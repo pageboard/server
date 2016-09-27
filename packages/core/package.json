@@ -1,0 +1,30 @@
+{
+  "name": "pageboard",
+  "version": "1.0.0",
+  "description": "Web pages content management system",
+  "main": "index.js",
+  "directories": {
+    "doc": "docs"
+  },
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/edasarl/pageboard.git"
+  },
+  "keywords": [
+    "cms",
+    "website",
+    "editor",
+    "clipboard",
+    "wysiwyg",
+    "headless"
+  ],
+  "author": "Jérémy Lal <kapouer@melix.org>",
+  "license": "MIT",
+  "bugs": {
+    "url": "https://github.com/edasarl/pageboard/issues"
+  },
+  "homepage": "https://github.com/edasarl/pageboard#readme"
+}
