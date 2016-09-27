@@ -1,6 +1,6 @@
 {
   "name": "pageboard",
-  "version": "1.0.0",
+  "version": "0.0.0",
   "description": "Web pages content management system",
   "main": "index.js",
   "directories": {
