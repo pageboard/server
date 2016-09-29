@@ -21,6 +21,7 @@ base de données
 Le contenu du site est géré par une seule table en relation n,n avec elle-même,
 la table de "blocs":
 
+```
 type: le type sémantique (obligatoire)
 mime: le type réel (obligatoire)
 url: l'url publique du bloc
@@ -28,7 +29,7 @@ lang: langue ISO 639-1
 scopes: permissions au format jwt-scopes
 data: attributs du bloc
 html: contenu html du bloc
-
+```
 
 D'autres tables plus spécialisées peuvent être ajoutés bien sûr; par exemple
 l'administration du site a besoin d'une gestion des utilisateurs et des permissions.
@@ -56,19 +57,19 @@ Un composant a aussi des fonctions permettant de parser ou serialiser du DOM.
 Ce DOM peut être dans trois formats: d'entrée, d'édition et de sortie.
 
 - from(domNode avec les attributs content-name) -> attrs
-- to(attrs) -> domNode avec les attributs content-name
+- to(attrs) -> domNode avec les attributs content-name  
 Le format d'édition doit pouvoir être parsé en attributs json et en contenus html,
 et vice-versa. Le contenu html étant systématiquement repéré par un attribut
 "content-name", le module s'occupe de lire et écrire leur contenu, et ces
 fonctions n'ont besoin de s'occuper que de la fusion ou de la lecture des attributs,
 ainsi que le placement des attributs "content-name".
 
-- input(domNode) -> {attrs, contents}
+- input(domNode) -> {attrs, contents}  
 La conversion depuis le format d'entrée est optionnelle et permet de convertir
 une saisie utilisateur en attributs et contenus qui seront ensuite rendus au
 format édition.
 
-- output(attrs, contents) -> domNode
+- output(attrs, contents) -> domNode  
 La conversion vers le format de sortie est optionnelle et permet de convertir
 le format d'édition vers un format plus approprié pour l'affichage en front.
 Dans le cadre d'un CMS, les attributs utiles à l'édition mais inutiles en front
