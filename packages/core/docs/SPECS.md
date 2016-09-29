@@ -84,6 +84,36 @@ limite au format reconnu par `from`, et si `output` n'est pas précisée, l'expo
 se limite au format produit par `to`.
 
 
+validation de bloc par composant
+--------------------------------
+
+La définition d'un composant peut être chargée dans l'API afin de permettre la
+validation:
+
+- de bloc.data par les définitions des attributs d'un composant
+- de bloc.html par les définitions de schéma de contenu
+
+Validation des attributs:
+définir le schéma des attributs dans le composant, en utilisant json-schema,
+et valider avec `ajv`.
+On pourra essayer d'améliorer le niveau de validation dans l'éditeur de texte,
+qui pour l'instant ne fait que vérifier l'absence ou la présence d'attributs.
+
+Validation du html:
+si le client n'envoie que du html au serveur, il va falloir trouver ou développer
+un TreeAdapter pour `parse5` qui n'expose que DOM Level 1 Core, et passer
+le document obtenu au parseur de prosemirror.
+
+Une autre solution un peu moins complexe et d'envoyer aussi le json correspondant
+au html - dans ce cas le json peut être plus facilement validé par prosemirror
+sur le serveur, et il suffit ensuite de reconstruire le html à partir du json
+et vérifier qu'on obtient bien la même chose.
+
+Dans ce cas on peut se demander si on veut conserver dans la base de données
+le html ou le json - mais le défaut du format json est qu'il doit être resérialisé
+à chaque fois, contrairement au format html qui peut être utilisé tel quel.
+
+
 format de sortie des composants
 -------------------------------
 
