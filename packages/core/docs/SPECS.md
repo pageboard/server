@@ -134,15 +134,51 @@ Lors de l'édition, on travaille donc à partir de l'original du html qui est
 enregistré dans le bloc, pas avec sa version "rendue" dans le DOM.
 
 
-dépendances
------------
+rendu des blocs
+---------------
 
-construction d'une page
------------------------
+L'API permet d'obtenir un bloc et l'arbre des relations avec ses sous-blocs,
+en une seule requête.
 
-gestion des références
-----------------------
+Le html du bloc racine est parsé, et chaque fois qu'un attribut `pb-ref` est
+trouvé, la valeur de `pb-id` correspondante est cherchée dans une map id->bloc
+construite à partir de l'arbre des sous-blocs, le bloc correspondant est trouvé
+et remplace le Node qui servait de référence.
 
-gestion des pages
------------------
+Lors de ce remplacement on peut considérer qu'on conserve les attributs qui
+étaient placés sur le node qui a été remplacé, dans la mesure où l'éditeur
+gère cette possibilité - à implémenter en fonction des besoins, l'exemple
+typique étant de conserver une "classe" css sur le Node porteur de `pb-ref`,
+et de conserver cette classe dans le Node qui remplace la référence.
+
+Remarque pour une version qui fonctionnerait "offline":
+Dans une architecture où la base de données serait accessible par un proxy sur
+le client qui saurait maintenir un cache correctement, les données obtenues
+initialement par l'API pourraient peupler le cache du client, et le remplacement
+des blocs se ferait en requêtant le proxy qui répondrait immédiatement, ayant
+les données des sous-blocs en cache. Si un sous-bloc n'était pas en cache,
+il serait alors requêté à l'API.
+
+
+pages
+-----
+
+Une page est un bloc identifié par un type "page" et un mime type "text/html".
+Il faut que l'url du bloc identifié comme étant une page soit accessible par
+routage, mais c'est au CMS de faire attention à cela.
+
+Par exemple, si l'url est un chemin /webcomponents/mapage.html et que le contenu
+du dossier `webcomponents` est servi comme des fichiers statiques, ce bloc ne
+sera pas prérendu mais sera visible comme une page dans le CMS. Dans ce cas le
+CMS aurait plutôt dû donner un type "component" ou autre, mais pas "page".
+
+Un bloc de type page possède un attribut "template" qui précise quel fichier
+html statique définit les dépendances de la page (attribut stocké dans data.template).
+Ce "template" contient le document html avec un tag head et ses dépendances,
+et un tag body vide.
+
+Le html du bloc page remplace le contenu du body de ce template.
+
+Cette version de pageboard ne sait pas "gérer" la compilation de dépendances
+dynamiques - mais n'empêche pas le chargement de dépendances par un bloc.
 
