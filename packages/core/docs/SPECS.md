@@ -153,7 +153,9 @@ web components
 --------------
 
 Il est possible qu'un bloc soit à la fois une instance de composant (forcément),
-et une instance de web component.
+et une instance de web component. Il ne faut cependant pas confondre les deux:
+un composant est une classe définie et utilisée pour l'édition des blocs,
+un web component est défini et utilisé pour le rendu du DOM.
 
 Il serait tentant d'éditer directement les blocs à partir du DOM rendu, mais
 d'une manière générale on ne sait pas quelles transformations ont pu modifier
