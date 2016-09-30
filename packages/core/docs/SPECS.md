@@ -8,11 +8,8 @@ Il y a trois grands types de routes
 
 - les fichiers locaux (montés sur /media, /js, /css, ...)
 - l'API (montée sur /api)
-- les pages (montées sur /)
-
-Les pages sont toutes construites à l'aide d'un fichier html "front.html",
-qui décide quoi faire en cas d'erreur (redirection par document.location
-par exemple).
+- les pages (montées sur / avec un template générique configuré par API,
+sur d'autres routes spécialisées)
 
 
 base de données
@@ -26,13 +23,13 @@ type: le type sémantique (obligatoire)
 mime: le type réel (obligatoire)
 url: l'url publique du bloc
 lang: langue ISO 639-1
-scopes: permissions au format jwt-scopes
-data: attributs du bloc
-html: contenu html du bloc
+data: attributs json (noms => html)
+content: contenus html (noms => json)
 ```
 
-D'autres tables plus spécialisées peuvent être ajoutés bien sûr; par exemple
-l'administration du site a besoin d'une gestion des utilisateurs et des permissions.
+D'autres colonnes, tables, et relations plus spécialisées peuvent être ajoutées;
+par exemple l'administration du site a besoin d'une gestion des utilisateurs,
+et des permissions.
 
 
 composants
@@ -43,153 +40,107 @@ Un composant est utilisé pour typer les blocs et les rendre éditables.
 Ce qui est abordé ici est un résumé de la documentation du module `coed`.
 
 Un composant définit:
-- des noms d'attributs
-- des noms de contenus
-- un schéma par nom de contenu
+- des noms de données et leur schéma json
+- des noms de contenus et leur schéma prosemirror
 - un nom de composant
 
-Les attributs servent à construire une représentation DOM du composant lors
-de son édition ou lors de sa publication.
+Les contenus sont des morceaux de HTML produits par l'éditeur dans un schéma
+défini par composant et par nom de contenu.
 
-Les contenus sont produits par l'éditeur html, dans un schéma qui leur est imposé.
+Les données sont fusionnées entièrement ou en partie dans le template qui
+enveloppe ces contenus. Certaines données servent à l'édition seulement,
+d'autres sont essentielles pour produire un rendu html du bloc.
+
+Exemple: un titre d'article n'est pas une donnée, c'est un contenu.
+Un statut d'article (important, épinglé) ou une date sont des données.
+On distingue données et contenus dans la mesure où le langage de schéma pour
+les décrire n'est pas le même (json-schema pour les données, schemaSpec de
+prosemirror pour les contenus).
 
 Un composant a aussi des fonctions permettant de parser ou serialiser du DOM.
-Ce DOM peut être dans trois formats: d'entrée, d'édition et de sortie.
+Ce DOM peut être dans trois formats: de saisie, d'édition et de publication.
 
-- from(domNode avec les attributs content-name) -> attrs
-- to(attrs) -> domNode avec les attributs content-name  
-Le format d'édition doit pouvoir être parsé en attributs json et en contenus html,
-et vice-versa. Le contenu html étant systématiquement repéré par un attribut
-"content-name", le module s'occupe de lire et écrire leur contenu, et ces
-fonctions n'ont besoin de s'occuper que de la fusion ou de la lecture des attributs,
-ainsi que le placement des attributs "content-name".
+- from(domNode) -> {data: ..., content: ...}
+- to({data: ..., content: ...}) -> domNode  
+Fonctions pour lire et écrire le format d'édition.
+L'état du bloc (data et content) doit être entièrement contenu dans le format
+d'édition DOM (to(from(node)) == node).
+Le module d'édition `coed` demande d'ajouter des attributs spécifiques sur les
+DOM nodes qui portent le contenu éditable (coed-name="nomducontenu").
 
-- input(domNode) -> {attrs, contents}  
-La conversion depuis le format d'entrée est optionnelle et permet de convertir
-une saisie utilisateur en attributs et contenus qui seront ensuite rendus au
-format édition.
+- input(domNode) -> {data: ..., content: ...}  
+La conversion depuis le format de saisie est optionnelle (par défaut `from`),
+et permet de convertir une saisie utilisateur en données et contenus qui seront
+ensuite rendus au format édition (to(input(node)))
 
-- output(attrs, contents) -> domNode  
-La conversion vers le format de sortie est optionnelle et permet de convertir
-le format d'édition vers un format plus approprié pour l'affichage en front.
-Dans le cadre d'un CMS, les attributs utiles à l'édition mais inutiles en front
-sont référencés à l'aide d'un attribut sur le domNode et la fonction d'input
-peut par la suite utiliser cette référence pour retrouver les attributs - le
-contenu étant porté par le domNode au format de sortie et pouvant être identifié
-par un attribut du même genre que "content-name" (mais qui ne sera lu que par
-la fonction d'input et n'est donc pas imposé par le module).
+- output({data: ..., content: ...}) -> domNode  
+La conversion vers le format de publication est optionnelle (par défaut, `to`) et
+produit un template pour la publication.
 
-Si `input` n'est pas précisée pour un composant, l'import depuis la saisie s
-limite au format reconnu par `from`, et si `output` n'est pas précisée, l'export
-se limite au format produit par `to`.
+Il faut remarquer que le format de publication d'un composant peut varier en
+fonction des données - voir plus bas pour les pages.
+
+
+enregistrement des contenus
+---------------------------
+
+La sérialisation des contenus est obtenue par la fonction toDOM() de l'éditeur,
+sachant que les blocs imbriqués sont automatiquement (pas par l'éditeur mais
+par `pageboard`) remplacés par un Node du genre
+`<div data-bloc="/api/blocs/123"></div>`
+
+- il porte un attribut qui donne une référence du bloc remplacé
+- ce node doit avoir un 'layout' pour pouvoir faire du lazy loading
+- un bloc peut optionnellement être "embarqué" dans le contenu, à condition que
+son composant correspondant soit capable de le relire à partir du html publié.
+Dans ce cas, le bloc embarqué n'a pas d'existence en dehors du html qui l'enregistre,
+et n'a pas d'attribut de référencement.
+
+Voir plus bas l'algorithme de rendu d'un bloc.
 
 
 validation de bloc par composant
 --------------------------------
 
-La définition d'un composant peut être chargée dans l'API afin de permettre la
-validation:
+Les schémas précisés dans un composant sont utilisés par le serveur pour valider
+les blocs avant de les enregistrer dans la base de données.
 
-- de bloc.data par les définitions des attributs d'un composant
-- de bloc.html par les définitions de schéma de contenu
+- validation des données  
+  À l'aide d'un validateur json-schéma comme `ajv`.
+  On pourra essayer d'améliorer le niveau de validation dans l'éditeur de texte,
+  qui pour l'instant ne fait que vérifier l'absence ou la présence d'attributs.
 
-Validation des attributs:
-définir le schéma des attributs dans le composant, en utilisant json-schema,
-et valider avec `ajv`.
-On pourra essayer d'améliorer le niveau de validation dans l'éditeur de texte,
-qui pour l'instant ne fait que vérifier l'absence ou la présence d'attributs.
-
-Validation du html:
-si le client n'envoie que du html au serveur, il va falloir trouver ou développer
-un TreeAdapter pour `parse5` qui n'expose que DOM Level 1 Core, et passer
-le document obtenu au parseur de prosemirror.
-
-Une autre solution un peu moins complexe et d'envoyer aussi le json correspondant
-au html - dans ce cas le json peut être plus facilement validé par prosemirror
-sur le serveur, et il suffit ensuite de reconstruire le html à partir du json
-et vérifier qu'on obtient bien la même chose.
-
-Dans ce cas on peut se demander si on veut conserver dans la base de données
-le html ou le json - mais le défaut du format json est qu'il doit être resérialisé
-à chaque fois, contrairement au format html qui peut être utilisé tel quel.
-
-
-format de sortie des composants
--------------------------------
-
-Ce qui est maintenant abordé est hors de la documentation du module `coed`,
-et sont des conventions propres à `pageboard`.
-
-Dans `pageboard`, les blocs enregistrent dans le champ `html` la *sortie* produite
-par les composants. Ces derniers doivent donc être capables de retrouver tous
-les attributs associés à une instance de composant, et les fonctions `input` et
-`output` doivent respecter des conventions.
-
-- output doit étiquetter les contenus avec un attribut `pb-name`, et placer
-un attribut `pb-id` sur le DOM de sortie avec comme valeur l'url du bloc dans
-l'api. Ceci permet de facilement imbriquer des blocs.
-- une fonction d'input par défaut est configurée dans `coed` pour reconnaitre le
-format de sortie décrit précédemment
-
-
-références de composants
-------------------------
-
-Un bloc peut, au lieu de contenir le html d'un autre bloc dans un de ses contenus,
-ne contenir qu'une référence vers cet autre bloc, en lui ajoutant un attribut
-booléen `pb-ref` à côté de l'attribut `pb-id`.
-
-En plus du comportement habituel dicté par `pb-id`, `pb-ref` indique
-- à la fonction d'affichage du DOM (qui prend la sortie de l'éditeur comme entrée)
-qu'il faut remplacer ce node par le html du bloc référencé par `pb-id`
-- à l'éditeur html qu'il doit recopier l'attribut `pb-ref` et ne pas écrire
-le contenu du node dans la sortie; et éventuellement signaler dans l'UI que
-ce bloc est une référence
-- que pour modifier le html portant un pb-ref, il faut ouvrir l'éditeur sur
-le bloc référencé.
+- validation des contenus  
+  Il faut un TreeAdapter pour `parse5` qui n'expose que DOM Level 1 Core, ou plus
+  simplement `jsdom`, passer le document obtenu au parseur de prosemirror configuré
+  avec le même schéma que celui du contenu, et resérialiser pour vérifier que
+  les contenus correspondent.
+  Une solution sans jsdom est possible, en utilisant la représentation json du DOM,
+  mais demande de soumettre le bloc avec cette représentation, ce qui n'est pas
+  toujours plus simple.
 
 
 web components
 --------------
 
-Il est possible qu'un bloc soit à la fois une instance de composant (forcément),
-et une instance de web component. Il ne faut cependant pas confondre les deux:
-un composant est une classe définie et utilisée pour l'édition des blocs,
-un web component est défini et utilisé pour le rendu du DOM.
+Un bloc est forcément une instance de composant, mais sa version de publication
+peut aussi être une instance de web component.
 
-Il serait tentant d'éditer directement les blocs à partir du DOM rendu, mais
-d'une manière générale on ne sait pas quelles transformations ont pu modifier
-le contenu, et en particulier dans le cas des web components on sait que
-ce qui est affiché ne correspond pas à ce qui a été initialement inséré.
-
-Lors de l'édition, on travaille donc à partir de l'original du html qui est
-enregistré dans le bloc, pas avec sa version "rendue" dans le DOM.
+Il faut bien garder en tête que les deux notions sont séparées, un web component
+ne se met à exister qu'après le rendu d'un bloc.
 
 
 rendu des blocs
 ---------------
 
-L'API permet d'obtenir un bloc et l'arbre des relations avec ses sous-blocs,
-en une seule requête.
+1) une référence de bloc permet de récupérer auprès de l'API type, data, content
+2) appeler components[type].output(data, content)
+3) node.querySelectorAll([data-block]).forEach(refaire étape 1) et remplacer
+le div par le html ainsi produit
 
-Le html du bloc racine est parsé, et chaque fois qu'un attribut `pb-ref` est
-trouvé, la valeur de `pb-id` correspondante est cherchée dans une map id->bloc
-construite à partir de l'arbre des sous-blocs, le bloc correspondant est trouvé
-et remplace le Node qui servait de référence.
-
-Lors de ce remplacement on peut considérer qu'on conserve les attributs qui
-étaient placés sur le node qui a été remplacé, dans la mesure où l'éditeur
-gère cette possibilité - à implémenter en fonction des besoins, l'exemple
-typique étant de conserver une "classe" css sur le Node porteur de `pb-ref`,
-et de conserver cette classe dans le Node qui remplace la référence.
-
-Remarque pour une version qui fonctionnerait "offline":
-Dans une architecture où la base de données serait accessible par un proxy sur
-le client qui saurait maintenir un cache correctement, les données obtenues
-initialement par l'API pourraient peupler le cache du client, et le remplacement
-des blocs se ferait en requêtant le proxy qui répondrait immédiatement, ayant
-les données des sous-blocs en cache. Si un sous-bloc n'était pas en cache,
-il serait alors requêté à l'API.
+La "récupération" du premier bloc doit aussi récupérer l'arbre des relations avec
+ses sous-blocs, ce qui rend la récursion provoquée par 3) peu coûteuse en requêtes
+additionnelles.
 
 
 pages
@@ -204,15 +155,13 @@ du dossier `webcomponents` est servi comme des fichiers statiques, ce bloc ne
 sera pas prérendu mais sera visible comme une page dans le CMS. Dans ce cas le
 CMS aurait plutôt dû donner un type "component" ou autre, mais pas "page".
 
-Un bloc de type page possède un attribut "template" qui précise quel fichier
-html statique définit les dépendances de la page (attribut stocké dans data.template).
-Ce "template" contient le document html avec un tag head et ses dépendances,
-et un tag body vide.
+Un bloc de type page possède une donnée "template" qui sert à définir quel
+template html sert de document de base pour remplir la page.
+L'avantage de cette approche est la simplicité de définition des templates de
+pages, qui sont susceptibles de définir les ressources à compiler.
 
-Le html du bloc page remplace le contenu du body de ce template.
-
-Cette version de pageboard ne sait pas "gérer" la compilation de dépendances
-dynamiques - mais n'empêche pas le chargement de dépendances par un bloc.
+Dans cette version de `pageboard`, la compilation de dépendances dynamiques
+n'est pas gérée, ni l'enregistrement de templates de pages dans la base de données.
 
 
 spécialisation
@@ -231,7 +180,5 @@ Dans le liveactu on a ces particularités:
 avec du lazy loading
 
 Toutes ces particularités entrent dans le cadre de pageboard car ce sont de
-simples restrictions, à l'exception des contenus des articles (en tant que blocs,
-leurs contenus seraient enregistrés ensemble de le html du bloc) qui doivent
-être enregistrés en dehors du html du bloc.
+simples restrictions.
 
