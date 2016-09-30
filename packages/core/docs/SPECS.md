@@ -220,20 +220,18 @@ spécialisation
 
 Il peut arriver qu'on veuille utiliser `pageboard` dans un cadre plus précis
 que le cadre général d'un CMS.
-Par exemple dans le cadre du liveactu, cas traité ici.
 
 Dans le liveactu on a ces particularités:
 
 - les composants représentent des ressources ou des articles
 - les pages doivent pouvoir être exportées en json
-- les articles doivent être liés aux pages (et non embarqués dans le bloc html de la page)
+- les articles doivent être tous liés aux pages
+- le contenu des articles (aside, content, title) doit pouvoir être exporté en json
 - les ressources utilisées dans les articles implémentent une forme de custom elements
 avec du lazy loading
 
-L'export en JSON des pages ne porte pas forcément sur le format "html" mais plutôt
-sur la structure en articles.
-Chaque article doit pouvoir être aussi lu sur un client HTML pauvre.
-
-En conclusion, la "seule" différence avec un CMS est la restriction des choix,
-ainsi que le fait que les articles sont obligatoirement liés aux pages.
+Toutes ces particularités entrent dans le cadre de pageboard car ce sont de
+simples restrictions, à l'exception des contenus des articles (en tant que blocs,
+leurs contenus seraient enregistrés ensemble de le html du bloc) qui doivent
+être enregistrés en dehors du html du bloc.
 
