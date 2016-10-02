@@ -81,22 +81,27 @@ Il faut remarquer que le format de publication d'un composant peut varier en
 fonction des données - voir plus bas pour les pages.
 
 
-enregistrement des contenus
----------------------------
+enregistrement des contenus et références de blocs
+--------------------------------------------------
 
 La sérialisation des contenus est obtenue par la fonction toDOM() de l'éditeur,
 sachant que les blocs imbriqués sont automatiquement (pas par l'éditeur mais
 par `pageboard`) remplacés par un Node du genre
 `<div data-bloc="/api/blocs/123"></div>`
 
+Ce Node est appelé une *référence* de bloc.
+
 - il porte un attribut qui donne une référence du bloc remplacé
 - ce node doit avoir un 'layout' pour pouvoir faire du lazy loading
-- un bloc peut optionnellement être "embarqué" dans le contenu, à condition que
-son composant correspondant soit capable de le relire à partir du html publié.
-Dans ce cas, le bloc embarqué n'a pas d'existence en dehors du html qui l'enregistre,
-et n'a pas d'attribut de référencement.
+- un bloc peut ne pas être référencé mais entièrement "embarqué" dans le contenu,
+à condition que son composant soit capable de le relire à partir du html publié.
+Ce bloc embarqué n'a alors pas d'existence dans la base de données.
 
-Voir plus bas l'algorithme de rendu d'un bloc.
+Les références de blocs décrites ici portent sur un seul bloc à la fois.
+
+Voir plus bas l'algorithme de rendu d'un bloc, qui explique comment on peut
+aussi faire le rendu d'une liste de blocs, ou même d'une liste de données
+externes convertibles en blocs.
 
 
 validation de bloc par composant
@@ -143,6 +148,31 @@ ses sous-blocs, ce qui rend la récursion provoquée par 3) peu coûteuse en req
 additionnelles.
 
 
+rendu de données externes
+-------------------------
+
+Il peut être parfois utile de pouvoir considérer une API qui n'a pas le même
+format que l'API des blocs.
+
+`<div data-bloc="http://external.com/path?params" data-bloc-type="mytypename">`
+
+charge des données json externes. L'attribut `data-bloc-type` sert à forcer le
+type de composant, dans les cas où les format externe n'est pas utilisable comme
+un format de bloc (c'est à dire ne contient pas `data`, `content`, `type` avec
+type une valeur de composant connu.
+
+
+rendu de listes
+---------------
+
+Si la référence de bloc renvoie une liste, alors tous les éléments récupérés
+sont simplement ajoutés en utilisant les modes de rendus définis avant.
+
+Par exemple, il est possible de placer une liste paginée de blocs si l'API
+de blocs supporte des paramètres de pagination, ou une liste de données
+obtenues d'une source externe.
+
+
 pages
 -----
 
@@ -174,7 +204,7 @@ Dans le liveactu on a ces particularités:
 
 - les composants représentent des ressources ou des articles
 - les pages doivent pouvoir être exportées en json
-- les articles doivent être tous liés aux pages
+- les articles doivent être insérés par une référence de liste
 - le contenu des articles (aside, content, title) doit pouvoir être exporté en json
 - les ressources utilisées dans les articles implémentent une forme de custom elements
 avec du lazy loading
