@@ -153,17 +153,15 @@ rendu de données externes
 -------------------------
 
 Il peut être parfois utile de pouvoir considérer une API qui n'a pas le même
-format que l'API des blocs.
+format que l'API des blocs, ou encore de faire des recherches ou de la pagination
+de blocs.
 
-`<div data-bloc="http://external.com/path?params" data-bloc-type="mytypename">`
+La bonne manière de faire cela dans `pageboard` est simplement de définir un
+composant spécialisé qui va récupérer des données (distantes ou pas) et les
+insérer en tant que blocs dans le contenu du bloc correspondant.
 
-charge des données json externes. L'attribut `data-bloc-type` sert à forcer le
-type de composant, dans les cas où les format externe n'est pas utilisable comme
-un format de bloc (c'est à dire ne contient pas `data`, `content`, `type` avec
-type une valeur de composant connu.
-
-Le rendu de données externes ne peut cependant pas bénéficier du préchargement
-des sous-blocs effectué lors de la récupération du bloc page.
+Le rendu de données externes ne peut cependant pas bénéficier dans le cas général
+du préchargement des sous-blocs effectué lors de la récupération du bloc page.
 
 
 rendu de listes
