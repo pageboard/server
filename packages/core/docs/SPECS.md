@@ -47,7 +47,10 @@ Les contenus sont des morceaux de HTML produits par l'éditeur dans un schéma
 défini par composant et par nom de contenu.
 
 Les données sont fusionnées entièrement ou en partie dans le template qui
-enveloppe ces contenus. Certaines données servent à l'édition seulement,
+enveloppe ces contenus et qui est embarqué dans (dans les cas simples) ou chargé
+par le composant (si le template est complexe ou est celui d'une page).
+
+Certaines données servent à l'édition seulement,
 d'autres sont essentielles pour produire un rendu html du bloc.
 
 Exemple: un titre d'article n'est pas une donnée, c'est un contenu.
@@ -74,7 +77,7 @@ ensuite rendus au format édition (to(input(node)))
 
 - output({data: ..., content: ...}) -> domNode  
 La conversion vers le format de publication est optionnelle (par défaut, `to`) et
-produit un template pour la publication.
+produit le DOM pour la publication.
 
 Il faut remarquer que le format de publication d'un composant peut varier en
 fonction des données - voir plus bas pour les pages.
