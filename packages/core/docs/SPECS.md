@@ -21,7 +21,6 @@ la table de "blocs":
 ```
 type: le type sémantique (obligatoire)
 mime: le type réel (obligatoire)
-url: l'url publique du bloc
 lang: langue ISO 639-1
 data: attributs json (noms => html)
 content: contenus html (noms => json)
@@ -182,21 +181,23 @@ pages
 -----
 
 Une page est un bloc identifié par un type "page" et un mime type "text/html".
-Il faut que l'url du bloc identifié comme étant une page soit accessible par
-routage, mais c'est au CMS de faire attention à cela.
 
-Par exemple, si l'url est un chemin /webcomponents/mapage.html et que le contenu
-du dossier `webcomponents` est servi comme des fichiers statiques, ce bloc ne
-sera pas prérendu mais sera visible comme une page dans le CMS. Dans ce cas le
-CMS aurait plutôt dû donner un type "component" ou autre, mais pas "page".
+Optionnellement, une page possède également deux données:
 
-Un bloc de type page possède une donnée "template" qui sert à définir quel
-template html sert de document de base pour remplir la page.
-L'avantage de cette approche est la simplicité de définition des templates de
-pages, qui sont susceptibles de définir les ressources à compiler.
+- `data.url`  
+  doit correspondre à une route accessible de l'application, et le fait qu'elle
+  soit prérendue dépend de l'application.
 
-Dans cette version de `pageboard`, la compilation de dépendances dynamiques
-n'est pas gérée, ni l'enregistrement de templates de pages dans la base de données.
+- `data.template`  
+  indique le nom d'un document html (typiquement un chemin relatif vers un fichier
+  html statique) qui sert de template.
+  L'avantage de ne pas conserver les templates de pages dans la base de données
+  est de les laisser modifiables facilement par les développeurs et par les
+  scripts de déploiement.
+
+Ne sont pas spécifiés (ni implémentés):
+- la compilation de dépendances dynamiques
+- l'enregistrement de templates de pages dans la base de données
 
 
 spécialisation
