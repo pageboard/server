@@ -160,6 +160,9 @@ type de composant, dans les cas où les format externe n'est pas utilisable comm
 un format de bloc (c'est à dire ne contient pas `data`, `content`, `type` avec
 type une valeur de composant connu.
 
+Le rendu de données externes ne peut cependant pas bénéficier du préchargement
+des sous-blocs effectué lors de la récupération du bloc page.
+
 
 rendu de listes
 ---------------
