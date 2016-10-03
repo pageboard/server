@@ -39,10 +39,9 @@ Un composant est utilisé pour typer les blocs et les rendre éditables.
 
 Ce qui est abordé ici est un résumé de la documentation du module `coed`.
 
-Un composant définit:
+Un composant a un nom qui sert à typer les blocs, et définit un schéma de bloc:
 - des noms de données et leur schéma json
 - des noms de contenus et leur schéma prosemirror
-- un nom de composant
 
 Les contenus sont des morceaux de HTML produits par l'éditeur dans un schéma
 défini par composant et par nom de contenu.
