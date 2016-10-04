@@ -36,50 +36,31 @@ composants
 
 Un composant est utilisé pour typer les blocs et les rendre éditables.
 
-Ce qui est abordé ici est un résumé de la documentation du module `coed`.
+Ce qui est abordé ici est une relecture de la
+[documentation de coed](https://github.com/kapouer/coed/blob/master/README.md).
 
 Un composant a un nom qui sert à typer les blocs, et définit un schéma de bloc:
 - des noms de données et leur schéma json
 - des noms de contenus et leur schéma prosemirror
 
-Les contenus sont des morceaux de HTML produits par l'éditeur dans un schéma
-défini par composant et par nom de contenu.
+Un composant doit implémenter des fonctions pour parser et produire du DOM:
+- saisi par l'utilisateur (input)
+- utilisé lors de l'édition (from/to)
+- exporté lors de la publication (output)
 
-Les données sont fusionnées entièrement ou en partie dans le template qui
-enveloppe ces contenus et qui est embarqué dans (dans les cas simples) ou chargé
-par le composant (si le template est complexe ou est celui d'une page).
+Données et contenus s'articulent ainsi par rapport au DOM parsés ou produits:
+- le composant est entièrement responsable de parser et écrire les données
+dans les différentes versions du DOM.
+- les données ne sont éditables qu'à l'aide d'une interface utilisateur intégrée
+par le composant dans le DOM éditable. Elles ne sont pas éditables en html.
+- les contenus html éditables sont repérés par le composant en plaçant dans le
+DOM d'édition un attribut `coed-name`.
 
-Certaines données servent à l'édition seulement,
-d'autres sont essentielles pour produire un rendu html du bloc.
-
-Exemple: un titre d'article n'est pas une donnée, c'est un contenu.
-Un statut d'article (important, épinglé) ou une date sont des données.
-On distingue données et contenus dans la mesure où le langage de schéma pour
-les décrire n'est pas le même (json-schema pour les données, schemaSpec de
-prosemirror pour les contenus).
-
-Un composant a aussi des fonctions permettant de parser ou serialiser du DOM.
-Ce DOM peut être dans trois formats: de saisie, d'édition et de publication.
-
-- from(domNode) -> {data: ..., content: ...}
-- to({data: ..., content: ...}) -> domNode  
-Fonctions pour lire et écrire le format d'édition.
-L'état du bloc (data et content) doit être entièrement contenu dans le format
-d'édition DOM (to(from(node)) == node).
-Le module d'édition `coed` demande d'ajouter des attributs spécifiques sur les
-DOM nodes qui portent le contenu éditable (coed-name="nomducontenu").
-
-- input(domNode) -> {data: ..., content: ...}  
-La conversion depuis le format de saisie est optionnelle (par défaut `from`),
-et permet de convertir une saisie utilisateur en données et contenus qui seront
-ensuite rendus au format édition (to(input(node)))
-
-- output({data: ..., content: ...}) -> domNode  
-La conversion vers le format de publication est optionnelle (par défaut, `to`) et
-produit le DOM pour la publication.
-
-Il faut remarquer que le format de publication d'un composant peut varier en
-fonction des données - voir plus bas pour les pages.
+Exemple: un titre d'article n'est pas une donnée, c'est un contenu avec un
+schéma qui n'autorise que du html inline.
+Un statut d'article (important, épinglé) ou une date sont des données, et le
+composant qui les gère peut proposer un menu select ou un calendrier pour les
+modifier.
 
 
 enregistrement des contenus et références de blocs
