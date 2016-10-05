@@ -7,7 +7,7 @@ routage
 Il y a trois grands types de routes
 
 - les fichiers locaux (montés sur /media, /js, /css, ...)
-- l'API (montée sur /api)
+- l'API (montée sur /api par exemple /api/blocks/46456)
 - les pages (montées sur / avec un template générique configuré par API,
 sur d'autres routes spécialisées)
 
