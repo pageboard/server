@@ -19,7 +19,7 @@ Le contenu du site est géré par une seule table en relation n,n avec elle-mêm
 la table de "blocs":
 
 ```
-type: le type sémantique (obligatoire)
+type: le type de composant (obligatoire)
 mime: le type réel (obligatoire)
 lang: langue ISO 639-1
 data: attributs json (noms => html)
