@@ -22,8 +22,8 @@ la table de "blocs":
 type: le type de composant (obligatoire)
 mime: le type réel (obligatoire)
 lang: langue ISO 639-1
-data: attributs json (noms => html)
-content: contenus html (noms => json)
+data: attributs json (noms => json)
+content: contenus html (noms => html)
 ```
 
 D'autres colonnes, tables, et relations plus spécialisées peuvent être ajoutées;
