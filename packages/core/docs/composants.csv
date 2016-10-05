@@ -1,46 +1,49 @@
-"catégorie"	"composants"	"contenu"	"paramètres"
-"text editor"	"pas des composants, mais des boutons pour interagir avec l’éditeur"
-	"h1, h2, … table, p, blockquote, hr, ul, ol, pre"
-
-"widgets"	"slider"	"slider item+"	"duration,loop"
-	"slider item"	"titre, texte et une ressource"
-	"menu"	"menu item+"
-	"menu item"	"link|menu"
-	"summary"	"- "	"soit url racine, soit type de page, ordre par défaut, nb items max"
-	"portfolio"	"portfolio item+"	"focus fiche: inline, modal, link"
-	"portfolio item"	"ressource, title, content"
-	"counter"	"block+"	"entier positif, paramètre de présentation…"
-	"timeline"	"timeline item+"
-	"timeline item"	"block+"	"entier positif"
-	"breadcrumb"	"-"	"start level"
-	"map"	"marker"	"center, zoom"
-	"marker"	"titre, legende"	"lat,lng"
-
-"metiers"	"catalogue"	"article+"	"ordre, items max, avec recherche ou sans…"
-	"article"	"défini selon les métiers"
-"sachant que le composant catalogue fait lui-même la requête http vers une source de données métier"
-
-"forms"	"form"	"block ou input fields, success, error"	"emails destinataires"
-	"input"	"label, placeholder, error"	"name (qui est le label speaking-url), validation"
-	"select"	"item+"	"checkbox, radio, dropdown"
-	"item"	"block+"	"name, value si block+ n’est pas du texte"
-
-"ressources"	"link"	"à définir, texte"
-	"video"	"-"
-	"audio"	"-"
-	"image"	"légende, crédit"
-	"embed"	"-"
-
-"layout"	"header"	"block+"
-	"footer"	"block+"
-	"grid"	"block+"	"nb et largeur des colonnes"
-	"tab"	"tab item+"	"nb de tabs"
-	"tab item"	"title, content"
-	"segment"	"block+"	"couleur, image de fond (fixed en option)"
-	"article"	"titre, ressource+, block+"	"des paramètres de présentation…"
-
-"page"	"page"	"layout+"	"url, template, lang"
-
-
-"NB: titre sous-entend qu’on peut styler “inline”"
-"texte sous-entend qu’on peut mettre n’importe quel autre block, ou à définir."
+catégorie,composants,contenu,paramètres
+text editor,header,block+,level
+,table,Tr > td > block,
+,blockquote,block+,
+,hr,-,
+,ul,Li > block+,
+,ol,Li > block+,
+,pre,text,
+,(title),inline text,
+,(text),block+,
+,,,
+widgets,slider,slider item+,"duration,loop"
+,slider item,"titre, texte et une ressource",
+,menu,menu item+,
+,menu item,link|menu,
+,summary,- ,"soit url racine, soit type de page, ordre par défaut, nb items max"
+,portfolio,portfolio item+,"focus fiche: inline, modal, link"
+,portfolio item,"ressource, title, content",
+,counter,block+,"entier positif, paramètre de présentation…"
+,timeline,timeline item+,
+,timeline item,block+,entier positif
+,breadcrumb,-,start level
+,map,marker,"center, zoom"
+,marker,"titre, legende","lat,lng"
+,,,
+metiers,catalogue,article+,"ordre, items max, avec recherche ou sans…"
+,article,défini selon les métiers,
+,,,
+,,,
+forms,form,"block ou input fields, success, error",emails destinataires
+,input,"label, placeholder, error","name (qui est le label speaking-url), validation"
+,select,item+,"checkbox, radio, dropdown"
+,item,block+,"name, value si block+ n’est pas du texte"
+,,,
+ressources,link,"à définir, texte",
+,video,-,
+,audio,-,
+,image,"légende, crédit",
+,embed,-,
+,,,
+layout,header,block+,
+,footer,block+,
+,grid,block+,nb et largeur des colonnes
+,tab,tab item+,nb de tabs
+,tab item,"title, content",
+,segment,block+,"couleur, image de fond (fixed en option)"
+,article,"titre, ressource+, block+",des paramètres de présentation…
+,,,
+page,page,layout+,"url, template, lang"
