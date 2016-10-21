@@ -16,19 +16,33 @@ base de données
 ---------------
 
 Le contenu du site est géré par une seule table en relation n,n avec elle-même,
-la table de "blocs":
+la table de "blocks":
 
 ```
-type: le type de composant (obligatoire)
-mime: le type réel (obligatoire)
-lang: langue ISO 639-1
+// champs obligatoires
+type: le type de composant
+mime: le type mime que représente ce block
 data: attributs json (noms => json)
 content: contenus html (noms => html)
+
+// champs optionels
+lang: langue ISO 639-1
+url: canonical url
+template: a template name, e.g. a file name
 ```
 
-D'autres colonnes, tables, et relations plus spécialisées peuvent être ajoutées;
-par exemple l'administration du site a besoin d'une gestion des utilisateurs,
-et des permissions.
+> Comment déterminer si ces champs vont dans `data` ou dans la table ?
+> + nécéssaires au fonctionnement du serveur
+> + le serveur ne doit pas faire d'hypothèse sur le schéma de data
+> - certains composants pourraient rendre éditables ces options
+> + mais elles concernent surtout le "point de vue extérieur" et pas le composant
+> lui-même, donc plutôt éditées en dehors d'un composant
+
+Il faut ajouter à cela:
+- users
+- permissions (en relation 1,n avec users)
+- journals (en relation 1,1 avec users, enregistre les opérations sur l'api)
+- sites (en relation 1,n avec blocks, 1,n avec users)
 
 
 composants
@@ -54,7 +68,7 @@ dans les différentes versions du DOM.
 - les données ne sont éditables qu'à l'aide d'une interface utilisateur intégrée
 par le composant dans le DOM éditable. Elles ne sont pas éditables en html.
 - les contenus html éditables sont repérés par le composant en plaçant dans le
-DOM d'édition un attribut `coed-name`.
+DOM d'édition un attribut `block-content`.
 
 Exemple: un titre d'article n'est pas une donnée, c'est un contenu avec un
 schéma qui n'autorise que du html inline.
@@ -69,10 +83,15 @@ enregistrement des contenus et références de blocs
 La sérialisation des contenus est obtenue par la fonction toDOM() de l'éditeur,
 sachant que les blocs imbriqués sont automatiquement (pas par l'éditeur mais
 par `pageboard`) remplacés par un Node du genre
-`<div data-bloc="/api/blocs/123"></div>`
+`<div data-block="/api/blocks/123"></div>`
 
 Ce Node est appelé une *référence* de bloc.
 
+Ainsi les contenus d'un block sont placés dans du html par le composant qui
+correspond au type du block, et les sous-blocks référencés dans ces contenus
+sont en relation directe (dans la db) au block qui les référence.
+
+Ceci est vrai pour tous les composants - la page étant un composant également.
 - il porte un attribut qui donne une référence du bloc remplacé
 - ce node doit avoir un 'layout' pour pouvoir faire du lazy loading
 - un bloc peut ne pas être référencé mais entièrement "embarqué" dans le contenu,
@@ -159,24 +178,18 @@ obtenues d'une source externe.
 pages
 -----
 
-Une page est un bloc identifié par un type "page" et un mime type "text/html".
+Une page est un bloc identifié par:
+- un type "page"
+- un mime type "text/html"
+- une url canonique (et non pas /api/xxx)
+- un template
 
-Optionnellement, une page possède également deux données:
-
-- `data.url`  
-  doit correspondre à une route accessible de l'application, et le fait qu'elle
-  soit prérendue dépend de l'application.
-
-- `data.template`  
-  indique le nom d'un document html (typiquement un chemin relatif vers un fichier
-  html statique) qui sert de template.
-  L'avantage de ne pas conserver les templates de pages dans la base de données
-  est de les laisser modifiables facilement par les développeurs et par les
-  scripts de déploiement.
-
-Ne sont pas spécifiés (ni implémentés):
-- la compilation de dépendances dynamiques
-- l'enregistrement de templates de pages dans la base de données
+> Pourquoi ne pas conserver les templates entiers dans la base de données ?
+> La première raison est de laisser les templates facilement éditables par les
+> développeurs.
+> Une seconde raison est de simplifier les scripts de déploiement.
+> À cause de cela, il n'est pas possible de bundler les dépendances de composants
+> de manière dynamique.
 
 
 spécialisation
@@ -191,8 +204,8 @@ Dans le liveactu on a ces particularités:
 - les pages doivent pouvoir être exportées en json
 - les articles doivent être insérés par une référence de liste
 - le contenu des articles (aside, content, title) doit pouvoir être exporté en json
-- les ressources utilisées dans les articles implémentent une forme de custom elements
-avec du lazy loading
+- les ressources utilisées dans les articles sont affichées en front à l'aide
+d'une sorte de custom element (simplifié) qui implémente du chargement différé.
 
 Toutes ces particularités entrent dans le cadre de pageboard car ce sont de
 simples restrictions.
