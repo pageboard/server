@@ -7,42 +7,51 @@ routage
 Il y a trois grands types de routes
 
 - les fichiers locaux (montés sur /media, /js, /css, ...)
-- l'API (montée sur /api par exemple /api/blocks/46456)
-- les pages (montées sur / avec un template générique configuré par API,
-sur d'autres routes spécialisées)
+- l'API (montée sur /api par exemple /api/blocks/46456) en JSON
+- les blocs ayant une url canonique, et dont le rendu dépend du type mime.
 
 
-base de données
----------------
+sites
+-----
 
-Le contenu du site est géré par une seule table en relation n,n avec elle-même,
-la table de "blocks":
+Les différents sites sont gérés par une table de "sites":
+
+```
+domain: le nom de domaine du site, ou le préfixe du site
+title: le titre du site
+```
+
+blocs
+------
+
+Le contenu du site est géré par une table en relation n,n avec elle-même,
+la table de blocs, et en relation n,1 avec la table de sites.
 
 ```
 // champs obligatoires
 type: le type de composant
-mime: le type mime que représente ce block
+mime: le type mime que représente ce bloc
 data: attributs json (noms => json)
 content: contenus html (noms => html)
 
 // champs optionels
 lang: langue ISO 639-1
-url: canonical url
+url: url canonique
 template: a template name, e.g. a file name
 ```
 
-> Comment déterminer si ces champs vont dans `data` ou dans la table ?
-> + nécéssaires au fonctionnement du serveur
-> + le serveur ne doit pas faire d'hypothèse sur le schéma de data
-> - certains composants pourraient rendre éditables ces options
-> + mais elles concernent surtout le "point de vue extérieur" et pas le composant
-> lui-même, donc plutôt éditées en dehors d'un composant
+> Comment déterminer si ces champs vont dans `data` ou pas ?
+> Ce qui va dans `data` ne concerne que le client, pas le serveur.
+
+> Qu'est qu'une URL canonique ?
+> c'est une url qui rend la ressource accessible sans connaître son id,
+> contrairement à /api/blocks/<id>
 
 Il faut ajouter à cela:
 - users
 - permissions (en relation 1,n avec users)
 - journals (en relation 1,1 avec users, enregistre les opérations sur l'api)
-- sites (en relation 1,n avec blocks, 1,n avec users)
+- sites (en relation 1,n avec les blocs, 1,n avec users)
 
 
 composants
@@ -77,32 +86,110 @@ composant qui les gère peut proposer un menu select ou un calendrier pour les
 modifier.
 
 
+pages
+-----
+
+Une page est un bloc identifié par:
+- un type "page"
+- un mime type "text/html"
+- une url canonique (et non pas /api/xxx)
+- un template
+
+> Pourquoi ne pas conserver les templates entiers dans la base de données ?
+> La première raison est de laisser les templates facilement éditables par les
+> développeurs.
+> Une seconde raison est de simplifier les scripts de déploiement.
+> À cause de cela, il n'est pas possible de bundler les dépendances de composants
+> de manière dynamique.
+
+
 enregistrement des contenus et références de blocs
 --------------------------------------------------
 
-La sérialisation des contenus est obtenue par la fonction toDOM() de l'éditeur,
-sachant que les blocs imbriqués sont automatiquement (pas par l'éditeur mais
-par `pageboard`) remplacés par un Node du genre
-`<div data-block="/api/blocks/123"></div>`
+La sérialisation des contenus est obtenue par la fonction de l'éditeur:
+`get(function fn(component, dom, data, content) {})`
 
-Ce Node est appelé une *référence* de bloc.
+Dans `pageboard` la fonction passée en paramètre s'occupe de remplacer le dom
+de chaque bloc par une *référence* de bloc:
+`<div block-url="/api/blocks/123"></div>`
+et de conserver la relation d'inclusion de ce bloc dans le bloc parent.
 
-Ainsi les contenus d'un block sont placés dans du html par le composant qui
-correspond au type du block, et les sous-blocks référencés dans ces contenus
-sont en relation directe (dans la db) au block qui les référence.
+Ensuite il suffit d'enregistrer les blocs et leurs relations.
 
-Ceci est vrai pour tous les composants - la page étant un composant également.
-- il porte un attribut qui donne une référence du bloc remplacé
-- ce node doit avoir un 'layout' pour pouvoir faire du lazy loading
-- un bloc peut ne pas être référencé mais entièrement "embarqué" dans le contenu,
-à condition que son composant soit capable de le relire à partir du html publié.
-Ce bloc embarqué n'a alors pas d'existence dans la base de données.
+> Comment le positionnement des sous-blocs est conservé ?
+> Les sous-blocs étant représentés par des références de blocs, ils sont
+> simplement situés par leur position dans le contenu html du bloc parent.
 
-Les références de blocs décrites ici portent sur un seul bloc à la fois.
+> Tous les blocs doivent-ils être remplacés par des références ?
+> Non - un bloc peut être entièrement embarqué dans le contenu du bloc parent,
+> et n'a alors pas d'existence dans la base de données.
 
-Voir plus bas l'algorithme de rendu d'un bloc, qui explique comment on peut
-aussi faire le rendu d'une liste de blocs, ou même d'une liste de données
-externes convertibles en blocs.
+> L'url peut-elle retourner une liste de blocs, ou des données externes ?
+> Non - pour cela il faut un bloc de type "liste", ou un bloc spécialisé pour
+> importer des données externes.
+
+> Une url de référence de bloc peut-elle être canonique ?
+> Oui - et c'est particulièrement utile dans le cas d'une référence de bloc
+> statique, c'est à dire ne faisant pas partie de contenu éditable.
+
+
+rendu d'un bloc
+---------------
+
+L'algorithme est le suivant, étant donné un block initial racine.
+
+```
+var block = root;
+var subBlocks = {
+	// map of url -> block
+};
+var doc, dom, ref, url;
+while (block) {
+	dom = coed.components[block.type].output(coed, block.data, block.content);
+	if (ref) ref.replaceWith(dom);
+	else doc = dom;
+	ref = dom.querySelector('[block-url]');
+	if (!ref) break;
+	url = ref.getAttribute('block-url');
+	block = subBlocks[url];
+}
+// now do something with doc
+```
+
+Il est important de noter que *toutes* les références sont résolues, pas
+seulement les références qui font partie d'un contenu, mais aussi celles
+qui font partie du dom (donc du template) renvoyé par un composant.
+
+
+rendu d'une page
+----------------
+
+Les pages sont rendues à l'aide d'un script de démarrage indépendant.
+
+- une requête vers l'API pour obtenir un bloc ayant la même url canonique
+  cette requête récupère aussi les sous-blocs, récursivement.
+- si aucun bloc n'est trouvé, redirige vers une page 404
+- le template correspondant à ce bloc est chargé, et le bloc et son template
+sont utilisés par le composant `page` pour faire le rendu du bloc
+
+
+référence de bloc et url canonique
+----------------------------------
+
+Lorsqu'un bloc de type page est créé, son template peut avoir besoin de blocs
+qui ne sont pas particulièrement éditables par l'utilisateur et qui sont placés
+par le développeur.
+
+Dans ce cas il convient d'utiliser une url canonique pour ce genre de bloc,
+et une référence permet alors d'en faire facilement faire le rendu.
+
+```
+<div block-url="/path/page/myblockname"></div>
+```
+
+> En effet on ne peut pas utiliser l'url d'api du bloc quand on veut l'insérer
+> dans la page, et c'est plus simple d'éviter d'avoir à générer les url et le
+> html avant de commencer le rendu de blocs.
 
 
 validation de bloc par composant
@@ -136,19 +223,6 @@ Il faut bien garder en tête que les deux notions sont séparées, un web compon
 ne se met à exister qu'après le rendu d'un bloc.
 
 
-rendu des blocs
----------------
-
-1) une référence de bloc permet de récupérer auprès de l'API type, data, content
-2) appeler components[type].output(data, content)
-3) node.querySelectorAll([data-block]).forEach(refaire étape 1) et remplacer
-le div par le html ainsi produit
-
-La "récupération" du premier bloc doit aussi récupérer l'arbre des relations avec
-ses sous-blocs, ce qui rend la récursion provoquée par 3) peu coûteuse en requêtes
-additionnelles.
-
-
 rendu de données externes
 -------------------------
 
@@ -164,32 +238,17 @@ Le rendu de données externes ne peut cependant pas bénéficier dans le cas gé
 du préchargement des sous-blocs effectué lors de la récupération du bloc page.
 
 
-rendu de listes
----------------
+liste dynamique de blocs
+------------------------
 
-Si la référence de bloc renvoie une liste, alors tous les éléments récupérés
-sont simplement ajoutés en utilisant les modes de rendus définis avant.
+Une liste de blocs est traitée un peu cmme un rendu de données externes:
+un composant de type 'liste' est responsable de faire le rendu à partir d'une
+liste de blocs obtenus
+- par relation d'inclusion
+- par une requête externe
 
-Par exemple, il est possible de placer une liste paginée de blocs si l'API
-de blocs supporte des paramètres de pagination, ou une liste de données
-obtenues d'une source externe.
-
-
-pages
------
-
-Une page est un bloc identifié par:
-- un type "page"
-- un mime type "text/html"
-- une url canonique (et non pas /api/xxx)
-- un template
-
-> Pourquoi ne pas conserver les templates entiers dans la base de données ?
-> La première raison est de laisser les templates facilement éditables par les
-> développeurs.
-> Une seconde raison est de simplifier les scripts de déploiement.
-> À cause de cela, il n'est pas possible de bundler les dépendances de composants
-> de manière dynamique.
+Ce composant de type liste peut également accepter des paramètres pour gérer
+la pagination, l'ordre, etc.
 
 
 spécialisation
