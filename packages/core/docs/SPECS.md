@@ -133,7 +133,15 @@ Ensuite il suffit d'enregistrer les blocs et leurs relations.
 > statique, c'est à dire ne faisant pas partie de contenu éditable.
 
 
-rendu d'un bloc
+suivi des changements
+---------------------
+
+Étant donné que les blocs sont enregistrés indépendemment les uns des autres,
+`pageboard` passe la fonction `change(coed, block)` à `coed` pour suivre les
+changements effectués dans chaque block.
+
+
+rendu d'un bloc	
 ---------------
 
 L'algorithme est le suivant, étant donné un block initial racine.
@@ -156,9 +164,9 @@ while (block) {
 // now do something with doc
 ```
 
-Il est important de noter que *toutes* les références sont résolues, pas
-seulement les références qui font partie d'un contenu, mais aussi celles
-qui font partie du dom (donc du template) renvoyé par un composant.
+> Il est important de noter que *toutes* les références sont résolues, pas
+> seulement les références qui font partie d'un contenu, mais aussi les références
+> statiques venant du template ou celles qui ont été ajoutées par le composant.
 
 
 rendu d'une page
@@ -187,9 +195,9 @@ et une référence permet alors d'en faire facilement faire le rendu.
 <div block-url="/path/page/myblockname"></div>
 ```
 
-> En effet on ne peut pas utiliser l'url d'api du bloc quand on veut l'insérer
-> dans la page, et c'est plus simple d'éviter d'avoir à générer les url et le
-> html avant de commencer le rendu de blocs.
+> En effet utiliser une url d'api demande de connaître l'id du bloc ajouté,
+> et ensuite de modifier mettre à jour l'attribut block-url.
+> C'est plus simple et aussi plus facile à lire avec une url canonique.
 
 
 validation de bloc par composant
