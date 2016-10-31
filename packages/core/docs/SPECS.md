@@ -221,14 +221,8 @@ les blocs avant de les enregistrer dans la base de données.
   toujours plus simple.
 
 
-web components
---------------
 
-Un bloc est forcément une instance de composant, mais sa version de publication
-peut aussi être une instance de web component.
 
-Il faut bien garder en tête que les deux notions sont séparées, un web component
-ne se met à exister qu'après le rendu d'un bloc.
 
 
 rendu de données externes
@@ -257,6 +251,16 @@ liste de blocs obtenus
 
 Ce composant de type liste peut également accepter des paramètres pour gérer
 la pagination, l'ordre, etc.
+
+
+web components
+--------------
+
+Un bloc est forcément une instance de composant, mais sa version de publication
+peut aussi être une instance de web component.
+
+Il faut bien garder en tête que les deux notions sont séparées, un web component
+ne se met à exister qu'après le rendu d'un bloc.
 
 
 spécialisation
