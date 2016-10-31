@@ -115,14 +115,21 @@ de chaque bloc par une *référence* de bloc:
 et de conserver la relation d'inclusion de ce bloc dans le bloc parent.
 
 Ensuite il suffit d'enregistrer les blocs et leurs relations.
+On distingue pour ce faire les genres de blocs suivants:
+- articles, souvent écrits en une seule fois avec plusieurs contenus riches
+- objets, plus ou moins complexes, mais toujours recopiables tels quels
+dans différents contenus
+- structurels, permettent de faire des mises en page complexes
+
+Seuls les deux premiers genres de blocs sont enregistrés et remplacés par des
+références.
+Les blocs structurels sont enregistrés dans les contenus.
+Il appartient à l'implémentation de décider s'il est légitime de référencer
+systématiquement un type de bloc ou pas.
 
 > Comment le positionnement des sous-blocs est conservé ?
 > Les sous-blocs étant représentés par des références de blocs, ils sont
 > simplement situés par leur position dans le contenu html du bloc parent.
-
-> Tous les blocs doivent-ils être remplacés par des références ?
-> Non - un bloc peut être entièrement embarqué dans le contenu du bloc parent,
-> et n'a alors pas d'existence dans la base de données.
 
 > L'url peut-elle retourner une liste de blocs, ou des données externes ?
 > Non - pour cela il faut un bloc de type "liste", ou un bloc spécialisé pour
