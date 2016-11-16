@@ -7,6 +7,7 @@ var rc = require('rc');
 exports.config = function(opts) {
 	if (!opts) opts = require(process.cwd() + '/package.json');
 	return rc(opts.name, {
+		env: opts.env || process.env.NODE_ENV || 'development',
 		name: opts.name,
 		version: opts.version,
 		listen: 3000,
@@ -70,6 +71,7 @@ function routes(dir, app, config, api) {
 
 function createApp(config) {
 	var app = express();
+	app.set("env", config.env);
 	app.set('views', config.statics.path);
 	app.disable('x-powered-by');
 	return app;
