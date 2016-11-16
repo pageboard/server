@@ -4,8 +4,8 @@ var ObjectionRest = require('objection-rest');
 exports.route = function(app, api, config) {
 	ObjectionRest(objection)
 		.routePrefix('/api')
-		.addModel(require('./models/site'))
-		.addModel(require('./models/block'))
+		.addModel(require('../../db/models/site'))
+		.addModel(require('../../db/models/block'))
 		.generate(app);
 };
 

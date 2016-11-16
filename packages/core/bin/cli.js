@@ -2,8 +2,9 @@
 
 var pageboard = require('../');
 
-var opts = require(process.cwd() + '/package.json');
-console.info(`${opts.name} ${opts.version}`);
+var config = pageboard.config();
 
-pageboard(opts);
+console.info(`${config.name} ${config.version}`);
+
+pageboard.init(config);
 

@@ -2,29 +2,32 @@ var requireAll = require('require-all');
 var http = require('http');
 var express = require('express');
 var morgan = require('morgan');
+var knex = require('knex');
+var objection = require('objection');
+var rc = require('rc');
 
-module.exports = pageboard;
-
-
-function pageboard(opts) {
-	var config = require('rc')(opts.name, {
+exports.config = function(opts) {
+	if (!opts) opts = require(process.cwd() + '/package.json');
+	return rc(opts.name, {
 		name: opts.name,
 		version: opts.version,
 		listen: 3000,
-		database: `postgres://localhost/${app.name}`,
+		database: `postgres://localhost/${opts.name}`,
 		logFormat: ':method :status :response-time ms :url - :res[content-length]',
 		statics: {
 			path: './public',
 			maxAge: 0
 		},
 		scope: {
-			issuer: config.name,
+			issuer: opts.name,
 			maxAge: 3600 * 12,
 			userProperty: 'user'
 		}
 	});
+};
 
-	var app = create(config);
+exports.init = function(config) {
+	var app = createApp(config);
 
 	var server = http.createServer(app);
 	server.listen(config.listen);
@@ -38,7 +41,8 @@ function pageboard(opts) {
 	var api = {
 		tag: require('upcache/tag'),
 		scope: require('upcache/scope')(config.scope),
-		vary: require('upcache/vary')
+		vary: require('upcache/vary'),
+		db: require('./db')(config)
 	};
 
 	routes('routes/files', app, config, api);
@@ -63,7 +67,7 @@ function routes(dir, app, config, api) {
 			}
 			return mod;
 		}
-	});
+	}));
 }
 
 function createApp(config) {
