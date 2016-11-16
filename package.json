@@ -15,5 +15,13 @@
   "bugs": {
     "url": "https://github.com/pageboard/pageboard/issues"
   },
-  "homepage": "https://github.com/pageboard/pageboard#readme"
+  "homepage": "https://github.com/pageboard/pageboard#readme",
+  "dependencies": {
+    "pageboard-core": "^0.1.0",
+    "pageboard-api": "^0.1.0",
+    "pageboard-prerender": "^0.1.0",
+    "pageboard-image": "^0.1.0",
+    "pageboard-inspector": "^0.1.0",
+    "pageboard-editor": "^0.1.0"
+  }
 }
