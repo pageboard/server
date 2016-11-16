@@ -1,0 +1,22 @@
+{
+  "name": "pageboard-image",
+  "version": "0.1.0",
+  "description": "",
+  "main": "index.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/pageboard/pageboard-image.git"
+  },
+  "author": "Jérémy Lal <kapouer@melix.org>",
+  "license": "MIT",
+  "bugs": {
+    "url": "https://github.com/pageboard/pageboard-image/issues"
+  },
+  "homepage": "https://github.com/pageboard/pageboard-image#readme",
+  "dependencies": {
+    "sharpie": "^2.1.0"
+  }
+}
