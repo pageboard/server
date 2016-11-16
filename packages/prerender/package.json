@@ -1,0 +1,24 @@
+{
+  "name": "pageboard-prerender",
+  "version": "0.1.0",
+  "description": "setup prerendering of views in pageboard",
+  "main": "index.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/pageboard/pageboard-prerender.git"
+  },
+  "keywords": [
+    "pageboard",
+    "prerender",
+    "dom"
+  ],
+  "author": "Jérémy Lal <kapouer@melix.org>",
+  "license": "MIT",
+  "bugs": {
+    "url": "https://github.com/pageboard/pageboard-prerender/issues"
+  },
+  "homepage": "https://github.com/pageboard/pageboard-prerender#readme"
+}
