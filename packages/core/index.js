@@ -44,15 +44,15 @@ exports.init = function(config) {
 		db: require('./db')(config)
 	};
 
-	routes('routes/files', app, config, api);
+	routes('files', app, config, api);
 	app.use(filesError);
 
 	app.use(morgan(config.logFormat));
 
-	routes('routes/api', app, config, api);
+	routes('api', app, config, api);
 	app.use(apiError);
 
-	routes('routes/views', app, config, api);
+	routes('views', app, config, api);
 	app.use(viewsError);
 }
 
