@@ -2,8 +2,6 @@ var requireAll = require('require-all');
 var http = require('http');
 var express = require('express');
 var morgan = require('morgan');
-var knex = require('knex');
-var objection = require('objection');
 var rc = require('rc');
 
 exports.config = function(opts) {
