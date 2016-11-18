@@ -1,11 +1,17 @@
 {
   "name": "pageboard",
-  "version": "1.0.0",
+  "version": "0.1.0",
   "description": "Web pages content management",
   "main": "index.js",
   "scripts": {
-    "test": "echo \"Error: no test specified\" && exit 1"
+    "test": "echo \"Error: no test specified\" && exit 1",
+    "start": "pageboard"
   },
+  "plugins": [
+    "pageboard-api", "pageboard-inspector",
+    "pageboard-image", "pageboard-editor",
+    "pageboard-prerender"
+  ],
   "repository": {
     "type": "git",
     "url": "git+https://github.com/pageboard/pageboard.git"
