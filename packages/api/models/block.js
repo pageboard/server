@@ -1,5 +1,5 @@
-var requireAll = require('require-all');
 var Model = require('objection').Model;
+var Path = require('path');
 
 function Block() {
 	Model.apply(this, arguments);
@@ -10,7 +10,7 @@ module.exports = Block;
 
 Block.tableName = 'block';
 
-Block.jsonSchema = defineComponents(__dirname + '/../components', {
+Block.jsonSchema = {
 	type: 'object',
 	required: ['type', 'mime', 'site_id'],
 	id: '/api/blocks',
@@ -45,7 +45,7 @@ Block.jsonSchema = defineComponents(__dirname + '/../components', {
 			type: 'integer'
 		}
 	}
-});
+};
 
 Block.relationMappings = {
 	children: {
@@ -82,19 +82,15 @@ Block.relationMappings = {
 	}
 };
 
-function defineComponents(dirname, schema) {
+Block.initComponents = function defineComponents(components) {
+	if (components.length === 0) return;
+	var schema = Block.jsonSchema;
 	var blockProps = schema.properties;
-	var modules;
-	try {
-		modules = requireAll({dirname: dirname});
-	} catch(ex) {
-		console.warn("block schema has no components in", dirname);
-		return schema;
-	}
-	schema.switch = Object.keys(modules).map(function(name) {
-		var component = modules[name];
+
+	schema.switch = components.map(function(path) {
+		var component = require(path);
 		if (component.prototype) component = component.prototype;
-		var type = component.name || name;
+		var type = component.name || Path.basename(path);
 		return {
 			if: {
 				properties: {
@@ -120,7 +116,7 @@ function defineComponents(dirname, schema) {
 		delete blockProps.data;
 		delete blockProps.content;
 	}
-	return schema;
+	Block.jsonSchema = schema;
 }
 
 function stringProperties(obj) {
