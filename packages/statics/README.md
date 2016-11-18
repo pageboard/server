@@ -1,1 +1,1 @@
-# pageboard-statics
+# pageboard-static

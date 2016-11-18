@@ -1,0 +1,23 @@
+{
+  "name": "pageboard-static",
+  "version": "0.1.0",
+  "description": "",
+  "main": "index.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/pageboard/pageboard-static.git"
+  },
+  "author": "Jérémy Lal <kapouer@melix.org>",
+  "license": "MIT",
+  "bugs": {
+    "url": "https://github.com/pageboard/pageboard-static/issues"
+  },
+  "homepage": "https://github.com/pageboard/pageboard-static#readme",
+  "dependencies": {
+    "glob": "^7.1.1",
+    "serve-static": "^1.11.1"
+  }
+}
