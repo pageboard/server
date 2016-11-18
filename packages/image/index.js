@@ -1,8 +1,8 @@
 var sharpie = require('sharpie');
 var rewrite = require('express-urlrewrite');
 
-module.exports = function(plugins) {
-  plugins.files.push(init);
+exports.file = function(app, api, config) {
+	return init;
 };
 
 function init(app, api, config) {
