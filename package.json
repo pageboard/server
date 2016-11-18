@@ -8,8 +8,11 @@
     "start": "pageboard"
   },
   "plugins": [
-    "pageboard-api", "pageboard-inspector",
-    "pageboard-image", "pageboard-editor",
+    "pageboard-static",
+    "pageboard-api",
+    "pageboard-inspector",
+    "pageboard-image",
+    "pageboard-editor",
     "pageboard-prerender"
   ],
   "repository": {
@@ -24,6 +27,7 @@
   "homepage": "https://github.com/pageboard/pageboard#readme",
   "dependencies": {
     "pageboard-core": "^0.1.0",
+    "pageboard-static": "^0.1.0",
     "pageboard-api": "^0.1.0",
     "pageboard-prerender": "^0.1.0",
     "pageboard-image": "^0.1.0",
