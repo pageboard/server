@@ -1,8 +1,9 @@
 var dom = require('express-dom');
 var expressHref = require('express-href');
 
-module.exports = function(plugins) {
-	plugins.views.push(init);
+exports.view = function(app, api, config) {
+	app.set('views', config.statics.root);
+	return init;
 };
 
 function init(app, api, config) {
@@ -22,7 +23,7 @@ function init(app, api, config) {
 	if (config.dom && config.dom.pool) delete dom.settings.pool;
 
 	dom.helpers.bundle = require('./plugins/bundledom')(
-		config.statics.path,
+		config.statics.root,
 		process.env.DEVELOP ? "" : "bundles"
 	);
 
