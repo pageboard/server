@@ -25,6 +25,7 @@ function init(app, api, config) {
 	});
 
 	models.Block.initComponents(config.components);
+	api.models = models;
 
 	api.migrate = function() {
 		migrate(knexInst, config.migrations);
