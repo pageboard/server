@@ -5,53 +5,33 @@ command-line usage
 ------------------
 
 ```
-# setup directories and symlinks
-pageboard setup
-# start express app
 pageboard --listen 3000 --database "postgres://myuser@localhost/myappdb"
+	--plugins pageboard-prerender --plugins ./plugins/myapp
 ```
 
 pageboard uses `rc` to load configuration from files and cli arguments.
 
-setup can be called multiple times, it won't delete your application files.
 
+Plugins
+-------
 
-directories
------------
+`plugins` parameter is a list of paths to requirable plugins.
+A plugin can export three hard-coded functions:
+- file
+- service
+- view
 
-* db/models/  
-  the database models and json schemas
+each of which receives `(app, api, config)` parameters.
 
-* db/seeds/<NODE_ENV>/
+First those functions are called, and the function they return will be
+called after all plugins have been loaded, each list before another, in the
+same order, with an error handler after each list.
+- files
+- services
+- views
 
-* db/migrations/
-
-* components/  
-  the editor components  
-
-* public/uploads/  
-  where uploaded files go
-
-* public/bundles/  
-  where compiled assets go
-
-* public/lang/  
-  where translated html go
-
-
-Makefile
---------
-
-Usage:
-```
-NODE_ENV=<env> make install
-```
-
-
-How it works ?
---------------
-
-Please read docs/
+This allows express routes to be setup in predictable order,
+and plugins to setup and share configurations, then initialize routes.
 
 
 configuration
@@ -62,15 +42,14 @@ Using `rc`.
 Default values coming from package.json:
 - name
 - version
-- plugins.services (list of requireable modules)
-- plugins.files (list of requireable modules)
-- plugins.views (list of requireable modules)
+- plugins
+
 
 Other configurations not set in package.json:
 - listen
 - database (connection string)
 - logFormat (for morgan)
-- statics.path (public/)
+- statics.mounts (list of directories to mount as statics public dirs)
 - statics.maxAge (default maxAge for static files)
 - scope.issuer (defaults to name)
 - scope.maxAge (default maxAge for jsonwebtoken)
@@ -78,5 +57,4 @@ Other configurations not set in package.json:
 - dom.stall, dom.allow (and all express-dom settings)
 - dom.pool.max (and all pool settings)
 - sharpie.q, sharpie.rs, sharpie.bg (and all sharpie settings)
-
 

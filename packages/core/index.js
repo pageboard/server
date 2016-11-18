@@ -13,9 +13,9 @@ exports.config = function(opts) {
 		database: `postgres://localhost/${opts.name}`,
 		logFormat: ':method :status :response-time ms :url - :res[content-length]',
 		statics: {
-			path: './public',
 			maxAge: 0,
-			files: []
+			root: process.cwd() + '/public',
+			mounts: []
 		},
 		scope: {
 			issuer: opts.name,
@@ -35,25 +35,33 @@ exports.init = function(config) {
 		vary: require('upcache/vary')
 	};
 
-	var pluginsConfig = {
-		files: [],
-		services: [],
-		views: []
-	};
+	var files = [];
+	var services = [];
+	var views = [];
+
+	config.plugins.push('./plugins/statics');
 
 	config.plugins.forEach(function(plugin) {
-		require(plugin)(pluginsConfig);
+		plugin = require(plugin);
+		var file = plugin.file && plugin.file(app, api, config);
+		if (file) files.push(file);
+
+		var service = plugin.service && plugin.service(app, api, config);
+		if (service) services.push(service);
+
+		var view = plugin.view && plugin.view(app, api, config);
+		if (view) views.push(view);
 	});
 
-	initPlugins(pluginsConfig.files, app, api, config);
+	initPlugins(files, app, api, config);
 	app.use(filesError);
 
 	app.use(morgan(config.logFormat));
 
-	initPlugins(pluginsConfig.services, app, api, config);
+	initPlugins(services, app, api, config);
 	app.use(servicesError);
 
-	initPlugins(pluginsConfig.views, app, api, config);
+	initPlugins(views, app, api, config);
 	app.use(viewsError);
 	return app;
 }
@@ -67,7 +75,6 @@ function initPlugins(list, app, api, config) {
 function createApp(config) {
 	var app = express();
 	app.set("env", config.env);
-	app.set('views', config.statics.path);
 	app.disable('x-powered-by');
 	return app;
 }
