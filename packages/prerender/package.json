@@ -20,5 +20,9 @@
   "bugs": {
     "url": "https://github.com/pageboard/pageboard-prerender/issues"
   },
-  "homepage": "https://github.com/pageboard/pageboard-prerender#readme"
+  "homepage": "https://github.com/pageboard/pageboard-prerender#readme",
+  "dependencies": {
+    "express-dom": "^5.3.2",
+    "express-href": "^1.0.0"
+  }
 }
