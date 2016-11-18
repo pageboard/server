@@ -8,14 +8,11 @@ var config = pageboard.config();
 
 console.info(`${config.name} ${config.version}`);
 
-var app = pageboard.init(config);
+pageboard.init(config).then(function(app) {
+	var server = http.createServer(app);
+	server.listen(config.listen);
 
-var server = http.createServer(app);
-server.listen(config.listen);
-
-process.title = config.appname;
-process.on('uncaughtException', function(err) {
-	console.error(err);
+	process.title = config.appname;
+	console.info(`http://localhost:${config.listen}`);
 });
-console.info(`http://localhost:${config.listen}`);
 

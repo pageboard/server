@@ -1,7 +1,7 @@
 {
   "name": "pageboard-core",
   "version": "0.1.0",
-  "description": "Web pages content management - core skeleton application and tools",
+  "description": "Web pages content management - core server",
   "main": "index.js",
   "bin": {
     "pageboard": "./bin/cli.js"
@@ -12,41 +12,29 @@
   },
   "repository": {
     "type": "git",
-    "url": "git+https://github.com/pageboard/pageboard.git"
+    "url": "git+https://github.com/pageboard/pageboard-core.git"
   },
   "author": "Jérémy Lal <kapouer@melix.org>",
   "license": "MIT",
   "bugs": {
-    "url": "https://github.com/pageboard/pageboard/issues"
+    "url": "https://github.com/pageboard/pageboard-core/issues"
   },
-  "homepage": "https://github.com/pageboard/pageboard",
+  "homepage": "https://github.com/pageboard/pageboard-core",
   "dependencies": {
     "body-parser": "^1.13.2",
     "bundledom": "^1.5.0",
-    "dashdash": "^1.13.0",
     "debug": "^2.2.0",
-    "diff-dom": "^2.1.0",
     "express": "^4.14.0",
     "express-extension-to-accept": "^0.0.2",
-    "express-href": "^1.0.0",
     "express-urlrewrite": "^1.2.0",
     "httperrors": "^2.1.0",
-    "iframe-resizer": "^3.5.3",
     "method-override": "^2.3.4",
-    "moment": "^2.10.6",
     "morgan": "^1.7.0",
     "rc": "^1.1.6",
-    "request": "^2.78.0",
-    "request-promise": "^4.1.1",
-    "require-all": "^2.0.0",
     "serve-favicon": "^2.3.0",
-    "speakingurl": "^6.0.0",
-    "upcache": "^0.5.0",
-    "window-agent": "^1.0.0",
-    "window-page": "^1.0.1"
+    "upcache": "^0.5.0"
   },
   "devDependencies": {
-    "browserify": "^13.0.0",
     "mocha": "^3.1.2",
     "should": "^11.1.1"
   }

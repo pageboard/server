@@ -39,8 +39,6 @@ exports.init = function(config) {
 	var services = [];
 	var views = [];
 
-	config.plugins.push('./plugins/statics');
-
 	config.plugins.forEach(function(plugin) {
 		plugin = require(plugin);
 		var file = plugin.file && plugin.file(app, api, config);
@@ -53,23 +51,23 @@ exports.init = function(config) {
 		if (view) views.push(view);
 	});
 
-	initPlugins(files, app, api, config);
-	app.use(filesError);
-
-	app.use(morgan(config.logFormat));
-
-	initPlugins(services, app, api, config);
-	app.use(servicesError);
-
-	initPlugins(views, app, api, config);
-	app.use(viewsError);
-	return app;
+	return initPlugins(files, app, api, config).then(function() {
+		app.use(filesError);
+		app.use(morgan(config.logFormat));
+		return initPlugins(services, app, api, config);
+	}).then(function() {
+		app.use(servicesError);
+		return initPlugins(views, app, api, config);
+	}).then(function() {
+		app.use(viewsError);
+		return app;
+	});
 }
 
 function initPlugins(list, app, api, config) {
-	list.forEach(function(init) {
-		init(app, api, config);
-	});
+	return Promise.all(list.map(function(init) {
+		return init(app, api, config);
+	}));
 }
 
 function createApp(config) {
