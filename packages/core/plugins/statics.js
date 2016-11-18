@@ -1,7 +1,12 @@
 var express = require('express');
 
-exports.route = function(app, api, config) {
-	// TODO get the list from the actual directories in public/
+module.exports = function(plugins) {
+	plugins.files.push(init);
+};
+function init(app, api, config) {
+	// TODO
+	// symlink config.statics.files to public/
+	// add all directories listed in public/
 	app.get(/^\/(.*\.html|js|components|css|img|themes|uploads|fonts|bundles)/,
 		express.static(config.statics.path, {
 			maxAge: config.statics.maxAge * 1000
@@ -11,5 +16,5 @@ exports.route = function(app, api, config) {
 			res.sendStatus(404);
 		}
 	);
-};
+}
 

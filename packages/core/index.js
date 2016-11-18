@@ -1,5 +1,4 @@
-var requireAll = require('require-all');
-var http = require('http');
+var Path = require('path');
 var express = require('express');
 var morgan = require('morgan');
 var rc = require('rc');
@@ -15,58 +14,54 @@ exports.config = function(opts) {
 		logFormat: ':method :status :response-time ms :url - :res[content-length]',
 		statics: {
 			path: './public',
-			maxAge: 0
+			maxAge: 0,
+			files: []
 		},
 		scope: {
 			issuer: opts.name,
 			maxAge: 3600 * 12,
 			userProperty: 'user'
-		}
+		},
+		plugins: opts.plugins || []
 	});
 };
 
 exports.init = function(config) {
 	var app = createApp(config);
 
-	var server = http.createServer(app);
-	server.listen(config.listen);
-
-	process.title = config.appname;
-	process.on('uncaughtException', function(err) {
-		console.error(err);
-	});
-	console.info(`http://localhost:${config.listen}`);
-
 	var api = {
 		tag: require('upcache/tag'),
 		scope: require('upcache/scope')(config.scope),
-		vary: require('upcache/vary'),
-		db: require('./db')(config)
+		vary: require('upcache/vary')
 	};
 
-	routes('files', app, config, api);
+	var pluginsConfig = {
+		files: [],
+		services: [],
+		views: []
+	};
+
+	config.plugins.forEach(function(plugin) {
+		require(plugin)(pluginsConfig);
+	});
+
+	initPlugins(pluginsConfig.files, app, api, config);
 	app.use(filesError);
 
 	app.use(morgan(config.logFormat));
 
-	routes('api', app, config, api);
-	app.use(apiError);
+	initPlugins(pluginsConfig.services, app, api, config);
+	app.use(servicesError);
 
-	routes('views', app, config, api);
+	initPlugins(pluginsConfig.views, app, api, config);
 	app.use(viewsError);
+	return app;
 }
 
-function routes(dir, app, config, api) {
-	Object.assign(api, requireAll({
-		dirname: __dirname + '/' + dir,
-		resolve: function(mod) {
-			if (mod.route) {
-				mod.route(app, api, config);
-				delete mod.route;
-			}
-			return mod;
-		}
-	}));
+function initPlugins(list, app, api, config) {
+	list.forEach(function(init) {
+		init(app, api, config);
+	});
 }
 
 function createApp(config) {
@@ -77,7 +72,7 @@ function createApp(config) {
 	return app;
 }
 
-function apiError(err, req, res, next) {
+function servicesError(err, req, res, next) {
 	var msg = err.message || err.toString();
 	var code = parseInt(err.statusCode || err.code);
 	if (isNaN(code) || code < 200 || code >= 600) {
