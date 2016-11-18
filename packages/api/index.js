@@ -3,46 +3,42 @@ var ObjectionRest = require('objection-rest');
 var knex = require('knex');
 
 
-module.exports = function(plugins) {
-	plugins.services.push(init.bind(plugins));
-	plugins.components = [];
-	plugins.models = [
+exports.service = function(app, api, config) {
+	config.components = [];
+	config.models = [
 		__dirname + '/models/site',
 		__dirname + '/models/block'
 	];
-	plugins.seeds = [__dirname + '/seeds'];
-	plugins.migrations = [__dirname + '/migrations'];
+	config.seeds = [__dirname + '/seeds'];
+	config.migrations = [__dirname + '/migrations'];
+	return init;
 };
 
 function init(app, api, config) {
 	var knexInst = knex(knexConfig(config));
 	objection.Model.knex(knexInst);
 
-	this.models.forEach(function(path) {
-		require(path);
+	var models = {};
+	config.models.forEach(function(path) {
+		var model = require(path);
+		models[model.name] = model;
 	});
-	console.log(objection);
 
-	//objection.models.Block.initComponents(this.components);
+	models.Block.initComponents(config.components);
 
 	api.migrate = function() {
-		migrate(knexInst, plugins.migrations);
+		migrate(knexInst, config.migrations);
 	};
 	api.seed = function() {
-		seed(knexInst, plugins.seeds);
+		seed(knexInst, config.seeds);
 	};
 
-	// what to do exactly with models ? require them all ?
-	// components should be used to
-	// 1) fill block schema when applicable
-	// 2) install front-end component
-
-	//ObjectionRest(objection)
-	//	.routePrefix('/api')
-	//	.addModel(require('./models/site'))
-	//	.addModel(require('./models/block'))
-	//	.generate(app);
-};
+	var rest = ObjectionRest(objection).routePrefix('/api');
+	Object.keys(models).forEach(function(name) {
+		rest.addModel(models[name]);
+	});
+	rest.generate(app);
+}
 
 function migrate(knex, dirs) {
 	return Promise.all(dirs.map(function(dir) {
