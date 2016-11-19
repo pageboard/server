@@ -59,7 +59,8 @@ function mount(root, dir) {
 				debug("creating directory", root, destDir);
 				mkdirp(Path.join(root, destDir), function(err) {
 					if (err) return reject(err);
-					fs.symlink(Path.join(dir, file), Path.join(root, file), function(err) {
+					var src = Path.join(root, file);
+					fs.symlink(Path.relative(Path.dirname(src), Path.join(dir, file)), src, function(err) {
 						if (err && err.code != 'EEXIST') return reject(err);
 						resolve();
 					});
