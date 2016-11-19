@@ -1,37 +1,37 @@
 var serveStatic = require('serve-static');
+var serveFavicon = require('serve-favicon');
 var fs = require('fs');
 var Path = require('path');
 var glob = require('glob');
 var mkdirp = require('mkdirp');
 var debug = require('debug')('pageboard-static');
 
-exports.file = function(plugins) {
+exports.file = function(app, api, config) {
+	config.statics = Object.assign({
+		root: 'public',
+		prefix: '/statics',
+		mounts: []
+	}, config.statics);
+	if (!config.favicon) config.favicon = Path.join(config.statics.root, 'favicon.ico');
 	return init;
 };
 
 function init(app, api, config) {
+	fs.stat(config.favicon, function(err) {
+		if (err) app.use('/favicon.ico', function(req, res, next) {
+			res.sendStatus(404);
+		});
+		else app.use(serveFavicon(config.favicon), {
+			maxAge: config.statics.maxAge * 1000
+		});
+	});
 	// list files and directories that are in each statics.mounts
 	// create directories, symlink files
 	return Promise.all(config.statics.mounts.map(function(dir) {
 		return mount(config.statics.root, dir);
-	})).then(function() {
-		return new Promise(function(resolve, reject) {
-			glob('*', {cwd: config.statics.root}, function(err, paths) {
-				if (err) return reject(err);
-				debug("files and directories in public/", paths);
-				var content = {};
-				paths.forEach(function(path) {
-					var ext = Path.extname(path);
-					if (ext) path = '.*\\' + ext;
-					else path = Path.basename(path);
-					content[path] = true;
-				});
-				resolve(Object.keys(content));
-			});
-		});
-	}).then(function(content) {
-		console.log("Mounting", content.join(', '), "in", config.statics.root);
-		app.get(new RegExp("^\/(" + content.join('|') + ")"),
+	})).then(function(content) {
+		console.info("Serving files", config.statics.root, "over", config.statics.prefix);
+		app.use(config.statics.prefix,
 			serveStatic(config.statics.root, {
 				maxAge: config.statics.maxAge * 1000
 			}),
@@ -61,7 +61,16 @@ function mount(root, dir) {
 					if (err) return reject(err);
 					var src = Path.join(root, file);
 					fs.symlink(Path.relative(Path.dirname(src), Path.join(dir, file)), src, function(err) {
-						if (err && err.code != 'EEXIST') return reject(err);
+						if (err) {
+							if (err.code == 'EEXIST') {
+								return fs.lstat(src, function(err, stats) {
+									if (stats.isSymbolicLink()) resolve();
+									else reject(err);
+								});
+							} else {
+								return reject(err);
+							}
+						}
 						resolve();
 					});
 				});
