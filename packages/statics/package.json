@@ -17,7 +17,9 @@
   },
   "homepage": "https://github.com/pageboard/pageboard-static#readme",
   "dependencies": {
+    "debug": "^2.3.2",
     "glob": "^7.1.1",
+    "mkdirp": "^0.5.1",
     "serve-static": "^1.11.1"
   }
 }
