@@ -33,6 +33,7 @@
     "pageboard-prerender": "^0.1.0",
     "pageboard-image": "^0.1.0",
     "pageboard-inspector": "^0.1.0",
-    "pageboard-editor": "^0.1.0"
+    "pageboard-read": "^0.1.0",
+    "pageboard-write": "^0.1.0"
   }
 }
