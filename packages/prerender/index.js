@@ -28,6 +28,6 @@ function init(app, modules, config) {
 	app.set('views', config.statics.root);
 	expressHref(app);
 	// the router is universal and available in pageboard-read
-	app.get('*', dom('route').load());
+	app.get('*', dom('router').load());
 };
 
