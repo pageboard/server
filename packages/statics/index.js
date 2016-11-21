@@ -6,17 +6,17 @@ var glob = require('glob');
 var mkdirp = require('mkdirp');
 var debug = require('debug')('pageboard-static');
 
-exports.file = function(app, api, config) {
+module.exports = function(config) {
 	config.statics = Object.assign({
 		root: 'public',
 		prefix: '/statics',
 		mounts: []
 	}, config.statics);
 	if (!config.favicon) config.favicon = Path.join(config.statics.root, 'favicon.ico');
-	return init;
+	return {file: init};
 };
 
-function init(app, api, config) {
+function init(app, modules, config) {
 	fs.stat(config.favicon, function(err) {
 		if (err) app.use('/favicon.ico', function(req, res, next) {
 			res.sendStatus(404);
