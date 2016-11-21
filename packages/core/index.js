@@ -2,6 +2,8 @@ var Path = require('path');
 var express = require('express');
 var morgan = require('morgan');
 var rc = require('rc');
+var mkdirp = require('mkdirp');
+var xdg = require('xdg-basedir');
 
 exports.config = function(opts) {
 	if (!opts) opts = require(process.cwd() + '/package.json');
@@ -22,12 +24,19 @@ exports.config = function(opts) {
 			maxAge: 3600 * 12,
 			userProperty: 'user'
 		},
-		plugins: opts.plugins || []
+		plugins: opts.plugins || [],
+		dirs: {
+			cache: Path.join(xdg.cache, opts.name),
+			config: Path.join(xdg.config, opts.name),
+			data: Path.join(xdg.data, opts.name),
+			runtime: Path.join(xdg.runtime, opts.name)
+		}
 	});
 	return config;
 };
 
 exports.init = function(config) {
+	initDirs(config.dirs);
 	var app = createApp(config);
 
 	var modules = {
@@ -72,6 +81,10 @@ function initPlugins(list, app, api, config) {
 	})).catch(function(err) {
 		console.error(err);
 	});
+}
+
+function initDirs(dirs) {
+	for (var k in dirs) mkdirp.sync(dirs[k]);
 }
 
 function createApp(config) {
