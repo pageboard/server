@@ -15,23 +15,23 @@ pageboard uses `rc` to load configuration from files and cli arguments.
 Plugins
 -------
 
-`plugins` parameter is a list of paths to requirable plugins.
-A plugin can export three hard-coded functions:
-- file
-- service
-- view
+`config.plugins` parameter is a list of modules names or paths.
 
-each of which receives `(app, api, config)` parameters.
 
-First those functions are called, and the function they return will be
-called after all plugins have been loaded, each list before another, in the
-same order, with an error handler after each list.
-- files
-- services
-- views
+Such a module:
+- is initialized immediately if `module.exports = function(config) {}`
+- will be accessible through `modules.<name>`
 
-This allows express routes to be setup in predictable order,
-and plugins to setup and share configurations, then initialize routes.
+The initialization function can return an object mapping any of `file`,
+`service`, `view` keys to a function with signature `app, modules, config`,
+and a `name` key for the canonical module name.
+That function is a typed plugin and can return a promise.
+
+For each plugin type (file, service, view) the list of plugins is called
+in that order.
+
+This allows express routes to be setup in predictable order, with separate
+error handlers.
 
 
 configuration

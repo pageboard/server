@@ -29,7 +29,7 @@ exports.config = function(opts) {
 exports.init = function(config) {
 	var app = createApp(config);
 
-	var api = {
+	var modules = {
 		tag: require('upcache/tag'),
 		scope: require('upcache/scope')(config.scope),
 		vary: require('upcache/vary')
@@ -39,25 +39,26 @@ exports.init = function(config) {
 	var services = [];
 	var views = [];
 
-	config.plugins.forEach(function(plugin) {
-		plugin = require(plugin);
-		var file = plugin.file && plugin.file(app, api, config);
-		if (file) files.push(file);
+	console.log(config.plugins)
 
-		var service = plugin.service && plugin.service(app, api, config);
-		if (service) services.push(service);
-
-		var view = plugin.view && plugin.view(app, api, config);
-		if (view) views.push(view);
+	config.plugins.forEach(function(path) {
+		if (path.startsWith('./')) path = Path.join(process.cwd(), path);
+		var plugin = require(path);
+		if (typeof plugin != "function") return;
+		var obj = plugin(config) || {};
+		if (obj.name) modules[obj.name] = plugin;
+		if (obj.file) files.push(obj.file);
+		if (obj.service) services.push(obj.service);
+		if (obj.view) views.push(obj.view);
 	});
 
-	return initPlugins(files, app, api, config).then(function() {
+	return initPlugins(files, app, modules, config).then(function() {
 		app.use(filesError);
 		app.use(morgan(config.logFormat));
-		return initPlugins(services, app, api, config);
+		return initPlugins(services, app, modules, config);
 	}).then(function() {
 		app.use(servicesError);
-		return initPlugins(views, app, api, config);
+		return initPlugins(views, app, modules, config);
 	}).then(function() {
 		app.use(viewsError);
 		return app;
@@ -67,7 +68,9 @@ exports.init = function(config) {
 function initPlugins(list, app, api, config) {
 	return Promise.all(list.map(function(init) {
 		return init(app, api, config);
-	}));
+	})).catch(function(err) {
+		console.error(err);
+	});
 }
 
 function createApp(config) {
