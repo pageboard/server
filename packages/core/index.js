@@ -39,7 +39,7 @@ exports.init = function(config) {
 	var services = [];
 	var views = [];
 
-	console.log(config.plugins)
+	console.info("plugins:\n", config.plugins.join("\n "));
 
 	config.plugins.forEach(function(path) {
 		if (path.startsWith('./')) path = Path.join(process.cwd(), path);
