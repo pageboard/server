@@ -9,7 +9,6 @@ var debug = require('debug')('pageboard-static');
 module.exports = function(config) {
 	config.statics = Object.assign({
 		root: 'public',
-		prefix: '/statics',
 		mounts: []
 	}, config.statics);
 	if (!config.favicon) config.favicon = Path.join(config.statics.root, 'favicon.ico');
@@ -30,8 +29,8 @@ function init(app, modules, config) {
 	return Promise.all(config.statics.mounts.map(function(dir) {
 		return mount(config.statics.root, dir);
 	})).then(function(content) {
-		console.info("Serving files", config.statics.root, "over", config.statics.prefix);
-		app.use(config.statics.prefix,
+		console.info("Serving files in\n", config.statics.root);
+		app.get(/^.*\.\w+/,
 			serveStatic(config.statics.root, {
 				maxAge: config.statics.maxAge * 1000
 			}),
