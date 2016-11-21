@@ -12,7 +12,8 @@
     "pageboard-api",
     "pageboard-inspector",
     "pageboard-image",
-    "pageboard-editor",
+    "pageboard-read",
+    "pageboard-write",
     "pageboard-prerender"
   ],
   "repository": {
