@@ -1,37 +1,33 @@
 var dom = require('express-dom');
 var expressHref = require('express-href');
+var Path = require('path');
 
 module.exports = function(config) {
-	return {view: init};
-};
-
-function init(app, api, config) {
-	app.set('views', config.statics.root);
-	expressHref(app);
-
-	if (!config.dom) config.dom = {};
+	if (!config.prerender) config.prerender = {};
 
 	Object.assign(dom.settings, {
 		stall: 20000,
-		allow: "same-origin"
-	}, config.dom);
+		allow: "same-origin",
+		cacheDir: Path.join(config.dirs.cache, "prerender")
+	}, config.prerender);
 
 	Object.assign(dom.pool, {
 		max: 8
-	}, config.dom.pool);
+	}, config.prerender.pool);
 
-	if (config.dom && config.dom.pool) delete dom.settings.pool;
+	if (config.prerender.pool) delete dom.settings.pool;
 
-	dom.helpers.bundle = require('./plugins/bundledom')(
-		config.statics.root,
-		process.env.DEVELOP ? "" : "bundles"
-	);
+	dom.clear();
 
-	app.get('*', dom(template, dom.helpers.bundle).load());
+	return {
+		view: init
+	};
 };
 
-function template(mw, settings, req, res) {
-	// get page block
-	// return template file name
-	return 'front';
-}
+function init(app, modules, config) {
+	app.set('views', config.statics.root);
+	expressHref(app);
+	// the router is universal and available in pageboard-read
+	app.get('*', dom('route').load());
+};
+
