@@ -5,7 +5,7 @@ var rc = require('rc');
 
 exports.config = function(opts) {
 	if (!opts) opts = require(process.cwd() + '/package.json');
-	return rc(opts.name, {
+	var config = rc(opts.name, {
 		env: opts.env || process.env.NODE_ENV || 'development',
 		name: opts.name,
 		version: opts.version,
@@ -24,6 +24,7 @@ exports.config = function(opts) {
 		},
 		plugins: opts.plugins || []
 	});
+	return config;
 };
 
 exports.init = function(config) {
