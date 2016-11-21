@@ -15,5 +15,9 @@
   "bugs": {
     "url": "https://github.com/pageboard/pageboard-read/issues"
   },
-  "homepage": "https://github.com/pageboard/pageboard-read#readme"
+  "homepage": "https://github.com/pageboard/pageboard-read#readme",
+  "dependencies": {
+    "window-agent": "^1.0.0",
+    "window-page": "^1.0.2"
+  }
 }
