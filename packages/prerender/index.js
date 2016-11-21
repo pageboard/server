@@ -1,12 +1,12 @@
 var dom = require('express-dom');
 var expressHref = require('express-href');
 
-exports.view = function(app, api, config) {
-	app.set('views', config.statics.root);
-	return init;
+module.exports = function(config) {
+	return {view: init};
 };
 
 function init(app, api, config) {
+	app.set('views', config.statics.root);
 	expressHref(app);
 
 	if (!config.dom) config.dom = {};
