@@ -8,33 +8,38 @@ var mkdirp = pify(require('mkdirp'));
 var fs = pify(fs);
 var debug = require('debug')('pageboard-static');
 
-module.exports = function(config) {
-	config.statics = Object.assign({
+module.exports = function(opt) {
+	opt.statics = Object.assign({
 		root: 'public',
 		mounts: []
-	}, config.statics);
-	if (!config.favicon) config.favicon = Path.join(config.statics.root, 'favicon.ico');
+	}, opt.statics);
+	if (!opt.statics.favicon) {
+		opt.statics.favicon = Path.join(opt.statics.root, 'favicon.ico');
+	}
 	return {file: init};
 };
 
-function init(app, modules, config) {
-	return fs.stat(config.favicon).then(function() {
-		app.use(serveFavicon(config.favicon), {
-			maxAge: config.statics.maxAge * 1000
+function init(All) {
+	var opt = All.opt.statics;
+	var app = All.app;
+
+	return fs.stat(opt.favicon).then(function() {
+		app.use(serveFavicon(opt.favicon), {
+			maxAge: opt.maxAge * 1000
 		});
 	}).catch(function() {
 		app.use('/favicon.ico', function(req, res, next) {
 			res.sendStatus(404);
 		});
 	}).then(function() {
-		return Promise.all(config.statics.mounts.map(function(dir) {
-			return mount(config.statics.root, dir);
+		return Promise.all(opt.mounts.map(function(dir) {
+			return mount(opt.root, dir);
 		}))
 	}).then(function(content) {
-		console.info("Serving files in\n", config.statics.root);
+		console.info("Serving files in\n", opt.root);
 		app.get(/^.*\.\w+/,
-			serveStatic(config.statics.root, {
-				maxAge: config.statics.maxAge * 1000
+			serveStatic(opt.root, {
+				maxAge: opt.maxAge * 1000
 			}),
 			function(req, res, next) {
 				console.info("File not found", req.path);
