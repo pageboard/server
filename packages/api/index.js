@@ -37,20 +37,39 @@ function init(app, modules, config) {
 		rest.addModel(models[name]);
 	});
 	rest.generate(app);
+
+	var p = Promise.resolve();
+	config._.forEach(function(arg) {
+		p = p.then(function() {
+			if (arg == "seed") {
+				return exports.seed();
+			} else if (arg == "migrate") {
+				return exports.migrate();
+			}
+		});
+	});
+	return p;
 }
 
 function migrate(knex, dirs) {
 	return Promise.all(dirs.map(function(dir) {
+		console.info("Running knex:migrate in", dir);
 		return knex.migrate.latest({
 			directory: dir
+		}).spread(function(batchNo, list) {
+			if (list.length) console.log(" ", list.join("\n "));
 		});
 	}));
 }
 
 function seed(knex, dirs) {
 	return Promise.all(dirs.map(function(dir) {
+		console.info("Running knex:seed");
 		return knex.seed.run({
 			directory: dir
+		}).spread(function(list) {
+			if (list.length) console.log(" ", list.join("\n "));
+			else console.log("No seed files in", dir);
 		});
 	}));
 }
