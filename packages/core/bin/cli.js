@@ -18,5 +18,7 @@ pageboard.init(config).then(function(app) {
 
 	process.title = config.appname;
 	console.info(`http://localhost:${config.listen}`);
+}).catch(function(err) {
+	console.error(err);
 });
 
