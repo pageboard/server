@@ -1,9 +1,11 @@
 var serveStatic = require('serve-static');
 var serveFavicon = require('serve-favicon');
-var fs = require('fs');
 var Path = require('path');
-var glob = require('glob');
-var mkdirp = require('mkdirp');
+var pify = require('pify');
+var fs = require('fs');
+var glob = pify(require('glob'));
+var mkdirp = pify(require('mkdirp'));
+var fs = pify(fs);
 var debug = require('debug')('pageboard-static');
 
 module.exports = function(config) {
@@ -16,19 +18,19 @@ module.exports = function(config) {
 };
 
 function init(app, modules, config) {
-	fs.stat(config.favicon, function(err) {
-		if (err) app.use('/favicon.ico', function(req, res, next) {
-			res.sendStatus(404);
-		});
-		else app.use(serveFavicon(config.favicon), {
+	return fs.stat(config.favicon).then(function() {
+		app.use(serveFavicon(config.favicon), {
 			maxAge: config.statics.maxAge * 1000
 		});
-	});
-	// list files and directories that are in each statics.mounts
-	// create directories, symlink files
-	return Promise.all(config.statics.mounts.map(function(dir) {
-		return mount(config.statics.root, dir);
-	})).then(function(content) {
+	}).catch(function() {
+		app.use('/favicon.ico', function(req, res, next) {
+			res.sendStatus(404);
+		});
+	}).then(function() {
+		return Promise.all(config.statics.mounts.map(function(dir) {
+			return mount(config.statics.root, dir);
+		}))
+	}).then(function(content) {
 		console.info("Serving files in\n", config.statics.root);
 		app.get(/^.*\.\w+/,
 			serveStatic(config.statics.root, {
@@ -44,37 +46,24 @@ function init(app, modules, config) {
 
 function mount(root, dir) {
 	debug("Mounting", dir, "in", root);
-	return new Promise(function(resolve, reject) {
-		debug("globing files in", dir);
-		glob('**', {cwd: dir, nodir: true}, function(err, files) {
-			debug("found", files);
-			if (err) return reject(err);
-			return resolve(files);
-		});
+	return glob('**', {
+		cwd: dir,
+		nodir: true
 	}).then(function(files) {
-		return Promise.all(files.map(function(file) {
-			var destDir = Path.dirname(file);
-			return new Promise(function(resolve, reject) {
-				debug("creating directory", root, destDir);
-				mkdirp(Path.join(root, destDir), function(err) {
-					if (err) return reject(err);
-					var src = Path.join(root, file);
-					fs.symlink(Path.relative(Path.dirname(src), Path.join(dir, file)), src, function(err) {
-						if (err) {
-							if (err.code == 'EEXIST') {
-								return fs.lstat(src, function(err, stats) {
-									if (stats.isSymbolicLink()) resolve();
-									else reject(err);
-								});
-							} else {
-								return reject(err);
-							}
-						}
-						resolve();
-					});
-				});
-			});
-		}));
+		debug("found", files);
+		return Promise.all(files.map(mountFile.bind(null, root, dir)));
+	});
+}
+
+function mountFile(root, dir, file) {
+	var destDir = Path.dirname(file);
+	debug("creating directory", root, destDir);
+	return mkdirp(Path.join(root, destDir)).then(function() {
+		var src = Path.join(root, file);
+		var dst = Path.relative(Path.dirname(src), Path.join(dir, file));
+		return fs.unlink(src).catch(function() {}).then(function() {
+			return fs.symlink(dst, src);
+		});
 	});
 }
 
