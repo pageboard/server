@@ -61,7 +61,14 @@ function mountFile(root, dir, file) {
 	return mkdirp(Path.join(root, destDir)).then(function() {
 		var src = Path.join(root, file);
 		var dst = Path.relative(Path.dirname(src), Path.join(dir, file));
-		return fs.unlink(src).catch(function() {}).then(function() {
+		return fs.lstat(src).catch(function() {}).then(function(stats) {
+			if (!stats) return;
+			if (stats.isSymbolicLink() == false) {
+				return Promise.reject(new Error("Cannot overwrite file with symbolic link:\n" + src));
+			} else {
+				return fs.unlink(src);
+			}
+		}).then(function() {
 			return fs.symlink(dst, src);
 		});
 	});
