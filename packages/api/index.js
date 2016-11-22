@@ -39,15 +39,12 @@ function init(app, modules, config) {
 	rest.generate(app);
 
 	var p = Promise.resolve();
-	config._.forEach(function(arg) {
-		p = p.then(function() {
-			if (arg == "seed") {
-				return exports.seed();
-			} else if (arg == "migrate") {
-				return exports.migrate();
-			}
-		});
-	});
+	if (config._.includes("migrate")) {
+		p = p.then(exports.migrate);
+	}
+	if (config._.includes("seed")) {
+		p = p.then(exports.seed);
+	}
 	return p;
 }
 
