@@ -2,48 +2,50 @@ var objection = require('objection');
 var ObjectionRest = require('objection-rest');
 var knex = require('knex');
 
-module.exports = function(config) {
-	config.components = [];
-	config.models = [
+module.exports = function(opt) {
+	opt.components = [];
+	opt.models = [
 		__dirname + '/models/site',
 		__dirname + '/models/block'
 	];
-	config.seeds = [__dirname + '/seeds'];
-	config.migrations = [__dirname + '/migrations'];
+	opt.seeds = [__dirname + '/seeds'];
+	opt.migrations = [__dirname + '/migrations'];
 	return {
-		name: 'api',
 		service: init
 	}
 };
 
-function init(app, modules, config) {
-	var knexInst = knex(knexConfig(config));
+function init(All) {
+	var opt = All.opt;
+	var knexInst = knex(knexConfig(opt));
 	objection.Model.knex(knexInst);
 
 	var models = {};
-	config.models.forEach(function(path) {
+	opt.models.forEach(function(path) {
 		var model = require(path);
 		models[model.name] = model;
 	});
+	Object.assign(exports, models);
 
-	models.Block.initComponents(config.components);
-	exports.models = models;
+	exports.Block.initComponents(opt.components);
 	exports.objection = objection;
-	exports.migrate = migrate.bind(null, knexInst, config.migrations);
-	exports.seed = seed.bind(null, knexInst, config.seeds);
+	exports.db = {
+		migrate: migrate.bind(null, knexInst, opt.migrations),
+		seed: seed.bind(null, knexInst, opt.seeds)
+	};
 
 	var rest = ObjectionRest(objection).routePrefix('/api');
 	Object.keys(models).forEach(function(name) {
 		rest.addModel(models[name]);
 	});
-	rest.generate(app);
+	rest.generate(All.app);
 
 	var p = Promise.resolve();
-	if (config._.includes("migrate")) {
-		p = p.then(exports.migrate);
+	if (opt._.includes("migrate")) {
+		p = p.then(exports.db.migrate);
 	}
-	if (config._.includes("seed")) {
-		p = p.then(exports.seed);
+	if (opt._.includes("seed")) {
+		p = p.then(exports.db.seed);
 	}
 	return p;
 }
