@@ -70,10 +70,11 @@ This allows express routes to be setup in predictable order, with separate
 error handlers.
 
 
-HTTPError
+HttpError
 ---------
 
-Is global, meaning you can `throw new HTTPError(code, message)` anywhere you like.
+Is global, meaning you can `throw new HttpError.notFound(message)` anywhere you like.
+See the [http-errors documentation](https://github.com/jshttp/http-errors).
 
 
 configuration
