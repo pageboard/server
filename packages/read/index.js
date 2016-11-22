@@ -1,3 +1,3 @@
-module.exports = function(config) {
-	config.statics.mounts.push(__dirname + 'public');
+module.exports = function(opt) {
+	opt.statics.mounts.push(__dirname + '/public');
 };
