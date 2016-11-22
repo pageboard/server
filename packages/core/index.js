@@ -5,14 +5,16 @@ var rc = require('rc');
 var mkdirp = require('mkdirp');
 var xdg = require('xdg-basedir');
 
-exports.config = function(opts) {
-	if (!opts) opts = require(process.cwd() + '/package.json');
-	var config = rc(opts.name, {
-		env: opts.env || process.env.NODE_ENV || 'development',
-		name: opts.name,
-		version: opts.version,
+exports.config = function(pkgOpt) {
+	if (!pkgOpt) pkgOpt = require(process.cwd() + '/package.json');
+	var name = pkgOpt.name;
+	var opt = rc(name, {
+		env: pkgOpt.env || process.env.NODE_ENV || 'development',
+		name: name,
+		version: pkgOpt.version,
+		global: true,
 		listen: 3000,
-		database: `postgres://localhost/${opts.name}`,
+		database: `postgres://localhost/${name}`,
 		logFormat: ':method :status :response-time ms :url - :res[content-length]',
 		statics: {
 			maxAge: 0,
@@ -20,64 +22,72 @@ exports.config = function(opts) {
 			mounts: []
 		},
 		scope: {
-			issuer: opts.name,
+			issuer: name,
 			maxAge: 3600 * 12,
 			userProperty: 'user'
 		},
-		plugins: opts.plugins || [],
+		plugins: pkgOpt.plugins || [],
 		dirs: {
-			cache: Path.join(xdg.cache, opts.name),
-			config: Path.join(xdg.config, opts.name),
-			data: Path.join(xdg.data, opts.name),
-			runtime: Path.join(xdg.runtime, opts.name)
+			cache: Path.join(xdg.cache, name),
+			config: Path.join(xdg.config, name),
+			data: Path.join(xdg.data, name),
+			runtime: Path.join(xdg.runtime, name)
 		}
 	});
-	return config;
+	return opt;
 };
 
-exports.init = function(config) {
-	initDirs(config.dirs);
-	var app = createApp(config);
+exports.init = function(opt) {
+	initDirs(opt.dirs);
+	var app = createApp(opt);
 
-	var modules = {
-		tag: require('upcache/tag'),
-		scope: require('upcache/scope')(config.scope),
-		vary: require('upcache/vary')
+	var All = {
+		app: app,
+		opt: opt
 	};
+	if (opt.global) global.All = All;
 
 	var files = [];
 	var services = [];
 	var views = [];
 
-	console.info("plugins:\n", config.plugins.join("\n "));
+	console.info("plugins:\n", opt.plugins.join("\n "));
 
-	config.plugins.forEach(function(path) {
+	opt.plugins.forEach(function(path) {
 		if (path.startsWith('./')) path = Path.join(process.cwd(), path);
 		var plugin = require(path);
 		if (typeof plugin != "function") return;
-		var obj = plugin(config) || {};
-		if (obj.name) modules[obj.name] = plugin;
+		var obj = plugin(opt) || {};
+		var to;
+		if (obj.name) {
+			to = All[obj.name] = All[obj.name] || {};
+		} else {
+			to = All;
+		}
+		Object.keys(plugin).forEach(function(key) {
+			if (to[key] !== undefined) throw new Error(`module conflict ${key}\n ${path}`);
+		});
 		if (obj.file) files.push(obj.file);
 		if (obj.service) services.push(obj.service);
 		if (obj.view) views.push(obj.view);
 	});
 
-	return initPlugins(files, app, modules, config).then(function() {
+	return initPlugins(files, All).then(function() {
 		app.use(filesError);
-		app.use(morgan(config.logFormat));
-		return initPlugins(services, app, modules, config);
+		app.use(morgan(opt.logFormat));
+		return initPlugins(services, All);
 	}).then(function() {
 		app.use(servicesError);
-		return initPlugins(views, app, modules, config);
+		return initPlugins(views, All);
 	}).then(function() {
 		app.use(viewsError);
 		return app;
 	});
 }
 
-function initPlugins(list, app, api, config) {
+function initPlugins(list, All) {
 	return Promise.all(list.map(function(init) {
-		return init(app, api, config);
+		return init(All);
 	})).catch(function(err) {
 		console.error(err);
 	});
@@ -87,9 +97,9 @@ function initDirs(dirs) {
 	for (var k in dirs) mkdirp.sync(dirs[k]);
 }
 
-function createApp(config) {
+function createApp(opt) {
 	var app = express();
-	app.set("env", config.env);
+	app.set("env", opt.env);
 	app.disable('x-powered-by');
 	return app;
 }
