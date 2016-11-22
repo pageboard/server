@@ -27,7 +27,7 @@
     "express": "^4.14.0",
     "express-extension-to-accept": "^0.0.2",
     "express-urlrewrite": "^1.2.0",
-    "httperrors": "^2.1.0",
+    "http-errors": "^1.5.1",
     "method-override": "^2.3.4",
     "mkdirp": "^0.5.1",
     "morgan": "^1.7.0",

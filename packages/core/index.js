@@ -5,6 +5,9 @@ var rc = require('rc');
 var mkdirp = require('mkdirp');
 var xdg = require('xdg-basedir');
 
+// exceptional but so natural
+global.HTTPError = require('http-errors');
+
 exports.config = function(pkgOpt) {
 	if (!pkgOpt) pkgOpt = require(process.cwd() + '/package.json');
 	var name = pkgOpt.name;

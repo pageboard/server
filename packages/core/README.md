@@ -70,6 +70,12 @@ This allows express routes to be setup in predictable order, with separate
 error handlers.
 
 
+HTTPError
+---------
+
+Is global, meaning you can `throw new HTTPError(code, message)` anywhere you like.
+
+
 configuration
 -------------
 
