@@ -2,8 +2,7 @@ var objection = require('objection');
 var ObjectionRest = require('objection-rest');
 var knex = require('knex');
 
-
-exports.service = function(app, api, config) {
+module.exports = function(config) {
 	config.components = [];
 	config.models = [
 		__dirname + '/models/site',
@@ -11,10 +10,13 @@ exports.service = function(app, api, config) {
 	];
 	config.seeds = [__dirname + '/seeds'];
 	config.migrations = [__dirname + '/migrations'];
-	return init;
+	return {
+		name: 'api',
+		service: init
+	}
 };
 
-function init(app, api, config) {
+function init(app, modules, config) {
 	var knexInst = knex(knexConfig(config));
 	objection.Model.knex(knexInst);
 
@@ -25,14 +27,10 @@ function init(app, api, config) {
 	});
 
 	models.Block.initComponents(config.components);
-	api.models = models;
-
-	api.migrate = function() {
-		migrate(knexInst, config.migrations);
-	};
-	api.seed = function() {
-		seed(knexInst, config.seeds);
-	};
+	exports.models = models;
+	exports.objection = objection;
+	exports.migrate = migrate.bind(null, knexInst, config.migrations);
+	exports.seed = seed.bind(null, knexInst, config.seeds);
 
 	var rest = ObjectionRest(objection).routePrefix('/api');
 	Object.keys(models).forEach(function(name) {
