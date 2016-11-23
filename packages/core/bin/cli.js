@@ -27,8 +27,8 @@ pageboard.init(config).then(function(All) {
 				console.info(`Run ${str}`);
 				return obj();
 			}
-		}).then(function() {
-			console.info(`Done ${str}`);
+		}).then(function(data) {
+			console.info(`Done ${str}: ${JSON.stringify(data, null, "  ")}`);
 		});
 	});
 	if (commands) {
