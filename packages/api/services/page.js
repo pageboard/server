@@ -6,11 +6,6 @@ exports = module.exports = function(config) {
 };
 
 function init(All) {
-	if (All.opt._.includes("create") && All.opt.page) {
-		return exports.create(All.opt.page).then(function(page) {
-			console.log("create page", page);
-		});
-	}
 	All.app.post('/api/page', function(req, res, next) {
 		exports.create(req.body).then(function(page) {
 			res.sendStatus(200);

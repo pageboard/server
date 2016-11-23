@@ -30,30 +30,19 @@ function init(All) {
 
 	exports.Block.initComponents(opt.components);
 	exports.objection = objection;
-	exports.db = {
-		migrate: migrate.bind(null, knexInst, opt.migrations),
-		seed: seed.bind(null, knexInst, opt.seeds)
-	};
+	exports.migrate = migrate.bind(null, knexInst, opt.migrations);
+	exports.seed = seed.bind(null, knexInst, opt.seeds);
 
 	var rest = ObjectionRest(objection).routePrefix('/api');
 	Object.keys(models).forEach(function(name) {
 		rest.addModel(models[name]);
 	});
 	rest.generate(All.app);
-
-	var p = Promise.resolve();
-	if (opt._.includes("migrate")) {
-		p = p.then(exports.db.migrate);
-	}
-	if (opt._.includes("seed")) {
-		p = p.then(exports.db.seed);
-	}
-	return p;
 }
 
 function migrate(knex, dirs) {
 	return Promise.all(dirs.map(function(dir) {
-		console.info("Running knex:migrate in", dir);
+		console.info(` ${dir}`);
 		return knex.migrate.latest({
 			directory: dir
 		}).spread(function(batchNo, list) {
@@ -64,7 +53,7 @@ function migrate(knex, dirs) {
 
 function seed(knex, dirs) {
 	return Promise.all(dirs.map(function(dir) {
-		console.info("Running knex:seed");
+		console.info(` ${dir}`);
 		return knex.seed.run({
 			directory: dir
 		}).spread(function(list) {
