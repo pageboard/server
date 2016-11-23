@@ -46,7 +46,8 @@ exports.init = function(opt) {
 
 	var All = {
 		app: app,
-		opt: opt
+		opt: opt,
+		cwd: process.cwd()
 	};
 	if (opt.global) global.All = All;
 
@@ -59,8 +60,8 @@ exports.init = function(opt) {
 	var plugins = [], pluginPath, plugin;
 
 	while (pluginPath = opt.plugins.shift()) {
+		if (pluginPath.startsWith('/')) pluginPath = Path.relative(All.cwd, pluginPath);
 		console.info(" ", pluginPath);
-		if (pluginPath.startsWith('./')) pluginPath = Path.join(process.cwd(), pluginPath);
 		plugins.push(pluginPath);
 		plugin = require(pluginPath);
 		if (typeof plugin != "function") return;
