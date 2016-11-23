@@ -2,7 +2,8 @@ var objection = require('objection');
 var ObjectionRest = require('objection-rest');
 var knex = require('knex');
 
-module.exports = function(opt) {
+exports = module.exports = function(opt) {
+	opt.plugins.unshift(__dirname + '/services/page');
 	opt.components = [];
 	opt.models = [
 		__dirname + '/models/site',
