@@ -13,7 +13,12 @@ pageboard uses `rc` to load configuration from files and cli arguments,
 and plugins can act upon actions:
 
 ```
-PGUSER=joe ./node_modules/.bin/pageboard --page.url=/test --page.template=test.html --page.domain=test create
+pageboard --data.url=/test \
+	--data.template=test.html \
+	--data.domain=test \
+	page.create
+
+pageboard --data.url=/test --data.domain=test page.get --connection.debug
 ```
 
 or even
