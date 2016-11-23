@@ -88,6 +88,17 @@ function knexConfig(config) {
 	}
 	obj.client = parsed.protocol.slice(0, -1);
 	obj.debug = !!parseInt(parsed.query.debug);
+	if (config.connection) {
+		if (config.connection.client) {
+			obj.client = config.connection.client;
+			delete config.connection.client;
+		}
+		if (config.connection.debug) {
+			obj.debug = config.connection.debug;
+			delete config.connection.debug;
+		}
+		Object.assign(conn, config.connection);
+	}
 	return obj;
 }
 
