@@ -42,7 +42,8 @@ exports.up = function (knex) {
 		table.integer('permission_id').unsigned().notNullable().references('id').inTable('permission').onDelete('CASCADE');
 	}).then(function() {
 		// unique index doesn't equal two null values so it's okay to do that
-		return knex.schema.raw("CREATE UNIQUE INDEX index_unique_block_site_id_data_url ON block(site_id, (data->>'url'))");
+		// MAYBE unique on site_id, url, type, to allow one to have content negotiation in a future version
+		return knex.schema.raw("CREATE UNIQUE INDEX index_unique_block_site_id_url ON block(site_id, url)");
 	});
 };
 
