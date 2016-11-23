@@ -9,7 +9,18 @@ pageboard --listen 3000 --database "postgres://myuser@localhost/myappdb"
 	--plugins pageboard-prerender --plugins ./plugins/myapp
 ```
 
-pageboard uses `rc` to load configuration from files and cli arguments.
+pageboard uses `rc` to load configuration from files and cli arguments,
+and plugins can act upon actions:
+
+```
+PGUSER=joe ./node_modules/.bin/pageboard --page.url=/test --page.template=test.html --page.domain=test create
+```
+
+or even
+
+```
+pageboard migrate seed
+```
 
 
 The `All` object
