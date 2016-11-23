@@ -81,7 +81,7 @@ exports.init = function(opt) {
 		return initPlugins('view', All);
 	}).then(function() {
 		app.use(viewsError);
-		return app;
+		return All;
 	});
 }
 
