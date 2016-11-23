@@ -18,8 +18,12 @@ exports.get = function(data) {
 		url: data.url,
 		type: 'page',
 		mime: 'text/html'
-	}).eager('children.^')
-	.joinRelation('site').where('site.domain', data.domain).first();
+	})
+	.eager('children.^')
+	.joinRelation('parents').where({
+		type: 'site',
+		'parents.url': data.site
+	}).first();
 };
 
 exports.create = function(data) {
@@ -27,20 +31,24 @@ exports.create = function(data) {
 		type: 'page',
 		mime: 'text/html'
 	}, data);
-	return All.Site.query().where('domain', data.domain).first().then(function(site) {
-		data.site_id = site.id;
-		return All.Block.query().insert(data);
+	return All.Block.query().where({
+		type: 'site',
+		url: data.site
+	}).first().then(function(site) {
+		return All.Block.query().insert(data).$relatedQuery('parents').relate(site.id);
 	});
 };
 
 
-
 exports.remove = function(data) {
-	if (!data.url || !data.domain) {
-		return Promise.reject(new HttpError.BadRequest("Missing url"));
+	if (!data.url || !data.site) {
+		return Promise.reject(new HttpError.BadRequest("Missing url or site"));
 	}
 
 	return All.Block.query().del().where(url, data.url)
-		.joinRelation('site').where('site.domain', data.domain);
+		.joinRelation('parents').where({
+			type: 'site',
+			'parents.url': data.site
+		});
 };
 

@@ -4,9 +4,12 @@ var knex = require('knex');
 
 exports = module.exports = function(opt) {
 	opt.plugins.unshift(__dirname + '/services/page');
-	opt.components = [];
+	opt.components = [
+		__dirname + '/components/site',
+		__dirname + '/components/page',
+		__dirname + '/components/user'
+	];
 	opt.models = [
-		__dirname + '/models/site',
 		__dirname + '/models/block'
 	];
 	opt.seeds = [__dirname + '/seeds'];

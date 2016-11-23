@@ -12,7 +12,7 @@ Block.tableName = 'block';
 
 Block.jsonSchema = {
 	type: 'object',
-	required: ['type', 'mime', 'site_id'],
+	required: ['type', 'mime'],
 	id: '/api/blocks',
 	properties: {
 		id: {
@@ -41,8 +41,38 @@ Block.jsonSchema = {
 		template: {
 			type: ['string', 'null']
 		},
-		site_id: {
-			type: 'integer'
+		permissions: {
+			type: 'object',
+			properties: {
+				read: {
+					type: 'array',
+					items: {
+						type: 'string'
+					},
+					uniqueItems: true
+				},
+				add: {
+					type: 'array',
+					items: {
+						type: 'string'
+					},
+					uniqueItems: true
+				},
+				save: {
+					type: 'array',
+					items: {
+						type: 'string'
+					},
+					uniqueItems: true
+				},
+				del: {
+					type: 'array',
+					items: {
+						type: 'string'
+					},
+					uniqueItems: true
+				}
+			}
 		}
 	}
 };
@@ -70,14 +100,6 @@ Block.relationMappings = {
 				to: "relation.parent_id"
 			},
 			to: 'block.id'
-		}
-	},
-	site: {
-		relation: Model.BelongsToOneRelation,
-		modelClass: require('./site'),
-		join: {
-			from: 'block.site_id',
-			to: 'site.id'
 		}
 	}
 };
