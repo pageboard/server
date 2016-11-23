@@ -54,43 +54,52 @@ exports.init = function(opt) {
 	var services = [];
 	var views = [];
 
-	console.info("plugins:\n", opt.plugins.join("\n "));
+	console.info("plugins:");
 
-	opt.plugins.forEach(function(path) {
-		if (path.startsWith('./')) path = Path.join(process.cwd(), path);
-		var plugin = require(path);
+	var plugins = [], pluginPath, plugin;
+
+	while (pluginPath = opt.plugins.shift()) {
+		console.info(" ", pluginPath);
+		if (pluginPath.startsWith('./')) pluginPath = Path.join(process.cwd(), pluginPath);
+		plugins.push(pluginPath);
+		plugin = require(pluginPath);
 		if (typeof plugin != "function") return;
 		var obj = plugin(opt) || {};
-		var to;
-		if (obj.name) {
-			to = All[obj.name] = All[obj.name] || {};
-		} else {
-			to = All;
-		}
-		Object.keys(plugin).forEach(function(key) {
-			if (to[key] !== undefined) throw new Error(`module conflict ${key}\n ${path}`);
-		});
-		if (obj.file) files.push(obj.file);
-		if (obj.service) services.push(obj.service);
-		if (obj.view) views.push(obj.view);
-	});
+		obj.path = pluginPath;
+		obj.plugin = plugin;
+		plugins.push(obj);
+	}
 
-	return initPlugins(files, All).then(function() {
+	All.plugins = plugins;
+
+	return initPlugins('file', All).then(function() {
 		app.use(filesError);
 		app.use(morgan(opt.logFormat));
-		return initPlugins(services, All);
+		return initPlugins('service', All);
 	}).then(function() {
 		app.use(servicesError);
-		return initPlugins(views, All);
+		return initPlugins('view', All);
 	}).then(function() {
 		app.use(viewsError);
 		return app;
 	});
 }
 
-function initPlugins(list, All) {
-	return Promise.all(list.map(function(init) {
-		return init(All);
+function initPlugins(type, All) {
+	return Promise.all(All.plugins.map(function(obj) {
+		if (!obj[type]) return;
+		var p = obj[type](All);
+		var to;
+		if (obj.name) {
+			to = All[obj.name] = All[obj.name] || {};
+		} else {
+			to = All;
+		}
+		Object.keys(obj.plugin).forEach(function(key) {
+			if (to[key] !== undefined) throw new Error(`module conflict ${key}\n ${obj.path}`);
+			to[key] = obj.plugin[key];
+		});
+		return p;
 	})).catch(function(err) {
 		console.error(err);
 	});
