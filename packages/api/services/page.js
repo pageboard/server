@@ -13,6 +13,15 @@ function init(All) {
 	});
 }
 
+exports.get = function(data) {
+	return All.Block.query().where({
+		url: data.url,
+		type: 'page',
+		mime: 'text/html'
+	}).eager('children.^')
+	.joinRelation('site').where('site.domain', data.domain).first();
+};
+
 exports.create = function(data) {
 	data = Object.assign({
 		type: 'page',
@@ -23,6 +32,8 @@ exports.create = function(data) {
 		return All.Block.query().insert(data);
 	});
 };
+
+
 
 exports.remove = function(data) {
 	if (!data.url || !data.domain) {
