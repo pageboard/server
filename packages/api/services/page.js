@@ -35,7 +35,10 @@ exports.create = function(data) {
 		type: 'site',
 		url: data.site
 	}).first().then(function(site) {
-		return All.Block.query().insert(data).$relatedQuery('parents').relate(site.id);
+		data.parents = [{
+			'#dbRef': site.id
+		}];
+		return All.Block.query().insertGraph(data);
 	});
 };
 
