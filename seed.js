@@ -11,6 +11,7 @@ pageboard.init(config).then(function(All) {
 		grants: ['all']
 	}}).then(function(user) {
 		return All.site.add({
+			user: user.id,
 			url: 'localhost',
 			data: {
 				name: 'Local site'
@@ -21,16 +22,25 @@ pageboard.init(config).then(function(All) {
 			All.page.add({
 				site: 'localhost',
 				url: '/error',
-				template: 'error.html'
+				template: 'error.html',
+				data: {
+					title: 'Error'
+				}
 			}),
 			All.page.add({
 				site: 'localhost',
 				url: '/',
-				template: 'index.html'
+				template: 'index.html',
+				data: {
+					title: 'Home'
+				}
 			})
 		]);
+	}).then(function() {
+		process.exit();
 	});
 }).catch(function(err) {
 	console.error(err);
+	process.exit(1);
 });
 
