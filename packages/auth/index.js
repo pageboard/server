@@ -2,7 +2,7 @@ var upcacheScope = require('upcache/scope');
 
 exports = module.exports = function(opt) {
 	opt.scope = Object.assign({
-		issuer: name,
+		issuer: opt.name,
 		maxAge: 3600 * 12,
 		userProperty: 'user'
 	}, opt.scope);
