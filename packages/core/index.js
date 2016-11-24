@@ -18,7 +18,6 @@ exports.config = function(pkgOpt) {
 		version: pkgOpt.version,
 		global: true,
 		listen: 3000,
-		database: `postgres://localhost/${name}`,
 		logFormat: ':method :status :response-time ms :url - :res[content-length]',
 		scope: {
 			issuer: name,
