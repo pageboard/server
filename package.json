@@ -10,6 +10,7 @@
   },
   "plugins": [
     "pageboard-cache",
+    "pageboard-auth",
     "pageboard-static",
     "pageboard-api",
     "pageboard-inspector",
@@ -37,6 +38,7 @@
     "pageboard-inspector": "^0.1.0",
     "pageboard-read": "^0.1.0",
     "pageboard-write": "^0.1.0",
-    "pageboard-cache": "^0.1.0"
+    "pageboard-cache": "^0.1.0",
+    "pageboard-auth": "^0.1.0"
   }
 }
