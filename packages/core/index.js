@@ -19,11 +19,6 @@ exports.config = function(pkgOpt) {
 		global: true,
 		listen: 3000,
 		logFormat: ':method :status :response-time ms :url - :res[content-length]',
-		scope: {
-			issuer: name,
-			maxAge: 3600 * 12,
-			userProperty: 'user'
-		},
 		plugins: pkgOpt.plugins || [],
 		dirs: {
 			cache: Path.join(xdg.cache, name),
