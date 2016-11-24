@@ -38,7 +38,7 @@ All useful functions are available through `All`:
 - All.tag, All.scope, All.vary (the upcache plugin)
 - All.Block, All.Site... (the api models, they are the only ones starting
   with a capital letter)
-- All.objection, All.api.seed, All.api.migrate
+- All.objection, All.seed, All.migrate
 ... and more.
 
 A plugin must *not* populate `All` - it is supposed to be read-only, but
