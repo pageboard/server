@@ -3,6 +3,8 @@ var ObjectionRest = require('objection-rest');
 var knex = require('knex');
 
 exports = module.exports = function(opt) {
+	if (!opt.database) opt.database = `postgres://localhost/${opt.name}`;
+
 	opt.plugins.unshift(
 		__dirname + '/services/user',
 		__dirname + '/services/site',
