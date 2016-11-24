@@ -1,0 +1,18 @@
+<!DOCTYPE html>
+<html>
+<head>
+	<title>Error</title>
+	<script type="text/javascript" src="/js/window-page.js"></script>
+	<script>
+	Page.build(function(state) {
+		document.querySelector('.error .code').innerHTML = state.query.code;
+	});
+	</script>
+</head>
+<body>
+	<div class="error">
+		An error occurred<br>
+		code <span class="code">xxx</span>
+	</div>
+</body>
+</html>
