@@ -10,7 +10,8 @@ var debug = require('debug')('pageboard-static');
 
 module.exports = function(opt) {
 	opt.statics = Object.assign({
-		root: 'public',
+		root: process.cwd() + '/public',
+		runtime: Path.join(opt.dirs.runtime, 'public'),
 		mounts: []
 	}, opt.statics);
 	if (!opt.statics.favicon) {
@@ -33,19 +34,24 @@ function init(All) {
 		});
 	}).then(function() {
 		return Promise.all(opt.mounts.map(function(dir) {
-			return mount(opt.root, dir);
+			return mount(opt.runtime, dir);
 		}))
 	}).then(function(content) {
 		console.info("Serving files in\n", opt.root);
-		app.get(/^.*\.\w+/,
-			serveStatic(opt.root, {
+		var args = [/^.*\.\w+/, serveStatic(opt.root, {
+			maxAge: opt.maxAge * 1000
+		})];
+		if (opt.runtime != opt.root) {
+			console.info("Serving runtime files in\n", opt.runtime);
+			args.push(serveStatic(opt.runtime, {
 				maxAge: opt.maxAge * 1000
-			}),
-			function(req, res, next) {
-				console.info("File not found", req.path);
-				res.sendStatus(404);
-			}
-		);
+			}));
+		}
+		args.push(function(req, res, next) {
+			console.info("File not found", req.path);
+			res.sendStatus(404);
+		});
+		app.get.apply(app, args);
 	});
 }
 
