@@ -55,9 +55,9 @@ exports.add = function(data) {
 		type: 'site',
 		mime: '*/*'
 	}, data);
-	return All.Block.query().where({
+	return All.Block.query().select('id').where({
 		type: 'user',
-		url: data.user
+		id: data.user
 	}).first().then(function(user) {
 		data.parents = [{
 			'#dbRef': user.id
