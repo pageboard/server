@@ -32,7 +32,6 @@ exports.config = function(pkgOpt) {
 		plugins: pkgOpt.plugins || [],
 		dirs: {
 			cache: Path.join(xdg.cache, name),
-			config: Path.join(xdg.config, name),
 			data: Path.join(xdg.data, name),
 			runtime: Path.join(xdg.runtime, name)
 		}
