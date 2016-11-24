@@ -16,7 +16,7 @@ and plugins can act upon actions:
 pageboard --data.url=/test \
 	--data.template=test.html \
 	--data.domain=test \
-	page.create
+	page.add
 
 pageboard --data.url=/test --data.domain=test page.get --connection.debug
 ```
