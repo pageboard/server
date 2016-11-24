@@ -1,4 +1,4 @@
-var Model = require('objection').Model;
+var Model = require('@kapouer/objection').Model;
 var Path = require('path');
 
 function Block() {
