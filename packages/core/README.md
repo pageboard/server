@@ -34,18 +34,17 @@ The `All` object
 All useful functions are available through `All`:
 
 - All.app (the express app)
-- All.config
+- All.opt
 - All.tag, All.scope, All.vary (the upcache plugin)
-- All.Block, All.Site... (the api models, they are the only ones starting
-  with a capital letter)
-- All.objection, All.seed, All.migrate
-... and more.
+- All.Block (the only objection model, but plugins could define more models)
+- All.objection, All.migrate
+- All.page.get, All.site.add, All.user.save, All.page.save, etc..
 
 A plugin must *not* populate `All` - it is supposed to be read-only, but
 nothing actually prevents that. It simply has to use `exports` instead.
 
-By default, `All` is a global object, but that can be disabled using the
-`config.global` setting.
+By default, `All` is a global object, but that can be disabled by setting
+configuration option `global` to false.
 
 
 Plugins
@@ -102,6 +101,9 @@ Default values coming from package.json:
 - name
 - version
 - plugins
+
+From command-line or from http request's hostname
+- site
 
 
 Other configurations not set in package.json:
