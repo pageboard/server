@@ -14,6 +14,7 @@ exports.config = function(pkgOpt) {
 	var opt = rc(name, {
 		env: pkgOpt.env || process.env.NODE_ENV || 'development',
 		name: name,
+		site: null,
 		version: pkgOpt.version,
 		global: true,
 		listen: 3000,
