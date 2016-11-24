@@ -9,7 +9,7 @@ var xdg = require('xdg-basedir');
 global.HttpError = require('http-errors');
 
 exports.config = function(pkgOpt) {
-	if (!pkgOpt) pkgOpt = require(process.cwd() + '/package.json');
+	pkgOpt = Object.assign({}, require(process.cwd() + '/package.json'), pkgOpt);
 	var name = pkgOpt.name;
 	var opt = rc(name, {
 		env: pkgOpt.env || process.env.NODE_ENV || 'development',
