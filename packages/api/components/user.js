@@ -5,7 +5,7 @@ if (typeof exports === "object" && typeof module !== "undefined") {
 }
 
 UserSchema.name = "user";
-UserSchema.required = ['email', 'password', 'name', 'firstname'];
+UserSchema.required = ['email', 'password', 'name', 'surname'];
 UserSchema.properties = {
 	email: {
 		type: 'string',
@@ -18,7 +18,7 @@ UserSchema.properties = {
 	name: {
 		type: 'string'
 	},
-	firstname: {
+	surname: {
 		type: 'string'
 	},
 	grants: {
