@@ -9,7 +9,7 @@
     "seed": "node index.js"
   },
   "plugins": [
-    "pageboard-upcache",
+    "pageboard-cache",
     "pageboard-static",
     "pageboard-api",
     "pageboard-inspector",
@@ -37,6 +37,6 @@
     "pageboard-inspector": "^0.1.0",
     "pageboard-read": "^0.1.0",
     "pageboard-write": "^0.1.0",
-    "pageboard-upcache": "^0.1.0"
+    "pageboard-cache": "^0.1.0"
   }
 }
