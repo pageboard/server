@@ -35,6 +35,7 @@ function init(All) {
 	exports.objection = objection;
 	exports.migrate = migrate.bind(null, knexInst, opt.migrations);
 	exports.seed = seed.bind(null, knexInst, opt.seeds);
+	exports.assignSite = assignSite;
 
 	var rest = ObjectionRest(objection).routePrefix('/api');
 	Object.keys(models).forEach(function(name) {
@@ -94,3 +95,8 @@ function knexConfig(config) {
 	return obj;
 }
 
+function assignSite(req, obj) {
+	return Object.assign({}, obj, {
+		site: req.hostname
+	});
+}

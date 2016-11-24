@@ -8,10 +8,10 @@ exports.seed = function(knex, Promise) {
 			type: 'user',
 			mime: 'application/json',
 			data: {
-				email: 'test@eda.sarl',
-				password: 'testtest',
-				name: 'Testname',
-				firstname: 'Testfirstname',
+				email: 'test@localhost.localdomain',
+				password: 'password',
+				name: 'Doe',
+				firstname: 'John',
 				grants: ['test']
 			},
 			permissions: {
@@ -22,14 +22,14 @@ exports.seed = function(knex, Promise) {
 			}
 		}, 'id');
 	}).then(function(userIds) {
-
+		// userIds[0] bears user id
 	}).then(function() {
 		return knex('block').insert({
-			url: '/test',
+			url: 'localhost',
 			type: 'site',
 			mime: '*/*',
 			data: {
-				name: 'Test site'
+				name: 'Local site'
 			}
 		});
 	});

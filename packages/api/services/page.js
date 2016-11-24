@@ -7,25 +7,25 @@ exports = module.exports = function(config) {
 
 function init(All) {
 	All.app.get('/api/page', function(req, res, next) {
-		exports.get(req.query).then(function(page) {
+		exports.get(All.assignSite(req, req.query)).then(function(page) {
 			res.send(page);
 		}).catch(next);
 	});
 	All.app.post('/api/page', function(req, res, next) {
-		exports.create(req.body).then(function(page) {
-			res.sendStatus(200);
+		exports.create(All.assignSite(req, req.body)).then(function(page) {
+			res.send();
 		}).catch(next);
 	});
 	All.app.delete('/api/page', function(req, res, next) {
-		exports.remove(req.query).then(function(page) {
-			res.sendStatus(200);
+		exports.remove(All.assignSite(req, req.query)).then(function(page) {
+			res.send();
 		}).catch(next);
 	});
 }
 
 exports.get = function(data) {
-	if (!data.site) return Promise.reject(new HttpError.BadRequest("Missing site"));
-	if (!data.url) return Promise.reject(new HttpError.BadRequest("Missing url"));
+	if (!data.site) throw new HttpError.BadRequest("Missing site");
+	if (!data.url) throw new HttpError.BadRequest("Missing url");
 	return All.Block.query().select('block.*').where({
 		'block.url': data.url,
 		'block.type': 'page',
@@ -35,11 +35,14 @@ exports.get = function(data) {
 	.joinRelation('parents').where({
 		'parents.type': 'site',
 		'parents.url': data.site
-	}).first();
+	}).first().then(function(page) {
+		if (!page) throw new HttpError.NotFound("No page found");
+		return page;
+	});
 };
 
 exports.create = function(data) {
-	if (!data.site) return Promise.reject(new HttpError.BadRequest("Missing site"));
+	if (!data.site) throw new HttpError.BadRequest("Missing site");
 	data = Object.assign({
 		type: 'page',
 		mime: 'text/html'
@@ -57,12 +60,12 @@ exports.create = function(data) {
 
 
 exports.remove = function(data) {
-	if (!data.site) return Promise.reject(new HttpError.BadRequest("Missing site"));
-	if (!data.url) return Promise.reject(new HttpError.BadRequest("Missing url"));
+	if (!data.site) throw new HttpError.BadRequest("Missing site");
+	if (!data.url) throw new HttpError.BadRequest("Missing url");
 
 	return All.Block.query().del().where(url, data.url)
 		.joinRelation('parents').where({
-			type: 'site',
+			'parents.type': 'site',
 			'parents.url': data.site
 		});
 };
