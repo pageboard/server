@@ -4,7 +4,7 @@ if (typeof exports === "object" && typeof module !== "undefined") {
 	module.exports = PageSchema;
 }
 
-PageSchema.name = "user";
+PageSchema.name = "page";
 PageSchema.required = ['title'];
 PageSchema.properties = {
 	title: {
