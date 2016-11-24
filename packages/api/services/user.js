@@ -42,6 +42,21 @@ function QueryUser(data) {
 	return q;
 }
 
+exports.authenticate = function(data) {
+	if (!data.email) {
+		throw new HttpError.BadRequest("Missing email");
+	}
+	if (!data.password) {
+		throw new HttpError.BadRequest("Missing password");
+	}
+	return All.Block.query().omit(['data.password']).where({
+		type: 'user',
+		'data.email': data.email,
+		'data.password': data.password // TODO store hashed password, compare hash
+	});
+};
+
+
 exports.get = function(data) {
 	return QueryUser(data).select('block.*').first().then(function(user) {
 		if (!user) throw new HttpError.NotFound("No user found");

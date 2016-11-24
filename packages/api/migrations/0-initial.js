@@ -16,6 +16,7 @@ exports.up = function (knex) {
 		table.integer('parent_id').unsigned().references('id').inTable('block').onDelete('CASCADE');
 		table.integer('child_id').unsigned().references('id').inTable('block').onDelete('CASCADE');
 	});
+	// TODO create index on type=user, data.email
 };
 
 exports.down = function (knex) {
