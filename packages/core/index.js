@@ -20,11 +20,6 @@ exports.config = function(pkgOpt) {
 		listen: 3000,
 		database: `postgres://localhost/${name}`,
 		logFormat: ':method :status :response-time ms :url - :res[content-length]',
-		statics: {
-			maxAge: 0,
-			root: process.cwd() + '/public',
-			mounts: []
-		},
 		scope: {
 			issuer: name,
 			maxAge: 3600 * 12,
