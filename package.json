@@ -5,7 +5,8 @@
   "main": "index.js",
   "scripts": {
     "test": "echo \"Error: no test specified\" && exit 1",
-    "start": "pageboard"
+    "start": "pageboard",
+    "seed": "node index.js"
   },
   "plugins": [
     "pageboard-upcache",
