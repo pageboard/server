@@ -17,8 +17,8 @@
   },
   "homepage": "https://github.com/pageboard/pageboard-api#readme",
   "dependencies": {
-    "knex": "^0.12.6",
     "@kapouer/objection": "^0.6.2",
+    "knex": "^0.12.6",
     "objection-rest": "^0.2.0",
     "passwd-user": "^2.1.0",
     "pg": "^6.1.0"
