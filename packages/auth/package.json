@@ -17,6 +17,8 @@
   },
   "homepage": "https://github.com/pageboard/pageboard-auth#readme",
   "dependencies": {
-    "upcache": "^0.4.1"
+    "bcrypt": "^0.8.7",
+    "pify": "^2.3.0",
+    "upcache": "^0.6.1"
   }
 }
