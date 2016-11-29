@@ -4,6 +4,10 @@ var Path = require('path');
 
 module.exports = function(opt) {
 	if (!opt.prerender) opt.prerender = {};
+	if (opt.develop) {
+		opt.prerender.develop = true;
+		opt.prerender.cacheModel = "none";
+	}
 
 	Object.assign(dom.settings, {
 		stall: 20000,
