@@ -22,7 +22,7 @@
   },
   "homepage": "https://github.com/pageboard/pageboard-prerender#readme",
   "dependencies": {
-    "express-dom": "^5.3.2",
+    "express-dom": "^5.5.1",
     "express-href": "^1.0.0"
   }
 }

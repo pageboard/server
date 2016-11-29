@@ -25,9 +25,10 @@ module.exports = function(opt) {
 };
 
 function init(All) {
-	All.app.set('views', All.opt.statics.root);
-	expressHref(All.app);
-	// the router is universal and available in pageboard-read
+	var views = [All.opt.statics.root];
+	if (All.opt.statics.runtime != All.opt.statics.root) views.push(All.opt.statics.runtime);
+	All.app.set('views', views);
+	expressHref(All.app);	// the router is universal and available in pageboard-read
 	All.app.get('*', dom('router').load());
 };
 
