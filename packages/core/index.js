@@ -48,7 +48,6 @@ exports.init = function(opt) {
 	while (pluginPath = opt.plugins.shift()) {
 		if (pluginPath.startsWith('/')) pluginPath = Path.relative(All.cwd, pluginPath);
 		console.info(" ", pluginPath);
-		plugins.push(pluginPath);
 		plugin = require(pluginPath);
 		if (typeof plugin != "function") return;
 		var obj = plugin(opt) || {};
