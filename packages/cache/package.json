@@ -17,6 +17,6 @@
   },
   "homepage": "https://github.com/pageboard/pageboard-cache#readme",
   "dependencies": {
-    "upcache": "^0.5.0"
+    "upcache": "^0.6.1"
   }
 }
