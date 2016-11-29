@@ -41,7 +41,7 @@ exports.init = function(opt) {
 	if (opt.global) global.All = All;
 
 
-	console.info("plugins:");
+	console.info("Plugins:");
 
 	var plugins = [], pluginPath, plugin;
 
