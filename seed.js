@@ -6,8 +6,8 @@ pageboard.init(config).then(function(All) {
 	return All.user.add({data: {
 		email: 'root@localhost.localdomain',
 		password: 'password',
-		name: 'John',
-		surname: 'Doe',
+		name: 'John Doe',
+		nickname: 'guest',
 		grants: ['all']
 	}}).then(function(user) {
 		return All.site.add({
