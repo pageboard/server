@@ -30,15 +30,15 @@
   },
   "homepage": "https://github.com/pageboard/pageboard#readme",
   "dependencies": {
-    "pageboard-core": "^0.1.0",
-    "pageboard-static": "^0.1.0",
     "pageboard-api": "^0.1.0",
-    "pageboard-prerender": "^0.1.0",
+    "pageboard-auth": "^0.1.0",
+    "pageboard-cache": "^0.1.0",
+    "pageboard-core": "^0.1.0",
     "pageboard-image": "^0.1.0",
     "pageboard-inspector": "^0.1.0",
+    "pageboard-prerender": "^0.1.0",
     "pageboard-read": "^0.1.0",
-    "pageboard-write": "^0.1.0",
-    "pageboard-cache": "^0.1.0",
-    "pageboard-auth": "^0.1.0"
+    "pageboard-static": "^0.1.0",
+    "pageboard-write": "^0.1.0"
   }
 }
