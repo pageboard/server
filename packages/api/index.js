@@ -31,8 +31,10 @@ function init(All) {
 	objection.Model.knex(knexInst);
 
 	var models = {};
+	console.info("Models:");
 	opt.models.forEach(function(path) {
 		var model = require(path);
+		console.info(" ", model.name);
 		models[model.name] = model;
 	});
 	Object.assign(exports, models);
