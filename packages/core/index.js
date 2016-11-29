@@ -40,9 +40,6 @@ exports.init = function(opt) {
 	};
 	if (opt.global) global.All = All;
 
-	var files = [];
-	var services = [];
-	var views = [];
 
 	console.info("plugins:");
 
