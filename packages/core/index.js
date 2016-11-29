@@ -84,11 +84,12 @@ function initPlugins(All, type) {
 		} else {
 			to = All;
 		}
+		var p = type && obj[type](All);
 		Object.keys(obj.plugin).forEach(function(key) {
 			if (to[key] !== undefined) throw new Error(`module conflict ${key}\n ${obj.path}`);
 			to[key] = obj.plugin[key];
 		});
-		return type && obj[type](All);
+		return p;
 	})).catch(function(err) {
 		console.error(err);
 	});
