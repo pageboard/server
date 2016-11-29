@@ -56,7 +56,7 @@ function init(All) {
 		}).catch(next);
 	});
 
-	All.app.put('/api/user/:id', All.restrict("user-:id"), function(req, res, next) {
+	All.app.put('/api/user/:id', exports.restrict("user-:id"), function(req, res, next) {
 		delete req.body.password;
 		delete req.body.email;
 		delete req.body.verified;
@@ -66,7 +66,7 @@ function init(All) {
 		}).catch(next);
 	});
 
-	All.app.delete('/api/user/:id', All.restrict("user-:id"), function(req, res, next) {
+	All.app.delete('/api/user/:id', exports.restrict("user-:id"), function(req, res, next) {
 		All.user.del(req.params).then(function(user) {
 			res.sendStatus(200);
 		}).catch(next);
