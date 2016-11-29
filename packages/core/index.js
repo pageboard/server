@@ -58,23 +58,26 @@ exports.init = function(opt) {
 
 	All.plugins = plugins;
 
-	return initPlugins('file', All).then(function() {
+
+	return initPlugins(All).then(function() {
+		return initPlugins(All, 'file');
+	}).then(function() {
 		app.use(filesError);
 		app.use(morgan(opt.logFormat));
-		return initPlugins('service', All);
+		return initPlugins(All, 'service');
 	}).then(function() {
 		app.use(servicesError);
-		return initPlugins('view', All);
+		return initPlugins(All, 'view');
 	}).then(function() {
 		app.use(viewsError);
 		return All;
 	});
 }
 
-function initPlugins(type, All) {
+function initPlugins(All, type) {
 	return Promise.all(All.plugins.map(function(obj) {
-		if (!obj[type]) return;
-		var p = obj[type](All);
+		if (type && !obj[type]) return;
+		if (!type && (obj.file || obj.service || obj.view)) return;
 		var to;
 		if (obj.name) {
 			to = All[obj.name] = All[obj.name] || {};
@@ -85,7 +88,7 @@ function initPlugins(type, All) {
 			if (to[key] !== undefined) throw new Error(`module conflict ${key}\n ${obj.path}`);
 			to[key] = obj.plugin[key];
 		});
-		return p;
+		return type && obj[type](All);
 	})).catch(function(err) {
 		console.error(err);
 	});
