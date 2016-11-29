@@ -1,67 +1,20 @@
-exports = module.exports = function(config) {
+exports = module.exports = function(opt) {
 	return {
-		name: 'user',
-		service: init
+		name: 'user'
 	};
 };
 
-function init(All) {
-	All.app.get('/api/user', function(req, res, next) {
-		exports.get(req.query).then(function(page) {
-			res.send(page);
-		}).catch(next);
-	});
-	All.app.post('/api/user', function(req, res, next) {
-		exports.add(req.body).then(function(page) {
-			res.send();
-		}).catch(next);
-	});
-	All.app.put('/api/user', function(req, res, next) {
-		exports.save(req.body).then(function(page) {
-			res.send();
-		}).catch(next);
-	});
-	All.app.delete('/api/user', function(req, res, next) {
-		exports.del(req.query).then(function(page) {
-			res.send();
-		}).catch(next);
-	});
-}
-
 function QueryUser(data) {
-	var q = All.Block.query();
-	if (data.id) {
-		q.where('id', data.id);
-	} else {
-		if (!data.url) throw new HttpError.BadRequest("Missing url");
-		q.where({
-			'block.url': data.url,
-			'block.type': 'user'
-		});
-	}
-	return q;
+	var obj = { type: 'user' };
+	if (data.id) obj.id = data.id;
+	else if (data.url) obj.url = data.url;
+	else if (data.email) obj['data.email'] = data.email;
+	else throw new HttpError.BadRequest("Cannot query user", data);
+	return All.Block.query().where(obj);
 }
-
-exports.authenticate = function(data) {
-	if (!data.email) {
-		throw new HttpError.BadRequest("Missing email");
-	}
-	if (!data.password) {
-		throw new HttpError.BadRequest("Missing password");
-	}
-	return All.Block.query().omit(['data.password']).where({
-		type: 'user',
-		'data.email': data.email,
-		'data.password': data.password // TODO store hashed password, compare hash
-	});
-};
-
 
 exports.get = function(data) {
-	return QueryUser(data).select('block.*').first().then(function(user) {
-		if (!user) throw new HttpError.NotFound("No user found");
-		return user;
-	});
+	return QueryUser(data).first();
 };
 
 exports.add = function(data) {
@@ -69,7 +22,7 @@ exports.add = function(data) {
 		type: 'user',
 		mime: 'application/json'
 	}, data);
-	return All.Block.query().insertGraph(data);
+	return All.Block.query().insert(data);
 };
 
 exports.save = function(data) {

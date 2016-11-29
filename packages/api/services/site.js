@@ -1,4 +1,4 @@
-exports = module.exports = function(config) {
+exports = module.exports = function(opt) {
 	return {
 		name: 'site',
 		service: init
