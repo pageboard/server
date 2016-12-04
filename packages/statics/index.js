@@ -48,8 +48,7 @@ function init(All) {
 			}));
 		}
 		args.push(function(req, res, next) {
-			console.info("File not found", req.path);
-			res.sendStatus(404);
+			next(new HttpError.NotFound("Static file not found"));
 		});
 		app.get.apply(app, args);
 	});
