@@ -1,6 +1,7 @@
 var Path = require('path');
 var express = require('express');
 var morgan = require('morgan');
+var prettyBytes = require('pretty-bytes');
 var rc = require('rc');
 var mkdirp = require('mkdirp');
 var xdg = require('xdg-basedir');
@@ -18,7 +19,7 @@ exports.config = function(pkgOpt) {
 		version: pkgOpt.version,
 		global: true,
 		listen: 3000,
-		logFormat: ':method :status :response-time ms :url - :res[content-length]',
+		logFormat: ':method :status :time :size :type\\:/:url',
 		plugins: pkgOpt.plugins || [],
 		dirs: {
 			cache: Path.join(xdg.cache, name),
@@ -58,6 +59,16 @@ exports.init = function(opt) {
 
 	All.plugins = plugins;
 
+	morgan.token('time', function(req, res) {
+		return padFour(morgan['response-time'](req, res, 0)) + 'ms';
+	});
+	morgan.token('type', function(req, res) {
+		return padFour((res.get('Content-Type') || '-').split(';').shift().split('/').pop());
+	});
+	morgan.token('size', function(req, res) {
+		var len = parseInt(res.get('Content-Length'));
+		return padFour((len && prettyBytes(len) || '0 B').replace(/ /g, ''));
+	});
 
 	return initPlugins(All).then(function() {
 		return initPlugins(All, 'file');
@@ -97,6 +108,10 @@ function initPlugins(All, type) {
 
 function initDirs(dirs) {
 	for (var k in dirs) mkdirp.sync(dirs[k]);
+}
+
+function padFour(str) {
+	return ("    " + str).slice(-4);
 }
 
 function createApp(opt) {
