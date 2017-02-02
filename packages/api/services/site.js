@@ -7,23 +7,23 @@ exports = module.exports = function(opt) {
 
 function init(All) {
 	All.app.get('/api/site', function(req, res, next) {
-		exports.get(req.query).then(function(page) {
-			res.send(page);
+		exports.get(req.query).then(function(site) {
+			res.send(site);
 		}).catch(next);
 	});
 	All.app.post('/api/site', function(req, res, next) {
-		exports.add(req.body).then(function(page) {
-			res.send();
+		exports.add(req.body).then(function(site) {
+			res.send(site);
 		}).catch(next);
 	});
 	All.app.put('/api/site', function(req, res, next) {
-		exports.save(req.body).then(function(page) {
-			res.send();
+		exports.save(req.body).then(function(site) {
+			res.send(site);
 		}).catch(next);
 	});
 	All.app.delete('/api/site', function(req, res, next) {
-		exports.del(req.query).then(function(page) {
-			res.send();
+		exports.del(req.query).then(function(site) {
+			res.send(site);
 		}).catch(next);
 	});
 }

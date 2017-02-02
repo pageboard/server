@@ -13,17 +13,17 @@ function init(All) {
 	});
 	All.app.post('/api/page', function(req, res, next) {
 		exports.add(reqData(req)).then(function(page) {
-			res.send();
+			res.send(page);
 		}).catch(next);
 	});
 	All.app.put('/api/page', function(req, res, next) {
 		exports.save(reqData(req)).then(function(page) {
-			res.send();
+			res.send(page);
 		}).catch(next);
 	});
 	All.app.delete('/api/page', function(req, res, next) {
 		exports.del(reqData(req)).then(function(page) {
-			res.send();
+			res.send(page);
 		}).catch(next);
 	});
 }
