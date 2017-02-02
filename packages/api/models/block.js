@@ -104,15 +104,15 @@ Block.relationMappings = {
 	}
 };
 
-Block.initComponents = function defineComponents(components) {
-	if (components.length === 0) return;
+Block.initElements = function initElements(elements) {
+	if (elements.length === 0) return;
 	var schema = Block.jsonSchema;
 	var blockProps = schema.properties;
 
-	schema.switch = components.map(function(path) {
-		var component = require(path);
-		if (component.prototype) component = component.prototype;
-		var type = component.name || Path.basename(path);
+	schema.switch = elements.map(function(path) {
+		var element = require(path);
+		if (element.prototype) element = element.prototype;
+		var type = element.name || Path.basename(path);
 		return {
 			if: {
 				properties: {
@@ -124,11 +124,11 @@ Block.initComponents = function defineComponents(components) {
 			then: {
 				properties: {
 					data: Object.assign({}, blockProps.data, {
-						properties: component.properties,
-						required: component.required || []
+						properties: element.properties,
+						required: element.required || []
 					}),
 					content: Object.assign({}, blockProps.content, {
-						properties: stringProperties(component.specs || {})
+						properties: stringProperties(element.specs || {})
 					})
 				}
 			}

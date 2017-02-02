@@ -31,8 +31,8 @@ These services expose get, add, save, del functions.
 * page  
   a web page, belongs to a site
 
-* component  
-  all other components are children of a page (or grand-children, recursively).
+* block  
+  all other blocks are children of a page (or grand-children, recursively).
 
 
 Permissions

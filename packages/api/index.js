@@ -10,10 +10,10 @@ exports = module.exports = function(opt) {
 		__dirname + '/services/site',
 		__dirname + '/services/page'
 	);
-	opt.components = [
-		__dirname + '/components/site',
-		__dirname + '/components/page',
-		__dirname + '/components/user'
+	opt.elements = [
+		__dirname + '/elements/site',
+		__dirname + '/elements/page',
+		__dirname + '/elements/user'
 	];
 	opt.models = [
 		__dirname + '/models/block'
@@ -39,7 +39,7 @@ function init(All) {
 	});
 	Object.assign(exports, models);
 
-	exports.Block.initComponents(opt.components);
+	exports.Block.initElements(opt.elements);
 	exports.objection = objection;
 	exports.migrate = migrate.bind(null, knexInst, opt.migrations);
 	exports.seed = seed.bind(null, knexInst, opt.seeds);

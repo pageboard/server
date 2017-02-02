@@ -1,12 +1,12 @@
-var UserSchema = {};
+var User = {};
 
 if (typeof exports === "object" && typeof module !== "undefined") {
-	module.exports = UserSchema;
+	module.exports = User;
 }
 
-UserSchema.name = "user";
-UserSchema.required = ['email', 'password', 'nickname', 'name'];
-UserSchema.properties = {
+User.name = "user";
+User.required = ['email', 'password', 'nickname', 'name'];
+User.properties = {
 	email: {
 		type: 'string',
 		format: 'email'
