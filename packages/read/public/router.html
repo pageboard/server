@@ -1,9 +1,23 @@
 <!DOCTYPE html>
 <html>
 <head>
-	<script type="text/javascript" src="/js/agent.js"></script>
-	<script type="text/javascript" src="/js/window-page.js"></script>
-	<script type="text/javascript" src="/js/pageboard.js"></script>
+	<script src="/js/agent.js"></script>
+	<script src="/js/window-page.js"></script>
+	<script>
+Page.route(function(state) {
+	return GET('/api/page', {
+		url: state.pathname
+	}).then(function(data) {
+		state.data.page = data;
+		return GET({
+			url: data.template,
+			type: 'html'
+		});
+	}).then(function(doc) {
+		state.document = doc;
+	});
+});
+	</script>
 </head>
 <body>
 </body>

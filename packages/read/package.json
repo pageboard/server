@@ -17,7 +17,8 @@
   },
   "homepage": "https://github.com/pageboard/pageboard-read#readme",
   "dependencies": {
-    "window-agent": "^1.0.0",
-    "window-page": "^1.0.2"
+    "pagecut": "^1.0.0",
+    "window-agent": "^1.0.1",
+    "window-page": "^1.1.3"
   }
 }
