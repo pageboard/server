@@ -8,7 +8,8 @@ exports = module.exports = function(opt) {
 	opt.plugins.unshift(
 		__dirname + '/services/user',
 		__dirname + '/services/site',
-		__dirname + '/services/page'
+		__dirname + '/services/page',
+		__dirname + '/services/block'
 	);
 	opt.elements = [
 		__dirname + '/elements/site',
