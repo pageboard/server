@@ -7,10 +7,10 @@
 Page.route(function(state) {
 	return GET('/api/page', {
 		url: state.pathname
-	}).then(function(data) {
-		state.data.page = data;
+	}).then(function(page) {
+		state.data.page = page;
 		return GET({
-			url: data.template,
+			url: page.data.template,
 			type: 'html'
 		});
 	}).then(function(doc) {
