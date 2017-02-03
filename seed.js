@@ -22,17 +22,17 @@ pageboard.init(config).then(function(All) {
 			All.page.add({
 				site: 'localhost',
 				url: '/error',
-				template: 'error.html',
 				data: {
-					title: 'Error'
+					title: 'Error',
+					template: 'templates/error.html'
 				}
 			}),
 			All.page.add({
 				site: 'localhost',
 				url: '/',
-				template: 'index.html',
 				data: {
-					title: 'Home'
+					title: 'Home',
+					template: 'templates/home.html'
 				}
 			})
 		]);
