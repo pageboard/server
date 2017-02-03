@@ -15,9 +15,9 @@
     "pageboard-api",
     "pageboard-inspector",
     "pageboard-image",
-    "pageboard-read",
+    "pageboard-prerender",
     "pageboard-write",
-    "pageboard-prerender"
+    "pageboard-read"
   ],
   "repository": {
     "type": "git",
