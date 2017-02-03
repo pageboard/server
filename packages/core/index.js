@@ -19,7 +19,7 @@ exports.config = function(pkgOpt) {
 		version: pkgOpt.version,
 		global: true,
 		listen: 3000,
-		logFormat: ':method :status :time :size :type\\:/:url',
+		logFormat: ':method :status :time :size :type :url',
 		plugins: pkgOpt.plugins || [],
 		dirs: {
 			cache: Path.join(xdg.cache, name),
