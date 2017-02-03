@@ -1,4 +1,4 @@
-var objection = require('@kapouer/objection');
+var objection = require('objection');
 var ObjectionRest = require('objection-rest');
 var knex = require('knex');
 
