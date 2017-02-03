@@ -5,9 +5,12 @@ if (typeof exports === "object" && typeof module !== "undefined") {
 }
 
 Page.name = "page";
-Page.required = ['title'];
+Page.required = ['template'];
 Page.properties = {
 	title: {
+		type: ['string', 'null']
+	},
+	template: {
 		type: 'string'
 	}
 };

@@ -38,9 +38,6 @@ Block.jsonSchema = {
 		url: {
 			type: ['string', 'null']
 		},
-		template: {
-			type: ['string', 'null']
-		},
 		permissions: {
 			type: 'object',
 			properties: {
