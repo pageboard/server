@@ -11,13 +11,13 @@
    xmlns:xlink="http://www.w3.org/1999/xlink"
    xmlns:sodipodi="http://sodipodi.sourceforge.net/DTD/sodipodi-0.dtd"
    xmlns:inkscape="http://www.inkscape.org/namespaces/inkscape"
-   width="222.50159"
-   height="201.8645"
-   viewBox="0 0 222.50156 201.86446"
+   width="256"
+   height="256"
+   viewBox="0 0 256 256"
    id="svg2"
    version="1.1"
-   inkscape:version="0.91 r13725"
-   sodipodi:docname="pb_logo_ico.svg">
+   inkscape:version="0.92.0 r15299"
+   sodipodi:docname="pageboard.svg">
   <defs
      id="defs4">
     <linearGradient
@@ -103,13 +103,13 @@
      inkscape:pageopacity="0.0"
      inkscape:pageshadow="2"
      inkscape:zoom="2.555434"
-     inkscape:cx="16.30887"
+     inkscape:cx="-71.738796"
      inkscape:cy="45.68482"
      inkscape:document-units="px"
      inkscape:current-layer="layer1"
      showgrid="false"
-     inkscape:window-width="1920"
-     inkscape:window-height="1016"
+     inkscape:window-width="2560"
+     inkscape:window-height="1376"
      inkscape:window-x="0"
      inkscape:window-y="27"
      inkscape:window-maximized="1"
@@ -119,7 +119,8 @@
      fit-margin-top="0"
      fit-margin-left="0"
      fit-margin-right="0"
-     fit-margin-bottom="0" />
+     fit-margin-bottom="0"
+     viewbox-x="0" />
   <metadata
      id="metadata7">
     <rdf:RDF>
@@ -136,11 +137,11 @@
      inkscape:label="Calque 1"
      inkscape:groupmode="layer"
      id="layer1"
-     transform="translate(-1.8157053,-827.04497)">
+     transform="translate(-1.8157053,-787.7429)">
     <g
        id="g4165"
-       transform="translate(-3.8418551e-8,-11.999998)"
-       style="stroke:#787878;stroke-opacity:1;fill:#787878;fill-opacity:1">
+       transform="translate(16.749221,-24.234311)"
+       style="fill:#787878;fill-opacity:1;stroke:#787878;stroke-opacity:1">
       <ellipse
          ry="7.8632765"
          rx="8.454113"
@@ -155,7 +156,7 @@
          style="fill:#787878;fill-opacity:1;fill-rule:evenodd;stroke:#787878;stroke-width:1.13545287px;stroke-linecap:butt;stroke-linejoin:miter;stroke-opacity:1" />
     </g>
     <g
-       transform="matrix(1,0,0,-1,118.3445,1867.9544)"
+       transform="matrix(1,0,0,-1,135.09372,1855.7201)"
        id="g4165-6"
        style="fill:#a0a0a0;fill-opacity:1;stroke:#a0a0a0;stroke-opacity:1">
       <ellipse
@@ -174,14 +175,14 @@
     <circle
        style="opacity:1;fill:#c8c8c8;fill-opacity:0;stroke:#a0a0a0;stroke-width:19.99999809;stroke-linejoin:round;stroke-miterlimit:4;stroke-dasharray:none;stroke-opacity:1"
        id="path4169"
-       cx="53.819527"
-       cy="927.32733"
+       cx="70.568748"
+       cy="915.09302"
        r="42.003822" />
     <circle
        style="opacity:1;fill:#787878;fill-opacity:0;stroke:#787878;stroke-width:19.99999809;stroke-linejoin:round;stroke-miterlimit:4;stroke-dasharray:none;stroke-opacity:1"
        id="path4169-8"
-       cx="172.31345"
-       cy="927.18726"
+       cx="189.06267"
+       cy="914.95294"
        r="42.003819" />
   </g>
 </svg>
