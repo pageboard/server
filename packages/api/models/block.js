@@ -131,15 +131,10 @@ Block.initElements = function initElements(elements) {
 			}
 		};
 	});
-	// https://github.com/Vincit/objection.js/issues/299
-	// keep this around to let Objection keep data/content columns
-	// as a result, ajv might let blocks with unknown types go straight through
-	// without schema validation for data/content
-	// Uncomment when fixed in objection
-	// if (schema.switch.length) {
-	// 	delete blockProps.data;
-	// 	delete blockProps.content;
-	// }
+	if (schema.switch.length) {
+		delete blockProps.data;
+		delete blockProps.content;
+	}
 	Block.jsonSchema = schema;
 }
 
