@@ -76,7 +76,8 @@ Block.jsonSchema = {
 				}
 			}
 		}
-	}
+	},
+	additionalProperties: false
 };
 
 Block.relationMappings = {
@@ -110,6 +111,8 @@ Block.initElements = function initElements(elements) {
 	if (elements.length === 0) return;
 	var schema = Block.jsonSchema;
 	var blockProps = schema.properties;
+	delete schema.properties;
+	delete schema.additionalProperties;
 
 	schema.switch = elements.map(function(path) {
 		var element = require(path);
@@ -124,22 +127,21 @@ Block.initElements = function initElements(elements) {
 				}
 			},
 			then: {
-				properties: {
+				properties: Object.assign({}, blockProps, {
 					data: Object.assign({}, blockProps.data, {
 						properties: element.properties,
+						additionalProperties: false,
 						required: element.required || []
 					}),
 					content: Object.assign({}, blockProps.content, {
-						properties: stringProperties(element.specs || {})
+						properties: stringProperties(element.specs || {}),
+						additionalProperties: false
 					})
-				}
+				}),
+				additionalProperties: false
 			}
 		};
 	});
-	if (schema.switch.length) {
-		delete blockProps.data;
-		delete blockProps.content;
-	}
 	Block.jsonSchema = schema;
 }
 
