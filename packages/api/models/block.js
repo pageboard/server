@@ -10,6 +10,11 @@ module.exports = Block;
 
 Block.tableName = 'block';
 
+// prefer ajv validation over partial objection schema assumptions
+// unfortunately, https://github.com/epoberezkin/ajv/issues/410
+// so for now, errors will be reported by database and not by validation
+Block.pickJsonSchemaProperties = false;
+
 Block.jsonSchema = {
 	type: 'object',
 	required: ['type', 'mime'],

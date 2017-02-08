@@ -62,6 +62,7 @@ exports.add = function(data) {
 		data.parents = [{
 			'#dbRef': user.id
 		}];
+		delete data.user;
 		return All.Block.query().insertGraph(data);
 	});
 };

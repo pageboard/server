@@ -81,6 +81,7 @@ exports.add = function(data) {
 		data.parents = [{
 			'#dbRef': site.id
 		}];
+		delete data.site;
 		return All.Block.query().insertGraph(data);
 	});
 };
