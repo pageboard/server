@@ -15,6 +15,8 @@ module.exports = function(opt) {
 		cacheDir: Path.join(opt.dirs.cache, "prerender")
 	}, opt.prerender);
 
+	dom.settings.helpers.push(dom.helpers.develop);
+
 	Object.assign(dom.pool, {
 		max: 8
 	}, opt.prerender.pool);
