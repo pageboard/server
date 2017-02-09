@@ -1,1 +1,1 @@
-../../node_modules/pagecut/dist/id.js
+../../node_modules/pagecut/dist/pagecut-id.js
