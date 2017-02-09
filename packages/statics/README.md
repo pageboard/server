@@ -14,3 +14,6 @@ Prefixing files makes it easier to configure proxies and caches, and also minimi
 the chances of URL collision between dynamic pages and files (which wouldn't
 be catastrophic, but it's clearer for the user to know how URL are available).
 
+Also serves `config.statics.favicon` (defaults to /favicon.ico) using *serve-favicon*,
+and if not configured will send a 404 right away.
+
