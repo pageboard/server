@@ -24,7 +24,7 @@ pageboard.init(config).then(function(All) {
 				url: '/error',
 				data: {
 					title: 'Error',
-					template: 'lib/templates/error.html'
+					template: 'public/templates/error.html'
 				}
 			}),
 			All.page.add({
@@ -32,7 +32,7 @@ pageboard.init(config).then(function(All) {
 				url: '/',
 				data: {
 					title: 'Home',
-					template: 'lib/templates/home.html'
+					template: 'public/templates/home.html'
 				}
 			})
 		]);
