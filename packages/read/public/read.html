@@ -3,6 +3,9 @@
 <head>
 	<script src="/js/agent.js"></script>
 	<script src="/js/window-page.js"></script>
+	<script src="/js/pagecut-viewer.js"></script>
+	<script src="/js/pagecut-id.js"></script>
+	<script src="/elements/page.js"></script>
 	<script>
 Page.route(function(state) {
 	return GET('/api/page', {
@@ -12,10 +15,25 @@ Page.route(function(state) {
 		return GET({
 			url: page.data.template,
 			type: 'html'
+		}).then(function(doc) {
+			var pagecut = new Pagecut.Viewer({
+				document: doc
+			});
+			var blocks = buildBlocksMap(page);
+			return pagecut.modules.id.from(page, blocks).then(function(fragment) {
+				state.document = fragment;
+			});
 		});
-	}).then(function(doc) {
-		state.document = doc;
 	});
+
+	function buildBlocksMap(block, blocks) {
+		if (!blocks) blocks = {};
+		blocks[block.id] = block;
+		if (block.children) block.children.forEach(function(item) {
+			buildBlocksMap(item, blocks);
+		});
+		return blocks;
+	}
 });
 	</script>
 </head>
