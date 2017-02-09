@@ -8,8 +8,9 @@ under the application's current working directory
 by creating sub-directories and making files symlinks;
 and serve them under the
 `config.statics.prefix`
-route prefix (default `/statics`).
+route prefix (defaults to dirname of root directory `/public`).
 
-The choice of prefixing all static files simplifies greatly configuration
-of proxies.
+Prefixing files makes it easier to configure proxies and caches, and also minimizes
+the chances of URL collision between dynamic pages and files (which wouldn't
+be catastrophic, but it's clearer for the user to know how URL are available).
 

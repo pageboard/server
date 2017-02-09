@@ -37,20 +37,23 @@ function init(All) {
 			return mount(opt.runtime, dir);
 		}))
 	}).then(function(content) {
-		console.info("Serving files in\n", opt.root);
-		var args = [/^.*\.\w+/, serveStatic(opt.root, {
-			maxAge: opt.maxAge * 1000
-		})];
-		if (opt.runtime != opt.root) {
-			console.info("Serving runtime files in\n", opt.runtime);
-			args.push(serveStatic(opt.runtime, {
+		var prefix = opt.prefix;
+		if (prefix == null) prefix = Path.basename(opt.root);
+
+		console.info("Files mounted on" , prefix, ":\n", opt.root);
+		if (opt.runtime != opt.root) console.info("are served from", "\n", opt.runtime);
+
+		app.use(
+			'/' + prefix,
+			serveStatic(opt.runtime, {
+				index: false,
+				redirect: false,
 				maxAge: opt.maxAge * 1000
-			}));
-		}
-		args.push(function(req, res, next) {
-			next(new HttpError.NotFound("Static file not found"));
-		});
-		app.get.apply(app, args);
+			}),
+			function(req, res, next) {
+				next(new HttpError.NotFound("Static file not found"));
+			}
+		);
 	});
 }
 
