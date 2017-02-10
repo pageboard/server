@@ -44,11 +44,15 @@ exports.init = function(opt) {
 
 	console.info("Plugins:");
 
-	var plugins = [], pluginPath, plugin;
+	var plugins = [], pluginPath, plugin, lastPath;
 
 	while (pluginPath = opt.plugins.shift()) {
-		if (pluginPath.startsWith('/')) pluginPath = Path.relative(All.cwd, pluginPath);
-		console.info(" ", pluginPath);
+		if (pluginPath.startsWith('/')) {
+			console.info("  ", Path.relative(Path.dirname(lastPath || All.cwd), pluginPath));
+		} else {
+			lastPath = require.resolve(pluginPath);
+			console.info(" ", pluginPath);
+		}
 		plugin = require(pluginPath);
 		if (typeof plugin != "function") return;
 		var obj = plugin(opt) || {};
