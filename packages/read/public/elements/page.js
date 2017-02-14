@@ -1,6 +1,8 @@
 (function() {
 
-var PageElement = {};
+var PageElement = {
+	name: 'page'
+};
 
 PageElement.view = function(doc, block) {
 	return doc;
