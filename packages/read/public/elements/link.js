@@ -11,9 +11,7 @@ var LinkElement = {
 LinkElement.view = function(doc, block) {
 	var anchor = doc.createElement('a');
 	anchor.href = block.url || '?';
-	var content = doc.createElement('div');
-	content.setAttribute('block-content', 'content');
-	anchor.appendChild(content);
+	anchor.setAttribute("block-content", "content");
 	return anchor;
 };
 
