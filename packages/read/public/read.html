@@ -21,7 +21,8 @@ Page.route(function(state) {
 			});
 			var blocks = buildBlocksMap(page);
 			return pagecut.modules.id.from(page, blocks).then(function(fragment) {
-				state.document = fragment;
+				if (fragment.nodeName != "HTML") throw new Error("Bad fragment");
+				state.document = fragment.ownerDocument;
 			});
 		});
 	});

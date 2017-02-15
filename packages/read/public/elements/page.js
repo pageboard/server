@@ -5,7 +5,7 @@ var PageElement = {
 };
 
 PageElement.view = function(doc, block) {
-	return doc;
+	return doc.documentElement;
 };
 
 Pagecut.modules.page = function(main) {
