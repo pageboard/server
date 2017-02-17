@@ -2,10 +2,16 @@ var serveStatic = require('serve-static');
 var serveFavicon = require('serve-favicon');
 var Path = require('path');
 var pify = require('pify');
-var fs = require('fs');
+var _fs = require('fs');
+var fs = {
+	stat: pify(_fs.stat),
+	lstat: pify(_fs.lstat),
+	symlink: pify(_fs.symlink),
+	unlink: pify(_fs.unlink)
+};
+
 var glob = pify(require('glob'));
 var mkdirp = pify(require('mkdirp'));
-var fs = pify(fs);
 var debug = require('debug')('pageboard-static');
 
 module.exports = function(opt) {
