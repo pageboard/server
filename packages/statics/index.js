@@ -66,30 +66,27 @@ function init(All) {
 function mount(root, dir) {
 	debug("Mounting", dir, "in", root);
 	return glob('**', {
-		cwd: dir,
-		nodir: true
-	}).then(function(files) {
-		debug("found", files);
-		return Promise.all(files.map(mountFile.bind(null, root, dir)));
+		cwd: dir
+	}).then(function(paths) {
+		return Promise.all(paths.map(mountPath.bind(null, root, dir)));
 	});
 }
 
-function mountFile(root, dir, file) {
-	var destDir = Path.dirname(file);
-	debug("creating directory", root, destDir);
-	return mkdirp(Path.join(root, destDir)).then(function() {
-		var src = Path.join(root, file);
-		var dst = Path.relative(Path.dirname(src), Path.join(dir, file));
-		return fs.lstat(src).catch(function() {}).then(function(stats) {
-			if (!stats) return;
-			if (stats.isSymbolicLink() == false) {
-				return Promise.reject(new Error("Cannot overwrite file with symbolic link:\n" + src));
-			} else {
-				return fs.unlink(src);
-			}
-		}).then(function() {
-			return fs.symlink(dst, src);
-		});
+function mountPath(root, dir, path) {
+	var dst = Path.join(root, path);
+	var src = Path.relative(Path.dirname(dst), Path.join(dir, path));
+	// if src is symlink or file, symlink it, if it's a directory, create a dir
+	return fs.lstat(src).then(function(stats) {
+		if (!stats) return;
+		if (stats.isSymbolicLink() || stats.isFile()) {
+			return fs.lstat(dst).catch(function(){}).then(function(lstats) {
+				if (lstats && lstats.isSymbolicLink()) return fs.unlink(dst);
+			}).then(function() {
+				return fs.symlink(src, dst);
+			});
+		} else {
+			return mkdirp(dst);
+		}
 	});
 }
 
