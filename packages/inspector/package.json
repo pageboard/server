@@ -15,5 +15,8 @@
   "bugs": {
     "url": "https://github.com/pageboard/pageboard-inspector/issues"
   },
-  "homepage": "https://github.com/pageboard/pageboard-inspector#readme"
+  "homepage": "https://github.com/pageboard/pageboard-inspector#readme",
+  "dependencies": {
+    "url-inspector": "^2.1.1"
+  }
 }
