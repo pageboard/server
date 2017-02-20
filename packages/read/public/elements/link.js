@@ -5,6 +5,23 @@ var LinkElement = {
 	group: 'block',
 	specs: {
 		content: "inline<_>*"
+	},
+	properties: {
+		url: {
+			title: 'Address',
+			type: "string",
+			format: "uri"
+		},
+		target: {
+			title: 'Target',
+			oneOf: [{
+				constant: "_blank",
+				title: "new window"
+			}, {
+				constant: "_self",
+				title: "same window"
+			}]
+		}
 	}
 };
 
