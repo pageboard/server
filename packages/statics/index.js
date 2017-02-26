@@ -2,13 +2,7 @@ var serveStatic = require('serve-static');
 var serveFavicon = require('serve-favicon');
 var Path = require('path');
 var pify = require('pify');
-var _fs = require('fs');
-var fs = {
-	stat: pify(_fs.stat),
-	lstat: pify(_fs.lstat),
-	symlink: pify(_fs.symlink),
-	unlink: pify(_fs.unlink)
-};
+var fs = pify(require('fs'), ['stat', 'lstat', 'symlink', 'unlink']);
 
 var glob = pify(require('glob'));
 var mkdirp = pify(require('mkdirp'));
