@@ -64,7 +64,11 @@ function mount(root, dir) {
 	return glob('**', {
 		cwd: dir
 	}).then(function(paths) {
-		return Promise.all(paths.map(mountPath.bind(null, root, dir)));
+		var p = Promise.resolve();
+		while (paths.length) {
+			p = p.then(mountPath.bind(null, root, dir, paths.shift()));
+		}
+		return p;
 	});
 }
 
