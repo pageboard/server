@@ -76,8 +76,15 @@ function mountPath(root, dir, path) {
 		if (!stats) return;
 		if (stats.isSymbolicLink() || stats.isFile()) {
 			return fs.lstat(dst).catch(function(){}).then(function(lstats) {
-				if (lstats && lstats.isSymbolicLink()) return fs.unlink(dst);
+				if (!lstats) return;
+				if (lstats.isSymbolicLink()) {
+					debug("unlink existing symlink", dst);
+					return fs.unlink(dst);
+				} else {
+					throw new Error("A file or directory already exists :\n" + dst);
+				}
 			}).then(function() {
+				debug("creating symlink for", src);
 				return fs.symlink(src, dst);
 			});
 		} else if (!dirCache[dst]) {
