@@ -8,6 +8,8 @@ var glob = pify(require('glob'));
 var mkdirp = pify(require('mkdirp'));
 var debug = require('debug')('pageboard-static');
 
+var dirCache = {};
+
 module.exports = function(opt) {
 	opt.statics = Object.assign({
 		root: process.cwd() + '/public',
@@ -78,7 +80,9 @@ function mountPath(root, dir, path) {
 			}).then(function() {
 				return fs.symlink(src, dst);
 			});
-		} else {
+		} else if (!dirCache[dst]) {
+			debug("create directory", dst);
+			dirCache[dst] = true;
 			return mkdirp(dst);
 		}
 	});
