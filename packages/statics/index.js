@@ -70,7 +70,8 @@ function mount(root, dir) {
 
 function mountPath(root, dir, path) {
 	var dst = Path.join(root, path);
-	var src = Path.relative(Path.dirname(dst), Path.join(dir, path));
+	// var src = Path.relative(Path.dirname(dst), Path.join(dir, path));
+	var src = Path.join(dir, path);
 	// if src is symlink or file, symlink it, if it's a directory, create a dir
 	return fs.lstat(src).then(function(stats) {
 		if (!stats) return;
