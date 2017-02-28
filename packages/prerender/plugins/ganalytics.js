@@ -1,3 +1,4 @@
+// https://philipwalton.com/articles/the-google-analytics-setup-i-use-on-every-site-i-build/
 module.exports = function(gaid) {
 	return function iePlugin(page) {
 		if (!gaid) return;
