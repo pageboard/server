@@ -1,5 +1,4 @@
 var Model = require('objection').Model;
-var Path = require('path');
 
 function Block() {
 	Model.apply(this, arguments);
@@ -107,17 +106,19 @@ Block.relationMappings = {
 	}
 };
 
-Block.initElements = function initElements(elements) {
-	if (elements.length === 0) return;
+Block.extendSchema = function extendSchema(schemas) {
+	var types = Object.keys(schemas);
+	if (types.length === 0) return;
 	var schema = Block.jsonSchema;
 	var blockProps = schema.properties;
 	delete schema.properties;
 	delete schema.additionalProperties;
 
-	schema.switch = elements.map(function(path) {
-		var element = require(path);
-		if (element.prototype) element = element.prototype;
-		var type = element.name || Path.basename(path);
+	schema.switch = types.map(function(type) {
+		var element = Object.assign({
+			properties: {},
+			specs: {}
+		}, schemas[type]);
 		return {
 			if: {
 				properties: {

@@ -1,6 +1,8 @@
 var objection = require('objection');
 var ObjectionRest = require('objection-rest');
 var knex = require('knex');
+var fs = require('fs');
+var Path = require('path');
 
 exports = module.exports = function(opt) {
 	if (!opt.database) opt.database = `postgres://localhost/${opt.name}`;
@@ -11,11 +13,12 @@ exports = module.exports = function(opt) {
 		__dirname + '/services/page',
 		__dirname + '/services/block'
 	);
-	opt.elements = [
-		__dirname + '/elements/site',
-		__dirname + '/elements/page',
-		__dirname + '/elements/user'
-	];
+	opt.elements.push(
+		__dirname + '/public/elements/site',
+		__dirname + '/public/elements/page',
+		__dirname + '/public/elements/user'
+	);
+	opt.statics.mounts.push(__dirname + '/public');
 	opt.models = [
 		__dirname + '/models/block'
 	];
@@ -40,7 +43,14 @@ function init(All) {
 	});
 	Object.assign(exports, models);
 
-	exports.Block.initElements(opt.elements);
+	opt.schemas = {};
+	opt.elements.forEach(function(path) {
+		var element = require(path);
+		var type = element.name || Path.basename(path);
+		var prev = opt.schemas[type];
+		if (prev) Object.assign(prev, element);
+	});
+	exports.Block.extendSchema(opt.schemas);
 	exports.objection = objection;
 	exports.migrate = migrate.bind(null, knexInst, opt.migrations);
 	exports.seed = seed.bind(null, knexInst, opt.seeds);
