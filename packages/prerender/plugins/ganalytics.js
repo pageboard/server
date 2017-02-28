@@ -1,6 +1,6 @@
 // https://philipwalton.com/articles/the-google-analytics-setup-i-use-on-every-site-i-build/
 module.exports = function(gaid) {
-	return function iePlugin(page) {
+	return function ganalyticsPlugin(page) {
 		if (!gaid) return;
 		page.when('idle', function(cb) {
 			this.run(function(gaid, done) {
