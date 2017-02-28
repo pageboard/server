@@ -18,11 +18,11 @@ Page.route(function(state) {
 			url: page.data.template,
 			type: 'html'
 		}).then(function(doc) {
-			var pagecut = new Pagecut.Viewer({
+			var viewer = new Pagecut.Viewer({
 				document: doc
 			});
 			var blocks = buildBlocksMap(page);
-			return pagecut.modules.id.from(page, blocks).then(function(fragment) {
+			return viewer.modules.id.from(page, blocks).then(function(fragment) {
 				if (fragment.nodeName != "HTML") throw new Error("Bad fragment");
 				state.document = fragment.ownerDocument;
 			});
