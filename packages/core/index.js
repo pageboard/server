@@ -25,7 +25,8 @@ exports.config = function(pkgOpt) {
 			cache: Path.join(xdg.cache, name),
 			data: Path.join(xdg.data, name),
 			runtime: Path.join(xdg.runtime, name)
-		}
+		},
+		elements: []
 	});
 	return opt;
 };
