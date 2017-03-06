@@ -23,6 +23,7 @@
   "homepage": "https://github.com/pageboard/pageboard-prerender#readme",
   "dependencies": {
     "express-dom": "^5.8.0",
-    "express-href": "^1.0.0"
+    "express-href": "^1.0.0",
+    "webkitgtk": "^4.5.0"
   }
 }
