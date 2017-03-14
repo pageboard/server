@@ -1,3 +1,5 @@
+var fs = require('fs');
+
 module.exports = function(opt) {
 	opt.statics.mounts.push(__dirname + '/public');
 	return {
@@ -13,11 +15,10 @@ function init(All) {
 }
 
 /*
-* express-dom load plugin that injects html import polyfill
+* server prerendering need html import polyfill
 */
+var htmlImportPolyfill = fs.readFileSync(require.resolve('@webcomponents/html-imports'));
+
 function prerenderPolyfillImports(page, settings) {
-	if (!module.htmlImportPolyfill) {
-		module.htmlImportPolyfill = require('fs').readFileSync(require.resolve('@webcomponents/html-imports'));
-	}
-	settings.load.scripts.unshift(module.htmlImportPolyfill);
+	settings.load.scripts.unshift(htmlImportPolyfill);
 }
