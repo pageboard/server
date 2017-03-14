@@ -18,7 +18,7 @@ Page.route(function(state) {
 			url: page.data.template,
 			type: 'html'
 		}).then(function(doc) {
-			var viewer = new Pagecut.Viewer({
+			var viewer = Pagecut.viewerInstance = new Pagecut.Viewer({
 				document: doc
 			});
 			var blocks = buildBlocksMap(page);
