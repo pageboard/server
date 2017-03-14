@@ -22,7 +22,8 @@ Page.route(function(state) {
 				document: doc
 			});
 			var blocks = buildBlocksMap(page);
-			return viewer.modules.id.from(page, blocks).then(function(fragment) {
+			viewer.modules.id.store = blocks;
+			return viewer.modules.id.from(page).then(function(fragment) {
 				if (fragment.nodeName != "HTML") throw new Error("Bad fragment");
 				state.document = fragment.ownerDocument;
 			});
