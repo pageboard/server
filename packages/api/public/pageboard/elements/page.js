@@ -11,6 +11,9 @@
 			template: {
 				type: 'string'
 			}
+		},
+		specs: {
+			body: 'block+'
 		}
 	};
 })(typeof exports == "undefined" ? window.Pagecut.modules : exports);

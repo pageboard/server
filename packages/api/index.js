@@ -14,9 +14,9 @@ exports = module.exports = function(opt) {
 		__dirname + '/services/block'
 	);
 	opt.elements.push(
-		__dirname + '/public/elements/site',
-		__dirname + '/public/elements/page',
-		__dirname + '/public/elements/user'
+		__dirname + '/public/pageboard/elements/site',
+		__dirname + '/public/pageboard/elements/page',
+		__dirname + '/public/pageboard/elements/user'
 	);
 	opt.statics.mounts.push(__dirname + '/public');
 	opt.models = [
