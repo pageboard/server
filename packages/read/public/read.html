@@ -28,6 +28,15 @@ Page.route(function(state) {
 				state.document = fragment.ownerDocument;
 			});
 		});
+	}).catch(function(err) {
+		console.error(err);
+		document.location = Page.format({
+			pathname: '/error',
+			query: {
+				code: err.statusCode || err.code || 500,
+				message: err.message || err.toString()
+			}
+		});
 	});
 
 	function buildBlocksMap(block, blocks) {
