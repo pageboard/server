@@ -74,24 +74,29 @@ function mount(root, dir) {
 
 function mountPath(root, dir, path) {
 	var dst = Path.join(root, path);
-	// var src = Path.relative(Path.dirname(dst), Path.join(dir, path));
 	var src = Path.join(dir, path);
-	// if src is symlink or file, symlink it, if it's a directory, create a dir
-	return fs.lstat(src).then(function(stats) {
-		if (!stats) return;
-		if (stats.isSymbolicLink() || stats.isFile()) {
-			return fs.lstat(dst).catch(function(){}).then(function(lstats) {
-				if (!lstats) return;
-				if (lstats.isSymbolicLink()) {
-					debug("unlink existing symlink", dst);
-					return fs.unlink(dst);
-				} else {
-					throw new Error("A file or directory already exists :\n" + dst);
-				}
-			}).then(function() {
+
+	return Promise.all([
+		fs.lstat(src),
+		fs.lstat(dst).catch(function(){}).then(function(stat) {
+			if (!stat) return stat;
+			if (!stat.isSymbolicLink() || stat.isDirectory()) return stat;
+			debug("unlink existing file or symlink", dst);
+			return fs.unlink(dst).then(function() {
+				return stat;
+			});
+		})
+	]).then(function(stats) {
+		var srcStat = stats[0];
+		var dstStat = stats[1];
+		if (srcStat.isSymbolicLink() || srcStat.isFile()) {
+			if (dstStat && dstStat.isDirectory()) {
+				throw new Error("Cannot deploy a file or symlink over a directory\n" +
+					"Please remove manually " + dst);
+			} else {
 				debug("creating symlink for", src);
 				return fs.symlink(src, dst);
-			});
+			}
 		} else if (!dirCache[dst]) {
 			debug("create directory", dst);
 			dirCache[dst] = true;
