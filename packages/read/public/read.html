@@ -1,46 +1,51 @@
 <!DOCTYPE html>
 <html>
 <head>
+	<!-- core bundle -->
 	<script src="/public/js/agent.js"></script>
 	<script src="/public/js/window-page.js"></script>
-
 	<script src="/public/pageboard/pagecut/viewer.js"></script>
 	<script src="/public/pageboard/pagecut/id.js"></script>
-	<script src="/public/pageboard/elements/page.js"></script>
-	<script src="/public/pageboard/elements/grid/view.js"></script>
-	<script src="/public/pageboard/elements/link/view.js"></script>
 
-	<link rel="import" href="/public/pageboard/elements/grid/view.html" />
-	<link rel="import" href="/public/pageboard/elements/link/view.html" />
+	<!-- elements bundle -->
+	<link rel="import" href="/public/pageboard/elements/page.html" />
+	<link rel="import" href="/public/pageboard/elements/grid.html" />
+	<link rel="import" href="/public/pageboard/elements/link.html" />
+
 	<script>
 Page.route(function(state) {
 	return GET('/api/page', {
 		url: state.pathname
 	}).then(function(page) {
-		state.data.page = page;
-		return GET({
-			url: page.data.template,
-			type: 'html'
-		}).then(function(doc) {
-			var viewer = Pagecut.viewerInstance = new Pagecut.Viewer({
-				document: doc
-			});
-			var blocks = buildBlocksMap(page);
-			viewer.modules.id.store = blocks;
-			return viewer.modules.id.from(page).then(function(fragment) {
-				if (fragment.nodeName != "HTML") throw new Error("Bad fragment");
-				state.document = fragment.ownerDocument;
-			});
+		var doc = document.cloneNode(false);
+		var html = doc.createElement('html');
+		doc.appendChild(html);
+		html.appendChild(doc.createElement('head'));
+		html.appendChild(doc.createElement('body'));
+		var viewer = Pagecut.viewerInstance = new Pagecut.Viewer({
+			document: doc
+		});
+
+		var blocks = buildBlocksMap(page);
+		viewer.modules.id.store = blocks;
+		return viewer.modules.id.from(page).then(function(fragment) {
+			if (fragment.nodeName != "HTML") throw new Error("Page should render a documentElement");
+			state.document = fragment.ownerDocument;
 		});
 	}).catch(function(err) {
 		console.error(err);
+		var params = {
+			code: err.statusCode || err.code || 500,
+			message: err.message || err.toString()
+		};
+		/*
 		document.location = Page.format({
 			pathname: '/error',
-			query: {
-				code: err.statusCode || err.code || 500,
-				message: err.message || err.toString()
-			}
+			query: params
 		});
+		*/
+		document.querySelector('#code').textContent = params.code;
+		document.querySelector('#message').textContent = params.message;
 	});
 
 	function buildBlocksMap(block, blocks) {
@@ -55,5 +60,10 @@ Page.route(function(state) {
 	</script>
 </head>
 <body>
+<h3>An error occurred</h3>
+<p>
+	<span id="code"></span><br>
+	<span id="message"></span>
+</p>
 </body>
 </html>
