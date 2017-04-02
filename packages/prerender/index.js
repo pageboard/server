@@ -9,6 +9,8 @@ module.exports = function(opt) {
 		opt.prerender.cacheModel = "none";
 	}
 
+	opt.prerender.console = true;
+
 	Object.assign(dom.settings, {
 		stall: 20000,
 		allow: "same-origin",
