@@ -1,19 +1,16 @@
 (function(exports) {
 	exports.page = {
-		view: function(doc, block) {
-			return doc.documentElement;
-		},
-		required: ['template'],
+		title: 'Page',
 		properties: {
 			title: {
 				type: ['string', 'null']
-			},
-			template: {
-				type: 'string'
 			}
 		},
-		specs: {
-			body: 'block+'
+		contents: {
+			body: {
+				spec: 'block+',
+				title: 'Body'
+			}
 		}
 	};
 })(typeof exports == "undefined" ? window.Pagecut.modules : exports);
