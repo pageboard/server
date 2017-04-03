@@ -3,6 +3,7 @@
 		title: 'Page',
 		properties: {
 			title: {
+				title: 'Title',
 				type: ['string', 'null']
 			},
 			url: {
