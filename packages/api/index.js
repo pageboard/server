@@ -70,7 +70,8 @@ function migrate(knex, dirs) {
 		return knex.migrate.latest({
 			directory: dir
 		}).spread(function(batchNo, list) {
-			if (list.length) console.log(" ", list.join("\n "));
+			if (list.length) return list;
+			return "No migrations run in this directory";
 		});
 	}));
 }
