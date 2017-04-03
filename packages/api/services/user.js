@@ -7,8 +7,7 @@ exports = module.exports = function(opt) {
 function QueryUser(data) {
 	var obj = { type: 'user' };
 	if (data.id) obj.id = data.id;
-	else if (data.url) obj.url = data.url;
-	else if (data.email) obj['data.email'] = data.email;
+	else if (data.email) obj['data:email'] = data.email;
 	else throw new HttpError.BadRequest("Cannot query user", data);
 	return All.Block.query().where(obj);
 }

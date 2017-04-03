@@ -6,9 +6,7 @@ exports.up = function (knex) {
 		table.string('mime').notNullable().index();
 		table.jsonb('data').notNullable().defaultTo('{}');
 		table.jsonb('content').notNullable().defaultTo('{}');
-		table.string('lang').index();
-		table.string('url').index().unique();
-		table.string('template').index();
+		table.string('lang');
 		table.jsonb('permissions').defaultTo('{"read": [], "add": [], "save": [], "del": []}');
 	})
 	.createTable('relation', function (table) {

@@ -35,7 +35,7 @@ function QuerySite(data) {
 	} else {
 		if (!data.url) throw new HttpError.BadRequest("Missing url");
 		q.where({
-			'block.url': data.url,
+			'block.data:url': data.url,
 			'block.type': 'site'
 		});
 	}

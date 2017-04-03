@@ -4,6 +4,11 @@
 		properties: {
 			title: {
 				type: ['string', 'null']
+			},
+			url: {
+				title: 'Address',
+				type: "string",
+				format: "uri"
 			}
 		},
 		contents: {

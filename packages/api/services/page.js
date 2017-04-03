@@ -38,11 +38,11 @@ function QueryPage(data) {
 		if (!site) throw new HttpError.BadRequest("Missing site");
 		if (!data.url) throw new HttpError.BadRequest("Missing url");
 		q.where({
-			'block.url': data.url,
+			"block.data:url": data.url,
 			'block.type': 'page'
 		}).joinRelation('parents').where({
 			'parents.type': 'site',
-			'parents.url': site
+			'parents.data:url': site
 		});
 	}
 	return q;
@@ -76,7 +76,7 @@ exports.add = function(data) {
 	}, data);
 	return All.Block.query().where({
 		type: 'site',
-		url: data.site
+		'data:url': data.site
 	}).first().then(function(site) {
 		data.parents = [{
 			'#dbRef': site.id
