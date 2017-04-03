@@ -22,8 +22,8 @@ Page.route(function(state) {
 
 		viewer.modules.id.store = buildBlocksMap(page);
 		return viewer.modules.id.from(page).then(function(fragment) {
-			if (fragment.nodeName != "HTML") throw new Error("Page should render a documentElement");
-			state.document = fragment.ownerDocument;
+			if (fragment.nodeName != "BODY") throw new Error("Page renderer should fill document and return body");
+			state.document = fragment.ownerDocument.cloneNode(true);
 		});
 	}).catch(function(err) {
 		console.error(err);
