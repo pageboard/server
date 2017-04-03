@@ -29,15 +29,14 @@ function init(All) {
 }
 
 function QuerySite(data) {
+	var ref = All.objection.ref;
 	var q = All.Block.query();
 	if (data.id) {
 		q.where('id', data.id);
 	} else {
 		if (!data.url) throw new HttpError.BadRequest("Missing url");
-		q.where({
-			'block.data:url': data.url,
-			'block.type': 'site'
-		});
+		q.where(ref('block.data:url').castText(), data.url)
+		.where('block.type', 'site');
 	}
 	return q;
 }
@@ -55,10 +54,10 @@ exports.add = function(data) {
 		type: 'site',
 		mime: '*/*'
 	}, data);
-	return All.Block.query().select('id').where({
+	return All.user.get({
 		type: 'user',
-		id: data.user
-	}).first().then(function(user) {
+		email: data.user
+	}).then(function(user) {
 		data.parents = [{
 			'#dbRef': user.id
 		}];

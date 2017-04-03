@@ -4,12 +4,14 @@ exports = module.exports = function(opt) {
 	};
 };
 
+
 function QueryUser(data) {
-	var obj = { type: 'user' };
-	if (data.id) obj.id = data.id;
-	else if (data.email) obj['data:email'] = data.email;
+	var ref = All.objection.ref;
+	var q = All.Block.query().where('type', 'user');
+	if (data.id) q.where('id', data.id);
+	else if (data.email) q.where(ref('data:email').castText(), data.email);
 	else throw new HttpError.BadRequest("Cannot query user", data);
-	return All.Block.query().where(obj);
+	return q;
 }
 
 exports.get = function(data) {

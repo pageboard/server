@@ -29,6 +29,7 @@ function init(All) {
 }
 
 function QueryPage(data) {
+	var ref = All.objection.ref;
 	var q = All.Block.query();
 	var site = data.site;
 	if (site) delete data.site;
@@ -37,13 +38,11 @@ function QueryPage(data) {
 	} else {
 		if (!site) throw new HttpError.BadRequest("Missing site");
 		if (!data.url) throw new HttpError.BadRequest("Missing url");
-		q.where({
-			"block.data:url": data.url,
-			'block.type': 'page'
-		}).joinRelation('parents').where({
-			'parents.type': 'site',
-			'parents.data:url': site
-		});
+		q.where('block.type', 'page')
+		.where(ref("block.data:url").castText(), data.url)
+		.joinRelation('parents')
+		.where('parents.type', 'site')
+		.where(ref('parents.data:url').castText(), site);
 	}
 	return q;
 }
@@ -69,15 +68,16 @@ exports.get = function(data) {
 };
 
 exports.add = function(data) {
+	var ref = All.objection.ref;
 	if (!data.site) throw new HttpError.BadRequest("Missing site");
 	data = Object.assign({
 		type: 'page',
 		mime: 'text/html'
 	}, data);
-	return All.Block.query().where({
-		type: 'site',
-		'data:url': data.site
-	}).first().then(function(site) {
+	return All.Block.query()
+		.where('type', 'site')
+		.where(ref('data:url').castText(), data.site)
+	.first().then(function(site) {
 		data.parents = [{
 			'#dbRef': site.id
 		}];
