@@ -37,8 +37,8 @@ Page.route(function(state) {
 			query: params
 		});
 		*/
-		document.querySelector('#code').textContent = params.code;
-		document.querySelector('#message').textContent = params.message;
+		document.body.innerHTML = '<h1>Error' + params.code + '</h1>' +
+			'<p>' + params.message + '</p>';
 	});
 
 	function buildBlocksMap(block, blocks) {
@@ -52,11 +52,5 @@ Page.route(function(state) {
 });
 	</script>
 </head>
-<body>
-<h3>An error occurred</h3>
-<p>
-	<span id="code"></span><br>
-	<span id="message"></span>
-</p>
-</body>
+<body></body>
 </html>
