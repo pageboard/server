@@ -17,17 +17,10 @@ Page.route(function(state) {
 	return GET('/api/page', {
 		url: state.pathname
 	}).then(function(page) {
-		var doc = document.cloneNode(false);
-		var html = doc.createElement('html');
-		doc.appendChild(html);
-		html.appendChild(doc.createElement('head'));
-		html.appendChild(doc.createElement('body'));
-		var viewer = Pagecut.viewerInstance = new Pagecut.Viewer({
-			document: doc
-		});
 
-		var blocks = buildBlocksMap(page);
-		viewer.modules.id.store = blocks;
+		var viewer = Pagecut.viewerInstance = new Pagecut.Viewer();
+
+		viewer.modules.id.store = buildBlocksMap(page);
 		return viewer.modules.id.from(page).then(function(fragment) {
 			if (fragment.nodeName != "HTML") throw new Error("Page should render a documentElement");
 			state.document = fragment.ownerDocument;
