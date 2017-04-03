@@ -12,6 +12,8 @@ Block.tableName = 'block';
 // prefer ajv validation over partial objection schema assumptions
 // unfortunately, https://github.com/epoberezkin/ajv/issues/410
 // so for now, errors will be reported by database and not by validation
+// In objection 0.8, will be the default value
+// https://github.com/Vincit/objection.js/issues/308
 Block.pickJsonSchemaProperties = false;
 
 Block.jsonSchema = {
