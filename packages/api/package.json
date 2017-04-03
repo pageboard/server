@@ -17,10 +17,10 @@
   },
   "homepage": "https://github.com/pageboard/pageboard-api#readme",
   "dependencies": {
-    "knex": "^0.12.7",
-    "objection": "^0.7.0",
+    "knex": "^0.12.9",
+    "objection": "^0.7.12",
     "objection-rest": "^0.4.0",
     "passwd-user": "^2.1.0",
-    "pg": "^6.1.4"
+    "pg": "^6.1.5"
   }
 }
