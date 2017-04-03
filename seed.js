@@ -3,39 +3,37 @@ var pageboard = require('pageboard-core');
 var config = pageboard.config();
 
 pageboard.init(config).then(function(All) {
-	return All.user.add({data: {
-		email: 'root@localhost.localdomain',
-		password: 'password',
-		name: 'John Doe',
-		nickname: 'guest',
-		grants: ['all']
-	}}).then(function(user) {
+	return All.objection.Model.query().table('relation').del().then(function() {
+		return All.Block.query().del();
+	}).then(function() {
+		return All.user.add({data: {
+			email: 'root@localhost.localdomain',
+			password: 'password',
+			name: 'John Doe',
+			nickname: 'guest',
+			grants: ['all']
+		}});
+	}).then(function(user) {
 		return All.site.add({
-			user: user.id,
-			url: 'localhost',
+			user: 'root@localhost.localdomain',
 			data: {
+				url: 'localhost',
 				name: 'Local site'
 			}
 		});
 	}).then(function(site) {
-		return Promise.all([
-			All.page.add({
-				site: 'localhost',
-				url: '/error',
-				data: {
-					title: 'Error',
-					template: 'public/templates/error.html'
-				}
-			}),
-			All.page.add({
-				site: 'localhost',
+		return All.page.add({
+			site: site.data.url,
+			data: {
 				url: '/',
-				data: {
-					title: 'Home',
-					template: 'public/templates/home.html'
-				}
-			})
-		]);
+				title: 'Home'
+			},
+			content: {
+				body: '<p>Welcome to Pageboard</p>'
+			}
+		});
+	}).then(function(page) {
+
 	}).then(function() {
 		process.exit();
 	});
