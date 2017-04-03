@@ -13,8 +13,13 @@ exports.up = function (knex) {
 		table.increments('id').primary();
 		table.integer('parent_id').unsigned().references('id').inTable('block').onDelete('CASCADE');
 		table.integer('child_id').unsigned().references('id').inTable('block').onDelete('CASCADE');
-	});
-	// TODO create index on type=user, data.email
+	})
+	.raw(
+		"CREATE UNIQUE INDEX ON block ((data#>>'{url}'), lang) WHERE data->'url' IS NOT NULL"
+	)
+	.raw(
+		"CREATE UNIQUE INDEX ON block ((data#>>'{email}')) WHERE type='user'"
+	);
 };
 
 exports.down = function (knex) {
