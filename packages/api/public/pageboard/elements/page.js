@@ -9,7 +9,7 @@
 			url: {
 				title: 'Address',
 				type: "string",
-				format: "uri"
+				pattern: "(\/[a-zA-Z0-9-.]*)+"
 			}
 		},
 		contents: {
