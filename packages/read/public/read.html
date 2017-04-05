@@ -21,9 +21,13 @@ Page.route(function(state) {
 		var viewer = Pagecut.viewerInstance = new Pagecut.Viewer();
 
 		viewer.modules.id.store = buildBlocksMap(page);
+
+		var stylesheets = collectStylesheets({}, document);
+
 		return viewer.modules.id.from(page).then(function(fragment) {
 			if (fragment.nodeName != "BODY") throw new Error("Page renderer should fill document and return body");
 			state.document = fragment.ownerDocument.cloneNode(true);
+			setStylesheets(stylesheets, state.document);
 		});
 	}).catch(function(err) {
 		console.error(err);
@@ -48,6 +52,28 @@ Page.route(function(state) {
 			buildBlocksMap(item, blocks);
 		});
 		return blocks;
+	}
+
+	function collectStylesheets(sheets, doc) {
+		var nodes = Array.from(doc.querySelectorAll('link[rel="import"],link[rel="stylesheet"]'));
+		nodes.forEach(function(node) {
+			if (node.import) collectStylesheets(sheets, node.import);
+			else sheets[node.href] = node.getAttribute('href');
+		});
+		return sheets;
+	}
+
+	function setStylesheets(map, doc) {
+		var pivot = doc.head.querySelector('script');
+		var href, sheet;
+		for (var k in map) {
+			href = map[k];
+			sheet = doc.createElement('link');
+			sheet.rel = "stylesheet";
+			sheet.setAttribute('href', href);
+			if (pivot) doc.head.insertBefore(sheet, pivot);
+			else doc.head.appendChild(sheet);
+		}
 	}
 });
 	</script>
