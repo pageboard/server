@@ -1,6 +1,7 @@
 var Path = require('path');
 var express = require('express');
 var morgan = require('morgan');
+var pad = require('pad');
 var prettyBytes = require('pretty-bytes');
 var rc = require('rc');
 var mkdirp = require('mkdirp');
@@ -64,15 +65,20 @@ exports.init = function(opt) {
 
 	All.plugins = plugins;
 
+	morgan.token('status', function(req, res) {
+		return pad(3, res.statusCode);
+	});
 	morgan.token('time', function(req, res) {
-		return padFour(morgan['response-time'](req, res, 0)) + 'ms';
+		var ms = morgan['response-time'](req, res, 0);
+		if (ms) return pad(4, ms) + 'ms';
+		else return pad(6, '');
 	});
 	morgan.token('type', function(req, res) {
-		return padFour((res.get('Content-Type') || '-').split(';').shift().split('/').pop());
+		return pad(4, (res.get('Content-Type') || '-').split(';').shift().split('/').pop());
 	});
 	morgan.token('size', function(req, res) {
 		var len = parseInt(res.get('Content-Length'));
-		return padFour((len && prettyBytes(len) || '0 B').replace(/ /g, ''));
+		return pad(4, (len && prettyBytes(len) || '0 B').replace(/ /g, ''));
 	});
 
 	return initPlugins(All).then(function() {
@@ -113,10 +119,6 @@ function initPlugins(All, type) {
 
 function initDirs(dirs) {
 	for (var k in dirs) mkdirp.sync(dirs[k]);
-}
-
-function padFour(str) {
-	return ("    " + str).slice(-4);
 }
 
 function createApp(opt) {
