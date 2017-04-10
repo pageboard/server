@@ -1,3 +1,4 @@
+// TODO use block lang to improve over unaccent
 exports.up = function(knex) {
 	return knex.schema
 	.raw("ALTER TABLE href ADD COLUMN tsv tsvector")
