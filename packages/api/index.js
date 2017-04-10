@@ -1,5 +1,4 @@
 var objection = require('objection');
-var ObjectionRest = require('objection-rest');
 var knex = require('knex');
 var fs = require('fs');
 var Path = require('path');
@@ -54,12 +53,6 @@ function init(All) {
 	exports.objection = objection;
 	exports.migrate = migrate.bind(null, knexInst, opt.migrations);
 	exports.seed = seed.bind(null, knexInst, opt.seeds);
-
-	var rest = ObjectionRest(objection).routePrefix('/api');
-	Object.keys(models).forEach(function(name) {
-		rest.addModel(models[name]);
-	});
-	rest.generate(All.app);
 }
 
 
