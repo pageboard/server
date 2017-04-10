@@ -6,22 +6,22 @@ exports = module.exports = function(opt) {
 };
 
 function init(All) {
-	All.app.get('/api/block', function(req, res, next) {
+	All.app.get(All.Block.jsonSchema.id, function(req, res, next) {
 		exports.get(reqData(req)).then(function(block) {
 			res.send(block);
 		}).catch(next);
 	});
-	All.app.post('/api/block', function(req, res, next) {
+	All.app.post(All.Block.jsonSchema.id, function(req, res, next) {
 		exports.add(reqData(req)).then(function(block) {
 			res.send(block);
 		}).catch(next);
 	});
-	All.app.put('/api/block', function(req, res, next) {
+	All.app.put(All.Block.jsonSchema.id, function(req, res, next) {
 		exports.save(reqData(req)).then(function(block) {
 			res.send(block);
 		}).catch(next);
 	});
-	All.app.delete('/api/block', function(req, res, next) {
+	All.app.delete(All.Block.jsonSchema.id, function(req, res, next) {
 		exports.del(reqData(req)).then(function(block) {
 			res.send(block);
 		}).catch(next);
