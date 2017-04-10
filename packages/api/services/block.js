@@ -29,9 +29,21 @@ function init(All) {
 }
 
 function QueryBlock(data) {
-	var q = All.Block.query();
-	if (!data.id) throw new HttpError.BadRequest("Missing id");
-	q.where('id', data.id);
+	var Block = All.Block;
+	var q = Block.query().pick(Object.keys(Block.jsonSchema.properties));
+	if (data.text) {
+		q.from(Block.raw([
+			'block',
+			Block.raw("phraseto_tsquery('unaccent', ?) AS query", [data.text])
+		]));
+		if (data.type) q.where('type', data.type);
+		q.whereRaw('query @@ block.tsv');
+		q.orderByRaw('ts_rank(block.tsv, query) DESC');
+	} else if (!data.id) {
+		throw new HttpError.BadRequest("Missing id");
+	} else {
+		q.where('id', data.id);
+	}
 	return q;
 }
 
@@ -41,11 +53,7 @@ function reqData(req) {
 }
 
 exports.get = function(data) {
-	return QueryBlock(data).select('block.*')
-	.eager('children.^').first().then(function(block) {
-		if (!block) throw new HttpError.NotFound("No block found");
-		return block;
-	});
+	return QueryBlock(data);
 };
 
 exports.add = function(data) {
