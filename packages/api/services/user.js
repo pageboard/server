@@ -20,8 +20,7 @@ exports.get = function(data) {
 
 exports.add = function(data) {
 	data = Object.assign({
-		type: 'user',
-		mime: 'application/json'
+		type: 'user'
 	}, data);
 	return All.Block.query().insert(data);
 };

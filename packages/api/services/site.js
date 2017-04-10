@@ -51,8 +51,7 @@ exports.get = function(data) {
 exports.add = function(data) {
 	if (!data.user) throw new HttpError.BadRequest("Missing user");
 	data = Object.assign({
-		type: 'site',
-		mime: '*/*'
+		type: 'site'
 	}, data);
 	return All.user.get({
 		type: 'user',

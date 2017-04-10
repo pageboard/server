@@ -71,8 +71,7 @@ exports.add = function(data) {
 	var ref = All.objection.ref;
 	if (!data.site) throw new HttpError.BadRequest("Missing site");
 	data = Object.assign({
-		type: 'page',
-		mime: 'text/html'
+		type: 'page'
 	}, data);
 	return All.Block.query()
 		.where('type', 'site')

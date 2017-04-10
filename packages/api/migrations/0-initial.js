@@ -3,7 +3,6 @@ exports.up = function(knex) {
 	.createTable('block', function (table) {
 		table.increments('id').primary();
 		table.string('type').notNullable().index();
-		table.string('mime').notNullable().index();
 		table.jsonb('data').notNullable().defaultTo('{}');
 		table.jsonb('content').notNullable().defaultTo('{}');
 		table.string('lang');

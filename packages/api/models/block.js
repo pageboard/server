@@ -18,16 +18,13 @@ Block.pickJsonSchemaProperties = false;
 
 Block.jsonSchema = {
 	type: 'object',
-	required: ['type', 'mime'],
+	required: ['type'],
 	id: '/api/blocks',
 	properties: {
 		id: {
 			type: 'integer'
 		},
 		type: {
-			type: 'string'
-		},
-		mime: {
 			type: 'string'
 		},
 		data: {
