@@ -6,6 +6,7 @@ exports.up = function(knex) {
 		table.jsonb('data').notNullable().defaultTo('{}');
 		table.jsonb('content').notNullable().defaultTo('{}');
 		table.string('lang');
+		table.timestamps(true, true); // created_at, updated_at, useTimestamps, defaultToNow
 	})
 	.createTable('relation', function (table) {
 		table.increments('id').primary();

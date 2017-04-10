@@ -42,6 +42,10 @@ Block.jsonSchema = {
 	additionalProperties: false
 };
 
+Block.prototype.$beforeUpdate = function() {
+	this.updated_at = new Date().toISOString();
+};
+
 Block.relationMappings = {
 	children: {
 		relation: Model.ManyToManyRelation,
