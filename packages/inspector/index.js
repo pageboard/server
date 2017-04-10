@@ -1,15 +1,25 @@
-var inspector = require('url-inspector');
-
-module.exports = function(opt) {
+exports = module.exports = function(opt) {
 	return {service: init};
 };
 
 function init(All) {
-	All.app.get('/inspector', function(req, res, next) {
-		inspector(req.query.url, All.opt.inspector, function(err, info) {
-			if (err) return next(err);
-			res.send(info);
-		});
-	});
+	var opt = All.opt;
+	exports.get = function(url) {
+		if (opt.inspector.url) {
+			return require('got')({
+				url: opt.inspector.url,
+				query: {
+					url: url
+				}
+			});
+		} else {
+			return new Promise(function(resolve, reject) {
+				require('url-inspector')(url, opt.inspector, function(err, result) {
+					if (err) return reject(err);
+					resolve(result);
+				});
+			});
+		}
+	};
 }
 
