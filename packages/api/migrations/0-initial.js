@@ -19,11 +19,31 @@ exports.up = function (knex) {
 	)
 	.raw(
 		"CREATE UNIQUE INDEX ON block ((data#>>'{email}')) WHERE type='user'"
+	)
+	.createTable('href', function(table) {
+		table.increments('id').primary();
+		table.integer('site_id').unsigned().references('id').inTable('block').onDelete('CASCADE');
+		table.string('url').notNullable();
+		table.string('mime').notNullable().index();
+		table.string('type').notNullable();
+		table.integer('size').notNullable().defaultTo(0);
+		table.string('title').notNullable();
+		table.string('description');
+		table.string('icon');
+		table.string('thumbnail');
+		table.string('site').notNullable();
+		table.string('pathname').notNullable();
+		table.string('lang');
+		table.timestamps(true, true); // created_at, updated_at, useTimestamps, defaultToNow
+	})
+	.raw(
+		"CREATE UNIQUE INDEX ON href (site_id, url, lang)"
 	);
 };
 
 exports.down = function (knex) {
 	return knex.schema
+		.dropTableIfExists('href')
 		.dropTableIfExists('relation')
 		.dropTableIfExists('block');
 };

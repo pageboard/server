@@ -10,7 +10,8 @@ exports = module.exports = function(opt) {
 		__dirname + '/services/user',
 		__dirname + '/services/site',
 		__dirname + '/services/page',
-		__dirname + '/services/block'
+		__dirname + '/services/block',
+		__dirname + '/services/href'
 	);
 	opt.elements.push(
 		__dirname + '/public/pageboard/elements/site',
@@ -19,7 +20,8 @@ exports = module.exports = function(opt) {
 	);
 	opt.statics.mounts.push(__dirname + '/public');
 	opt.models = [
-		__dirname + '/models/block'
+		__dirname + '/models/block',
+		__dirname + '/models/href'
 	];
 	opt.seeds = [__dirname + '/seeds'];
 	opt.migrations = [__dirname + '/migrations'];
