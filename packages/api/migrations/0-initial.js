@@ -1,4 +1,4 @@
-exports.up = function (knex) {
+exports.up = function(knex) {
 	return knex.schema
 	.createTable('block', function (table) {
 		table.increments('id').primary();
@@ -41,9 +41,10 @@ exports.up = function (knex) {
 	);
 };
 
-exports.down = function (knex) {
+exports.down = function(knex) {
 	return knex.schema
 		.dropTableIfExists('href')
 		.dropTableIfExists('relation')
 		.dropTableIfExists('block');
 };
+
