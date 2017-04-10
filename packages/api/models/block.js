@@ -40,39 +40,6 @@ Block.jsonSchema = {
 		},
 		lang: {
 			type: ['string', 'null']
-		},
-		permissions: {
-			type: 'object',
-			properties: {
-				read: {
-					type: 'array',
-					items: {
-						type: 'string'
-					},
-					uniqueItems: true
-				},
-				add: {
-					type: 'array',
-					items: {
-						type: 'string'
-					},
-					uniqueItems: true
-				},
-				save: {
-					type: 'array',
-					items: {
-						type: 'string'
-					},
-					uniqueItems: true
-				},
-				del: {
-					type: 'array',
-					items: {
-						type: 'string'
-					},
-					uniqueItems: true
-				}
-			}
 		}
 	},
 	additionalProperties: false
