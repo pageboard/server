@@ -37,8 +37,9 @@ function QueryBlock(data) {
 			Block.raw("phraseto_tsquery('unaccent', ?) AS query", [data.text])
 		]));
 		if (data.type) q.where('type', data.type);
-		q.whereRaw('query @@ block.tsv');
-		q.orderByRaw('ts_rank(block.tsv, query) DESC');
+		q.whereRaw('query @@ tsv');
+		q.orderByRaw('ts_rank(tsv, query) DESC');
+		q.limit(10);
 	} else if (!data.id) {
 		throw new HttpError.BadRequest("Missing id");
 	} else {

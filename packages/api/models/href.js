@@ -78,12 +78,12 @@ Href.prototype.$beforeUpdate = function() {
 };
 
 Href.relationMappings = {
-	site: {
+	parent: {
 		relation: Model.BelongsToOneRelation,
-		modelClass: __dirname + '/Block',
+		modelClass: __dirname + '/block',
 		join: {
-			from: 'Href.site_id',
-			to: 'Block.id'
+			from: 'href.parent_id',
+			to: 'block.id'
 		}
 	}
 };

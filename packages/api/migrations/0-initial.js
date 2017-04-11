@@ -21,7 +21,7 @@ exports.up = function(knex) {
 	)
 	.createTable('href', function(table) {
 		table.increments('id').primary();
-		table.integer('site_id').unsigned().references('id').inTable('block').onDelete('CASCADE');
+		table.integer('parent_id').unsigned().references('id').inTable('block').onDelete('CASCADE');
 		table.string('url').notNullable();
 		table.string('mime').notNullable().index();
 		table.string('type').notNullable();
@@ -36,7 +36,7 @@ exports.up = function(knex) {
 		table.timestamps(true, true); // created_at, updated_at, useTimestamps, defaultToNow
 	})
 	.raw(
-		"CREATE UNIQUE INDEX ON href (site_id, url, lang)"
+		"CREATE UNIQUE INDEX ON href (parent_id, url, lang)"
 	);
 };
 

@@ -1,4 +1,4 @@
-
+var URL = require('url');
 
 exports = module.exports = function(opt) {
 	this.opt = opt;
@@ -23,22 +23,30 @@ function init(All) {
 
 function QueryHref(data) {
 	if (!data.site) throw new HttpError.BadRequest("Missing site");
-	var q = joinSite(All.Href.query(), data.site);
+	var Href = All.Href;
+	var q = joinSite(Href.query(), data.site);
+	q.pick(Object.keys(Href.jsonSchema.properties));
 
 	if (data.url) {
-		q.where('url', url);
+		q.where('url', data.url);
+		q.orderBy('updated_at', 'desc');
 	} else if (data.text) {
-		// TODO full text search
-		q.limit(10);
+		q.from(Href.raw([
+			'href',
+			Href.raw("phraseto_tsquery('unaccent', ?) AS query", [data.text])
+		]));
+		if (data.type) q.where('type', data.type);
+		q.whereRaw('query @@ tsv');
+		q.orderByRaw('ts_rank(tsv, query) DESC');
 	}
-	q.orderBy('updated_at', 'desc');
+	q.limit(10);
 	return q;
 }
 
 function joinSite(q, site) {
-	return q.joinRelation('site')
-	.where('site.type', 'site')
-	.where(ref('site.data:url').castText(), site);
+	return q.joinRelation('parent')
+	.where('parent.type', 'site')
+	.where(All.objection.ref('parent.data:url').castText(), site);
 }
 
 function reqData(req) {
@@ -67,9 +75,11 @@ exports.add = function(data) {
 		meta = filterMeta(meta);
 		return QueryHref(data).first().then(function(href) {
 			if (!href) {
-				return joinSite(All.Href.query(), data.site).insert(Object.assign(meta, {
-					site_id: ref('site.id')
-				})).returning('*');
+				return All.Href.query().insert(Object.assign({
+					parent_id: All.Block.query().select('id')
+						.where('type', 'site')
+						.where(ref('data:url').castText(), data.site)
+				}, meta)).returning('*');
 			} else {
 				return All.Href.query().patch(meta).where('id', href.id).first().returning('*');
 			}
