@@ -12,6 +12,7 @@
     "pageboard-cache",
     "pageboard-auth",
     "pageboard-static",
+    "pageboard-upload",
     "pageboard-elements",
     "pageboard-api",
     "pageboard-inspector",
@@ -41,6 +42,7 @@
     "pageboard-prerender": "^0.1.0",
     "pageboard-read": "^0.1.0",
     "pageboard-static": "^0.1.0",
+    "pageboard-upload": "^0.1.0",
     "pageboard-write": "^0.1.0"
   }
 }
