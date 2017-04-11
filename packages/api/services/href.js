@@ -24,29 +24,30 @@ function init(All) {
 function QueryHref(data) {
 	if (!data.site) throw new HttpError.BadRequest("Missing site");
 	var Href = All.Href;
-	var q = joinSite(Href.query(), data.site);
+	var q = Href.query();
 	q.pick(Object.keys(Href.jsonSchema.properties));
+	joinSite(q, data);
 
 	if (data.url) {
 		q.where('url', data.url);
 		q.orderBy('updated_at', 'desc');
 	} else if (data.text) {
 		q.from(Href.raw([
-			'href',
-			Href.raw("phraseto_tsquery('unaccent', ?) AS query", [data.text])
+			Href.raw("phraseto_tsquery('unaccent', ?) AS query", [data.text]),
+			'href'
 		]));
-		if (data.type) q.where('type', data.type);
-		q.whereRaw('query @@ tsv');
-		q.orderByRaw('ts_rank(tsv, query) DESC');
+		if (data.type) q.where('href.type', data.type);
+		q.whereRaw('query @@ href.tsv');
+		q.orderByRaw('ts_rank(href.tsv, query) DESC');
 	}
 	q.limit(10);
 	return q;
 }
 
-function joinSite(q, site) {
+function joinSite(q, data) {
 	return q.joinRelation('parent')
-	.where('parent.type', 'site')
-	.where(All.objection.ref('parent.data:url').castText(), site);
+		.where('parent.type', 'site')
+		.where(All.objection.ref('parent.data:url').castText(), data.site);
 }
 
 function reqData(req) {
