@@ -68,6 +68,9 @@ exports.init = function(opt) {
 
 	All.plugins = plugins;
 
+	morgan.token('method', function(req, res) {
+		return pad(req.method, 4);
+	});
 	morgan.token('status', function(req, res) {
 		return pad(3, res.statusCode);
 	});
@@ -81,7 +84,7 @@ exports.init = function(opt) {
 	});
 	morgan.token('size', function(req, res) {
 		var len = parseInt(res.get('Content-Length'));
-		return pad(4, (len && prettyBytes(len) || '0 B').replace(/ /g, ''));
+		return pad(6, (len && prettyBytes(len) || '0 B').replace(/ /g, ''));
 	});
 
 	return initPlugins(All).then(function() {
