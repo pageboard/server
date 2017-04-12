@@ -2,6 +2,7 @@ var multer = require('multer');
 var Path = require('path');
 var crypto = require('crypto');
 var mkdirp = require('mkdirp');
+var speaking = require('speakingurl');
 
 exports = module.exports = function(opt) {
 	if (!opt.upload) opt.upload = {};
@@ -18,9 +19,7 @@ exports = module.exports = function(opt) {
 		return;
 	}
 
-
 	return {
-		// unnamed service - it doesn't expose cli
 		service: init
 	};
 };
@@ -43,8 +42,10 @@ function init(All) {
 		},
 		filename: function (req, file, cb) {
 			var parts = file.originalname.split('.');
-			var basename = parts.shift();
+			var basename = speaking(parts.shift(), {truncate: 128});
 			var extensions = parts.join('.').toLowerCase();
+			// TODO use url-inspector to determine the real mime file type
+			// and allow only specific file types
 
 			crypto.pseudoRandomBytes(4, function (err, raw) {
 				if (err) return cb(err);
