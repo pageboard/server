@@ -47,6 +47,10 @@ function init(All) {
 
 		app.use(
 			'/' + prefix,
+			function(req, res, next) {
+				if (/^(get|head)$/i.test(req.method)) next();
+				else next('route');
+			},
 			serveStatic(opt.runtime, {
 				index: false,
 				redirect: false,
@@ -55,7 +59,11 @@ function init(All) {
 				fallthrough: true
 			}),
 			function(req, res, next) {
-				next(new HttpError.NotFound("Static file not found"));
+				if (/^(get|head)$/i.test(req.method)) {
+					next(new HttpError.NotFound("Static file not found"));
+				} else {
+					next();
+				}
 			}
 		);
 	});
