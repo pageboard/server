@@ -25,13 +25,11 @@ exports.up = function(knex) {
 		table.string('url').notNullable();
 		table.string('mime').notNullable().index();
 		table.string('type').notNullable();
-		table.integer('size').notNullable().defaultTo(0);
 		table.string('title').notNullable();
-		table.string('description');
 		table.string('icon');
-		table.string('thumbnail');
 		table.string('site').notNullable();
 		table.string('pathname').notNullable();
+		table.jsonb('meta').notNullable().defaultTo('{}');
 		table.string('lang');
 		table.timestamps(true, true); // created_at, updated_at, useTimestamps, defaultToNow
 	})

@@ -27,6 +27,10 @@ Href.jsonSchema = {
 		site_id: {
 			type: 'integer'
 		},
+		updated_at: {
+			type: 'string',
+			format: 'date-time'
+		},
 		mime: {
 			type: 'string'
 		},
@@ -37,22 +41,11 @@ Href.jsonSchema = {
 		type: {
 			type: 'string'
 		},
-		size: {
-			type: 'integer',
-			default: 0
-		},
 		title: {
 			type: 'string'
 		},
-		description: {
-			type: ['string', 'null']
-		},
 		icon: {
 			type: ['string', 'null']
-		},
-		thumbnail: {
-			type: ['string', 'null'],
-			format: 'uri'
 		},
 		site: {
 			type: 'string'
@@ -62,6 +55,31 @@ Href.jsonSchema = {
 		},
 		lang: {
 			type: ['string', 'null']
+		},
+		meta: {
+			type: 'object',
+			default: {},
+			properties: {
+				description: {
+					type: ['string', 'null']
+				},
+				thumbnail: {
+					type: ['string', 'null'],
+					format: 'uri'
+				},
+				size: {
+					type: ['integer', 'null']
+				},
+				width: {
+					type: ['integer', 'null']
+				},
+				height: {
+					type: ['integer', 'null']
+				},
+				duration: {
+					type: ['string', 'null']
+				}
+			}
 		}
 	},
 	additionalProperties: false

@@ -5,8 +5,8 @@ exports.up = function(knex) {
 	.raw(`CREATE OR REPLACE FUNCTION href_tsv_update() RETURNS trigger AS $$
 BEGIN
 	new.tsv := setweight(to_tsvector('unaccent', coalesce(new.title, '')), 'A') ||
-		setweight(to_tsvector('unaccent', coalesce(new.description, '')), 'B') ||
-		setweight(to_tsvector('unaccent', coalesce(new.url, '')), 'C')
+		setweight(to_tsvector('unaccent', coalesce(new.site, '')), 'B') ||
+		setweight(to_tsvector('unaccent', coalesce(new.meta->>'description', '')), 'C')
 		;
 	RETURN new;
 END
