@@ -8,16 +8,8 @@ exports = module.exports = function(opt) {
 	if (!opt.upload) opt.upload = {};
 	if (!opt.upload.files) opt.upload.files = 100;
 	if (!opt.upload.size) opt.upload.size = 50000000;
-	if (!opt.upload.dir) opt.upload.dir = 'public/uploads';
-
-	var dir = opt.upload.dir;
-	if (dir.startsWith('./')) dir = opt.upload.dir = dir.substring(2);
-
-	if (dir.startsWith('/') || dir.endsWith('/')) {
-		console.error("upload.dir must not start or end with /", dir);
-		console.error("disabling upload service");
-		return;
-	}
+	// currently not modifiable
+	opt.upload.dir = 'public/uploads';
 
 	return {
 		service: init
@@ -28,7 +20,7 @@ function init(All) {
 	var upload = All.opt.upload;
 	var dest = Path.resolve(All.cwd, upload.dir);
 	console.info("Upload to :\n", dest);
-	mkdirp.sync(dest);
+	mkdirp.sync(Path.join(All.cwd, 'uploads'));
 
 	var storage = multer.diskStorage({
 		destination: function(req, file, cb) {
