@@ -17,7 +17,7 @@ exports = module.exports = function(opt) {
 	}, All.opt.thumbnail));
 
 	return {
-		name: image,
+		name: 'image',
 		file: init
 	};
 };
