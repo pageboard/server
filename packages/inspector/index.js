@@ -1,5 +1,9 @@
 exports = module.exports = function(opt) {
-	return {service: init};
+	if (!opt.inspector) opt.inspector = {};
+	return {
+		name: 'inspector',
+		service: init
+	};
 };
 
 function init(All) {
