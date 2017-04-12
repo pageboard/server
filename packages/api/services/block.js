@@ -6,23 +6,23 @@ exports = module.exports = function(opt) {
 };
 
 function init(All) {
-	All.app.get(All.Block.jsonSchema.id, function(req, res, next) {
-		exports.get(reqData(req)).then(function(block) {
+	All.app.get(All.Block.jsonSchema.id, All.query, function(req, res, next) {
+		exports.get(req.query).then(function(block) {
 			res.send(block);
 		}).catch(next);
 	});
-	All.app.post(All.Block.jsonSchema.id, function(req, res, next) {
-		exports.add(reqData(req)).then(function(block) {
+	All.app.post(All.Block.jsonSchema.id, All.body, function(req, res, next) {
+		exports.add(req.body).then(function(block) {
 			res.send(block);
 		}).catch(next);
 	});
-	All.app.put(All.Block.jsonSchema.id, function(req, res, next) {
-		exports.save(reqData(req)).then(function(block) {
+	All.app.put(All.Block.jsonSchema.id, All.body, function(req, res, next) {
+		exports.save(req.body).then(function(block) {
 			res.send(block);
 		}).catch(next);
 	});
-	All.app.delete(All.Block.jsonSchema.id, function(req, res, next) {
-		exports.del(reqData(req)).then(function(block) {
+	All.app.delete(All.Block.jsonSchema.id, All.query, function(req, res, next) {
+		exports.del(req.query).then(function(block) {
 			res.send(block);
 		}).catch(next);
 	});
@@ -46,11 +46,6 @@ function QueryBlock(data) {
 		q.where('id', data.id);
 	}
 	return q;
-}
-
-function reqData(req) {
-	var obj = req.body || req.query;
-	return obj;
 }
 
 exports.get = function(data) {

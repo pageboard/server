@@ -6,23 +6,23 @@ exports = module.exports = function(opt) {
 };
 
 function init(All) {
-	All.app.get('/api/page', function(req, res, next) {
-		exports.get(reqData(req)).then(function(page) {
+	All.app.get('/api/page', All.query, function(req, res, next) {
+		exports.get(req.query).then(function(page) {
 			res.send(page);
 		}).catch(next);
 	});
-	All.app.post('/api/page', function(req, res, next) {
-		exports.add(reqData(req)).then(function(page) {
+	All.app.post('/api/page', All.body, function(req, res, next) {
+		exports.add(req.body).then(function(page) {
 			res.send(page);
 		}).catch(next);
 	});
-	All.app.put('/api/page', function(req, res, next) {
-		exports.save(reqData(req)).then(function(page) {
+	All.app.put('/api/page', All.body, function(req, res, next) {
+		exports.save(req.body).then(function(page) {
 			res.send(page);
 		}).catch(next);
 	});
-	All.app.delete('/api/page', function(req, res, next) {
-		exports.del(reqData(req)).then(function(page) {
+	All.app.delete('/api/page', All.query, function(req, res, next) {
+		exports.del(req.query).then(function(page) {
 			res.send(page);
 		}).catch(next);
 	});
@@ -45,18 +45,6 @@ function QueryPage(data) {
 		.where(ref('parents.data:url').castText(), site);
 	}
 	return q;
-}
-
-function reqData(req) {
-	var obj = req.body || req.query;
-	obj.site = All.opt.site || req.hostname;
-	return obj;
-}
-
-function assignSite(req, obj) {
-	return Object.assign({}, obj, {
-		site: req.hostname
-	});
 }
 
 exports.get = function(data) {

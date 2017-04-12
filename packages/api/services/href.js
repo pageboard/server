@@ -9,13 +9,13 @@ exports = module.exports = function(opt) {
 };
 
 function init(All) {
-	All.app.get(All.Href.jsonSchema.id, function(req, res, next) {
-		exports.get(reqData(req)).then(function(href) {
+	All.app.get(All.Href.jsonSchema.id, All.query, function(req, res, next) {
+		exports.get(req.query).then(function(href) {
 			res.send(href);
 		}).catch(next);
 	});
-	All.app.post(All.Href.jsonSchema.id, function(req, res, next) {
-		exports.add(reqData(req)).then(function(href) {
+	All.app.post(All.Href.jsonSchema.id, All.body, function(req, res, next) {
+		exports.add(req.body).then(function(href) {
 			res.send(href);
 		}).catch(next);
 	});
@@ -50,19 +50,31 @@ function joinSite(q, data) {
 		.where(All.objection.ref('parent.data:url').castText(), data.site);
 }
 
-function reqData(req) {
-	var obj = req.body || req.query;
+function filterResult(result) {
+	var obj = {meta:{}};
+	['mime', 'url', 'type', 'title', 'icon', 'site']
+	.forEach(function(key) {
+		if (result[key] !== undefined) obj[key] = result[key];
+	});
+	if (result.url) obj.pathname = URL.parse(result.url).pathname;
+	var meta = {};
+	['width', 'height', 'duration', 'size', 'thumbnail', 'description']
+	.forEach(function(key) {
+		if (result[key] !== undefined) obj.meta[key] = result[key];
+	});
+	if (obj.type == "image" && obj.mime != "text/html" && !obj.meta.thumbnail) {
+		obj.meta.thumbnail = obj.url;
+	}
 	return obj;
 }
 
-function filterMeta(meta) {
-	var obj = {};
-	['mime', 'url', 'type', 'size', 'title', 'description', 'icon', 'thumbnail', 'site']
-	.forEach(function(key) {
-		if (meta[key] !== undefined) obj[key] = meta[key];
+function embedThumbnail(obj) {
+	var thumb = obj.meta.thumbnail;
+	if (!thumb) return obj;
+	return All.image.thumbnail(thumb).then(function(datauri) {
+		obj.meta.thumbnail = datauri;
+		return obj;
 	});
-	if (meta.url) obj.pathname = URL.parse(meta.url).pathname;
-	return obj;
 }
 
 exports.get = function(data) {
@@ -72,17 +84,18 @@ exports.get = function(data) {
 exports.add = function(data) {
 	if (!data.url) throw new HttpError.BadRequest("Missing url");
 	var ref = All.objection.ref;
-	return All.inspector.get(data.url).then(function(meta) {
-		meta = filterMeta(meta);
+	return All.inspector.get(data.url)
+	.then(filterResult).then(embedThumbnail)
+	.then(function(result) {
 		return QueryHref(data).first().then(function(href) {
 			if (!href) {
 				return All.Href.query().insert(Object.assign({
 					parent_id: All.Block.query().select('id')
 						.where('type', 'site')
 						.where(ref('data:url').castText(), data.site)
-				}, meta)).returning('*');
+				}, result)).returning('*');
 			} else {
-				return All.Href.query().patch(meta).where('id', href.id).first().returning('*');
+				return All.Href.query().patch(result).where('id', href.id).first().returning('*');
 			}
 		});
 	});
