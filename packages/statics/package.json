@@ -21,7 +21,7 @@
     "glob": "^7.1.1",
     "mkdirp": "^0.5.1",
     "pify": "^2.3.0",
-    "serve-favicon": "^2.3.2",
-    "serve-static": "^1.11.1"
+    "serve-favicon": "^2.4.2",
+    "serve-static": "^1.12.1"
   }
 }
