@@ -46,7 +46,7 @@ function init(All) {
 			var basename = parts.shift();
 			var extensions = parts.join('.').toLowerCase();
 
-			crypto.pseudoRandomBytes(8, function (err, raw) {
+			crypto.pseudoRandomBytes(4, function (err, raw) {
 				if (err) return cb(err);
 				cb(null, `${basename}-${raw.toString('hex')}.${extensions}`);
 			});
