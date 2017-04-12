@@ -50,7 +50,9 @@ function init(All) {
 			serveStatic(opt.runtime, {
 				index: false,
 				redirect: false,
-				maxAge: opt.maxAge * 1000
+				maxAge: opt.maxAge * 1000,
+				dotfiles: 'ignore',
+				fallthrough: true
 			}),
 			function(req, res, next) {
 				next(new HttpError.NotFound("Static file not found"));
