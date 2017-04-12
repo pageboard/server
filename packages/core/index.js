@@ -1,5 +1,6 @@
 var Path = require('path');
 var express = require('express');
+var bodyParserJson = require('body-parser').json();
 var morgan = require('morgan');
 var pad = require('pad');
 var prettyBytes = require('pretty-bytes');
@@ -39,7 +40,9 @@ exports.init = function(opt) {
 	var All = {
 		app: app,
 		opt: opt,
-		cwd: process.cwd()
+		cwd: process.cwd(),
+		query: reqQuery.bind(All),
+		body: reqBody.bind(All)
 	};
 	if (opt.global) global.All = All;
 
@@ -156,5 +159,20 @@ function viewsError(err, req, res, next) {
 	}
 	if (code >= 500) console.error(err);
 	res.redirect(req.app.settings.errorLocation + '?code=' + code);
+}
+
+function reqBody(req, res, next) {
+	var opt = this.opt;
+	bodyParserJson(req, res, function() {
+		var obj = req.body;
+		obj.site = opt.site || req.hostname;
+		next();
+	});
+}
+
+function reqQuery(req, res, next) {
+	var obj = req.query;
+	obj.site = this.opt.site || req.hostname;
+	next();
 }
 
