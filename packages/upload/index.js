@@ -28,7 +28,7 @@ exports = module.exports = function(opt) {
 function init(All) {
 	var upload = All.opt.upload;
 	var dest = Path.resolve(All.cwd, upload.dir);
-	console.info("will upload to", dest);
+	console.info("Upload to :\n", dest);
 	mkdirp.sync(dest);
 
 	var storage = multer.diskStorage({
