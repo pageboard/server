@@ -19,6 +19,9 @@ exports.up = function(knex) {
 	.raw(
 		"CREATE UNIQUE INDEX ON block ((data#>>'{email}')) WHERE type='user'"
 	)
+	.raw(
+		"CREATE INDEX ON block (updated_at DESC)"
+	)
 	.createTable('href', function(table) {
 		table.increments('id').primary();
 		table.integer('parent_id').unsigned().references('id').inTable('block').onDelete('CASCADE');
@@ -35,7 +38,11 @@ exports.up = function(knex) {
 	})
 	.raw(
 		"CREATE UNIQUE INDEX ON href (parent_id, url, lang)"
-	);
+	)
+	.raw(
+		"CREATE INDEX ON href (updated_at DESC)"
+	)
+	;
 };
 
 exports.down = function(knex) {
