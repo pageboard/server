@@ -68,30 +68,13 @@ exports.init = function(opt) {
 
 	All.plugins = plugins;
 
-	morgan.token('method', function(req, res) {
-		return pad(req.method, 4);
-	});
-	morgan.token('status', function(req, res) {
-		return pad(3, res.statusCode);
-	});
-	morgan.token('time', function(req, res) {
-		var ms = morgan['response-time'](req, res, 0);
-		if (ms) return pad(4, ms) + 'ms';
-		else return pad(6, '');
-	});
-	morgan.token('type', function(req, res) {
-		return pad(4, (res.get('Content-Type') || '-').split(';').shift().split('/').pop());
-	});
-	morgan.token('size', function(req, res) {
-		var len = parseInt(res.get('Content-Length'));
-		return pad(6, (len && prettyBytes(len) || '0 B').replace(/ /g, ''));
-	});
+	All.log = initLog(opt);
 
 	return initPlugins(All).then(function() {
 		return initPlugins(All, 'file');
 	}).then(function() {
 		app.use(filesError);
-		app.use(morgan(opt.logFormat));
+		app.use(All.log);
 		return initPlugins(All, 'service');
 	}).then(function() {
 		app.use(servicesError);
@@ -121,6 +104,29 @@ function initPlugins(All, type) {
 	})).catch(function(err) {
 		console.error(err);
 	});
+}
+
+function initLog(opt) {
+	morgan.token('method', function(req, res) {
+		return pad(req.method, 4);
+	});
+	morgan.token('status', function(req, res) {
+		return pad(3, res.statusCode);
+	});
+	morgan.token('time', function(req, res) {
+		var ms = morgan['response-time'](req, res, 0);
+		if (ms) return pad(4, ms) + 'ms';
+		else return pad(6, '');
+	});
+	morgan.token('type', function(req, res) {
+		return pad(4, (res.get('Content-Type') || '-').split(';').shift().split('/').pop());
+	});
+	morgan.token('size', function(req, res) {
+		var len = parseInt(res.get('Content-Length'));
+		return pad(6, (len && prettyBytes(len) || '0 B').replace(/ /g, ''));
+	});
+
+	return morgan(opt.logFormat);
 }
 
 function initDirs(dirs) {
@@ -159,8 +165,10 @@ function filesError(err, req, res, next) {
 	if (isNaN(code) || code < 200 || code >= 600) {
 		code = 500;
 	}
-	if (code >= 500) console.error(err);
-	res.sendStatus(code);
+	if (code >= 400) All.log(req, res, function() {
+		res.sendStatus(code);
+	});
+	else res.sendStatus(code);
 }
 
 function viewsError(err, req, res, next) {
