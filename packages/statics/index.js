@@ -24,27 +24,28 @@ module.exports = function(opt) {
 };
 
 function init(All) {
-	var opt = All.opt.statics;
+	var statics = All.opt.statics;
 	var app = All.app;
 
-	return fs.stat(opt.favicon).then(function() {
-		app.use(serveFavicon(opt.favicon), {
-			maxAge: opt.maxAge * 1000
-		});
-	}).catch(function() {
+	return fs.stat(statics.favicon).then(function() {
+		app.use(serveFavicon(statics.favicon, {
+			maxAge: statics.maxAge * 1000
+		}));
+	}).catch(function(err) {
+		delete statics.favicon;
 		app.use('/favicon.ico', function(req, res, next) {
 			res.sendStatus(404);
 		});
 	}).then(function() {
-		return Promise.all(opt.mounts.map(function(dir) {
-			return mount(opt.runtime, dir);
+		return Promise.all(statics.mounts.map(function(dir) {
+			return mount(statics.runtime, dir);
 		}))
 	}).then(function(content) {
-		var prefix = opt.prefix;
-		if (prefix == null) prefix = Path.basename(opt.root);
+		var prefix = statics.prefix;
+		if (prefix == null) prefix = Path.basename(statics.root);
 
-		console.info("Files mounted on" , prefix, ":\n", opt.root);
-		if (opt.runtime != opt.root) console.info("are served from", "\n", opt.runtime);
+		console.info("Files mounted on" , prefix, ":\n", statics.root);
+		if (statics.runtime != statics.root) console.info("are served from", "\n", statics.runtime);
 
 		app.use(
 			'/' + prefix,
@@ -52,10 +53,10 @@ function init(All) {
 				if (/^(get|head)$/i.test(req.method)) next();
 				else next('route');
 			},
-			serveStatic(opt.runtime, {
+			serveStatic(statics.runtime, {
 				index: false,
 				redirect: false,
-				maxAge: opt.maxAge * 1000,
+				maxAge: statics.maxAge * 1000,
 				dotfiles: 'ignore',
 				fallthrough: true
 			}),
