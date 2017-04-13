@@ -17,6 +17,8 @@ module.exports = function(opt) {
 	if (!statics.runtime) statics.runtime = Path.join(opt.dirs.runtime, 'public');
 	if (!statics.mounts) statics.mounts = [];
 	if (!statics.favicon) statics.favicon = Path.join(statics.root, 'favicon.ico');
+	if (!statics.maxAge) statics.maxAge = 3600;
+	if (opt.env == 'development') statics.maxAge = 0;
 
 	return {file: init};
 };
