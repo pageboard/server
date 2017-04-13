@@ -30,15 +30,22 @@ function QueryHref(data) {
 
 	if (data.url) {
 		q.where('url', data.url);
-		q.orderBy('updated_at', 'desc');
 	} else if (data.text) {
+		var text = data.text;
+		var variant = 'phrase';
+		if (text.indexOf(' ') < 0) {
+			text += ':*';
+			variant = '';
+		}
 		q.from(Href.raw([
-			Href.raw("phraseto_tsquery('unaccent', ?) AS query", [data.text]),
+			Href.raw(variant + "to_tsquery('unaccent', ?) AS query", [text]),
 			'href'
 		]));
 		if (data.type) q.where('href.type', data.type);
 		q.whereRaw('query @@ href.tsv');
 		q.orderByRaw('ts_rank(href.tsv, query) DESC');
+	} else {
+		q.orderBy('updated_at', 'desc');
 	}
 	q.limit(10);
 	return q;

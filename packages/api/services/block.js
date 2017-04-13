@@ -32,9 +32,15 @@ function QueryBlock(data) {
 	var Block = All.Block;
 	var q = Block.query().pick(Object.keys(Block.jsonSchema.properties));
 	if (data.text) {
+		var text = data.text;
+		var variant = 'phrase';
+		if (text.indexOf(' ') < 0) {
+			text += ':*';
+			variant = '';
+		}
 		q.from(Block.raw([
-			'block',
-			Block.raw("phraseto_tsquery('unaccent', ?) AS query", [data.text])
+			Block.raw(variant + "to_tsquery('unaccent', ?) AS query", [text]),
+			'block'
 		]));
 		if (data.type) q.where('type', data.type);
 		q.whereRaw('query @@ tsv');
