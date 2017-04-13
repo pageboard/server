@@ -11,14 +11,13 @@ var debug = require('debug')('pageboard-static');
 var dirCache = {};
 
 module.exports = function(opt) {
-	opt.statics = Object.assign({
-		root: process.cwd() + '/public',
-		runtime: Path.join(opt.dirs.runtime, 'public'),
-		mounts: []
-	}, opt.statics);
-	if (!opt.statics.favicon) {
-		opt.statics.favicon = Path.join(opt.statics.root, 'favicon.ico');
-	}
+	if (!opt.statics) opt.statics = {};
+	var statics = opt.statics;
+	if (!statics.root) statics.root = process.cwd() + '/public';
+	if (!statics.runtime) statics.runtime = Path.join(opt.dirs.runtime, 'public');
+	if (!statics.mounts) statics.mounts = [];
+	if (!statics.favicon) statics.favicon = Path.join(statics.root, 'favicon.ico');
+
 	return {file: init};
 };
 
