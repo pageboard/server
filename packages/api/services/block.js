@@ -35,6 +35,7 @@ function QueryBlock(data) {
 		var text = data.text;
 		var variant = 'phrase';
 		if (text.indexOf(' ') < 0) {
+			// prefix matching when only one word is being typed
 			text += ':*';
 			variant = '';
 		}
