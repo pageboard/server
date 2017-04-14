@@ -1,8 +1,9 @@
-var multer = require('multer');
+var multer = require('@kapouer/multer');
 var Path = require('path');
 var crypto = require('crypto');
 var mkdirp = require('mkdirp');
 var speaking = require('speakingurl');
+var Throttle = require('stream-throttle').Throttle;
 
 exports = module.exports = function(opt) {
 	if (!opt.upload) opt.upload = {};
@@ -46,12 +47,19 @@ function init(All) {
 		}
 	});
 
+	var throttle;
+	if (All.opt.env == "development") {
+		console.info("throttling uploads to 100kb/s for development");
+		throttle = new Throttle({rate: 100000});
+	}
+
 	var mw = multer({
 		storage: storage,
 		limits: {
 			files: upload.files,
 			fileSize: upload.size
-		}
+		},
+		transform: throttle
 	});
 
 	All.app.post('/' + upload.dir, mw.array('files'), function(req, res, next) {
