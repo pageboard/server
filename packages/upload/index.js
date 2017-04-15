@@ -9,6 +9,12 @@ exports = module.exports = function(opt) {
 	if (!opt.upload) opt.upload = {};
 	if (!opt.upload.files) opt.upload.files = 100;
 	if (!opt.upload.size) opt.upload.size = 50000000;
+	if (opt.upload.bandwidth === undefined) {
+		if (opt.env == "development") {
+			console.info(" development mode");
+			opt.upload.bandwidth = 500000;
+		}
+	}
 	// currently not modifiable
 	opt.upload.dir = 'public/uploads';
 
@@ -55,8 +61,8 @@ function init(All) {
 		}
 	});
 
-	var bps = opt.env == "development" ? 100000 : 0;
-	if (bps) console.info(" bandwidth limited for development to", Math.round(bps / 1000) + 'KB/s');
+	var bps = opt.upload.bandwidth;
+	if (bps) console.info(" bandwidth limited to", Math.round(bps / 1000) + 'KB/s');
 
 	All.app.post('/' + upload.dir, throttle(bps), mw.array('files'), function(req, res, next) {
 		res.send(req.files.map(function(file) {
