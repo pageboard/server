@@ -1,4 +1,5 @@
 var URL = require('url');
+var Path = require('path');
 
 exports = module.exports = function(opt) {
 	this.opt = opt;
@@ -95,6 +96,9 @@ exports.add = function(data) {
 	return All.inspector.get(data.url)
 	.then(filterResult).then(embedThumbnail)
 	.then(function(result) {
+		if (local && !result.icon && All.opt.statics.favicon) {
+			result.icon = Path.basename(All.opt.statics.favicon);
+		}
 		return QueryHref(data).first().then(function(href) {
 			if (!href) {
 				return All.Href.query().insert(Object.assign({
