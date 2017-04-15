@@ -11,7 +11,6 @@ exports = module.exports = function(opt) {
 	if (!opt.upload.size) opt.upload.size = 50000000;
 	if (opt.upload.bandwidth === undefined) {
 		if (opt.env == "development") {
-			console.info(" development mode");
 			opt.upload.bandwidth = 500000;
 		}
 	}
