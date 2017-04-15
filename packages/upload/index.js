@@ -16,6 +16,7 @@ exports = module.exports = function(opt) {
 	}
 	// currently not modifiable
 	opt.upload.dir = 'public/uploads';
+	opt.statics.mounts.push(Path.join(opt.cwd, opt.upload.dir));
 
 	return {
 		service: init
@@ -24,9 +25,9 @@ exports = module.exports = function(opt) {
 
 function init(All) {
 	var upload = All.opt.upload;
-	var dest = Path.resolve(All.cwd, upload.dir);
+	var dest = Path.resolve(All.opt.cwd, upload.dir);
 	console.info("Upload to :\n", dest);
-	mkdirp.sync(Path.join(All.cwd, 'uploads'));
+	mkdirp.sync(Path.join(All.opt.cwd, 'uploads'));
 
 	var storage = multer.diskStorage({
 		destination: function(req, file, cb) {
@@ -65,7 +66,7 @@ function init(All) {
 
 	All.app.post('/' + upload.dir, throttle(bps), mw.array('files'), function(req, res, next) {
 		res.send(req.files.map(function(file) {
-			return '/' + Path.join(Path.relative(All.cwd, file.destination), file.filename);
+			return '/' + Path.join(Path.relative(All.opt.cwd, file.destination), file.filename);
 		}));
 	});
 }
