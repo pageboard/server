@@ -1,9 +1,9 @@
-var multer = require('@kapouer/multer');
+var multer = require('multer');
 var Path = require('path');
 var crypto = require('crypto');
 var mkdirp = require('mkdirp');
 var speaking = require('speakingurl');
-var Throttle = require('stream-throttle').Throttle;
+var throttle = require('express-throttle-bandwidth');
 
 exports = module.exports = function(opt) {
 	if (!opt.upload) opt.upload = {};
@@ -47,22 +47,18 @@ function init(All) {
 		}
 	});
 
-	var throttle;
-	if (All.opt.env == "development") {
-		console.info("throttling uploads to 100kb/s for development");
-		throttle = new Throttle({rate: 100000});
-	}
-
 	var mw = multer({
 		storage: storage,
 		limits: {
 			files: upload.files,
 			fileSize: upload.size
-		},
-		transform: throttle
+		}
 	});
 
-	All.app.post('/' + upload.dir, mw.array('files'), function(req, res, next) {
+	var bps = opt.env == "development" ? 100000 : 0;
+	if (bps) console.info(" bandwidth limited for development to", Math.round(bps / 1000) + 'KB/s');
+
+	All.app.post('/' + upload.dir, throttle(bps), mw.array('files'), function(req, res, next) {
 		res.send(req.files.map(function(file) {
 			return '/' + Path.join(Path.relative(All.cwd, file.destination), file.filename);
 		}));
