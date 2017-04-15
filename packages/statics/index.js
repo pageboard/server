@@ -37,6 +37,7 @@ function init(All) {
 			res.sendStatus(404);
 		});
 	}).then(function() {
+		debug("Static mounts", statics.mounts);
 		return Promise.all(statics.mounts.map(function(dir) {
 			return mount(statics.runtime, dir);
 		}))
