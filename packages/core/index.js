@@ -28,7 +28,10 @@ exports.config = function(pkgOpt) {
 			data: Path.join(xdg.data, name),
 			runtime: Path.join(xdg.runtime, name)
 		},
-		elements: []
+		elements: [],
+		statics: {
+			mounts: []
+		}
 	});
 	return opt;
 };
@@ -46,6 +49,7 @@ exports.init = function(opt) {
 	};
 	if (opt.global) global.All = All;
 
+	opt.statics.mounts.push(Path.join(All.cwd, 'public'));
 
 	console.info("Plugins:");
 
