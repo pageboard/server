@@ -12,9 +12,11 @@ var xdg = require('xdg-basedir');
 global.HttpError = require('http-errors');
 
 exports.config = function(pkgOpt) {
-	pkgOpt = Object.assign({}, require(process.cwd() + '/package.json'), pkgOpt);
+	var cwd = process.cwd();
+	pkgOpt = Object.assign({}, require(cwd + '/package.json'), pkgOpt);
 	var name = pkgOpt.name;
 	var opt = rc(name, {
+		cwd: cwd,
 		env: pkgOpt.env || process.env.NODE_ENV || 'development',
 		name: name,
 		site: null,
@@ -43,13 +45,10 @@ exports.init = function(opt) {
 	var All = {
 		app: app,
 		opt: opt,
-		cwd: process.cwd(),
 		query: reqQuery.bind(All),
 		body: reqBody.bind(All)
 	};
 	if (opt.global) global.All = All;
-
-	opt.statics.mounts.push(Path.join(All.cwd, 'public'));
 
 	console.info("Plugins:");
 
@@ -57,7 +56,7 @@ exports.init = function(opt) {
 
 	while (pluginPath = opt.plugins.shift()) {
 		if (pluginPath.startsWith('/')) {
-			console.info("  ", Path.relative(Path.dirname(lastPath || All.cwd), pluginPath));
+			console.info("  ", Path.relative(Path.dirname(lastPath || opt.cwd), pluginPath));
 		} else {
 			lastPath = require.resolve(pluginPath);
 			console.info(" ", pluginPath);
