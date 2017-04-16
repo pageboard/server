@@ -9,8 +9,8 @@ exports = module.exports = function(opt) {
 	if (!opt.image.dir) opt.image.dir = opt.upload && opt.upload.dir || 'public/uploads';
 
 	thumbnailer = sharpie(Object.assign({
-		rs: 'h:128,max',
-		q: '75',
+		rs: 'h:64,max',
+		q: '70',
 		bg: 'white',
 		flatten: true,
 		hostnames: true
