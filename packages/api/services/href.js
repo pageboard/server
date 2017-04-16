@@ -20,6 +20,11 @@ function init(All) {
 			res.send(href);
 		}).catch(next);
 	});
+	All.app.delete(All.Href.jsonSchema.id, All.query, function(req, res, next) {
+		exports.del(req.query).then(function() {
+			res.send();
+		}).catch(next);
+	});
 }
 
 function QueryHref(data) {
@@ -111,5 +116,10 @@ exports.add = function(data) {
 			}
 		});
 	});
+};
+
+exports.del = function(data) {
+	if (!data.url) throw new HttpError.BadRequest("Missing url");
+	return joinSite(All.Href.query(), data).where('url', data.url);
 };
 
