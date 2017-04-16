@@ -28,7 +28,11 @@ exports = module.exports = function(opt) {
 // - fabriquer un thumbnail à partir d'une image distante
 
 function init(All) {
-	All.app.get(`:url(/${All.opt.image.dir}/.*)`, sharpie(All.opt.image));
+	console.info("Resizing images from /public/images to :\n", All.opt.image.dir);
+	All.app.get("/public/images/:url(*)", function(req, res, next) {
+		req.params.url = '/' + All.opt.image.dir + '/' + req.params.url;
+		next();
+	}, sharpie(All.opt.image));
 }
 
 exports.thumbnail = function(url, query) {
