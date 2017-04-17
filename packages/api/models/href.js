@@ -24,7 +24,7 @@ Href.jsonSchema = {
 		id: {
 			type: 'integer'
 		},
-		site_id: {
+		parent_id: {
 			type: 'integer'
 		},
 		updated_at: {

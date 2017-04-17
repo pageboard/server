@@ -21,8 +21,8 @@ function init(All) {
 		}).catch(next);
 	});
 	All.app.delete(All.Href.jsonSchema.id, All.query, function(req, res, next) {
-		exports.del(req.query).then(function() {
-			res.send();
+		exports.del(req.query).then(function(count) {
+			res.send(count);
 		}).catch(next);
 	});
 }
@@ -31,7 +31,7 @@ function QueryHref(data) {
 	if (!data.site) throw new HttpError.BadRequest("Missing site");
 	var Href = All.Href;
 	var q = Href.query();
-	q.pick(Object.keys(Href.jsonSchema.properties));
+	q.select(Object.keys(Href.jsonSchema.properties).map(name => 'href.' + name));
 	joinSite(q, data);
 
 	if (data.url) {
