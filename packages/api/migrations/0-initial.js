@@ -26,6 +26,7 @@ exports.up = function(knex) {
 		table.increments('id').primary();
 		table.integer('parent_id').unsigned().references('id').inTable('block').onDelete('CASCADE');
 		table.string('url').notNullable();
+		table.boolean('visible').notNullable().defaultTo(true);
 		table.string('mime').notNullable().index();
 		table.string('type').notNullable();
 		table.string('title').notNullable();

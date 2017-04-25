@@ -21,8 +21,8 @@ function init(All) {
 		}).catch(next);
 	});
 	All.app.delete(All.Href.jsonSchema.id, All.query, function(req, res, next) {
-		exports.del(req.query).then(function(count) {
-			res.send(count);
+		exports.del(req.query).then(function(href) {
+			res.send(href);
 		}).catch(next);
 	});
 }
@@ -49,9 +49,11 @@ function QueryHref(data) {
 			'href'
 		]));
 		if (data.type) q.where('href.type', data.type);
+		q.where('href.visible', true);
 		q.whereRaw('query @@ href.tsv');
 		q.orderByRaw('ts_rank(href.tsv, query) DESC');
 	} else {
+		q.where('href.visible', true);
 		q.orderBy('updated_at', 'desc');
 	}
 	q.limit(10);
@@ -120,6 +122,14 @@ exports.add = function(data) {
 
 exports.del = function(data) {
 	if (!data.url) throw new HttpError.BadRequest("Missing url");
-	return joinSite(All.Href.query(), data).where('url', data.url);
+	return QueryHref(data).first().then(function(href) {
+		if (!href) throw new HttpError.NotFound("No href found for this url");
+		return All.Href.query().patch({
+			visible: false
+		}).where('id', href.id).then(function() {
+			href.visible = false;
+			return href;
+		});
+	});
 };
 

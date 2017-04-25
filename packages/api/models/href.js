@@ -34,6 +34,10 @@ Href.jsonSchema = {
 		mime: {
 			type: 'string'
 		},
+		visible: {
+			type: 'boolean',
+			default: true
+		},
 		url: {
 			type: 'string',
 			format: 'uri'
