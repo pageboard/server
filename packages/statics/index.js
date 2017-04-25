@@ -13,7 +13,7 @@ var dirCache = {};
 module.exports = function(opt) {
 	if (!opt.statics) opt.statics = {};
 	var statics = opt.statics;
-	if (!statics.root) statics.root = process.cwd() + '/public';
+	if (!statics.root) statics.root = Path.join(opt.cwd, 'public');
 	if (!statics.runtime) statics.runtime = Path.join(opt.dirs.runtime, 'public');
 	if (!statics.mounts) statics.mounts = [];
 	if (!statics.favicon) statics.favicon = Path.join(statics.root, 'favicon.ico');
@@ -26,6 +26,7 @@ module.exports = function(opt) {
 function init(All) {
 	var statics = All.opt.statics;
 	var app = All.app;
+	var mounts = [statics.root].concat(statics.mounts);
 
 	return fs.stat(statics.favicon).then(function() {
 		app.use(serveFavicon(statics.favicon, {
@@ -37,9 +38,9 @@ function init(All) {
 			res.sendStatus(404);
 		});
 	}).then(function() {
-		debug("Static mounts", statics.mounts);
+		debug("Static mounts", mounts);
 		return mkdirp(statics.runtime).then(function() {
-			return Promise.all(statics.mounts.map(function(dir) {
+			return Promise.all(mounts.map(function(dir) {
 				return mount(statics.runtime, dir);
 			}))
 		});
