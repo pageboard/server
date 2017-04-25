@@ -118,6 +118,8 @@ function mountPath(root, dir, path) {
 			debug("create directory", dst);
 			dirCache[dst] = true;
 			return mkdirp(dst);
+		} else {
+			debug("already existing directory", dst);
 		}
 	});
 }
