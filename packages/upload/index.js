@@ -16,7 +16,6 @@ exports = module.exports = function(opt) {
 	}
 	// currently not modifiable
 	opt.upload.dir = 'public/uploads';
-	opt.statics.mounts.push(Path.join(opt.cwd, opt.upload.dir));
 
 	return {
 		service: init
