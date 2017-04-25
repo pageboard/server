@@ -38,9 +38,11 @@ function init(All) {
 		});
 	}).then(function() {
 		debug("Static mounts", statics.mounts);
-		return Promise.all(statics.mounts.map(function(dir) {
-			return mount(statics.runtime, dir);
-		}))
+		return mkdirp(statics.runtime).then(function() {
+			return Promise.all(statics.mounts.map(function(dir) {
+				return mount(statics.runtime, dir);
+			}))
+		});
 	}).then(function(content) {
 		var prefix = statics.prefix;
 		if (prefix == null) prefix = Path.basename(statics.root);
