@@ -81,7 +81,9 @@ function mount(root, dir) {
 	}).then(function(paths) {
 		var p = Promise.resolve();
 		while (paths.length) {
-			p = p.then(mountPath.bind(null, root, dir, paths.shift()));
+			p = p.then(mountPath.bind(null, root, dir, paths.shift())).catch(function(err) {
+				console.error(err);
+			});
 		}
 		return p;
 	});
