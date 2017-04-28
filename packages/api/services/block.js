@@ -30,7 +30,7 @@ function init(All) {
 
 function QueryBlock(data) {
 	var Block = All.Block;
-	var q = Block.query().pick(Object.keys(Block.jsonSchema.properties));
+	var q = Block.query().select(Block.jsonColumns);
 	if (data.text) {
 		var text = data.text;
 		var variant = 'phrase';
@@ -62,11 +62,11 @@ exports.get = function(data) {
 exports.add = function(data) {
 	var parent = data.parent;
 	delete data.parent;
-	return QueryBlock({id: parent}).first().then(function(parent) {
+	return All.Block.query().select('_id').where('_id', parent).first().then(function(parent) {
 		data.parents = [{
-			'#dbRef': parent.id
+			'#dbRef': parent._id
 		}];
-		return All.Block.query().insertGraph(data);
+		return All.Block.query().insertGraph(data).returning(All.Block.jsonColumns)
 	});
 };
 

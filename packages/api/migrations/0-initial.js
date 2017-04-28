@@ -1,7 +1,8 @@
 exports.up = function(knex) {
 	return knex.schema
 	.createTable('block', function (table) {
-		table.increments('id').primary();
+		table.increments('_id').primary();
+		table.string('id', 16).index();
 		table.string('type').notNullable().index();
 		table.jsonb('data').notNullable().defaultTo('{}');
 		table.jsonb('content').notNullable().defaultTo('{}');
@@ -10,8 +11,8 @@ exports.up = function(knex) {
 	})
 	.createTable('relation', function (table) {
 		table.increments('id').primary();
-		table.integer('parent_id').unsigned().references('id').inTable('block').onDelete('CASCADE');
-		table.integer('child_id').unsigned().references('id').inTable('block').onDelete('CASCADE');
+		table.integer('parent_id').notNullable().unsigned().references('_id').inTable('block').onDelete('CASCADE');
+		table.integer('child_id').notNullable().unsigned().references('_id').inTable('block').onDelete('CASCADE');
 	})
 	.raw(
 		"CREATE UNIQUE INDEX ON block ((data#>>'{url}'), lang) WHERE data->'url' IS NOT NULL"
@@ -23,8 +24,8 @@ exports.up = function(knex) {
 		"CREATE INDEX ON block (updated_at DESC)"
 	)
 	.createTable('href', function(table) {
-		table.increments('id').primary();
-		table.integer('parent_id').unsigned().references('id').inTable('block').onDelete('CASCADE');
+		table.increments('_id').primary();
+		table.integer('_parent_id').unsigned().references('_id').inTable('block').onDelete('CASCADE');
 		table.string('url').notNullable();
 		table.boolean('visible').notNullable().defaultTo(true);
 		table.string('mime').notNullable().index();
@@ -38,7 +39,7 @@ exports.up = function(knex) {
 		table.timestamps(true, true); // created_at, updated_at, useTimestamps, defaultToNow
 	})
 	.raw(
-		"CREATE UNIQUE INDEX ON href (parent_id, url, lang)"
+		"CREATE UNIQUE INDEX ON href (_parent_id, url, lang)"
 	)
 	.raw(
 		"CREATE INDEX ON href (updated_at DESC)"

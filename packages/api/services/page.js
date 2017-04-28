@@ -61,12 +61,12 @@ exports.add = function(data) {
 	data = Object.assign({
 		type: 'page'
 	}, data);
-	return All.Block.query()
+	return All.Block.query().select('_id')
 		.where('type', 'site')
 		.where(ref('data:url').castText(), data.site)
 	.first().then(function(site) {
 		data.parents = [{
-			'#dbRef': site.id
+			'#dbRef': site._id
 		}];
 		delete data.site;
 		return All.Block.query().insertGraph(data);

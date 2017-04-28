@@ -30,8 +30,7 @@ function init(All) {
 function QueryHref(data) {
 	if (!data.site) throw new HttpError.BadRequest("Missing site");
 	var Href = All.Href;
-	var q = Href.query();
-	q.select(Object.keys(Href.jsonSchema.properties).map(name => 'href.' + name));
+	var q = Href.query().select(Href.jsonColumns.map(col => 'href.' + col));
 	joinSite(q, data);
 
 	if (data.url) {
@@ -112,9 +111,10 @@ exports.add = function(data) {
 					parent_id: All.Block.query().select('id')
 						.where('type', 'site')
 						.where(ref('data:url').castText(), data.site)
-				}, result)).returning('*');
+				}, result)).returning(All.Href.jsonColumns);
 			} else {
-				return All.Href.query().patch(result).where('id', href.id).first().returning('*');
+				return All.Href.query().patch(result).where('id', href.id)
+					.first().returning(All.Href.jsonColumns);
 			}
 		});
 	});

@@ -16,13 +16,15 @@ Block.tableName = 'block';
 // https://github.com/Vincit/objection.js/issues/308
 Block.pickJsonSchemaProperties = false;
 
+Block.idColumn = '_id';
+
 Block.jsonSchema = {
 	type: 'object',
 	required: ['type'],
 	id: '/api/blocks',
 	properties: {
 		id: {
-			type: 'integer'
+			type: 'string'
 		},
 		type: {
 			type: 'string'
@@ -42,6 +44,8 @@ Block.jsonSchema = {
 	additionalProperties: false
 };
 
+Block.jsonColumns = Object.keys(Block.jsonSchema.properties);
+
 Block.prototype.$beforeUpdate = function() {
 	this.updated_at = new Date().toISOString();
 };
@@ -51,24 +55,24 @@ Block.relationMappings = {
 		relation: Model.ManyToManyRelation,
 		modelClass: Block,
 		join: {
-			from: 'block.id',
+			from: 'block._id',
 			through: {
 				from: "relation.parent_id",
 				to: "relation.child_id"
 			},
-			to: 'block.id'
+			to: 'block._id'
 		}
 	},
 	parents: {
 		relation: Model.ManyToManyRelation,
 		modelClass: Block,
 		join: {
-			from: 'block.id',
+			from: 'block._id',
 			through: {
 				from: "relation.child_id",
 				to: "relation.parent_id"
 			},
-			to: 'block.id'
+			to: 'block._id'
 		}
 	}
 };

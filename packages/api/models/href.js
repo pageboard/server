@@ -16,17 +16,13 @@ Href.tableName = 'href';
 // https://github.com/Vincit/objection.js/issues/308
 Href.pickJsonSchemaProperties = false;
 
+Href.idColumn = '_id';
+
 Href.jsonSchema = {
 	type: 'object',
 	required: ['url', 'mime'],
 	id: '/api/href',
 	properties: {
-		id: {
-			type: 'integer'
-		},
-		parent_id: {
-			type: 'integer'
-		},
 		updated_at: {
 			type: 'string',
 			format: 'date-time'
@@ -89,6 +85,8 @@ Href.jsonSchema = {
 	additionalProperties: false
 };
 
+Href.jsonColumns = Object.keys(Href.jsonSchema.properties);
+
 /* not needed, default is set by db
 Href.prototype.$beforeInsert = function() {
 	this.created_at = new Date().toISOString();
@@ -104,8 +102,8 @@ Href.relationMappings = {
 		relation: Model.BelongsToOneRelation,
 		modelClass: __dirname + '/block',
 		join: {
-			from: 'href.parent_id',
-			to: 'block.id'
+			from: 'href._parent_id',
+			to: 'block._id'
 		}
 	}
 };

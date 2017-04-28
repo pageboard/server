@@ -56,9 +56,9 @@ exports.add = function(data) {
 	return All.user.get({
 		type: 'user',
 		email: data.user
-	}).then(function(user) {
+	}).select('_id').then(function(user) {
 		data.parents = [{
-			'#dbRef': user.id
+			'#dbRef': user._id
 		}];
 		delete data.user;
 		return All.Block.query().insertGraph(data);
