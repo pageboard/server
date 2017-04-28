@@ -17,9 +17,9 @@
   },
   "homepage": "https://github.com/pageboard/pageboard-read#readme",
   "dependencies": {
-    "@webcomponents/html-imports": "https://github.com/webcomponents/html-imports/archive/v1.0.0-rc.2.tar.gz",
+    "@webcomponents/html-imports": "https://github.com/webcomponents/html-imports/archive/v1.0.0-rc.4.tar.gz",
     "pagecut": "^1.0.0",
-    "window-agent": "^1.0.2",
+    "window-agent": "^1.1.0",
     "window-page": "^2.0.0-alpha.1"
   }
 }
