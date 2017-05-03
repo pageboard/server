@@ -1,4 +1,5 @@
 var Model = require('objection').Model;
+var crypto = require('crypto');
 
 function Block() {
 	Model.apply(this, arguments);
@@ -45,6 +46,12 @@ Block.jsonSchema = {
 };
 
 Block.jsonColumns = Object.keys(Block.jsonSchema.properties);
+
+Block.prototype.$beforeInsert = function() {
+	if (!this.id) return genId(this).then(function(id) {
+		this.id = id;
+	}.bind(this));
+};
 
 Block.prototype.$beforeUpdate = function() {
 	this.updated_at = new Date().toISOString();
@@ -126,3 +133,17 @@ function stringProperties(obj) {
 	}
 	return props;
 }
+
+/**
+ * this is the only function in pageboard that is defined both for client and for server !!!
+ * similar function is defined in pageboard-write#store.js
+*/
+function genId() {
+	return new Promise(function(resolve, reject) {
+		crypto.randomBytes(8, function(err, buffer) {
+			if (err) reject(err);
+			else resolve(buffer.toString('hex'));
+		});
+	});
+}
+
