@@ -17,6 +17,7 @@
   },
   "homepage": "https://github.com/pageboard/pageboard-read#readme",
   "dependencies": {
+		"dom-template-strings": "^1.1.0",
     "@webcomponents/html-imports": "https://github.com/webcomponents/html-imports/archive/v1.0.0-rc.4.tar.gz",
     "pagecut": "^1.0.0",
     "window-agent": "^1.1.0",

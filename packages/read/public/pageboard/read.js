@@ -19,15 +19,12 @@ Page.route(function(state) {
 
 		var viewer = Pagecut.viewerInstance = new Pagecut.Viewer();
 
-		viewer.modules.id.store = buildBlocksMap(page);
-
 		var stylesheets = collectStylesheets({}, document);
-
-		return viewer.modules.id.from(page).then(function(fragment) {
-			if (fragment.nodeName != "BODY") throw new Error("Page renderer should fill document and return body");
-			state.document = fragment.ownerDocument.cloneNode(true);
-			setStylesheets(stylesheets, state.document);
-		});
+		var frag = viewer.modules.id.from(page);
+		if (frag.nodeName != "BODY") throw new Error("Page renderer should fill document and return body");
+		state.document = frag.ownerDocument.cloneNode(true);
+		state.document.dom = dom.bind(state.document);
+		setStylesheets(stylesheets, state.document);
 	}).catch(function(err) {
 		console.error(err);
 		var params = {
@@ -43,15 +40,6 @@ Page.route(function(state) {
 		document.body.innerHTML = '<h1>Error' + params.code + '</h1>' +
 			'<p>' + params.message + '</p>';
 	});
-
-	function buildBlocksMap(block, blocks) {
-		if (!blocks) blocks = {};
-		blocks[block.id] = block;
-		if (block.children) block.children.forEach(function(item) {
-			buildBlocksMap(item, blocks);
-		});
-		return blocks;
-	}
 
 	function collectStylesheets(sheets, doc) {
 		var nodes = Array.from(doc.querySelectorAll('link[rel="import"],link[rel="stylesheet"]'));
