@@ -65,7 +65,7 @@ function init(All) {
 
 	All.app.post('/' + upload.dir, throttle(bps), mw.array('files'), function(req, res, next) {
 		res.send(req.files.map(function(file) {
-			return '/' + Path.join(Path.relative(All.opt.cwd, file.destination), file.filename);
+			return req.protocol + '://' + req.get('Host') + '/' + Path.join(Path.relative(All.opt.cwd, file.destination), file.filename);
 		}));
 	});
 }
