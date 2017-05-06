@@ -9,21 +9,27 @@ exports = module.exports = function(opt) {
 function init(All) {
 	var opt = All.opt;
 	exports.get = function(url) {
+		var p;
 		if (opt.inspector.url) {
-			return require('got')({
+			p = require('got')({
 				url: opt.inspector.url,
 				query: {
 					url: url
 				}
 			});
 		} else {
-			return new Promise(function(resolve, reject) {
+			p = new Promise(function(resolve, reject) {
 				require('url-inspector')(url, opt.inspector, function(err, result) {
 					if (err) return reject(err);
 					resolve(result);
 				});
 			});
 		}
+		return p.then(function(result) {
+			// here are fixed some inspector shortcomings
+			if (result.icon == "data:/,") result.icon = null;
+			return result;
+		});
 	};
 }
 
