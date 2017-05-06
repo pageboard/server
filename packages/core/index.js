@@ -187,14 +187,16 @@ function reqBody(req, res, next) {
 	var opt = this.opt;
 	bodyParserJson(req, res, function() {
 		var obj = req.body;
-		obj.site = opt.site || req.hostname;
+		// all payloads must contain site
+		obj.site = req.hostname;
 		next();
 	});
 }
 
 function reqQuery(req, res, next) {
 	var obj = req.query;
-	obj.site = this.opt.site || req.hostname;
+	// all payloads must contain site
+	obj.site = req.hostname;
 	next();
 }
 
