@@ -99,21 +99,23 @@ exports.get = function(data) {
 exports.add = function(data) {
 	if (!data.url) throw new HttpError.BadRequest("Missing url");
 	var ref = All.objection.ref;
-	return All.inspector.get(data.url)
-	.then(filterResult).then(embedThumbnail)
+	var url = data.url;
+
+	return All.inspector.get(url).catch(function(err) {
+		// inspector failure
+		if (typeof err == 'number') err = new HttpError[err]("Inspector failure");
+		throw err;
+	}).then(filterResult).then(embedThumbnail)
 	.then(function(result) {
-		if (local && !result.icon && All.opt.statics.favicon) {
-			result.icon = Path.basename(All.opt.statics.favicon);
-		}
-		return QueryHref(data).first().then(function(href) {
+		return QueryHref(data).first().select('href._id').then(function(href) {
 			if (!href) {
 				return All.Href.query().insert(Object.assign({
-					parent_id: All.Block.query().select('id')
+					_parent_id: All.Block.query().select('_id')
 						.where('type', 'site')
 						.where(ref('data:url').castText(), data.site)
 				}, result)).returning(All.Href.jsonColumns);
 			} else {
-				return All.Href.query().patch(result).where('id', href.id)
+				return All.Href.query().patch(result).where('_id', href._id)
 					.first().returning(All.Href.jsonColumns);
 			}
 		});
@@ -122,11 +124,11 @@ exports.add = function(data) {
 
 exports.del = function(data) {
 	if (!data.url) throw new HttpError.BadRequest("Missing url");
-	return QueryHref(data).first().then(function(href) {
+	return QueryHref(data).select('href._id').first().then(function(href) {
 		if (!href) throw new HttpError.NotFound("No href found for this url");
 		return All.Href.query().patch({
 			visible: false
-		}).where('id', href.id).then(function() {
+		}).where('_id', href._id).then(function() {
 			href.visible = false;
 			return href;
 		});
