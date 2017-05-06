@@ -40,6 +40,10 @@ Block.jsonSchema = {
 		},
 		lang: {
 			type: ['string', 'null']
+		},
+		standalone: { // a standalone block can have 0 or multiple parents
+			type: 'boolean',
+			default: false
 		}
 	},
 	additionalProperties: false

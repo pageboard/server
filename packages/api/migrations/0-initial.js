@@ -7,6 +7,7 @@ exports.up = function(knex) {
 		table.jsonb('data').notNullable().defaultTo('{}');
 		table.jsonb('content').notNullable().defaultTo('{}');
 		table.string('lang');
+		table.boolean('standalone').notNullable().defaultTo(false);
 		table.timestamps(true, true); // created_at, updated_at, useTimestamps, defaultToNow
 	})
 	.createTable('relation', function (table) {
