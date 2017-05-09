@@ -13,11 +13,6 @@ exports = module.exports = function(opt) {
 		__dirname + '/services/block',
 		__dirname + '/services/href'
 	);
-	opt.elements.push(
-		__dirname + '/public/pageboard/elements/site',
-		__dirname + '/public/pageboard/elements/page',
-		__dirname + '/public/pageboard/elements/user'
-	);
 	opt.statics.mounts.push(__dirname + '/public');
 	opt.models = [
 		__dirname + '/models/block',
