@@ -1,4 +1,8 @@
-var Model = require('objection').Model;
+var objection = require('objection');
+var Model = objection.Model;
+var QueryBuilder = objection.QueryBuilder;
+var ref = objection.ref;
+
 var crypto = require('crypto');
 
 function Block() {
@@ -150,4 +154,14 @@ function genId() {
 		});
 	});
 }
+
+QueryBuilder.prototype.whereSite = function(site) {
+	return this.joinRelation('parents')
+		.where('parents.type', 'site')
+		.where(ref('parents.data:url').castText(), site);
+};
+
+QueryBuilder.prototype.whereUrl = function(url) {
+	return this.where(ref("block.data:url").castText(), url);
+};
 
