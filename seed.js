@@ -21,19 +21,6 @@ pageboard.init(config).then(function(All) {
 				name: 'Local site'
 			}
 		});
-	}).then(function(site) {
-		return All.page.add({
-			site: site.data.url,
-			data: {
-				url: '/',
-				title: 'Home'
-			},
-			content: {
-				body: '<p>Welcome to Pageboard</p>'
-			}
-		});
-	}).then(function(page) {
-
 	}).then(function() {
 		process.exit();
 	});
