@@ -153,9 +153,10 @@ function createApp(opt) {
 
 function servicesError(err, req, res, next) {
 	var msg = err.message || err.toString();
-	var code = parseInt(err.statusCode || err.code);
+	var fullCode = err.statusCode || err.code;
+	var code = parseInt(fullCode);
 	if (isNaN(code) || code < 200 || code >= 600) {
-		msg += "\nerror code: " + code;
+		msg += "\nerror code: " + fullCode;
 		code = 500;
 	}
 	if (code >= 500) console.error(err);
