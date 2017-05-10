@@ -41,10 +41,7 @@ function init(All) {
 
 	opt.schemas = {};
 	opt.elements.forEach(function(path) {
-		var element = require(path);
-		var type = element.name || Path.basename(path);
-		var prev = opt.schemas[type];
-		if (prev) Object.assign(prev, element);
+		Object.assign(opt.schemas, require(path));
 	});
 	exports.Block.extendSchema(opt.schemas);
 	exports.objection = objection;
