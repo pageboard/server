@@ -99,7 +99,7 @@ Block.extendSchema = function extendSchema(schemas) {
 	schema.switch = types.map(function(type) {
 		var element = Object.assign({
 			properties: {},
-			specs: {}
+			contents: {}
 		}, schemas[type]);
 		return {
 			if: {
@@ -117,7 +117,7 @@ Block.extendSchema = function extendSchema(schemas) {
 						required: element.required || []
 					}),
 					content: Object.assign({}, blockProps.content, {
-						properties: stringProperties(element.specs || {}),
+						properties: stringProperties(element.contents || {}),
 						additionalProperties: false
 					})
 				}),
