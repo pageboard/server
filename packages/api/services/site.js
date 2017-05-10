@@ -35,8 +35,7 @@ function QuerySite(data) {
 		q.where('id', data.id);
 	} else {
 		if (!data.url) throw new HttpError.BadRequest("Missing url");
-		q.where(ref('block.data:url').castText(), data.url)
-		.where('block.type', 'site');
+		q.whereUrl(data.url).where('block.type', 'site');
 	}
 	return q;
 }
@@ -59,6 +58,10 @@ exports.add = function(data) {
 	}).select('_id').then(function(user) {
 		data.parents = [{
 			'#dbRef': user._id
+		}];
+		data.children = [{
+			type: 'notfound',
+			standalone: true
 		}];
 		delete data.user;
 		return All.Block.query().insertGraph(data);

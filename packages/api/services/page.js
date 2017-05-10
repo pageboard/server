@@ -32,87 +32,96 @@ function QueryPage(data, Block) {
 	if (!Block) Block = All.Block;
 	var ref = All.objection.ref;
 	var q = Block.query().where('block.type', 'page');
-	var site = data.site;
-	if (site) delete data.site;
 	if (data.id) {
 		q.where('block.id', data.id);
 	} else {
-		if (!site) throw new HttpError.BadRequest("Missing site");
+		if (!data.site) throw new HttpError.BadRequest("Missing site");
 		if (!data.url) throw new HttpError.BadRequest("Missing url");
-		q.where(ref("block.data:url").castText(), data.url)
+		q.whereUrl(data.url);
 	}
-	return q.joinRelation('parents')
-		.where('parents.type', 'site')
-		.where(ref('parents.data:url').castText(), site);
+	return q.whereSite(data.site);
 }
 
 exports.get = function(data) {
-	return QueryPage(data).select(All.Block.jsonColumns.map(col => `block.${col}`))
+	var blockCols = All.Block.jsonColumns.map(col => `block.${col}`);
+	return QueryPage(data).select(blockCols)
 	.eager('children.^').first().then(function(page) {
-		if (!page) throw new HttpError.NotFound("No page found");
-		return page;
-	});
-};
-
-exports.add = function(data) {
-	var ref = All.objection.ref;
-	if (!data.site) throw new HttpError.BadRequest("Missing site");
-	data = Object.assign({
-		type: 'page'
-	}, data);
-	return All.Block.query().select('_id')
-		.where('type', 'site')
-		.where(ref('data:url').castText(), data.site)
-	.first().then(function(site) {
-		data.parents = [{
-			'#dbRef': site._id
-		}];
-		delete data.site;
-		return All.Block.query().insertGraph(data);
+		if (!page) {
+			return All.Block.query().select(blockCols).first()
+				.whereSite(data.site).where('block.type', 'notfound')
+				.eager('children.^').first();
+		} else {
+			return page;
+		}
 	});
 };
 
 exports.save = function(changes) {
 	// changes.remove, add, update are lists of blocks
 	// changes.id is the page id so we know how to parent all blocks
+	// TODO if page is used to list pages, we have to check that affected pages url
+	// + the changes do not result in multiple identical url
+	var site = changes.site;
 	return All.objection.transaction(All.Block, function(Block) {
-		return QueryPage(changes, Block).select('block.id', 'block._id').first().then(function(page) {
-			return removeChanges(page, changes.remove);
+		return Block.query().whereSite(site).where('block.id', changes.id)
+		.whereIn('block.type', ['page', 'notfound'])
+		.select('block.id', 'block._id', 'block.data').first().then(function(page) {
+			if (!page) throw new HttpError.NotFound("Page not found");
+			return removeChanges(site, page, changes.remove);
 		}).then(function(page) {
-			return addChanges(page, changes.add);
+			return addChanges(site, page, changes.add);
 		}).then(function(page) {
-			return updateChanges(page, changes.update);
+			return updateChanges(site, page, changes.update);
 		});
 	});
 };
 
-function updateChanges(page, updates) {
+function updateChanges(site, page, updates) {
 	return Promise.all(updates.map(function(child) {
 		if (child.id == page.id) {
-			return page.$query().patch(child);
+			// really ?
+			var p = Promise.resolve();
+			if (child.data.url != page.data.url) {
+				// make sure child.data.url is not already used in db
+				p = p.then(function() {
+					return QueryPage({
+						site: site,
+						url: child.data.url
+					}).count().then(function(count) {
+						if (count > 0) throw new HTTPError.BadRequest("url already used");
+					});
+				});
+			}
+			return p.then(function() {
+				return page.$query().patch(child);
+			});
 		} else {
 			return page.$relatedQuery('children').patch(child).where('id', child.id);
 		}
 	}));
 }
 
-function addChanges(page, adds) {
+function addChanges(site, page, adds) {
 	return page.$relatedQuery('children').insert(adds).then(function(rows) {
 		return page.$relatedQuery('children').relate(rows.map(row => row._id));
 	}).then(x => page);
 }
 
-function removeChanges(page, removes) {
+function removeChanges(site, page, removes) {
 	var ids = removes.map(obj => obj.id);
 	return page.$relatedQuery('children')
 	.unrelate().whereIn('id', ids).then(function() {
 		// now remove all blocks that are not shared blocks
-		return page.$relatedQuery('children').delete()
-		.whereIn('id', ids).where('standalone', false);
+		return page.$relatedQuery('children')
+		.delete().whereIn('id', ids).where('standalone', false);
 	}).then(x => page);
 }
 
+exports.add = function(data) {
+	throw new HTTPError.NotImplemented("TODO use save to add page blocks");
+};
+
 exports.del = function(data) {
-	return QueryPage(data).del();
+	throw new HTTPError.NotImplemented("TODO use save to delete page blocks");
 };
 
