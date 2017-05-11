@@ -1,12 +1,20 @@
 Page.route(function(state) {
+	// conveniently export doc.dom from dom-template-strings
+	Document.prototype.dom = dom;
 	return GET('/api/page', {
 		url: state.pathname
+	}).catch(function(err) {
+		// emergency error handling
+		document.body.textContent = `${err.code} ${err}`;
+		document.title = err.code;
+		throw err;
 	}).then(function(page) {
-		// conveniently export doc.dom from dom-template-strings
-		Document.prototype.dom = dom;
-
 		var viewer = Pagecut.viewerInstance = new Pagecut.Viewer();
 
+		// TODO monkey-patch window-page so that Page.state.query has accessors
+		// and that after prerendering, if some query parameters were not accessed,
+		// a 302 Temporary redirection goes to the same url without those query parameters
+		// to setup that redirection, use meta http-equiv="Status" content="302"
 		var frag = viewer.modules.id.from(page);
 		if (frag.nodeName != "BODY") throw new Error("Page renderer should fill document and return body");
 		state.document = frag.ownerDocument;
@@ -17,19 +25,8 @@ Page.route(function(state) {
 			return doc.dom`<script src="${src}"></script>`;
 		});
 	}).catch(function(err) {
-		console.error(err);
-		var params = {
-			code: err.statusCode || err.code || 500,
-			message: err.message || err.toString()
-		};
-		/*
-		document.location = Page.format({
-			pathname: '/error',
-			query: params
-		});
-		*/
-		document.body.innerHTML = '<h1>Error' + params.code + '</h1>' +
-			'<p>' + params.message + '</p>';
+		// log client-side errors
+		if (err) console.error(err);
 	});
 
 	function mergeAssets(doc, modules, what, builder) {
