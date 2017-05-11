@@ -18,6 +18,8 @@ module.exports = function(opt) {
 	}, opt.prerender);
 
 	dom.settings.helpers.push(dom.helpers.develop);
+	dom.settings.load.plugins.unshift(dom.plugins.httpequivs);
+	dom.settings.load.plugins.unshift(dom.plugins.httplinkpreload);
 
 	Object.assign(dom.pool, {
 		max: 8
