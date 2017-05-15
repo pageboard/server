@@ -48,12 +48,16 @@ function QueryPage(data, Block) {
 
 exports.get = function(data) {
 	var blockCols = All.Block.jsonColumns.map(col => `block.${col}`);
-	return QueryPage(data).select(blockCols)
-	.eager('children.^').first().then(function(page) {
+	return QueryPage(data).select(blockCols).first()
+	.eager('children(jsonColumns).^', {
+		jsonColumns: query => query.select(blockCols)
+	}).then(function(page) {
 		if (!page) {
 			return All.Block.query().select(blockCols).first()
 				.whereSite(data.site).where('block.type', 'notfound')
-				.eager('children.^').first();
+				.eager('children(jsonColumns).^', {
+					jsonColumns: query => query.select(blockCols)
+				});
 		} else {
 			return page;
 		}
