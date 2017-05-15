@@ -65,7 +65,7 @@ exports.get = function(data) {
 };
 
 exports.find = function(data) {
-	return All.Block.query().select(All.Block.jsonColumns)
+	return All.Block.query().select(All.Block.jsonColumns.map(col => `block.${col}`))
 		.whereSite(data.site)
 		.whereJsonText('block.data:url', 'LIKE', data.url + '%');
 };
