@@ -11,6 +11,11 @@ function init(All) {
 			res.send(page);
 		}).catch(next);
 	});
+	All.app.get('/api/pages', All.query, function(req, res, next) {
+		exports.find(req.query).then(function(pages) {
+			res.send(pages);
+		}).catch(next);
+	});
 	All.app.post('/api/page', All.body, function(req, res, next) {
 		exports.add(req.body).then(function(page) {
 			res.send(page);
@@ -53,6 +58,12 @@ exports.get = function(data) {
 			return page;
 		}
 	});
+};
+
+exports.find = function(data) {
+	return All.Block.query().select(All.Block.jsonColumns)
+		.whereSite(data.site)
+		.whereJsonText('block.data:url', 'LIKE', data.url + '%');
 };
 
 exports.save = function(changes) {
