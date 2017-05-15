@@ -158,10 +158,12 @@ function genId() {
 QueryBuilder.prototype.whereSite = function(site) {
 	return this.joinRelation('parents')
 		.where('parents.type', 'site')
-		.where(ref('parents.data:url').castText(), site);
+		.whereJsonText('parents.data:url', site);
 };
 
-QueryBuilder.prototype.whereUrl = function(url) {
-	return this.where(ref("block.data:url").castText(), url);
+QueryBuilder.prototype.whereJsonText = function(a) {
+	var args = Array.from(arguments).slice(1);
+	args.unshift(ref(a).castText());
+	return this.where.apply(this, args);
 };
 

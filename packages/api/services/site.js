@@ -29,13 +29,12 @@ function init(All) {
 }
 
 function QuerySite(data) {
-	var ref = All.objection.ref;
 	var q = All.Block.query();
 	if (data.id) {
 		q.where('id', data.id);
 	} else {
 		if (!data.url) throw new HttpError.BadRequest("Missing url");
-		q.whereUrl(data.url).where('block.type', 'site');
+		q.whereJsonText('block.data:url', data.url).where('block.type', 'site');
 	}
 	return q;
 }

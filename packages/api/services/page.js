@@ -30,14 +30,13 @@ function init(All) {
 
 function QueryPage(data, Block) {
 	if (!Block) Block = All.Block;
-	var ref = All.objection.ref;
 	var q = Block.query().where('block.type', 'page');
 	if (data.id) {
 		q.where('block.id', data.id);
 	} else {
 		if (!data.site) throw new HttpError.BadRequest("Missing site");
 		if (!data.url) throw new HttpError.BadRequest("Missing url");
-		q.whereUrl(data.url);
+		q.whereJsonText("block.data:url", data.url);
 	}
 	return q.whereSite(data.site);
 }

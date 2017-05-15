@@ -6,10 +6,9 @@ exports = module.exports = function(opt) {
 
 
 function QueryUser(data) {
-	var ref = All.objection.ref;
 	var q = All.Block.query().where('type', 'user');
 	if (data.id) q.where('id', data.id);
-	else if (data.email) q.where(ref('data:email').castText(), data.email);
+	else if (data.email) q.whereJsonText('data:email', data.email);
 	else throw new HttpError.BadRequest("Cannot query user", data);
 	return q;
 }
