@@ -48,16 +48,19 @@ function QueryPage(data, Block) {
 
 exports.get = function(data) {
 	var blockCols = All.Block.jsonColumns.map(col => `block.${col}`);
-	return QueryPage(data).select(blockCols).first()
+	return QueryPage(data)
+	.select(blockCols)
+	.first()
 	.eager('children(jsonColumns).^', {
 		jsonColumns: query => query.select(blockCols)
 	}).then(function(page) {
 		if (!page) {
-			return All.Block.query().select(blockCols).first()
-				.whereSite(data.site).where('block.type', 'notfound')
-				.eager('children(jsonColumns).^', {
-					jsonColumns: query => query.select(blockCols)
-				});
+			return All.Block.query()
+			.select(blockCols).first()
+			.whereSite(data.site).where('block.type', 'notfound')
+			.eager('children(jsonColumns).^', {
+				jsonColumns: query => query.select(blockCols)
+			});
 		} else {
 			return page;
 		}
@@ -65,70 +68,102 @@ exports.get = function(data) {
 };
 
 exports.find = function(data) {
-	return All.Block.query().select(All.Block.jsonColumns.map(col => `block.${col}`))
-		.whereSite(data.site)
-		.whereJsonText('block.data:url', 'LIKE', data.url + '%');
+	return All.Block.query()
+	.select(All.Block.jsonColumns.map(col => `block.${col}`))
+	.whereSite(data.site)
+	.whereJsonText('block.data:url', 'LIKE', `${data.url || ''}%`);
 };
 
 exports.save = function(changes) {
 	// changes.remove, add, update are lists of blocks
-	// changes.id is the page id so we know how to parent all blocks
-	// TODO if page is used to list pages, we have to check that affected pages url
-	// + the changes do not result in multiple identical url
-	var site = changes.site;
+	// changes.id is the page id
+	// normal blocks belongs to the page
+	// standalone blocks follow these rules:
+	// - if it is added, it is added to the site, and to the current page as well
+	//   (it is not possible to add a standalone block without adding it to the current page)
+	// - if it is updated, it is already added to the current page
+	//   (a block cannot become standalone, only added blocks can be standalone, so when
+	//    the client wants to change a block to become standalone, it is actually a new copy).
+	// - if it is removed, it is removed from the current page. The standalone block
+	//   will only be removed later by a garbage collector if no longer used.
 	return All.objection.transaction(All.Block, function(Block) {
-		return Block.query().whereSite(site).where('block.id', changes.id)
-		.whereIn('block.type', ['page', 'notfound'])
-		.select('block.id', 'block._id', 'block.data').first().then(function(page) {
-			if (!page) throw new HttpError.NotFound("Page not found");
+		var site, page;
+		return Block.query().whereJsonText('block.data:url', changes.site)
+		.first().then(function(inst) {
+			if (!inst) throw new HttpError.NotFound("Site not found");
+			site = inst;
+		}).then(function() {
+			return site.$relatedQuery('children').where('block.id', changes.id)
+			.first().then(function(inst) {
+				if (!inst) throw new HttpError.NotFound("Page not found");
+				page = inst;
+			});
+		}).then(function() {
 			return removeChanges(site, page, changes.remove);
-		}).then(function(page) {
+		}).then(function() {
 			return addChanges(site, page, changes.add);
-		}).then(function(page) {
+		}).then(function() {
 			return updateChanges(site, page, changes.update);
 		});
 	});
 };
 
 function updateChanges(site, page, updates) {
+	// here we just try to patch and let the db decide what was actually possible
 	return Promise.all(updates.map(function(child) {
-		if (child.id == page.id) {
-			// really ?
-			var p = Promise.resolve();
-			if (child.data.url != page.data.url) {
-				// make sure child.data.url is not already used in db
-				p = p.then(function() {
-					return QueryPage({
-						site: site,
-						url: child.data.url
-					}).count().then(function(count) {
-						if (count > 0) throw new HTTPError.BadRequest("url already used");
-					});
-				});
-			}
-			return p.then(function() {
-				return page.$query().patch(child);
+		return site
+		.$relatedQuery('children')
+		.patch(child)
+		.where({
+			id: child.id,
+			standalone: true
+		}).then(function() {
+			return page
+			.$relatedQuery('children')
+			.patch(child)
+			.where({
+				id: child.id,
+				standalone: false
 			});
-		} else {
-			return page.$relatedQuery('children').patch(child).where('id', child.id);
-		}
+		});
 	}));
 }
 
 function addChanges(site, page, adds) {
-	return page.$relatedQuery('children').insert(adds).then(function(rows) {
-		return page.$relatedQuery('children').relate(rows.map(row => row._id));
-	}).then(x => page);
+	// when a standalone block is added, it needs to be related to the site and to the page
+	return page
+	.$relatedQuery('children')
+	.insert(adds)
+	.then(function(rows) {
+		return page
+		.$relatedQuery('children')
+		.relate(rows.map(row => row._id))
+		.then(() => rows);
+	}).then(function(rows) {
+		var alones = rows
+		.filter(row => row.standalone)
+		.map(row => row._id);
+		if (alones.length) {
+			return site
+			.$relatedQuery('children')
+			.relate(alones);
+		}
+	});
 }
 
 function removeChanges(site, page, removes) {
 	var ids = removes.map(obj => obj.id);
 	return page.$relatedQuery('children')
-	.unrelate().whereIn('id', ids).then(function() {
-		// now remove all blocks that are not shared blocks
-		return page.$relatedQuery('children')
-		.delete().whereIn('id', ids).where('standalone', false);
-	}).then(x => page);
+	.unrelate()
+	.whereIn('id', ids)
+	.then(function() {
+		// now remove all blocks that are not standalone blocks, trusting db only
+		return page
+		.$relatedQuery('children')
+		.delete()
+		.whereIn('id', ids)
+		.where('standalone', false);
+	});
 }
 
 exports.add = function(data) {
