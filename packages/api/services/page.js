@@ -33,34 +33,28 @@ function init(All) {
 	});
 }
 
-function QueryPage(data, Block) {
-	if (!Block) Block = All.Block;
-	var q = Block.query().where('block.type', 'page');
-	if (data.id) {
-		q.where('block.id', data.id);
-	} else {
-		if (!data.site) throw new HttpError.BadRequest("Missing site");
-		if (!data.url) throw new HttpError.BadRequest("Missing url");
-		q.whereJsonText("block.data:url", data.url);
-	}
-	return q.whereSite(data.site);
+function QueryPage(site) {
+	var blockCols = All.Block.jsonColumns.map(col => `block.${col}`);
+	return All.Block.query()
+	.select(blockCols)
+	.first()
+	.eager('[parents(parentsFilter),children(childrenFilter).^]', {
+		parentsFilter: query => query.select(blockCols)
+			.where('block.type', 'site')
+			.whereJsonText('block.data:url', site),
+		childrenFilter: query => query.select(blockCols)
+	});
 }
 
 exports.get = function(data) {
-	var blockCols = All.Block.jsonColumns.map(col => `block.${col}`);
-	return QueryPage(data)
-	.select(blockCols)
-	.first()
-	.eager('children(jsonColumns).^', {
-		jsonColumns: query => query.select(blockCols)
-	}).then(function(page) {
+	if (!data.site) throw new HttpError.BadRequest("Missing site");
+	if (!data.url) throw new HttpError.BadRequest("Missing url");
+
+	return QueryPage(data.site).where('type', 'page')
+	.whereJsonText("block.data:url", data.url)
+	.then(function(page) {
 		if (!page) {
-			return All.Block.query()
-			.select(blockCols).first()
-			.whereSite(data.site).where('block.type', 'notfound')
-			.eager('children(jsonColumns).^', {
-				jsonColumns: query => query.select(blockCols)
-			});
+			return QueryPage(data.site).where('type', 'notfound');
 		} else {
 			return page;
 		}
