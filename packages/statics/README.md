@@ -1,18 +1,26 @@
 pageboard-static
 ================
 
-Install and mount npm modules files under
+Install and mount directories under three paths:
 
-<domain>/files/<module>/
+- /.pageboard/<directory>
+mapped to <runtime>/pageboard/...
+- /.files/<module>/<directory>
+mapped to <runtime>/files/<hostname>/...
+- /.uploads
+mapped to <runtime>/uploads/<hostname>/...
 
 
 API
 ---
 
-`All.static.install(domain, dependencies)`
+`All.statics.install({domain, mounts})`
 
-returns a promise, and takes a dependencies object in the same format as the one
-in package.json.
+A mount is an object like:
+```
+{
+  from: "some/path/dir",
+  to: "
 
 
 Example site object
@@ -23,21 +31,12 @@ site: {
 	data: {
 		"dependencies": {
 			pageboard-elements: "^1.0",
-			casta: "edasarl/casta"
+			pageboard-custom-site: "kapouer/pageboard-custom-site#1.0"
 		},
-		"elements": [
-			"/files/pageboard-elements/page.js",
-			"/files/pageboard-elements/link.js",
-			"/files/casta/elements/shutter.js"
-		]
 	}
 }
 ```
 
-Elements are added when initializing a page from read.html at route phase, so
-that build can access those elements.
-
-Elements themselves can declare ui scripts and stylesheets, which are loaded
-into the page at the end of the build phase, so setup phase can run them.
-
+Each dependency can add directories by setting a "pageboard.directories" list
+of relative paths in its package.json.
 
