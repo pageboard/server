@@ -226,7 +226,7 @@ function initConfig(prefix, domain, module, config) {
 			console.info(`${domain} > ${module} has no package.json, mounting the module directory`);
 			config.directories.push({
 				from: Path.resolve(moduleDir),
-				to: domain ? Path.join(domain, module) : 'pageboard'
+				to: domain ? Path.join('/', '.files', domain, module) : '/.pageboard'
 			});
 			return;
 		}
@@ -244,7 +244,7 @@ function initConfig(prefix, domain, module, config) {
 				console.warn(`Warning: ${domain} dependency ${module} bad mount from: ${from}`);
 				return;
 			}
-			var rootTo = domain ? Path.join('/', 'files', domain, module) : '/pageboard';
+			var rootTo = domain ? Path.join('/', '.files', domain, module) : '/.pageboard';
 			var to = Path.resolve(rootTo, mount.to);
 			if (to.startsWith(rootTo) == false) {
 				console.warn(`Warning: ${domain} dependency ${module} bad mount to: ${to}`);
