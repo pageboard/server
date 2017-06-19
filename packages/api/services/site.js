@@ -1,3 +1,5 @@
+var equal = require('esequal');
+
 exports = module.exports = function(opt) {
 	return {
 		name: 'site',
@@ -69,7 +71,14 @@ exports.add = function(data) {
 };
 
 exports.save = function(data) {
-	return QuerySite(data).patch(data);
+	return QuerySite(data).first().then(function(site) {
+		if (!site) throw new Error("Missing site");
+		return site.$query().patch(data).then(function(result) {
+			var deps = data.data && data.data.dependencies;
+			if (deps && !equal(site.data.dependencies, deps)) return All.install(data.data).then(() => result);
+			else return result;
+		});
+	});
 };
 
 exports.del = function(data) {

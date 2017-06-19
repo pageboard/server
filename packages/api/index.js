@@ -59,7 +59,7 @@ exports.install = function({elements, directories, domain}) {
 		if (domain) {
 			exports.blocksByDomain[domain] = Block;
 		} else {
-			All.api.Block = Block;
+			exports.Block = All.api.Block = Block;
 		}
 		if (!domain) return;
 
@@ -85,8 +85,11 @@ exports.install = function({elements, directories, domain}) {
 
 exports.DomainBlock = function(domain) {
 	if (exports.blocksByDomain[domain]) return Promise.resolve(exports.blocksByDomain[domain]);
-	return All.install(domain).then(function() {
-		return exports.blocksByDomain[domain];
+	return All.api.site.get({domain: domain}).then(function(site) {
+		if (!site) throw new Error("Site not found");
+		return All.install(site.data).then(function() {
+			return exports.blocksByDomain[domain];
+		});
 	});
 };
 
