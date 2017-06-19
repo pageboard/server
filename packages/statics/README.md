@@ -1,19 +1,43 @@
 pageboard-static
 ================
 
-Mounts the content of directories listed in
-`config.statics.mounts`
-under the application's current working directory
-`config.statics.root` public directory
-by creating sub-directories and making files symlinks;
-and serve them under the
-`config.statics.prefix`
-route prefix (defaults to dirname of root directory `/public`).
+Install and mount npm modules files under
 
-Prefixing files makes it easier to configure proxies and caches, and also minimizes
-the chances of URL collision between dynamic pages and files (which wouldn't
-be catastrophic, but it's clearer for the user to know how URL are available).
+<domain>/files/<module>/
 
-Also serves `config.statics.favicon` (defaults to /favicon.ico) using *serve-favicon*,
-and if not configured will send a 404 right away.
+
+API
+---
+
+`All.static.install(domain, dependencies)`
+
+returns a promise, and takes a dependencies object in the same format as the one
+in package.json.
+
+
+Example site object
+-------------------
+
+```
+site: {
+	data: {
+		"dependencies": {
+			pageboard-elements: "^1.0",
+			casta: "edasarl/casta"
+		},
+		"elements": [
+			"/files/pageboard-elements/page.js",
+			"/files/pageboard-elements/link.js",
+			"/files/casta/elements/shutter.js"
+		]
+	}
+}
+```
+
+Elements are added when initializing a page from read.html at route phase, so
+that build can access those elements.
+
+Elements themselves can declare ui scripts and stylesheets, which are loaded
+into the page at the end of the build phase, so setup phase can run them.
+
 

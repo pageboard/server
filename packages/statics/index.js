@@ -1,61 +1,57 @@
 var serveStatic = require('serve-static');
-var serveFavicon = require('serve-favicon');
 var Path = require('path');
-var pify = require('pify');
-var fs = pify(require('fs'), ['stat', 'lstat', 'symlink', 'unlink']);
+var pify = require('util').promisify;
+var fs = {
+	symlink: pify(require('fs').symlink),
+	unlink: pify(require('fs').unlink)
+};
 
-var glob = pify(require('glob'));
 var mkdirp = pify(require('mkdirp'));
+var rimraf = pify(require('rimraf'));
+
 var debug = require('debug')('pageboard-static');
 
-var dirCache = {};
-
-module.exports = function(opt) {
+exports = module.exports = function(opt) {
 	if (!opt.statics) opt.statics = {};
 	var statics = opt.statics;
-	if (!statics.root) statics.root = Path.join(opt.cwd, 'public');
-	if (!statics.runtime) statics.runtime = Path.join(opt.dirs.runtime, 'public');
-	if (!statics.mounts) statics.mounts = [];
-	if (!statics.favicon) statics.favicon = Path.join(statics.root, 'favicon.ico');
+	if (!statics.runtime) {
+		statics.runtime = Path.join(opt.dirs.runtime, 'statics');
+	} else {
+		statics.runtime = Path.resolve(statics.runtime);
+	}
+
 	if (!statics.maxAge) statics.maxAge = 3600;
 	if (opt.env == 'development') statics.maxAge = 0;
 
-	return {file: init};
+	return {
+		name: 'statics',
+		file: init
+	};
 };
 
 function init(All) {
 	var statics = All.opt.statics;
 	var app = All.app;
-	var mounts = [statics.root].concat(statics.mounts);
 
-	return fs.stat(statics.favicon).then(function() {
-		app.use(serveFavicon(statics.favicon, {
-			maxAge: statics.maxAge * 1000
-		}));
-	}).catch(function(err) {
-		delete statics.favicon;
-		app.use('/favicon.ico', function(req, res, next) {
-			res.sendStatus(404);
-		});
-	}).then(function() {
-		debug("Static mounts", mounts);
-		return mkdirp(statics.runtime).then(function() {
-			return Promise.all(mounts.map(function(dir) {
-				return mount(statics.runtime, dir);
-			}))
-		});
-	}).then(function(content) {
-		var prefix = statics.prefix;
-		if (prefix == null) prefix = Path.basename(statics.root);
+	return mkdirp(statics.runtime).then(function() {
+		console.info(`Static directories are served from symlinks in ${statics.runtime}`);
 
-		console.info("Files mounted on" , prefix, ":\n", statics.root);
-		if (statics.runtime != statics.root) console.info("are served from", "\n", statics.runtime);
-
-		app.use(
-			'/' + prefix,
+		app.get(
+			"/:dir(.pageboard|.files|.uploads)/*",
 			function(req, res, next) {
-				if (/^(get|head)$/i.test(req.method)) next();
-				else next('route');
+				switch(req.params.dir) {
+					case ".pageboard":
+						req.url = "/" + req.url.substring(2);
+						break;
+					case ".uploads":
+						req.url = "/uploads/" + req.hostname + req.url.substring(9);
+						break;
+					case ".files":
+						req.url = "/files/" + req.hostname + req.url.substring(7);
+						break;
+				}
+				console.log("rewritten to", req.url);
+				next();
 			},
 			serveStatic(statics.runtime, {
 				index: false,
@@ -75,53 +71,27 @@ function init(All) {
 	});
 }
 
-function mount(root, dir) {
-	debug("Mounting", dir, "in", root);
-	return glob('**', {
-		cwd: dir
-	}).then(function(paths) {
-		var p = Promise.resolve();
-		while (paths.length) {
-			p = p.then(mountPath.bind(null, root, dir, paths.shift())).catch(function(err) {
-				console.error(err);
-			});
-		}
-		return p;
+exports.install = function({mounts, domain}) {
+	return rimraf(Path.join(All.opt.statics.runtime, domain)).then(function() {
+		return Promise.all(mounts.map(function(mount) {
+			return mountPath(mount.from, mount.to);
+		}));
+	});
+};
+
+function mountPath(src, dst) {
+	var base = All.opt.statics.runtime;
+	var absDst = Path.resolve(Path.join(base, dst));
+	if (absDst.startsWith(base) == false) {
+		console.error("Cannot mount outside runtime", dst);
+		return;
+	}
+
+	debug(`Mount ${src} to ${absDst}`);
+
+	return mkdirp(Path.dirname(absDst)).then(function() {
+		return fs.unlink(absDst).catch(function(err) {}).then(function() {
+			return fs.symlink(src, absDst);
+		});
 	});
 }
-
-function mountPath(root, dir, path) {
-	var dst = Path.join(root, path);
-	var src = Path.join(dir, path);
-
-	return Promise.all([
-		fs.lstat(src),
-		fs.lstat(dst).catch(function(){}).then(function(stat) {
-			if (!stat) return stat;
-			if (!stat.isSymbolicLink() || stat.isDirectory()) return stat;
-			debug("unlink existing file or symlink", dst);
-			return fs.unlink(dst).then(function() {
-				return stat;
-			});
-		})
-	]).then(function(stats) {
-		var srcStat = stats[0];
-		var dstStat = stats[1];
-		if (srcStat.isSymbolicLink() || srcStat.isFile()) {
-			if (dstStat && dstStat.isDirectory()) {
-				throw new Error("Cannot deploy a file or symlink over a directory\n" +
-					"Please remove manually " + dst);
-			} else {
-				debug("creating symlink for", src);
-				return fs.symlink(src, dst);
-			}
-		} else if (!dirCache[dst]) {
-			debug("create directory", dst);
-			dirCache[dst] = true;
-			return mkdirp(dst);
-		} else {
-			debug("already existing directory", dst);
-		}
-	});
-}
-
