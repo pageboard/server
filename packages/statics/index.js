@@ -1,4 +1,5 @@
 var serveStatic = require('serve-static');
+var serveFavicon = require('serve-favicon');
 var Path = require('path');
 var pify = require('util').promisify;
 var fs = {
@@ -36,21 +37,24 @@ function init(All) {
 	return mkdirp(statics.runtime).then(function() {
 		console.info(`Static directories are served from symlinks in ${statics.runtime}`);
 
+		app.use(serveFavicon(Path.join(__dirname, 'logo', 'pageboard.ico')));
+
 		app.get(
 			"/:dir(.pageboard|.files|.uploads)/*",
 			function(req, res, next) {
+				var url = req.url;
 				switch(req.params.dir) {
 					case ".pageboard":
-						req.url = "/" + req.url.substring(2);
+						req.url = "/" + url.substring(2);
 						break;
 					case ".uploads":
-						req.url = "/uploads/" + req.hostname + req.url.substring(9);
+						req.url = "/uploads/" + req.hostname + url.substring(9);
 						break;
 					case ".files":
-						req.url = "/files/" + req.hostname + req.url.substring(7);
+						req.url = "/files/" + req.hostname + url.substring(7);
 						break;
 				}
-				console.log("rewritten to", req.url);
+				debug("Static url", url, "rewritten to", req.url);
 				next();
 			},
 			serveStatic(statics.runtime, {

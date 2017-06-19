@@ -19,6 +19,7 @@
   "dependencies": {
     "debug": "^2.3.2",
     "mkdirp": "^0.5.1",
+    "serve-favicon": "^2.4.3",
     "serve-static": "^1.12.1"
   }
 }
