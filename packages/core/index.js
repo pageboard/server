@@ -117,23 +117,29 @@ function initDirs(dirs) {
 
 function initPlugins(plugins, type) {
 	var All = this;
-	return Promise.all(plugins.map(function(obj) {
-		if (type && !obj[type]) return;
-		if (!type && (obj.file || obj.service || obj.view)) return;
+	plugins = plugins.filter(function(obj) {
+		if (type && !obj[type]) return false;
+		if (!type && (obj.file || obj.service || obj.view)) return false;
+		return true;
+	}).sort(function(a, b) {
+		return (a.priority || 0) <= (b.priority || 0);
+	});
+	var p = Promise.resolve();
+	plugins.forEach(function(obj) {
 		var to;
 		if (obj.name) {
 			to = All[obj.name] = All[obj.name] || {};
 		} else {
 			to = All;
 		}
-		var p = type && obj[type].call(obj, All);
+		if (type) p = p.then(() => obj[type].call(obj, All));
 		Object.keys(obj.plugin).forEach(function(key) {
 			if (to[key] !== undefined) throw new Error(`module conflict ${obj.name}.${key}`);
 			to[key] = obj.plugin[key];
 			delete obj.plugin[key]; // we made a copy before
 		});
-		return p;
-	})).catch(function(err) {
+	});
+	return p.catch(function(err) {
 		console.error(err);
 	});
 }
