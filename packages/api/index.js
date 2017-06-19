@@ -20,8 +20,9 @@ exports = module.exports = function(opt) {
 	opt.seeds = [__dirname + '/seeds'];
 	opt.migrations = [__dirname + '/migrations'];
 	return {
+		name: 'api',
 		service: init
-	}
+	};
 };
 
 function init(All) {
