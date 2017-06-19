@@ -36,7 +36,10 @@ All useful functions are available through `All`:
 - All.app (the express app)
 - All.opt
 - All.tag, All.scope, All.vary (the upcache plugin)
-- All.Block (the only objection model, but plugins could define more models)
+- All.api.Block
+- All.api.Href
+- All.api.DomainBlock(domain) -> promise
+- All.install({domain, dependencies})
 - All.objection, All.migrate
 - All.page.get, All.site.add, All.user.save, All.page.save, etc..
 
@@ -83,6 +86,34 @@ then services, then views.
 
 This allows express routes to be setup in predictable order, with separate
 error handlers.
+
+
+Sites, mounts, elements
+-----------------------
+
+`config.directories` and `config.elements` are arrays of paths that can be populated
+by plugins when pageboard is started.
+
+A site (with a domain) can also declare dependencies on npm modules, each of
+which can contain a package.json with `pageboard.directories` and `pageboard.elements`
+lists of relative paths.
+
+Mounts declared this way are accessible through `/.files/<module>/<path>`
+and are only accessible through the same domain.
+
+Elements declared this way are loaded into a new Block per-domain model,
+`All.api.DomainBlock(domain)` (returns a promise because it might need to install
+the domain if the site was never installed before).
+
+Elements entries can point to a directory, in which case all files with .js
+extensions in that directory are loaded as elements.
+
+pageboard-core is responsible for building the `directories` and `elements` arrays,
+and then calls
+```
+All.statics.install({mounts, domain})
+All.api.install({elements, directories, domain})
+```
 
 
 HttpError
