@@ -8,20 +8,6 @@
     "start": "pageboard",
     "seed": "node seed.js"
   },
-  "plugins": [
-    "pageboard-cache",
-    "pageboard-auth",
-    "pageboard-static",
-    "pageboard-upload",
-    "pageboard-elements",
-    "pageboard-elements-carousel",
-    "pageboard-api",
-    "pageboard-inspector",
-    "pageboard-image",
-    "pageboard-prerender",
-    "pageboard-write",
-    "pageboard-read"
-  ],
   "repository": {
     "type": "git",
     "url": "git+https://github.com/pageboard/pageboard.git"
