@@ -33,16 +33,16 @@ function init(All) {
 	});
 }
 
-function QueryPage(domain) {
-	var Block = All.api.Block;
-	return Block.query()
-	.select(Block.jsonColumns)
+function QueryPage(DomainBlock) {
+		// TODO site object is already known by All.api at that point
+	return DomainBlock.query()
+	.select(DomainBlock.jsonColumns)
 	.first()
 	.eager('[parents(parentsFilter),children(childrenFilter).^]', {
-		parentsFilter: query => query.select(Block.jsonColumns)
+		parentsFilter: query => query.select(DomainBlock.jsonColumns)
 			.where('block.type', 'site')
-			.whereJsonText('block.data:domain', domain),
-		childrenFilter: query => query.select(Block.jsonColumns)
+			.whereJsonText('block.data:domain', DomainBlock.domain),
+		childrenFilter: query => query.select(DomainBlock.jsonColumns)
 	});
 }
 
@@ -50,14 +50,16 @@ exports.get = function(data) {
 	if (!data.domain) throw new HttpError.BadRequest("Missing domain");
 	if (!data.url) throw new HttpError.BadRequest("Missing url");
 
-	return QueryPage(data.domain).where('type', 'page')
-	.whereJsonText("block.data:url", data.url)
-	.then(function(page) {
-		if (!page) {
-			return QueryPage(data.domain).where('type', 'notfound');
-		} else {
-			return page;
-		}
+	return All.api.DomainBlock(data.domain).then(function(DomainBlock) {
+		return QueryPage(DomainBlock).where('type', 'page')
+		.whereJsonText("block.data:url", data.url)
+		.then(function(page) {
+			if (!page) {
+				return QueryPage(DomainBlock).where('type', 'notfound');
+			} else {
+				return page;
+			}
+		});
 	});
 };
 
@@ -83,10 +85,11 @@ exports.save = function(changes) {
 	// - if it is removed, it is removed from the current page. The standalone block
 	//   will only be removed later by a garbage collector if no longer used.
 
-	return All.api.blockForDomain(data.domain).then(function(Block) {
+	return All.api.DomainBlock(data.domain).then(function(Block) {
 		return All.objection.transaction(Block);
 	}).then(function(Block) {
 		var site, page;
+		// TODO il n'y a pas besoin de chercher site encore vu qu'il est chargé dans blockForDomain
 		return Block.query().whereJsonText('block.data:domain', changes.domain)
 		.first().then(function(inst) {
 			if (!inst) throw new HttpError.NotFound("Site not found");

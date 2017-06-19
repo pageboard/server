@@ -44,6 +44,7 @@ function init(All) {
 	});
 
 	exports.Href = models.Href;
+	exports.models = models;
 	exports.objection = objection;
 	exports.migrate = migrate.bind(null, knexInst, opt.migrations);
 	exports.seed = seed.bind(null, knexInst, opt.seeds);
@@ -57,6 +58,7 @@ exports.install = function({elements, directories, domain}) {
 	})).then(function() {
 		var Block = exports.models.Block.extendSchema(schemas);
 		if (domain) {
+			Block.domain = domain;
 			exports.blocksByDomain[domain] = Block;
 		} else {
 			exports.Block = All.api.Block = Block;
@@ -85,7 +87,7 @@ exports.install = function({elements, directories, domain}) {
 
 exports.DomainBlock = function(domain) {
 	if (exports.blocksByDomain[domain]) return Promise.resolve(exports.blocksByDomain[domain]);
-	return All.api.site.get({domain: domain}).then(function(site) {
+	return All.site.get({domain: domain}).then(function(site) {
 		if (!site) throw new Error("Site not found");
 		return All.install(site.data).then(function() {
 			return exports.blocksByDomain[domain];
