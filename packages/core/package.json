@@ -22,7 +22,6 @@
   "homepage": "https://github.com/pageboard/pageboard-core",
   "dependencies": {
     "body-parser": "^1.17.2",
-    "bundledom": "^1.5.0",
     "debug": "^2.2.0",
     "esequal": "^0.1.15",
     "express": "^4.15.3",
