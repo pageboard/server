@@ -59,6 +59,9 @@ exports.get = function(data) {
 			} else {
 				return page;
 			}
+		}).then(function(page) {
+			page.elements = All.api.Block.elements.concat(DomainBlock.elements);
+			return page;
 		});
 	});
 };

@@ -63,25 +63,18 @@ exports.install = function({elements, directories, domain}) {
 		} else {
 			exports.Block = All.api.Block = Block;
 		}
-		if (!domain) return;
-
-		return All.site.get({domain:domain}).then(function(site) {
-			var paths = [];
-			elements.forEach(function(path) {
-				var mount = directories.find(function(mount) {
-					return path.startsWith(mount.from);
-				});
-				if (!mount) {
-					console.warn(`Warning: element ${path} cannot be mounted`);
-				} else {
-					paths.push(path.substring(mount.from.length));
-				}
+		var elementsPaths = [];
+		elements.forEach(function(path) {
+			var mount = directories.find(function(mount) {
+				return path.startsWith(mount.from);
 			});
-			if (!equal(site.data.elements, paths)) {
-				site.data.elements = paths;
-				return All.site.save(site);
+			if (!mount) {
+				console.warn(`Warning: element ${path} cannot be mounted`);
+			} else {
+				elementsPaths.push(Path.join(mount.to, path.substring(mount.from.length)));
 			}
 		});
+		Block.elements = elementsPaths;
 	});
 };
 
