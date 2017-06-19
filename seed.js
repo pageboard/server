@@ -17,8 +17,9 @@ pageboard.init(config).then(function(All) {
 		return All.site.add({
 			user: 'root@localhost.localdomain',
 			data: {
-				url: 'localhost',
-				name: 'Local site'
+				name: '@kapouer/local',
+				domain: 'localhost',
+				title: "Kapouer's local site"
 			}
 		});
 	}).then(function() {
