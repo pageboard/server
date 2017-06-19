@@ -6,7 +6,7 @@ var thumbnailer;
 
 exports = module.exports = function(opt) {
 	if (!opt.image) opt.image = {};
-	if (!opt.image.dir) opt.image.dir = opt.upload && opt.upload.dir || 'public/uploads';
+	if (!opt.image.dir) opt.image.dir = ".image";
 
 	thumbnailer = sharpie(Object.assign({
 		rs: 'h:64,max',
@@ -18,7 +18,8 @@ exports = module.exports = function(opt) {
 
 	return {
 		name: 'image',
-		file: init
+		file: initFile,
+		service: initService
 	};
 };
 
@@ -27,12 +28,18 @@ exports = module.exports = function(opt) {
 // - un fichier distant est utilisé comme une image. On ne peut pas redimensionner.
 // - fabriquer un thumbnail à partir d'une image distante
 
-function init(All) {
-	console.info("Resizing images from /public/images to :\n", All.opt.image.dir);
-	All.app.get("/public/images/:url(*)", function(req, res, next) {
-		req.params.url = '/' + All.opt.image.dir + '/' + req.params.url;
-		next();
-	}, sharpie(All.opt.image));
+function initFile(All) {
+	var opt = All.opt;
+	var uploadDir = opt.upload && opt.upload.dir;
+	if (uploadDir) {
+		console.info("Images resizable by upload at", uploadDir);
+		All.app.get(`:url(/${uploadDir}/*)`, sharpie(All.opt.image));
+	}
+}
+
+function initService(All) {
+	console.info(`Images resizable by proxy at /.api/image`);
+	All.app.get(`/.api/image`, sharpie(All.opt.image));
 }
 
 exports.thumbnail = function(url, query) {
