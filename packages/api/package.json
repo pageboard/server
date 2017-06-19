@@ -17,6 +17,7 @@
   },
   "homepage": "https://github.com/pageboard/pageboard-api#readme",
   "dependencies": {
+    "esequal": "^0.1.15",
     "knex": "^0.13.0",
     "objection": "^0.8.1",
     "passwd-user": "^2.1.0",

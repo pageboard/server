@@ -6,7 +6,7 @@ exports = module.exports = function(opt) {
 
 
 function QueryUser(data) {
-	var q = All.Block.query().where('type', 'user');
+	var q = All.api.Block.query().where('type', 'user');
 	if (data.id) q.where('id', data.id);
 	else if (data.email) q.whereJsonText('data:email', data.email);
 	else throw new HttpError.BadRequest("Cannot query user", data);
@@ -21,7 +21,7 @@ exports.add = function(data) {
 	data = Object.assign({
 		type: 'user'
 	}, data);
-	return All.Block.query().insert(data);
+	return All.api.Block.query().insert(data);
 };
 
 exports.save = function(data) {

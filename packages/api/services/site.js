@@ -6,22 +6,22 @@ exports = module.exports = function(opt) {
 };
 
 function init(All) {
-	All.app.get('/api/site', All.query, function(req, res, next) {
+	All.app.get('/.api/site', All.query, function(req, res, next) {
 		exports.get(req.query).then(function(site) {
 			res.send(site);
 		}).catch(next);
 	});
-	All.app.post('/api/site', All.body, function(req, res, next) {
+	All.app.post('/.api/site', All.body, function(req, res, next) {
 		exports.add(req.body).then(function(site) {
 			res.send(site);
 		}).catch(next);
 	});
-	All.app.put('/api/site', All.body, function(req, res, next) {
+	All.app.put('/.api/site', All.body, function(req, res, next) {
 		exports.save(req.body).then(function(site) {
 			res.send(site);
 		}).catch(next);
 	});
-	All.app.delete('/api/site', All.query, function(req, res, next) {
+	All.app.delete('/.api/site', All.query, function(req, res, next) {
 		exports.del(req.query).then(function(site) {
 			res.send(site);
 		}).catch(next);
@@ -29,12 +29,12 @@ function init(All) {
 }
 
 function QuerySite(data) {
-	var q = All.Block.query();
+	var q = All.api.Block.query();
 	if (data.id) {
 		q.where('id', data.id);
 	} else {
-		if (!data.url) throw new HttpError.BadRequest("Missing url");
-		q.whereJsonText('block.data:url', data.url).where('block.type', 'site');
+		if (!data.domain) throw new HttpError.BadRequest("Missing domain");
+		q.whereJsonText('block.data:domain', data.domain).where('block.type', 'site');
 	}
 	return q;
 }
@@ -51,6 +51,7 @@ exports.add = function(data) {
 	data = Object.assign({
 		type: 'site'
 	}, data);
+	// TODO transaction
 	return All.user.get({
 		type: 'user',
 		email: data.user
@@ -63,7 +64,7 @@ exports.add = function(data) {
 			standalone: true
 		}];
 		delete data.user;
-		return All.Block.query().insertGraph(data);
+		return All.api.Block.query().insertGraph(data);
 	});
 };
 

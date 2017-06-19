@@ -75,7 +75,7 @@ Href.jsonSchema = {
 	additionalProperties: false
 };
 
-Href.jsonColumns = Object.keys(Href.jsonSchema.properties);
+Href.jsonColumns = Object.keys(Href.jsonSchema.properties).map(col => `href.${col}`);
 
 /* not needed, default is set by db
 Href.prototype.$beforeInsert = function() {

@@ -10,17 +10,17 @@ exports = module.exports = function(opt) {
 };
 
 function init(All) {
-	All.app.get(All.Href.jsonSchema.id, All.query, function(req, res, next) {
+	All.app.get("/.api/href", All.query, function(req, res, next) {
 		exports.get(req.query).then(function(href) {
 			res.send(href);
 		}).catch(next);
 	});
-	All.app.post(All.Href.jsonSchema.id, All.body, function(req, res, next) {
+	All.app.post("/.api/href", All.body, function(req, res, next) {
 		exports.add(req.body).then(function(href) {
 			res.send(href);
 		}).catch(next);
 	});
-	All.app.delete(All.Href.jsonSchema.id, All.query, function(req, res, next) {
+	All.app.delete("/.api/href", All.query, function(req, res, next) {
 		exports.del(req.query).then(function(href) {
 			res.send(href);
 		}).catch(next);
@@ -28,9 +28,9 @@ function init(All) {
 }
 
 function QueryHref(data) {
-	if (!data.site) throw new HttpError.BadRequest("Missing site");
-	var Href = All.Href;
-	var q = Href.query().select(Href.jsonColumns.map(col => 'href.' + col));
+	if (!data.domain) throw new HttpError.BadRequest("Missing domain");
+	var Href = All.api.Href;
+	var q = Href.query().select(Href.jsonColumns);
 	joinSite(q, data);
 
 	if (data.url) {
@@ -62,7 +62,7 @@ function QueryHref(data) {
 function joinSite(q, data) {
 	return q.joinRelation('parent')
 		.where('parent.type', 'site')
-		.where(All.objection.ref('parent.data:url').castText(), data.site);
+		.where(All.objection.ref('parent.data:url').castText(), data.domain);
 }
 
 function filterResult(result) {
@@ -100,6 +100,8 @@ exports.add = function(data) {
 	if (!data.url) throw new HttpError.BadRequest("Missing url");
 	var ref = All.objection.ref;
 	var url = data.url;
+	var Href = All.api.href;
+	var Block = All.api.Block;
 
 	return All.inspector.get(url).catch(function(err) {
 		// inspector failure
@@ -109,14 +111,14 @@ exports.add = function(data) {
 	.then(function(result) {
 		return QueryHref(data).first().select('href._id').then(function(href) {
 			if (!href) {
-				return All.Href.query().insert(Object.assign({
-					_parent_id: All.Block.query().select('_id')
+				return Href.query().insert(Object.assign({
+					_parent_id: Block.query().select('_id')
 						.where('type', 'site')
-						.where(ref('data:url').castText(), data.site)
-				}, result)).returning(All.Href.jsonColumns);
+						.where(ref('data:domain').castText(), data.domain)
+				}, result)).returning(Href.jsonColumns);
 			} else {
-				return All.Href.query().patch(result).where('_id', href._id)
-					.first().returning(All.Href.jsonColumns);
+				return Href.query().patch(result).where('_id', href._id)
+					.first().returning(Href.jsonColumns);
 			}
 		});
 	});
@@ -126,7 +128,7 @@ exports.del = function(data) {
 	if (!data.url) throw new HttpError.BadRequest("Missing url");
 	return QueryHref(data).select('href._id').first().then(function(href) {
 		if (!href) throw new HttpError.NotFound("No href found for this url");
-		return All.Href.query().patch({
+		return All.api.Href.query().patch({
 			visible: false
 		}).where('_id', href._id).then(function() {
 			href.visible = false;

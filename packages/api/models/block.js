@@ -43,7 +43,7 @@ Block.jsonSchema = {
 	additionalProperties: false
 };
 
-Block.jsonColumns = Object.keys(Block.jsonSchema.properties);
+Block.jsonColumns = Object.keys(Block.jsonSchema.properties).map(col => `block.${col}`);
 
 Block.prototype.$beforeInsert = function() {
 	if (!this.id) return genId(this).then(function(id) {
@@ -85,7 +85,7 @@ Block.relationMappings = {
 Block.extendSchema = function extendSchema(schemas) {
 	var types = Object.keys(schemas);
 	if (types.length === 0) return;
-	var schema = Block.jsonSchema;
+	var schema = Object.assign({}, Block.jsonSchema);
 	var blockProps = schema.properties;
 	delete schema.properties;
 	delete schema.additionalProperties;
@@ -119,7 +119,10 @@ Block.extendSchema = function extendSchema(schemas) {
 			}
 		};
 	});
-	Block.jsonSchema = schema;
+	var DomainBlock = class extends Block {};
+	Object.assign(DomainBlock, Block);
+	DomainBlock.jsonSchema = schema;
+	return DomainBlock;
 }
 
 function stringProperties(obj) {
@@ -145,10 +148,10 @@ function genId() {
 	});
 }
 
-QueryBuilder.prototype.whereSite = function(site) {
+QueryBuilder.prototype.whereDomain = function(domain) {
 	return this.joinRelation('parents')
 		.where('parents.type', 'site')
-		.whereJsonText('parents.data:url', site);
+		.whereJsonText('parents.data:domain', domain);
 };
 
 QueryBuilder.prototype.whereJsonText = function(a) {

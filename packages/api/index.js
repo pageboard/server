@@ -43,11 +43,11 @@ function init(All) {
 		models[model.name] = model;
 	});
 
-	exports.models = models;
+	exports.Href = models.Href;
 	exports.objection = objection;
 	exports.migrate = migrate.bind(null, knexInst, opt.migrations);
 	exports.seed = seed.bind(null, knexInst, opt.seeds);
-	exports.blocks = {};
+	exports.blocksByDomain = {};
 }
 
 exports.install = function({elements, directories, domain}) {
@@ -57,7 +57,7 @@ exports.install = function({elements, directories, domain}) {
 	})).then(function() {
 		var Block = exports.models.Block.extendSchema(schemas);
 		if (domain) {
-			exports.blocks[domain] = Block;
+			exports.blocksByDomain[domain] = Block;
 		} else {
 			All.api.Block = Block;
 		}
@@ -84,9 +84,9 @@ exports.install = function({elements, directories, domain}) {
 };
 
 exports.DomainBlock = function(domain) {
-	if (exports.blocks[domain]) return Promise.resolve(exports.blocks[domain]);
+	if (exports.blocksByDomain[domain]) return Promise.resolve(exports.blocksByDomain[domain]);
 	return All.install(domain).then(function() {
-		return exports.blocks[domain];
+		return exports.blocksByDomain[domain];
 	});
 };
 
