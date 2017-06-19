@@ -1,7 +1,7 @@
 Page.route(function(state) {
 	// conveniently export doc.dom from dom-template-strings
 	Document.prototype.dom = dom;
-	return GET('/api/page', {
+	return GET('/.api/page', {
 		url: state.pathname
 	}).catch(function(err) {
 		// emergency error handling
@@ -9,6 +9,8 @@ Page.route(function(state) {
 		document.title = err.code;
 		throw err;
 	}).then(function(page) {
+		// TODO
+		Pagecut.modules = Pageboard.elements;
 		var viewer = Pagecut.viewerInstance = new Pagecut.Viewer();
 
 		// TODO monkey-patch window-page so that Page.state.query has accessors
@@ -40,5 +42,9 @@ Page.route(function(state) {
 			});
 		});
 	}
+});
+
+Page.build(function(state) {
+
 });
 
