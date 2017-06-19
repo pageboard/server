@@ -19,6 +19,9 @@ exports.up = function(knex) {
 		"CREATE UNIQUE INDEX ON block ((data#>>'{url}'), lang) WHERE data->'url' IS NOT NULL"
 	)
 	.raw(
+		"CREATE UNIQUE INDEX ON block ((data#>>'{domain}')) WHERE type='site'"
+	)
+	.raw(
 		"CREATE UNIQUE INDEX ON block ((data#>>'{email}')) WHERE type='user'"
 	)
 	.raw(
