@@ -1,7 +1,14 @@
 var objection = require('objection');
 var knex = require('knex');
-var fs = require('fs');
+
 var Path = require('path');
+var pify = require('util').promisify;
+var equal = require('esequal');
+
+var fs = {
+	readFile: pify(require('fs').readFile)
+};
+var vm = require('vm');
 
 exports = module.exports = function(opt) {
 	if (!opt.database) opt.database = `postgres://localhost/${opt.name}`;
@@ -31,25 +38,73 @@ function init(All) {
 	objection.Model.knex(knexInst);
 
 	var models = {};
-	console.info("Models:");
 	opt.models.forEach(function(path) {
 		var model = require(path);
-		console.info(" ", model.name);
 		models[model.name] = model;
 	});
-	Object.assign(exports, models);
 
-	opt.schemas = {};
-	opt.elements.forEach(function(path) {
-		Object.assign(opt.schemas, require(path));
-	});
-	exports.Block.extendSchema(opt.schemas);
+	exports.models = models;
 	exports.objection = objection;
 	exports.migrate = migrate.bind(null, knexInst, opt.migrations);
 	exports.seed = seed.bind(null, knexInst, opt.seeds);
+	exports.blocks = {};
 }
 
+exports.install = function({elements, directories, domain}) {
+	var schemas = {};
+	return Promise.all(elements.map(function(path) {
+		return populateSchemas(path, schemas);
+	})).then(function() {
+		var Block = exports.models.Block.extendSchema(schemas);
+		if (domain) {
+			exports.blocks[domain] = Block;
+		} else {
+			All.api.Block = Block;
+		}
+		if (!domain) return;
 
+		return All.site.get({domain:domain}).then(function(site) {
+			var paths = [];
+			elements.forEach(function(path) {
+				var mount = directories.find(function(mount) {
+					return path.startsWith(mount.from);
+				});
+				if (!mount) {
+					console.warn(`Warning: element ${path} cannot be mounted`);
+				} else {
+					paths.push(path.substring(mount.from.length));
+				}
+			});
+			if (!equal(site.data.elements, paths)) {
+				site.data.elements = paths;
+				return All.site.save(site);
+			}
+		});
+	});
+};
+
+exports.DomainBlock = function(domain) {
+	if (exports.blocks[domain]) return Promise.resolve(exports.blocks[domain]);
+	return All.install(domain).then(function() {
+		return exports.blocks[domain];
+	});
+};
+
+function populateSchemas(path, schemas) {
+	return fs.readFile(path).then(function(buf) {
+		var script = new vm.Script(buf, {filename: path});
+		var sandbox = {Pageboard: {elements: {}}};
+		try {
+			script.runInNewContext(sandbox, {filename: path, timeout: 1000});
+		} catch(ex) {
+			console.error(`Error trying to install element ${path}: ${ex}`);
+			return;
+		}
+		Object.assign(schemas, sandbox.Pageboard.elements);
+	}).catch(function(err) {
+		console.error(`Error inspecting element path ${path}`, err);
+	});
+}
 
 function migrate(knex, dirs) {
 	return Promise.all(dirs.map(function(dir) {
