@@ -24,6 +24,7 @@
     "body-parser": "^1.17.2",
     "bundledom": "^1.5.0",
     "debug": "^2.2.0",
+    "esequal": "^0.1.15",
     "express": "^4.15.3",
     "express-extension-to-accept": "^0.0.2",
     "express-urlrewrite": "^1.2.0",
@@ -31,10 +32,13 @@
     "method-override": "^2.3.4",
     "mkdirp": "^0.5.1",
     "morgan": "^1.8.2",
+    "p-queue": "^1.0.0",
     "pad": "^1.1.0",
+    "pkg-up": "^2.0.0",
     "pretty-bytes": "^4.0.2",
     "rc": "^1.2.1",
     "serve-favicon": "^2.4.3",
+    "util-promisify": "^2.0.0",
     "xdg-basedir": "^2.0.0"
   },
   "devDependencies": {

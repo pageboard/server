@@ -1,3 +1,5 @@
+var pify = require('util').promisify;
+if (!pify) pify = require('util').promisify = require('util-promisify');
 var Path = require('path');
 var express = require('express');
 var bodyParserJson = require('body-parser').json();
@@ -5,8 +7,22 @@ var morgan = require('morgan');
 var pad = require('pad');
 var prettyBytes = require('pretty-bytes');
 var rc = require('rc');
-var mkdirp = require('mkdirp');
+var mkdirp = pify(require('mkdirp'));
 var xdg = require('xdg-basedir');
+var pkgup = require('pkg-up');
+var PQueue = require('p-queue');
+var equal = require('esequal');
+
+var fs = {
+	writeFile: pify(require('fs').writeFile),
+	readFile: pify(require('fs').readFile),
+	readdir: pify(require('fs').readdir),
+	stat: pify(require('fs').stat)
+};
+
+var npm = require('npm');
+npm.load = pify(npm.load);
+var npmQueue = new PQueue({concurrency: 1});
 
 // exceptional but so natural
 global.HttpError = require('http-errors');
@@ -19,77 +35,89 @@ exports.config = function(pkgOpt) {
 		cwd: cwd,
 		env: pkgOpt.env || process.env.NODE_ENV || 'development',
 		name: name,
-		site: null,
 		version: pkgOpt.version,
 		global: true,
 		listen: 3000,
 		logFormat: ':method :status :time :size :type :url',
-		plugins: pkgOpt.plugins || [],
 		dirs: {
 			cache: Path.join(xdg.cache, name),
 			data: Path.join(xdg.data, name),
 			runtime: Path.join(xdg.runtime, name)
 		},
 		elements: [],
-		statics: {
-			mounts: []
-		}
+		directories: [],
+		plugins: [],
+		dependencies: pkgOpt.dependencies || {}
 	});
 	return opt;
 };
 
 exports.init = function(opt) {
-	initDirs(opt.dirs);
 	var app = createApp(opt);
 
 	var All = {
 		app: app,
-		opt: opt,
-		query: reqQuery.bind(All),
-		body: reqBody.bind(All)
+		opt: opt
 	};
+	All.query = reqQuery.bind(All);
+	All.body = reqBody.bind(All);
+	All.install = install.bind(All);
+
 	if (opt.global) global.All = All;
 
-	console.info("Plugins:");
+	Object.keys(opt.dependencies).forEach(function(module) {
+		opt.plugins.push(module);
+	});
 
-	var plugins = [], pluginPath, plugin, lastPath;
+	var pluginList = [];
 
-	while (pluginPath = opt.plugins.shift()) {
-		if (pluginPath.startsWith('/')) {
-			console.info("  ", Path.relative(Path.dirname(lastPath || opt.cwd), pluginPath));
-		} else {
-			lastPath = require.resolve(pluginPath);
-			console.info(" ", pluginPath);
-		}
-		plugin = require(pluginPath);
-		if (typeof plugin != "function") return;
+	while (opt.plugins.length) {
+		var module = opt.plugins.shift();
+		var plugin = require(module);
+		if (typeof plugin != "function") continue;
 		var obj = plugin(opt) || {};
-		obj.path = pluginPath;
-		obj.plugin = plugin;
-		plugins.push(obj);
+		obj.plugin = Object.assign({}, plugin); // make a copy for initPlugins
+		pluginList.push(obj);
 	}
-
-	All.plugins = plugins;
 
 	All.log = initLog(opt);
 
-	return initPlugins(All).then(function() {
-		return initPlugins(All, 'file');
+	return Promise.all(Object.keys(opt.dependencies).map(function(module) {
+		return pkgup(require.resolve(module)).then(function(pkgPath) {
+			return initConfig(Path.dirname(Path.dirname(pkgPath)), null, module, All.opt);
+		});
+	})).then(function() {
+		return initDirs(opt.dirs);
+	}).then(function() {
+		return initPlugins.call(All, pluginList);
+	}).then(function() {
+		return initPlugins.call(All, pluginList, 'file');
 	}).then(function() {
 		app.use(filesError);
 		app.use(All.log);
-		return initPlugins(All, 'service');
+		return initPlugins.call(All, pluginList, 'service');
 	}).then(function() {
 		app.use(servicesError);
-		return initPlugins(All, 'view');
+		return initPlugins.call(All, pluginList, 'view');
+	}).then(function() {
+		return All.statics.install({mounts: All.opt.directories, domain: 'pageboard'});
+	}).then(function() {
+		return All.api.install({elements: All.opt.elements, directories: All.opt.directories});
 	}).then(function() {
 		app.use(viewsError);
 		return All;
 	});
 }
 
-function initPlugins(All, type) {
-	return Promise.all(All.plugins.map(function(obj) {
+function initDirs(dirs) {
+	return Promise.all(Object.keys(dirs).map(function(key) {
+		return mkdirp(dirs[key]);
+	}));
+}
+
+function initPlugins(plugins, type) {
+	var All = this;
+	return Promise.all(plugins.map(function(obj) {
 		if (type && !obj[type]) return;
 		if (!type && (obj.file || obj.service || obj.view)) return;
 		var to;
@@ -98,10 +126,11 @@ function initPlugins(All, type) {
 		} else {
 			to = All;
 		}
-		var p = type && obj[type](All);
+		var p = type && obj[type].call(obj, All);
 		Object.keys(obj.plugin).forEach(function(key) {
-			if (to[key] !== undefined) throw new Error(`module conflict ${key}\n ${obj.path}`);
+			if (to[key] !== undefined) throw new Error(`module conflict ${obj.name}.${key}`);
 			to[key] = obj.plugin[key];
+			delete obj.plugin[key]; // we made a copy before
 		});
 		return p;
 	})).catch(function(err) {
@@ -132,8 +161,121 @@ function initLog(opt) {
 	return morgan(opt.logFormat);
 }
 
-function initDirs(dirs) {
-	for (var k in dirs) mkdirp.sync(dirs[k]);
+function install({domain, dependencies}) {
+	if (!domain) throw new Error("Missing domain");
+	var All = this;
+	var dataDir = Path.join(All.opt.dirs.data, 'sites');
+	var domainDir = Path.join(dataDir, domain);
+	var config = {
+		directories: [],
+		elements: []
+	};
+	return mkdirp(domainDir).then(function() {
+		var pkgFile = Path.join(domainDir, 'package.json');
+		var doInstall = true;
+		return fs.readFile(pkgFile).then(function(json) {
+			var obj = JSON.parse(json);
+			if (equal(obj.dependencies, dependencies)) doInstall = false;
+		}).catch(function() {
+			// whatever
+		}).then(function() {
+			if (!doInstall) return;
+			return fs.writeFile(pkgFile, JSON.stringify({
+				dependencies: dependencies
+			}));
+		}).then(function() {
+			if (!doInstall) return;
+			return npmInstall(domainDir);
+		});
+	}).then(function(data) {
+		return Promise.all(Object.keys(dependencies).map(function(module) {
+			return initConfig(Path.join(domainDir, 'node_modules'), domain, module, config);
+		}));
+	}).then(function() {
+		return All.statics.install({mounts: config.directories, domain: domain});
+	}).then(function() {
+		return All.api.install({elements: config.elements, directories: config.directories, domain: domain});
+	}).then(function() {
+		return config;
+	});
+};
+
+function npmInstall(domainDir) {
+	return npmQueue.add(function() {
+		return npm.load({
+			prefix: domainDir,
+			'ignore-scripts': true
+		}).then(function() {
+			return new Promise(function(resolve, reject) {
+				npm.commands.install(function(err, data) {
+					if (err) reject(err);
+					else resolve(data);
+				});
+			});
+		});
+	});
+}
+
+function initConfig(prefix, domain, module, config) {
+	var moduleDir = Path.join(prefix, module);
+	return fs.readFile(Path.join(moduleDir, 'package.json')).catch(function(err) {
+		// it's ok to not have a package.json here
+		return false;
+	}).then(function(buf) {
+		if (buf === false) {
+			console.info(`${domain} > ${module} has no package.json, mounting the module directory`);
+			config.directories.push({
+				from: Path.resolve(moduleDir),
+				to: domain ? Path.join(domain, module) : 'pageboard'
+			});
+			return;
+		}
+		var meta = JSON.parse(buf);
+		if (!meta.pageboard) return; // nothing to do
+		var directories = meta.pageboard.directories || [];
+		if (!Array.isArray(directories)) directories = [directories];
+		directories.forEach(function(mount) {
+			if (typeof mount == "string") mount = {
+				from: mount,
+				to: mount
+			};
+			var from = Path.resolve(moduleDir, mount.from);
+			if (from.startsWith(moduleDir) == false) {
+				console.warn(`Warning: ${domain} dependency ${module} bad mount from: ${from}`);
+				return;
+			}
+			var rootTo = domain ? Path.join('/', 'files', domain, module) : '/pageboard';
+			var to = Path.resolve(rootTo, mount.to);
+			if (to.startsWith(rootTo) == false) {
+				console.warn(`Warning: ${domain} dependency ${module} bad mount to: ${to}`);
+				return;
+			}
+			config.directories.push({
+				from: from,
+				to: to
+			});
+		});
+
+		var elements = meta.pageboard.elements || [];
+		if (!Array.isArray(elements)) elements = [elements];
+		return Promise.all(elements.map(function(path) {
+			var absPath = Path.resolve(prefix, module, path);
+			return fs.stat(absPath).then(function(stat) {
+				if (stat.isDirectory()) return fs.readdir(absPath).then(function(paths) {
+					return paths.map(function(path) {
+						return Path.join(absPath, path);
+					});
+				});
+				else return [absPath];
+			}).then(function(paths) {
+				paths.forEach(function(path) {
+					if (path.endsWith('.js')) config.elements.push(path);
+				});
+			});
+		}));
+	}).catch(function(err) {
+		console.error(`Error: ${domain} dependency ${module} cannot be extracted`, err);
+	});
 }
 
 function createApp(opt) {
@@ -188,16 +330,16 @@ function reqBody(req, res, next) {
 	var opt = this.opt;
 	bodyParserJson(req, res, function() {
 		var obj = req.body;
-		// all payloads must contain site
-		obj.site = req.hostname;
+		// all payloads must contain domain
+		obj.domain = req.hostname;
 		next();
 	});
 }
 
 function reqQuery(req, res, next) {
 	var obj = req.query;
-	// all payloads must contain site
-	obj.site = req.hostname;
+	// all payloads must contain domain
+	obj.domain = req.hostname;
 	next();
 }
 
