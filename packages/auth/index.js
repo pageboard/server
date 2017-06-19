@@ -1,6 +1,6 @@
 var upcacheScope = require('upcache/scope');
 var pify = require('pify');
-var bcrypt = pify(require('bcrypt'));
+var bcrypt = pify(require('bcrypt')); // consider using argon2
 var appSalt; // keep it private
 
 exports = module.exports = function(opt) {
@@ -8,7 +8,7 @@ exports = module.exports = function(opt) {
 		issuer: opt.name,
 		maxAge: 3600 * 12,
 		userProperty: 'user',
-		saltRounds: 10
+		saltRounds: 10 // this should grow over the years
 	}, opt.scope);
 
 	exports.scope = upcacheScope(opt.scope);
@@ -20,7 +20,7 @@ exports = module.exports = function(opt) {
 };
 
 function init(All) {
-	All.app.post('/api/login', function(req, res, next) {
+	All.app.post('/.api/login', function(req, res, next) {
 		exports.authenticate(req.body).then(function(user) {
 			exports.scope.login(res, {
 				email: user.data.email,
@@ -28,11 +28,11 @@ function init(All) {
 			});
 		}).catch(next);
 	});
-	All.app.post('/api/logout', function(req, res, next) {
+	All.app.post('/.api/logout', function(req, res, next) {
 		exports.logout(res);
 	});
 
-	All.app.get('/api/user', function(req, res, next) {
+	All.app.get('/.api/user', function(req, res, next) {
 		All.user.get(req.query).then(function(user) {
 			if (!user) throw new HttpError.NotFound("No user found");
 			if (All.scope.test(req, "user-" + user.id)) {
@@ -43,20 +43,20 @@ function init(All) {
 		}).catch(next);
 	});
 
-	All.app.get('/api/verify', All.tag.disable(), function(req, res, next) {
+	All.app.get('/.api/verify', All.tag.disable(), function(req, res, next) {
 		exports.verify(req.query).then(function(user) {
 			res.send(user);
 		}).catch(next);
 	});
 
 	// TODO rate limit
-	All.app.post('/api/user', function(req, res, next) {
+	All.app.post('/.api/user', function(req, res, next) {
 		exports.create(req.body).then(function(user) {
 			res.send(user);
 		}).catch(next);
 	});
 
-	All.app.put('/api/user/:id', exports.restrict("user-:id"), function(req, res, next) {
+	All.app.put('/.api/user/:id', exports.restrict("user-:id"), function(req, res, next) {
 		delete req.body.password;
 		delete req.body.email;
 		delete req.body.verified;
@@ -66,7 +66,7 @@ function init(All) {
 		}).catch(next);
 	});
 
-	All.app.delete('/api/user/:id', exports.restrict("user-:id"), function(req, res, next) {
+	All.app.delete('/.api/user/:id', exports.restrict("user-:id"), function(req, res, next) {
 		All.user.del(req.params).then(function(user) {
 			res.sendStatus(200);
 		}).catch(next);
@@ -113,7 +113,7 @@ exports.create = function(data) {
 			data: data
 		}).then(function(user) {
 			// TODO send email to user
-			console.log(`Send email to user with link to /api/verify?email=${user.data.email}&verification=${user.data.verification}`);
+			console.log(`Send email to user with link to /.api/verify?email=${user.data.email}&verification=${user.data.verification}`);
 			if (user.data.password) delete user.data.password;
 			if (user.data.verification) delete user.data.verification;
 			return user;
