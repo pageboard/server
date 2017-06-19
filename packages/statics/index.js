@@ -85,6 +85,7 @@ exports.install = function({mounts, domain}) {
 
 function mountPath(src, dst) {
 	var base = All.opt.statics.runtime;
+	if (dst.startsWith('/.')) dst = '/' + dst.substring(2);
 	var absDst = Path.resolve(Path.join(base, dst));
 	if (absDst.startsWith(base) == false) {
 		console.error("Cannot mount outside runtime", dst);
