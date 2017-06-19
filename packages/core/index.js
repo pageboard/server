@@ -188,7 +188,7 @@ function install({domain, dependencies}) {
 			return npmInstall(domainDir);
 		});
 	}).then(function(data) {
-		return Promise.all(Object.keys(dependencies).map(function(module) {
+		return Promise.all(Object.keys(dependencies || {}).map(function(module) {
 			return initConfig(Path.join(domainDir, 'node_modules'), domain, module, config);
 		}));
 	}).then(function() {
