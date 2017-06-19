@@ -30,6 +30,7 @@ module.exports = function(opt) {
 	dom.clear();
 
 	return {
+		priority: Infinity,
 		view: init
 	};
 };
