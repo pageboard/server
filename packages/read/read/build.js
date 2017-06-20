@@ -15,24 +15,30 @@ Page.build(function(state) {
 	if (frag.nodeName != "BODY") throw new Error("Page renderer should fill document and return body");
 	var doc = frag.ownerDocument;
 
-	fillModules(doc, elements, 'stylesheets', function(doc, href) {
-		return doc.dom`<link rel="stylesheet" href="${href}" />`;
+	filterModules(elements, 'stylesheets').forEach(function(href) {
+		doc.head.appendChild(doc.dom`\n <link rel="stylesheet" href="${href}" />`);
 	});
-	fillModules(doc, elements, 'scripts', function(doc, src) {
-		return doc.dom`<script src="${src}"></script>`;
+	filterModules(elements, 'scripts').forEach(function(src) {
+		doc.head.appendChild(doc.dom`\n <script src="${src}"></script>`);
 	});
 
-	return Page.importDocument(doc, true); // noload
+	return Page.importDocument(doc, true); // noload - does it really helps ?
 
-	function fillModules(doc, modules, what, builder) {
+	function filterModules(modules, prop) {
 		var map = {};
+		var res = [];
 		Object.keys(modules).forEach(function(name) {
 			var mod = modules[name];
-			if (mod[what]) mod[what].forEach(function(url) {
-				if (map[url]) return;
+			var list = mod[prop];
+			if (!list) return;
+			var url;
+			for (var i=0; i < list.length; i++) {
+				url = list[i];
+				if (map[url]) continue;
 				map[url] = true;
-				doc.head.appendChild(builder(doc, url));
-			});
+				res.push(url);
+			}
 		});
+		return res;
 	}
 });
