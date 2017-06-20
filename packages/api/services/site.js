@@ -53,7 +53,6 @@ exports.add = function(data) {
 	data = Object.assign({
 		type: 'site'
 	}, data);
-	// TODO transaction
 	return All.user.get({
 		type: 'user',
 		email: data.user
