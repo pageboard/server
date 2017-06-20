@@ -1,5 +1,5 @@
 {
-  "name": "@pageboard/static",
+  "name": "@pageboard/statics",
   "version": "0.1.0",
   "description": "",
   "main": "index.js",
@@ -8,14 +8,14 @@
   },
   "repository": {
     "type": "git",
-    "url": "git+https://github.com/pageboard/static.git"
+    "url": "git+https://github.com/pageboard/statics.git"
   },
   "author": "Jérémy Lal <kapouer@melix.org>",
   "license": "MIT",
   "bugs": {
-    "url": "https://github.com/pageboard/static/issues"
+    "url": "https://github.com/pageboard/statics/issues"
   },
-  "homepage": "https://github.com/pageboard/static#readme",
+  "homepage": "https://github.com/pageboard/statics#readme",
   "dependencies": {
     "debug": "^2.3.2",
     "mkdirp": "^0.5.1",

@@ -10,7 +10,7 @@ var fs = {
 var mkdirp = pify(require('mkdirp'));
 var rimraf = pify(require('rimraf'));
 
-var debug = require('debug')('pageboard-static');
+var debug = require('debug')('pageboard-statics');
 
 exports = module.exports = function(opt) {
 	if (!opt.statics) opt.statics = {};
