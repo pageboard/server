@@ -85,7 +85,6 @@ exports.install = function({elements, directories, domain}) {
 exports.DomainBlock = function(domain) {
 	if (exports.blocksByDomain[domain]) return Promise.resolve(exports.blocksByDomain[domain]);
 	return All.site.get({domain: domain}).then(function(site) {
-		if (!site) throw new Error("Site not found");
 		return All.install(site.data).then(function() {
 			return exports.blocksByDomain[domain];
 		});
