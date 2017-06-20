@@ -1,5 +1,5 @@
 {
-  "name": "pageboard-upload",
+  "name": "@pageboard/upload",
   "version": "0.1.0",
   "description": "",
   "main": "index.js",
@@ -8,14 +8,14 @@
   },
   "repository": {
     "type": "git",
-    "url": "git+https://github.com/pageboard/pageboard-upload.git"
+    "url": "git+https://github.com/pageboard/upload.git"
   },
   "author": "Jérémy Lal <kapouer@melix.org>",
   "license": "MIT",
   "bugs": {
-    "url": "https://github.com/pageboard/pageboard-upload/issues"
+    "url": "https://github.com/pageboard/upload/issues"
   },
-  "homepage": "https://github.com/pageboard/pageboard-upload#readme",
+  "homepage": "https://github.com/pageboard/upload#readme",
   "dependencies": {
     "express-throttle-bandwidth": "^1.0.0",
     "mkdirp": "^0.5.1",
