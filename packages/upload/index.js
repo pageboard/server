@@ -69,8 +69,9 @@ function init(All) {
 		if (bps) console.info("Upload bandwidth limited to", Math.round(bps / 1000) + 'KB/s');
 
 		All.app.post('/.api/upload', throttle(bps), mw.array('files'), function(req, res, next) {
+			var curDest = Path.join(dest, req.hostname);
 			res.send(req.files.map(function(file) {
-				return req.protocol + '://' + req.get('Host') + '/.' + Path.join(upload.dir, Path.relative(dest, file.destination), file.filename);
+				return req.protocol + '://' + req.get('Host') + '/.' + Path.join(upload.dir, Path.relative(curDest, file.destination), file.filename);
 			}));
 		});
 	});
