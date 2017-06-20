@@ -25,6 +25,7 @@
     "pageboard-core": "^0.1.0",
     "pageboard-elements": "^0.1.0",
     "pageboard-elements-carousel": "^0.1.0",
+    "pageboard-github-webhook": "^0.1.0",
     "pageboard-image": "^0.1.0",
     "pageboard-inspector": "^0.1.0",
     "pageboard-prerender": "^0.1.0",
