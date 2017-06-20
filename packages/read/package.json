@@ -19,9 +19,9 @@
   "dependencies": {
     "dom-template-strings": "^1.1.0",
     "@webcomponents/html-imports": "^1.0.0",
-    "pagecut": "^1.0.0",
+    "pagecut": "pageboard/pagecut",
     "window-agent": "^1.2.0",
-    "window-page": "^2.0.0-alpha.1"
+    "window-page": "kapouer/window-page"
   },
   "pageboard": {
     "directories": [
