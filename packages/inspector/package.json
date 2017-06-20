@@ -1,5 +1,5 @@
 {
-  "name": "pageboard-inspector",
+  "name": "@pageboard/inspector",
   "version": "0.1.0",
   "description": "",
   "main": "index.js",
@@ -8,14 +8,14 @@
   },
   "repository": {
     "type": "git",
-    "url": "git+https://github.com/pageboard/pageboard-inspector.git"
+    "url": "git+https://github.com/pageboard/inspector.git"
   },
   "author": "Jérémy Lal <kapouer@melix.org>",
   "license": "MIT",
   "bugs": {
-    "url": "https://github.com/pageboard/pageboard-inspector/issues"
+    "url": "https://github.com/pageboard/inspector/issues"
   },
-  "homepage": "https://github.com/pageboard/pageboard-inspector#readme",
+  "homepage": "https://github.com/pageboard/inspector#readme",
   "dependencies": {
     "got": "^6.7.1",
     "url-inspector": "^2.1.3"
