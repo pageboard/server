@@ -1,5 +1,5 @@
 {
-  "name": "pageboard-auth",
+  "name": "@pageboard/auth",
   "version": "0.1.0",
   "description": "",
   "main": "index.js",
@@ -8,14 +8,14 @@
   },
   "repository": {
     "type": "git",
-    "url": "git+https://github.com/pageboard/pageboard-auth.git"
+    "url": "git+https://github.com/pageboard/auth.git"
   },
   "author": "Jérémy Lal <kapouer@melix.org>",
   "license": "MIT",
   "bugs": {
-    "url": "https://github.com/pageboard/pageboard-auth/issues"
+    "url": "https://github.com/pageboard/auth/issues"
   },
-  "homepage": "https://github.com/pageboard/pageboard-auth#readme",
+  "homepage": "https://github.com/pageboard/auth#readme",
   "dependencies": {
     "bcrypt": "^0.8.7",
     "pify": "^2.3.0",
