@@ -43,9 +43,13 @@ function init(All) {
 		models[model.name] = model;
 	});
 
+	exports.objection = objection;
+	exports.transaction = objection.transaction;
+	exports.ref = objection.ref;
+
 	exports.Href = models.Href;
 	exports.models = models;
-	exports.objection = objection;
+
 	exports.migrate = migrate.bind(null, knexInst, opt.migrations);
 	exports.seed = seed.bind(null, knexInst, opt.seeds);
 	exports.blocksByDomain = {};

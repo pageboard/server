@@ -62,7 +62,7 @@ function QueryHref(data) {
 function joinSite(q, data) {
 	return q.joinRelation('parent')
 		.where('parent.type', 'site')
-		.where(All.objection.ref('parent.data:url').castText(), data.domain);
+		.where(All.api.ref('parent.data:url').castText(), data.domain);
 }
 
 function filterResult(result) {
@@ -98,9 +98,9 @@ exports.get = function(data) {
 
 exports.add = function(data) {
 	if (!data.url) throw new HttpError.BadRequest("Missing url");
-	var ref = All.objection.ref;
+	var ref = All.api.ref;
 	var url = data.url;
-	var Href = All.api.href;
+	var Href = All.api.Href;
 	var Block = All.api.Block;
 
 	return All.inspector.get(url).catch(function(err) {

@@ -38,12 +38,17 @@ function QueryPage(DomainBlock) {
 	return DomainBlock.query()
 	.select(DomainBlock.jsonColumns)
 	.first()
+	.eager('[children(childrenFilter).^]', {
+		childrenFilter: query => query.select(DomainBlock.jsonColumns)
+	});
+	/* we don't need parents for now
 	.eager('[parents(parentsFilter),children(childrenFilter).^]', {
 		parentsFilter: query => query.select(DomainBlock.jsonColumns)
 			.where('block.type', 'site')
 			.whereJsonText('block.data:domain', DomainBlock.domain),
 		childrenFilter: query => query.select(DomainBlock.jsonColumns)
 	});
+	*/
 }
 
 exports.get = function(data) {
@@ -88,28 +93,27 @@ exports.save = function(changes) {
 	// - if it is removed, it is removed from the current page. The standalone block
 	//   will only be removed later by a garbage collector if no longer used.
 
-	return All.api.DomainBlock(data.domain).then(function(Block) {
-		return All.objection.transaction(Block);
-	}).then(function(Block) {
-		var site, page;
-		// TODO il n'y a pas besoin de chercher site encore vu qu'il est chargé dans blockForDomain
-		return Block.query().whereJsonText('block.data:domain', changes.domain)
-		.first().then(function(inst) {
-			if (!inst) throw new HttpError.NotFound("Site not found");
-			site = inst;
-		}).then(function() {
-			console.log(changes);
-			return site.$relatedQuery('children').where('block.id', changes.page)
+	return All.api.DomainBlock(changes.domain).then(function(DomainBlock) {
+		return All.api.transaction(DomainBlock, function(Block) {
+			var site, page;
+			// TODO il n'y a pas besoin de chercher site encore vu qu'il est chargé dans blockForDomain
+			return Block.query().whereJsonText('block.data:domain', changes.domain)
 			.first().then(function(inst) {
-				if (!inst) throw new HttpError.NotFound("Page not found");
-				page = inst;
+				if (!inst) throw new HttpError.NotFound("Site not found");
+				site = inst;
+			}).then(function() {
+				return site.$relatedQuery('children').where('block.id', changes.page)
+				.first().then(function(inst) {
+					if (!inst) throw new HttpError.NotFound("Page not found");
+					page = inst;
+				});
+			}).then(function() {
+				return removeChanges(site, page, changes.remove);
+			}).then(function() {
+				return addChanges(site, page, changes.add);
+			}).then(function() {
+				return updateChanges(site, page, changes.update);
 			});
-		}).then(function() {
-			return removeChanges(site, page, changes.remove);
-		}).then(function() {
-			return addChanges(site, page, changes.add);
-		}).then(function() {
-			return updateChanges(site, page, changes.update);
 		});
 	});
 };
