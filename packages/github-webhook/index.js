@@ -10,6 +10,7 @@ exports = module.exports = function(opt) {
 
 function init(All) {
 	var opt = All.opt;
+	console.info("Setting up /.api/github webhook");
 	All.app.post('/.api/github', bodyParser.raw({
 		type: "json"
 	}), function(req, res, next) {
