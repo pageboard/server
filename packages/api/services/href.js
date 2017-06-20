@@ -62,7 +62,7 @@ function QueryHref(data) {
 function joinSite(q, data) {
 	return q.joinRelation('parent')
 		.where('parent.type', 'site')
-		.where(All.api.ref('parent.data:url').castText(), data.domain);
+		.where(All.api.ref('parent.data:domain').castText(), data.domain);
 }
 
 function filterResult(result) {
