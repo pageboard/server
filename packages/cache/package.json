@@ -1,5 +1,5 @@
 {
-  "name": "pageboard-cache",
+  "name": "@pageboard/cache",
   "version": "0.1.0",
   "description": "",
   "main": "index.js",
@@ -8,14 +8,14 @@
   },
   "repository": {
     "type": "git",
-    "url": "git+https://github.com/pageboard/pageboard-cache.git"
+    "url": "git+https://github.com/pageboard/cache.git"
   },
   "author": "Jérémy Lal <kapouer@melix.org>",
   "license": "MIT",
   "bugs": {
-    "url": "https://github.com/pageboard/pageboard-cache/issues"
+    "url": "https://github.com/pageboard/cache/issues"
   },
-  "homepage": "https://github.com/pageboard/pageboard-cache#readme",
+  "homepage": "https://github.com/pageboard/cache#readme",
   "dependencies": {
     "upcache": "^0.6.1"
   }
