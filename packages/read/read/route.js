@@ -5,6 +5,7 @@ Page.route(function(state) {
 		// emergency error handling
 		document.body.textContent = `${err.code} ${err}`;
 		document.title = err.code;
+		document.head.insertAdjacentHTML('afterBegin', `<meta http-equiv="Status" content="${err.code} ${err}">`);
 		throw err;
 	}).then(function(page) {
 		var scripts = page.elements;
