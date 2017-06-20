@@ -10,7 +10,7 @@ var fs = {
 };
 var vm = require('vm');
 
-var debug = require('debug')('pageboard-api');
+var debug = require('debug')('pageboard:api');
 
 exports = module.exports = function(opt) {
 	if (!opt.database) opt.database = `postgres://localhost/${opt.name}`;
@@ -149,7 +149,7 @@ function knexConfig(config) {
 		if (auth.length > 1) conn.password = auth[1];
 	}
 	obj.client = parsed.protocol.slice(0, -1);
-	obj.debug = !!parseInt(parsed.query.debug);
+	obj.debug = require('debug').enabled('pageboard:sql');
 	if (config.connection) {
 		if (config.connection.client) {
 			obj.client = config.connection.client;

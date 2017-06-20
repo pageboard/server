@@ -44,3 +44,9 @@ A user have grants, and blocks have permissions.
 - del
 - read
 
+
+Debug
+-----
+
+DEBUG=pageboard:api
+DEBUG=pageboard:sql
