@@ -1,5 +1,5 @@
 {
-  "name": "pageboard-read",
+  "name": "@pageboard/read",
   "version": "0.1.0",
   "description": "",
   "main": "index.js",
@@ -8,14 +8,14 @@
   },
   "repository": {
     "type": "git",
-    "url": "git+https://github.com/pageboard/pageboard-read.git"
+    "url": "git+https://github.com/pageboard/read.git"
   },
   "author": "Jérémy Lal <kapouer@melix.org>",
   "license": "MIT",
   "bugs": {
-    "url": "https://github.com/pageboard/pageboard-read/issues"
+    "url": "https://github.com/pageboard/read/issues"
   },
-  "homepage": "https://github.com/pageboard/pageboard-read#readme",
+  "homepage": "https://github.com/pageboard/read#readme",
   "dependencies": {
     "dom-template-strings": "^1.1.0",
     "@webcomponents/html-imports": "^1.0.0",
