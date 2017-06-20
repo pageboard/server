@@ -22,7 +22,7 @@ function init(All) {
 		}
 		var domain = req.hostname;
 
-		All.api.site.get({domain: req.hostname}).then(function(site) {
+		All.site.get({domain: req.hostname}).then(function(site) {
 			if (!site) throw new HttpError.NotFound("Site not found");
 			var sign = req.get('X-Github-Signature');
 			var delivery = req.get('X-Github-Delivery');
@@ -41,7 +41,7 @@ function init(All) {
 					save = true;
 				}
 			});
-			if (save) return All.api.site.save(site).then(function(result) {
+			if (save) return All.site.save(site).then(function(result) {
 				console.info(result);
 				res.sendStatus(200);
 			});
