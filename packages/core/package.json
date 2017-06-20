@@ -1,5 +1,5 @@
 {
-  "name": "pageboard-core",
+  "name": "@pageboard/core",
   "version": "0.1.0",
   "description": "Web pages content management - core server",
   "main": "index.js",
@@ -12,14 +12,14 @@
   },
   "repository": {
     "type": "git",
-    "url": "git+https://github.com/pageboard/pageboard-core.git"
+    "url": "git+https://github.com/pageboard/core.git"
   },
   "author": "Jérémy Lal <kapouer@melix.org>",
   "license": "MIT",
   "bugs": {
-    "url": "https://github.com/pageboard/pageboard-core/issues"
+    "url": "https://github.com/pageboard/core/issues"
   },
-  "homepage": "https://github.com/pageboard/pageboard-core",
+  "homepage": "https://github.com/pageboard/core",
   "dependencies": {
     "body-parser": "^1.17.2",
     "debug": "^2.2.0",
