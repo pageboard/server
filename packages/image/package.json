@@ -1,5 +1,5 @@
 {
-  "name": "pageboard-image",
+  "name": "@pageboard/image",
   "version": "0.1.0",
   "description": "",
   "main": "index.js",
@@ -8,14 +8,14 @@
   },
   "repository": {
     "type": "git",
-    "url": "git+https://github.com/pageboard/pageboard-image.git"
+    "url": "git+https://github.com/pageboard/image.git"
   },
   "author": "Jérémy Lal <kapouer@melix.org>",
   "license": "MIT",
   "bugs": {
-    "url": "https://github.com/pageboard/pageboard-image/issues"
+    "url": "https://github.com/pageboard/image/issues"
   },
-  "homepage": "https://github.com/pageboard/pageboard-image#readme",
+  "homepage": "https://github.com/pageboard/image#readme",
   "dependencies": {
     "bl": "^1.2.0",
     "datauri": "^1.0.5",
