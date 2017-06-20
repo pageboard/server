@@ -3,8 +3,8 @@ var pageboard = require('pageboard-core');
 var config = pageboard.config();
 
 pageboard.init(config).then(function(All) {
-	return All.objection.Model.query().table('relation').del().then(function() {
-		return All.Block.query().del();
+	return All.api.Model.query().table('relation').del().then(function() {
+		return All.api.Block.query().del();
 	}).then(function() {
 		return All.user.add({data: {
 			email: 'root@localhost.localdomain',
