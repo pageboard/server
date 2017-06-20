@@ -1,4 +1,4 @@
-var pageboard = require('pageboard-core');
+var pageboard = require('@pageboard/core');
 
 var config = pageboard.config();
 
