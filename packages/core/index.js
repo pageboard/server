@@ -76,7 +76,7 @@ exports.init = function(opt) {
 		var plugin = require(module);
 		if (typeof plugin != "function") continue;
 		var obj = plugin(opt) || {};
-		obj.plugin = Object.assign({}, plugin); // make a copy for initPlugins
+		obj.plugin = plugin;
 		pluginList.push(obj);
 	}
 
@@ -133,10 +133,13 @@ function initPlugins(plugins, type) {
 			to = All;
 		}
 		if (type) p = p.then(() => obj[type].call(obj, All));
-		Object.keys(obj.plugin).forEach(function(key) {
-			if (to[key] !== undefined) throw new Error(`module conflict ${obj.name}.${key}`);
-			to[key] = obj.plugin[key];
-			delete obj.plugin[key]; // we made a copy before
+		p = p.then(function() {
+			var plugin = obj.plugin = Object.assign({}, obj.plugin); // make a copy
+			Object.keys(plugin).forEach(function(key) {
+				if (to[key] !== undefined) throw new Error(`module conflict ${obj.name}.${key}`);
+				to[key] = plugin[key];
+				delete plugin[key]; // we made a copy before
+			});
 		});
 	});
 	return p.catch(function(err) {
