@@ -121,6 +121,8 @@ Block.extendSchema = function extendSchema(schemas) {
 	});
 	var DomainBlock = class extends Block {};
 	Object.assign(DomainBlock, Block);
+	DomainBlock.relationMappings.children.modelClass = DomainBlock;
+	DomainBlock.relationMappings.parents.modelClass = DomainBlock;
 	DomainBlock.jsonSchema = schema;
 	return DomainBlock;
 }

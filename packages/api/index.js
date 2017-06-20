@@ -46,7 +46,7 @@ function init(All) {
 	exports.objection = objection;
 	exports.transaction = objection.transaction;
 	exports.ref = objection.ref;
-
+	exports.Model = objection.Model;
 	exports.Href = models.Href;
 	exports.models = models;
 
