@@ -234,6 +234,7 @@ function npmInstall(domainDir) {
 }
 
 function initConfig(prefix, domain, module, config) {
+	module = module.split('/').pop(); // org modules
 	var moduleDir = Path.join(prefix, module);
 	return fs.readFile(Path.join(moduleDir, 'package.json')).catch(function(err) {
 		// it's ok to not have a package.json here
