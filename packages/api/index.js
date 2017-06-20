@@ -10,6 +10,8 @@ var fs = {
 };
 var vm = require('vm');
 
+var debug = require('debug')('pageboard-api');
+
 exports = module.exports = function(opt) {
 	if (!opt.database) opt.database = `postgres://localhost/${opt.name}`;
 
@@ -56,6 +58,7 @@ function init(All) {
 }
 
 exports.install = function({elements, directories, domain}) {
+	debug("installing", domain || "pageboard", elements, directories);
 	var schemas = {};
 	return Promise.all(elements.map(function(path) {
 		return populateSchemas(path, schemas);
@@ -75,7 +78,9 @@ exports.install = function({elements, directories, domain}) {
 			if (!mount) {
 				console.warn(`Warning: element ${path} cannot be mounted`);
 			} else {
-				elementsPaths.push(Path.join(mount.to, path.substring(mount.from.length)));
+				var basePath = domain ? mount.to.replace(domain + "/", "") : mount.to;
+				debug("Add element path", path, basePath);
+				elementsPaths.push(Path.join(basePath, path.substring(mount.from.length)));
 			}
 		});
 		Block.elements = elementsPaths;

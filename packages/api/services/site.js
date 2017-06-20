@@ -71,9 +71,15 @@ exports.add = function(data) {
 
 exports.save = function(data) {
 	return exports.get(data).then(function(site) {
+		if (data.domain) delete data.domain;
+		var sameDeps = equal(
+			data.data && data.data.dependencies || null,
+			site.data && site.data.dependencies || null
+		);
+		// ensure we don't just empty site.data by mistake
+		data.data = Object.assign({}, site.data, data.data);
 		return site.$query().patch(data).then(function(result) {
-			var deps = data.data && data.data.dependencies;
-			if (deps && !equal(site.data.dependencies, deps)) return All.install(data.data).then(() => result);
+			if (sameDeps == false) return All.install(data.data).then(() => result);
 			else return result;
 		});
 	});
