@@ -17,11 +17,11 @@ var fs = {
 	writeFile: pify(require('fs').writeFile),
 	readFile: pify(require('fs').readFile),
 	readdir: pify(require('fs').readdir),
-	stat: pify(require('fs').stat)
+	stat: pify(require('fs').stat),
+	unlink: pify(require('fs').unlink)
 };
 
 var npm = require('npm');
-npm.load = pify(npm.load);
 var npmQueue = new PQueue({concurrency: 1});
 
 // exceptional but so natural
@@ -211,14 +211,22 @@ function install({domain, dependencies}) {
 
 function npmInstall(domainDir) {
 	return npmQueue.add(function() {
-		return npm.load({
-			prefix: domainDir,
-			'ignore-scripts': true
-		}).then(function() {
+		return fs.unlink(Path.join(domainDir, 'package-lock.json')).catch(function(){})
+		.then(function() {
 			return new Promise(function(resolve, reject) {
-				npm.commands.install(function(err, data) {
-					if (err) reject(err);
-					else resolve(data);
+				npm.load({
+					prefix: domainDir,
+					'ignore-scripts': true,
+					only: 'prod',
+					loglevel: 'silent',
+					silent: true,
+					progress: false
+				}, function(err) {
+					if (err) return reject(err);
+					npm.commands.install(function(err, data) {
+						if (err) reject(err);
+						else resolve(data);
+					});
 				});
 			});
 		});
