@@ -34,9 +34,9 @@ function init(All) {
 }
 
 function QueryPage(DomainBlock) {
-		// TODO site object is already known by All.api at that point
 	return DomainBlock.query()
 	.select(DomainBlock.jsonColumns)
+	.whereDomain(DomainBlock.domain)
 	.first()
 	.eager('[children(childrenFilter).^]', {
 		childrenFilter: query => query.select(DomainBlock.jsonColumns)
@@ -56,11 +56,11 @@ exports.get = function(data) {
 	if (!data.url) throw new HttpError.BadRequest("Missing url");
 
 	return All.api.DomainBlock(data.domain).then(function(DomainBlock) {
-		return QueryPage(DomainBlock).where('type', 'page')
+		return QueryPage(DomainBlock).where('block.type', 'page')
 		.whereJsonText("block.data:url", data.url)
 		.then(function(page) {
 			if (!page) {
-				return QueryPage(DomainBlock).where('type', 'notfound');
+				return QueryPage(DomainBlock).where('block.type', 'notfound');
 			} else {
 				return page;
 			}
@@ -96,7 +96,6 @@ exports.save = function(changes) {
 	return All.api.DomainBlock(changes.domain).then(function(DomainBlock) {
 		return All.api.transaction(DomainBlock, function(Block) {
 			var site, page;
-			// TODO il n'y a pas besoin de chercher site encore vu qu'il est chargé dans blockForDomain
 			return Block.query().whereJsonText('block.data:domain', changes.domain)
 			.first().then(function(inst) {
 				if (!inst) throw new HttpError.NotFound("Site not found");
