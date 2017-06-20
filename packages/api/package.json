@@ -1,5 +1,5 @@
 {
-  "name": "pageboard-api",
+  "name": "@pageboard/api",
   "version": "0.1.0",
   "description": "",
   "main": "index.js",
@@ -8,14 +8,14 @@
   },
   "repository": {
     "type": "git",
-    "url": "git+https://github.com/pageboard/pageboard-api.git"
+    "url": "git+https://github.com/pageboard/api.git"
   },
   "author": "Jérémy Lal <kapouer@melix.org>",
   "license": "MIT",
   "bugs": {
-    "url": "https://github.com/pageboard/pageboard-api/issues"
+    "url": "https://github.com/pageboard/api/issues"
   },
-  "homepage": "https://github.com/pageboard/pageboard-api#readme",
+  "homepage": "https://github.com/pageboard/api#readme",
   "dependencies": {
     "debug": "^2.6.8",
     "esequal": "^0.1.15",
