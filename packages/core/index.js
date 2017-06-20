@@ -310,7 +310,7 @@ function servicesError(err, req, res, next) {
 		msg += "\nerror code: " + fullCode;
 		code = 500;
 	}
-	if (code >= 500) console.error(err);
+	if (All.opt.env == "development" || code >= 500) console.error(err);
 	if (msg) res.status(code).send(msg);
 	else res.sendStatus(code);
 }
@@ -331,7 +331,7 @@ function viewsError(err, req, res, next) {
 	if (isNaN(code) || code < 200 || code >= 600) {
 		code = 500;
 	}
-	if (code >= 500) console.error(err);
+	if (All.opt.env == "development" || code >= 500) console.error(err);
 	res.redirect(req.app.settings.errorLocation + '?code=' + code);
 }
 
