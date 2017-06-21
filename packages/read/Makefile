@@ -5,6 +5,7 @@ dts := $(shell node -p "require('path').dirname(require.resolve('dom-template-st
 agent := $(shell node -p "require('path').dirname(require.resolve('window-agent'))")
 
 install:
+	mkdir -p pagecut
 	ln -sf ${pagecut}/dist/pagecut-viewer.js pagecut/viewer.js
 	ln -sf ${pagecut}/dist/pagecut-editor.js pagecut/editor.js
 	ln -sf ${pagecut}/dist/pagecut-id.js pagecut/id.js
