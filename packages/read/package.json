@@ -4,7 +4,8 @@
   "description": "",
   "main": "index.js",
   "scripts": {
-    "test": "echo \"Error: no test specified\" && exit 1"
+    "test": "echo \"Error: no test specified\" && exit 1",
+    "postinstall": "make install"
   },
   "repository": {
     "type": "git",
@@ -17,15 +18,16 @@
   },
   "homepage": "https://github.com/pageboard/read#readme",
   "dependencies": {
-    "dom-template-strings": "^1.1.0",
     "@webcomponents/html-imports": "^1.0.0",
-    "pagecut": "^1.0.0-alpha.1",
+    "dom-template-strings": "^1.1.0",
+    "pagecut": "^1.0.0-alpha.2",
     "window-agent": "^1.2.0",
-    "window-page": "^2.0.0-alpha.2"
+    "window-page": "^2.0.0-alpha.3"
   },
   "pageboard": {
     "directories": [
-      "read", "pagecut"
+      "read",
+      "pagecut"
     ]
   }
 }
