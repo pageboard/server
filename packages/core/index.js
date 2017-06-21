@@ -190,6 +190,7 @@ function install({domain, dependencies}) {
 		}).then(function() {
 			if (!doInstall) return;
 			return fs.writeFile(pkgFile, JSON.stringify({
+				name: domain,
 				dependencies: dependencies
 			}));
 		}).then(function() {
