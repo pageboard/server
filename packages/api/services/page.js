@@ -16,6 +16,12 @@ function init(All) {
 			res.send(pages);
 		}).catch(next);
 	});
+	All.app.get('/.api/elements.js', All.query, function(req, res, next) {
+		All.api.DomainBlock(req.query.domain).then(function(DomainBlock) {
+			res.type('text/javascript');
+			res.send('Pageboard.elements = ' + DomainBlock.source);
+		});
+	});
 	All.app.post('/.api/page', All.body, function(req, res, next) {
 		exports.add(req.body).then(function(page) {
 			res.send(page);
@@ -65,7 +71,6 @@ exports.get = function(data) {
 				return page;
 			}
 		}).then(function(page) {
-			page.elements = All.api.Block.elements.concat(DomainBlock.elements);
 			return page;
 		});
 	});

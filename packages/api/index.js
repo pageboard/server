@@ -4,6 +4,7 @@ var knex = require('knex');
 var Path = require('path');
 var pify = require('util').promisify;
 var equal = require('esequal');
+var toSource = require('tosource');
 
 var fs = {
 	readFile: pify(require('fs').readFile)
@@ -59,31 +60,39 @@ function init(All) {
 
 exports.install = function({elements, directories, domain}) {
 	debug("installing", domain || "pageboard", elements, directories);
-	var schemas = {};
+	var eltsMap = {};
 	return Promise.all(elements.map(function(path) {
-		return populateSchemas(path, schemas);
+		return importElements(path, eltsMap);
 	})).then(function() {
-		var Block = exports.models.Block.extendSchema(schemas);
-		if (domain) {
-			Block.domain = domain;
-			exports.blocksByDomain[domain] = Block;
-		} else {
-			exports.Block = All.api.Block = Block;
-		}
-		var elementsPaths = [];
-		elements.forEach(function(path) {
+		var Block = exports.models.Block.extendSchema(eltsMap);
+
+		Object.keys(eltsMap).forEach(function(name) {
+			var elt = eltsMap[name];
+			var eltPath = elt.path;
+			delete elt.path;
 			var mount = directories.find(function(mount) {
-				return path.startsWith(mount.from);
+				return eltPath.startsWith(mount.from);
 			});
 			if (!mount) {
 				console.warn(`Warning: element ${path} cannot be mounted`);
 			} else {
 				var basePath = domain ? mount.to.replace(domain + "/", "") : mount.to;
-				debug("Add element path", path, basePath);
-				elementsPaths.push(Path.join(basePath, path.substring(mount.from.length)));
+				var eltPathname = Path.join(basePath, eltPath.substring(mount.from.length));
+				var eltDirPath = Path.dirname(eltPathname);
+				var promotePathFn = promotePath.bind(null, eltDirPath);
+				if (elt.scripts) elt.scripts = elt.scripts.map(promotePathFn);
+				if (elt.stylesheets) elt.stylesheets = elt.stylesheets.map(promotePathFn);
 			}
 		});
-		Block.elements = elementsPaths;
+		Block.elements = eltsMap;
+		if (domain) {
+			Block.domain = domain;
+			exports.blocksByDomain[domain] = Block;
+			Block.source = toSource(Object.assign({}, exports.Block.elements, Block.elements));
+		} else {
+			exports.Block = All.api.Block = Block;
+			Block.source = toSource(Block.elements);
+		}
 	});
 };
 
@@ -96,7 +105,12 @@ exports.DomainBlock = function(domain) {
 	});
 };
 
-function populateSchemas(path, schemas) {
+function promotePath(dir, path) {
+	if (path.startsWith('/') || /^(http|https|data):/.test(path)) return path;
+	return Path.join(dir, path);
+}
+
+function importElements(path, eltsMap) {
 	return fs.readFile(path).then(function(buf) {
 		var script = new vm.Script(buf, {filename: path});
 		var sandbox = {Pageboard: {elements: {}}};
@@ -106,7 +120,11 @@ function populateSchemas(path, schemas) {
 			console.error(`Error trying to install element ${path}: ${ex}`);
 			return;
 		}
-		Object.assign(schemas, sandbox.Pageboard.elements);
+		var elts = sandbox.Pageboard.elements;
+		for (var name in elts) {
+			elts[name].path = path;
+			eltsMap[name] = elts[name];
+		}
 	}).catch(function(err) {
 		console.error(`Error inspecting element path ${path}`, err);
 	});
