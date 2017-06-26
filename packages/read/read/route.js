@@ -8,8 +8,6 @@ Page.route(function(state) {
 		document.head.insertAdjacentHTML('afterBegin', `<meta http-equiv="Status" content="${err.code} ${err}">`);
 		throw err;
 	}).then(function(page) {
-		var scripts = page.elements;
-		delete page.elements;
 		// this works around createHTMLDocument incompatibilities
 		var doc = document.cloneNode(false);
 		var html = doc.createElement('html');
@@ -20,13 +18,14 @@ Page.route(function(state) {
 		state.document = doc;
 		state.data.page = page;
 
-		scripts = [
+		var scripts = [
 			"/.pageboard/read/window-page.js",
 			"/.pageboard/read/dom-template-strings.js",
 			"/.pageboard/pagecut/viewer.js",
 			"/.pageboard/pagecut/id.js",
-			"/.pageboard/read/build.js"
-		].concat(scripts);
+			"/.pageboard/read/build.js",
+			"/.api/elements.js"
+		];
 
 		scripts.forEach(function(src) {
 			var node = doc.createElement('script');
