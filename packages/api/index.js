@@ -80,8 +80,18 @@ exports.install = function({elements, directories, domain}) {
 				var eltPathname = Path.join(basePath, eltPath.substring(mount.from.length));
 				var eltDirPath = Path.dirname(eltPathname);
 				var promotePathFn = promotePath.bind(null, eltDirPath);
-				if (elt.scripts) elt.scripts = elt.scripts.map(promotePathFn);
-				if (elt.stylesheets) elt.stylesheets = elt.stylesheets.map(promotePathFn);
+				if (elt.scripts != null) {
+					if (typeof elt.scripts == "string") elt.scripts = [elt.scripts];
+					elt.scripts = elt.scripts.map(promotePathFn);
+				} else {
+					delete elt.scripts;
+				}
+				if (elt.stylesheets != null) {
+					if (typeof elt.stylesheets == "string") elt.stylesheets = [elt.stylesheets];
+					elt.stylesheets = elt.stylesheets.map(promotePathFn);
+				} else {
+					delete elt.stylesheets;
+				}
 			}
 		});
 		Block.elements = eltsMap;
