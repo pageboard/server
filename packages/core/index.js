@@ -12,6 +12,7 @@ var xdg = require('xdg-basedir');
 var pkgup = require('pkg-up');
 var PQueue = require('p-queue');
 var equal = require('esequal');
+var debug = require('debug')('pageboard:core');
 
 var fs = {
 	writeFile: pify(require('fs').writeFile),
@@ -179,14 +180,16 @@ function install({domain, dependencies}) {
 		directories: [],
 		elements: []
 	};
+	var pkgFile = Path.join(domainDir, 'package.json');
 	return mkdirp(domainDir).then(function() {
-		var pkgFile = Path.join(domainDir, 'package.json');
+		debug("Trying dependency", pkgFile);
 		var doInstall = true;
 		return fs.readFile(pkgFile).then(function(json) {
 			var obj = JSON.parse(json);
 			if (equal(obj.dependencies, dependencies)) doInstall = false;
-		}).catch(function() {
+		}).catch(function(ex) {
 			// whatever
+			debug("Error reading dependency", ex);
 		}).then(function() {
 			if (!doInstall) return;
 			return fs.writeFile(pkgFile, JSON.stringify({
@@ -211,6 +214,7 @@ function install({domain, dependencies}) {
 };
 
 function npmInstall(domainDir) {
+	debug("Installing dependencies", domainDir);
 	return npmQueue.add(function() {
 		return fs.unlink(Path.join(domainDir, 'package-lock.json')).catch(function(){})
 		.then(function() {
@@ -237,6 +241,7 @@ function npmInstall(domainDir) {
 function initConfig(prefix, domain, module, config) {
 	module = module.split('/').pop(); // org modules
 	var moduleDir = Path.join(prefix, module);
+	debug("Module directory", module, moduleDir);
 	return fs.readFile(Path.join(moduleDir, 'package.json')).catch(function(err) {
 		// it's ok to not have a package.json here
 		return false;
@@ -253,6 +258,7 @@ function initConfig(prefix, domain, module, config) {
 		if (!meta.pageboard) return; // nothing to do
 		var directories = meta.pageboard.directories || [];
 		if (!Array.isArray(directories)) directories = [directories];
+		debug("processing directories", directories);
 		directories.forEach(function(mount) {
 			if (typeof mount == "string") mount = {
 				from: mount,
@@ -277,6 +283,7 @@ function initConfig(prefix, domain, module, config) {
 
 		var elements = meta.pageboard.elements || [];
 		if (!Array.isArray(elements)) elements = [elements];
+		debug("processing elements", elements);
 		return Promise.all(elements.map(function(path) {
 			var absPath = Path.resolve(prefix, module, path);
 			return fs.stat(absPath).then(function(stat) {
