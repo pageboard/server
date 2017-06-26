@@ -85,7 +85,7 @@ exports.init = function(opt) {
 
 	return Promise.all(Object.keys(opt.dependencies).map(function(module) {
 		return pkgup(require.resolve(module)).then(function(pkgPath) {
-			return initConfig(Path.dirname(Path.dirname(pkgPath)), null, module, All.opt);
+			return initConfig(Path.dirname(pkgPath), null, module, All.opt);
 		});
 	})).then(function() {
 		return initDirs(opt.dirs);
@@ -202,7 +202,7 @@ function install({domain, dependencies}) {
 		});
 	}).then(function(data) {
 		return Promise.all(Object.keys(dependencies || {}).map(function(module) {
-			return initConfig(Path.join(domainDir, 'node_modules'), domain, module, config);
+			return initConfig(Path.join(domainDir, 'node_modules', module), domain, module, config);
 		}));
 	}).then(function() {
 		return All.statics.install({mounts: config.directories, domain: domain});
@@ -238,9 +238,7 @@ function npmInstall(domainDir) {
 	});
 }
 
-function initConfig(prefix, domain, module, config) {
-	module = module.split('/').pop(); // org modules
-	var moduleDir = Path.join(prefix, module);
+function initConfig(moduleDir, domain, module, config) {
 	debug("Module directory", module, moduleDir);
 	return fs.readFile(Path.join(moduleDir, 'package.json')).catch(function(err) {
 		// it's ok to not have a package.json here
@@ -285,7 +283,7 @@ function initConfig(prefix, domain, module, config) {
 		if (!Array.isArray(elements)) elements = [elements];
 		debug("processing elements", elements);
 		return Promise.all(elements.map(function(path) {
-			var absPath = Path.resolve(prefix, module, path);
+			var absPath = Path.resolve(moduleDir, path);
 			return fs.stat(absPath).then(function(stat) {
 				if (stat.isDirectory()) return fs.readdir(absPath).then(function(paths) {
 					return paths.map(function(path) {
