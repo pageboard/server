@@ -182,14 +182,12 @@ function install({domain, dependencies}) {
 	};
 	var pkgFile = Path.join(domainDir, 'package.json');
 	return mkdirp(domainDir).then(function() {
-		debug("Trying dependency", pkgFile);
 		var doInstall = true;
 		return fs.readFile(pkgFile).then(function(json) {
 			var obj = JSON.parse(json);
 			if (equal(obj.dependencies, dependencies)) doInstall = false;
 		}).catch(function(ex) {
 			// whatever
-			debug("Error reading dependency", ex);
 		}).then(function() {
 			if (!doInstall) return;
 			return fs.writeFile(pkgFile, JSON.stringify({
