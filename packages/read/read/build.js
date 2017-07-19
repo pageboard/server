@@ -6,7 +6,6 @@ if (!window.Pageboard) window.Pageboard = {elements: {}};
 
 Page.build(function(state) {
 	// conveniently export doc.dom from dom-template-strings
-	Document.prototype.dom = dom;
 	var elements = Pageboard.elements;
 	Object.assign(Pagecut.modules, elements);
 	var viewer = Pagecut.viewerInstance = new Pagecut.Viewer();
