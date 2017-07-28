@@ -7,12 +7,13 @@ if (!window.Pageboard) window.Pageboard = {elements: {}};
 Page.build(function(state) {
 	// conveniently export doc.dom from dom-template-strings
 	var elements = Pageboard.elements;
-	Object.assign(Pagecut.modules, elements);
+	Pagecut.modules = Object.assign(Pagecut.modules || {}, elements);
 	var viewer = Pagecut.viewerInstance = new Pagecut.Viewer();
 	var page = state.data.page;
-	var frag = viewer.modules.id.from(page);
-	if (frag.nodeName != "BODY") throw new Error("Page renderer should fill document and return body");
-	var doc = frag.ownerDocument;
+	var body = viewer.from(page);
+	if (body.nodeName != "BODY") throw new Error("Page renderer should fill document and return body");
+	var doc = body.ownerDocument;
+	doc.documentElement.replaceChild(body, doc.body);
 
 	filterModules(elements, 'stylesheets').forEach(function(href) {
 		doc.head.appendChild(doc.dom`\n <link rel="stylesheet" href="${href}" />`);
