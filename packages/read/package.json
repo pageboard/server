@@ -20,8 +20,8 @@
   "dependencies": {
     "@webcomponents/custom-elements": "^1.0.0",
     "@webcomponents/html-imports": "^1.0.0",
-    "pagecut": "^1.0.0-alpha.2",
     "dom-template-strings": "^2.0.0",
+    "pagecut": "^1.0.0-alpha.3",
     "window-agent": "^1.2.0",
     "window-page": "^2.0.0-alpha.3"
   },
