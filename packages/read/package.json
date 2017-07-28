@@ -18,6 +18,7 @@
   },
   "homepage": "https://github.com/pageboard/read#readme",
   "dependencies": {
+    "@webcomponents/custom-elements": "^1.0.0",
     "@webcomponents/html-imports": "^1.0.0",
     "pagecut": "^1.0.0-alpha.2",
     "dom-template-strings": "^2.0.0",
