@@ -22,7 +22,6 @@ Page.route(function(state) {
 			"/.pageboard/read/window-page.js",
 			"/.pageboard/read/dom-template-strings.js",
 			"/.pageboard/pagecut/viewer.js",
-			"/.pageboard/pagecut/id.js",
 			"/.pageboard/read/build.js",
 			"/.api/elements.js"
 		];
