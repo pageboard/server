@@ -9,6 +9,8 @@ class Block extends Model {}
 
 module.exports = Block;
 
+Block.useLimitInFirst = true;
+
 Block.tableName = 'block';
 
 Block.idColumn = '_id';

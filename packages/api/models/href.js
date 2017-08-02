@@ -4,6 +4,8 @@ class Href extends Model {}
 
 module.exports = Href;
 
+Href.useLimitInFirst = true;
+
 Href.tableName = 'href';
 
 Href.idColumn = '_id';

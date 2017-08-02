@@ -20,7 +20,7 @@
     "debug": "^2.6.8",
     "esequal": "^0.1.15",
     "knex": "^0.13.0",
-    "objection": "^0.8.3",
+    "objection": "^0.8.5",
     "passwd-user": "^2.1.0",
     "pg": "^6.2.3",
     "tosource": "^1.0.0"
