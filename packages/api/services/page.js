@@ -187,10 +187,10 @@ function removeChanges(site, page, removes) {
 }
 
 exports.add = function(data) {
-	throw new HTTPError.NotImplemented("TODO use save to add page blocks");
+	throw new HttpError.NotImplemented("TODO use save to add page blocks");
 };
 
 exports.del = function(data) {
-	throw new HTTPError.NotImplemented("TODO use save to delete page blocks");
+	throw new HttpError.NotImplemented("TODO use save to delete page blocks");
 };
 
