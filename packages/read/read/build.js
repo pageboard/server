@@ -15,10 +15,16 @@ Page.build(function(state) {
 	var doc = body.ownerDocument;
 	doc.documentElement.replaceChild(body, doc.body);
 
-	filterModules(elements, 'stylesheets').forEach(function(href) {
+	var sortedElements = Object.keys(elements).map(function(key) {
+		return elements[key];
+	}).sort(function(a, b) {
+		return (a.priority || 0) > (b.priority || 0);
+	});
+
+	filterModules(sortedElements, 'stylesheets').forEach(function(href) {
 		doc.head.appendChild(doc.dom`\n <link rel="stylesheet" href="${href}" />`);
 	});
-	filterModules(elements, 'scripts').forEach(function(src) {
+	filterModules(sortedElements, 'scripts').forEach(function(src) {
 		doc.head.appendChild(doc.dom`\n <script src="${src}"></script>`);
 	});
 
@@ -27,8 +33,7 @@ Page.build(function(state) {
 	function filterModules(modules, prop) {
 		var map = {};
 		var res = [];
-		Object.keys(modules).forEach(function(name) {
-			var mod = modules[name];
+		modules.forEach(function(mod) {
 			var list = mod[prop];
 			if (!list) return;
 			var url;
