@@ -36,9 +36,9 @@ jspm_packages
 # Optional REPL history
 .node_repl_history
 
-read/agent.js
-read/dom-template-strings.js
-read/html-imports.min.js
-read/window-page.js
+/read/agent.js
+/read/dom-template-strings.js
+/read/html-imports.min.js
+/read/window-page.js
 
-pagecut/*
+/pagecut/*
