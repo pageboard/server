@@ -5,7 +5,7 @@
   "main": "index.js",
   "scripts": {
     "test": "echo \"Error: no test specified\" && exit 1",
-    "postinstall": "make install"
+    "postinstall": "postinstall-links"
   },
   "repository": {
     "type": "git",
@@ -21,8 +21,22 @@
     "@webcomponents/html-imports": "^1.0.1",
     "dom-template-strings": "^2.2.0",
     "pagecut": "kapouer/pagecut",
+    "postinstall-links": "^0.1.0",
     "window-agent": "^1.2.0",
     "window-page": "^2.0.0-alpha.3"
+  },
+  "links": {
+    "pagecut/dist/pagecut-viewer.js": "pagecut/viewer.js",
+    "pagecut/dist/pagecut-editor.js": "pagecut/editor.js",
+    "pagecut/dist/pagecut-menu.js": "pagecut/menu.js",
+    "pagecut/dist/pagecut.css": "pagecut/",
+    "pagecut/dist/pagecut-menu.css": "pagecut/",
+    "pagecut/dist/prosemirror.css": "pagecut/",
+    "pagecut/dist/prosemirror-menu.css": "pagecut/",
+    "window-page/window-page.js": "read/",
+    "@webcomponents/html-imports/html-imports.min.js": "read/",
+    "dom-template-strings/dom-template-strings.js": "read/",
+    "window-agent/agent.js": "read/"
   },
   "pageboard": {
     "directories": [
