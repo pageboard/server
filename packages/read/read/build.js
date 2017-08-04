@@ -28,7 +28,8 @@ Page.build(function(state) {
 		doc.head.appendChild(doc.dom`\n <script src="${src}"></script>`);
 	});
 
-	return Page.importDocument(doc, true); // noload - does it really helps ?
+	// used to be (doc, true) but this causes some problems with custom elements
+	return Page.importDocument(doc);
 
 	function filterModules(modules, prop) {
 		var map = {};
