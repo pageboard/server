@@ -20,7 +20,7 @@
   "dependencies": {
     "@webcomponents/html-imports": "^1.0.1",
     "dom-template-strings": "^2.2.0",
-    "pagecut": "^1.0.0-beta.1",
+    "pagecut": "kapouer/pagecut",
     "window-agent": "^1.2.0",
     "window-page": "^2.0.0-alpha.3"
   },
