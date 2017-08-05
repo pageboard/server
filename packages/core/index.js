@@ -219,7 +219,9 @@ function npmInstall(domainDir) {
 			return new Promise(function(resolve, reject) {
 				npm.load({
 					prefix: domainDir,
-					'ignore-scripts': true,
+					// TODO use binci to run in a docker container
+					// with domainDir as the volume
+					'ignore-scripts': false,
 					only: 'prod',
 					loglevel: 'silent',
 					silent: true,
