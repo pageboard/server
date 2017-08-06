@@ -225,7 +225,8 @@ function npmInstall(domainDir) {
 					only: 'prod',
 					loglevel: 'silent',
 					silent: true,
-					progress: false
+					progress: false,
+					'package-lock': false
 				}, function(err) {
 					if (err) return reject(err);
 					npm.commands.install(function(err, data) {
