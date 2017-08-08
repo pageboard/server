@@ -38,7 +38,7 @@ jspm_packages
 
 /read/agent.js
 /read/dom-template-strings.js
-/read/html-imports.min.js
+/read/html-imports.*
 /read/window-page.js
 
 /pagecut/*
