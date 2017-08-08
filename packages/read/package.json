@@ -35,6 +35,7 @@
     "pagecut/dist/prosemirror-menu.css": "pagecut/",
     "window-page/window-page.js": "read/",
     "@webcomponents/html-imports/html-imports.min.js": "read/",
+    "@webcomponents/html-imports/html-imports.min.js.map": "read/",
     "dom-template-strings/dom-template-strings.js": "read/",
     "window-agent/agent.js": "read/"
   },
