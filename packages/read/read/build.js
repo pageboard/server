@@ -10,26 +10,27 @@ Page.build(function(state) {
 	Pagecut.modules = Object.assign(Pagecut.modules || {}, elements);
 	var viewer = Pagecut.viewerInstance = new Pagecut.Viewer();
 	var page = state.data.page;
-	var body = viewer.from(page);
-	if (body.nodeName != "BODY") throw new Error("Page renderer should fill document and return body");
-	var doc = body.ownerDocument;
-	doc.documentElement.replaceChild(body, doc.body);
+	return viewer.from(page).then(function(body) {
+		if (body.nodeName != "BODY") throw new Error("Page renderer should fill document and return body");
+		var doc = body.ownerDocument;
+		doc.documentElement.replaceChild(body, doc.body);
 
-	var sortedElements = Object.keys(elements).map(function(key) {
-		return elements[key];
-	}).sort(function(a, b) {
-		return (a.priority || 0) > (b.priority || 0);
-	});
+		var sortedElements = Object.keys(elements).map(function(key) {
+			return elements[key];
+		}).sort(function(a, b) {
+			return (a.priority || 0) - (b.priority || 0);
+		});
 
-	filterModules(sortedElements, 'stylesheets').forEach(function(href) {
-		doc.head.appendChild(doc.dom`\n <link rel="stylesheet" href="${href}" />`);
-	});
-	filterModules(sortedElements, 'scripts').forEach(function(src) {
-		doc.head.appendChild(doc.dom`\n <script src="${src}"></script>`);
-	});
+		filterModules(sortedElements, 'stylesheets').forEach(function(href) {
+			doc.head.appendChild(doc.dom`\n <link rel="stylesheet" href="${href}" />`);
+		});
+		filterModules(sortedElements, 'scripts').forEach(function(src) {
+			doc.head.appendChild(doc.dom`\n <script src="${src}"></script>`);
+		});
 
-	// used to be (doc, true) but this causes some problems with custom elements
-	return Page.importDocument(doc);
+		// used to be (doc, true) but this causes some problems with custom elements
+		return Page.importDocument(doc);
+	});
 
 	function filterModules(modules, prop) {
 		var map = {};
