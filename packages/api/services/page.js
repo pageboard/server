@@ -125,50 +125,41 @@ exports.save = function(changes) {
 function updateChanges(site, page, updates) {
 	// here we just try to patch and let the db decide what was actually possible
 	return Promise.all(updates.map(function(child) {
+		delete child.orphan;
 		return site
 		.$relatedQuery('children')
 		.patch(child)
 		.where({
-			id: child.id,
-			standalone: true
+			id: child.id
 		}).then(function() {
 			return page
 			.$relatedQuery('children')
 			.patch(child)
 			.where({
-				id: child.id,
-				standalone: false
+				id: child.id
 			});
 		});
 	}));
 }
 
 function addChanges(site, page, adds) {
-	// when a standalone block is added, it needs to be related to the site and to the page
-	// unless it is an orphan standalone block
-	var orphans = {};
+	// insert page children then relate standalone blocks to site
+	// insert site children (orphans)
+	var childrenOfPage = [];
+	var childrenOfSite = [];
 	adds.forEach(function(block) {
-		if (block.orphan) orphans[block.id] = true;
+		if (block.orphan) childrenOfSite.push(block);
+		else childrenOfPage.push(block);
 		delete block.orphan;
 	});
-	return page
-	.$relatedQuery('children')
-	.insert(adds)
-	.then(function(rows) {
-		return page
-		.$relatedQuery('children')
-		.relate(rows.filter(row => !orphans[row.id]).map(row => row._id))
-		.then(() => rows);
-	}).then(function(rows) {
-		var alones = rows
-		.filter(row => row.standalone)
-		.map(row => row._id);
-		if (alones.length) {
-			return site
-			.$relatedQuery('children')
-			.relate(alones);
-		}
-	});
+	return Promise.all([
+		page.$relatedQuery('children').insert(childrenOfPage).then(function(rows) {
+			var alones = rows.filter(row => row.standalone).map(row => row._id);
+			if (alones.length == 0) return;
+			return site.$relatedQuery('children').relate(alones);
+		}),
+		site.$relatedQuery('children').insert(childrenOfSite)
+	]);
 }
 
 function removeChanges(site, page, removes) {
@@ -184,6 +175,8 @@ function removeChanges(site, page, removes) {
 		.whereIn('id', ids)
 		.where('standalone', false);
 	});
+	// removal of orphans or of standalones that have become orphans is done
+	// by some garbage collector
 }
 
 exports.add = function(data) {
