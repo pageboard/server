@@ -80,6 +80,7 @@ exports.find = function(data) {
 	var Block = All.api.Block;
 	return Block.query()
 	.select(Block.jsonColumns)
+	.omit(['content'])
 	.whereDomain(data.domain)
 	.where('block.type', 'page')
 	.whereJsonText('block.data:url', 'LIKE', `${data.url || ''}%`);
