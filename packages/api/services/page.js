@@ -44,7 +44,7 @@ function QueryPage(DomainBlock) {
 	.select(DomainBlock.jsonColumns)
 	.whereDomain(DomainBlock.domain)
 	.first()
-	.eager('[children(childrenFilter).^]', {
+	.eager('[children(childrenFilter)]', {
 		childrenFilter: query => query.select(DomainBlock.jsonColumns)
 	});
 	/* we don't need parents for now
