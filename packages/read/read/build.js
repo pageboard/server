@@ -5,26 +5,19 @@
 if (!window.Pageboard) window.Pageboard = {elements: {}};
 
 Page.build(function(state) {
-	// conveniently export doc.dom from dom-template-strings
-	var elements = Pageboard.elements;
-	Pagecut.modules = Object.assign(Pagecut.modules || {}, elements);
-	var viewer = Pagecut.viewerInstance = new Pagecut.Viewer();
+	var viewer = Pagecut.viewerInstance = new Pagecut.Viewer({
+		elements: Pageboard.elements
+	});
 	var page = state.data.page;
 	return viewer.from(page).then(function(body) {
 		if (body.nodeName != "BODY") throw new Error("Page renderer should fill document and return body");
 		var doc = body.ownerDocument;
 		doc.documentElement.replaceChild(body, doc.body);
 
-		var sortedElements = Object.keys(elements).map(function(key) {
-			return elements[key];
-		}).sort(function(a, b) {
-			return (a.priority || 0) - (b.priority || 0);
-		});
-
-		filterModules(sortedElements, 'stylesheets').forEach(function(href) {
+		filterModules(viewer.elements, 'stylesheets').forEach(function(href) {
 			doc.head.appendChild(doc.dom`\n <link rel="stylesheet" href="${href}" />`);
 		});
-		filterModules(sortedElements, 'scripts').forEach(function(src) {
+		filterModules(viewer.elements, 'scripts').forEach(function(src) {
 			doc.head.appendChild(doc.dom`\n <script src="${src}"></script>`);
 		});
 
