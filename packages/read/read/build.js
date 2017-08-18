@@ -5,19 +5,19 @@
 if (!window.Pageboard) window.Pageboard = {elements: {}};
 
 Page.build(function(state) {
-	var viewer = Pagecut.viewerInstance = new Pagecut.Viewer({
+	Pageboard.view = new Pagecut.Viewer({
 		elements: Pageboard.elements
 	});
 	var page = state.data.page;
-	return viewer.from(page).then(function(body) {
+	return Pageboard.view.from(page).then(function(body) {
 		if (body.nodeName != "BODY") throw new Error("Page renderer should fill document and return body");
 		var doc = body.ownerDocument;
 		doc.documentElement.replaceChild(body, doc.body);
 
-		filterModules(viewer.elements, 'stylesheets').forEach(function(href) {
+		filterModules(Pageboard.view, 'stylesheets').forEach(function(href) {
 			doc.head.appendChild(doc.dom`\n <link rel="stylesheet" href="${href}" />`);
 		});
-		filterModules(viewer.elements, 'scripts').forEach(function(src) {
+		filterModules(Pageboard.view, 'scripts').forEach(function(src) {
 			doc.head.appendChild(doc.dom`\n <script src="${src}"></script>`);
 		});
 
@@ -28,7 +28,7 @@ Page.build(function(state) {
 	function filterModules(modules, prop) {
 		var map = {};
 		var res = [];
-		modules.forEach(function(mod) {
+		modules.elements.forEach(function(mod) {
 			var list = mod[prop];
 			if (!list) return;
 			var url;
