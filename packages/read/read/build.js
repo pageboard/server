@@ -5,24 +5,33 @@
 if (!window.Pageboard) window.Pageboard = {elements: {}};
 
 Page.build(function(state) {
-	Pageboard.view = new Pagecut.Viewer({
-		elements: Pageboard.elements
-	});
-	var page = state.data.page;
-	return Pageboard.view.from(page).then(function(body) {
-		if (body.nodeName != "BODY") throw new Error("Page renderer should fill document and return body");
-		var doc = body.ownerDocument;
-		doc.documentElement.replaceChild(body, doc.body);
-
-		filterModules(Pageboard.view, 'stylesheets').forEach(function(href) {
-			doc.head.appendChild(doc.dom`\n <link rel="stylesheet" href="${href}" />`);
+	return GET('/.api/page', {
+		url: state.pathname
+	}).catch(function(err) {
+		// emergency error handling
+		document.body.textContent = `${err.code} ${err}`;
+		document.title = err.code;
+		document.head.insertAdjacentHTML('afterBegin', `<meta http-equiv="Status" content="${err.code} ${err}">`);
+		throw err;
+	}).then(function(page) {
+		Pageboard.view = new Pagecut.Viewer({
+			elements: Pageboard.elements
 		});
-		filterModules(Pageboard.view, 'scripts').forEach(function(src) {
-			doc.head.appendChild(doc.dom`\n <script src="${src}"></script>`);
-		});
+		return Pageboard.view.from(page).then(function(body) {
+			if (body.nodeName != "BODY") throw new Error("Page renderer should fill document and return body");
+			var doc = body.ownerDocument;
+			doc.documentElement.replaceChild(body, doc.body);
 
-		// used to be (doc, true) but this causes some problems with custom elements
-		return Page.importDocument(doc);
+			filterModules(Pageboard.view, 'stylesheets').forEach(function(href) {
+				doc.head.appendChild(doc.dom`\n <link rel="stylesheet" href="${href}" />`);
+			});
+			filterModules(Pageboard.view, 'scripts').forEach(function(src) {
+				doc.head.appendChild(doc.dom`\n <script src="${src}"></script>`);
+			});
+
+			// used to be (doc, true) but this causes some problems with custom elements
+			return Page.importDocument(doc);
+		});
 	});
 
 	function filterModules(modules, prop) {
