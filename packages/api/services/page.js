@@ -44,17 +44,17 @@ function QueryPage(DomainBlock) {
 	.select(DomainBlock.jsonColumns)
 	.whereDomain(DomainBlock.domain)
 	.first()
-	.eager('[children(childrenFilter)]', {
-		childrenFilter: query => query.select(DomainBlock.jsonColumns)
+	.eager(`[
+		children(childrenFilter),
+		children(standalonesFilter) as standalones .children
+	]`, {
+		childrenFilter: function(query) {
+			return query.select(DomainBlock.jsonColumns).where('block.standalone', false);
+		},
+		standalonesFilter: function(query) {
+			return query.select(DomainBlock.jsonColumns).where('block.standalone', true);
+		}
 	});
-	/* we don't need parents for now
-	.eager('[parents(parentsFilter),children(childrenFilter).^]', {
-		parentsFilter: query => query.select(DomainBlock.jsonColumns)
-			.where('block.type', 'site')
-			.whereJsonText('block.data:domain', DomainBlock.domain),
-		childrenFilter: query => query.select(DomainBlock.jsonColumns)
-	});
-	*/
 }
 
 exports.get = function(data) {
@@ -71,6 +71,8 @@ exports.get = function(data) {
 				return page;
 			}
 		}).then(function(page) {
+			page.children = page.children.concat(page.standalones);
+			delete page.standalones;
 			return page;
 		});
 	});
