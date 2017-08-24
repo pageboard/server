@@ -19,7 +19,8 @@ exports = module.exports = function(opt) {
 	return {
 		name: 'image',
 		file: initFile,
-		service: initService
+		service: initService,
+		priority: 10
 	};
 };
 
