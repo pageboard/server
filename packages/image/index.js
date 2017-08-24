@@ -33,8 +33,12 @@ function initFile(All) {
 	var opt = All.opt;
 	var uploadDir = opt.upload && opt.upload.dir;
 	if (uploadDir) {
-		console.info("Images resizable by upload at", uploadDir);
-		All.app.get(`:url(/${uploadDir}/*)`, sharpie(All.opt.image));
+		uploadDir = "." + uploadDir;
+		console.info("Images resizable by upload at", "/" + uploadDir);
+		All.app.get(`:url(/${uploadDir}/*)`, function(req, res, next) {
+			if (!req.query.rs) next('route');
+			else next();
+		}, sharpie(All.opt.image));
 	}
 }
 
