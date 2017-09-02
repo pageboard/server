@@ -55,6 +55,7 @@ function QueryHref(data) {
 		q.where('href.visible', true);
 		q.whereRaw('query @@ href.tsv');
 		q.orderByRaw('ts_rank(href.tsv, query) DESC');
+		q.orderBy('updated_at', 'desc');
 	} else {
 		q.where('href.visible', true);
 		q.orderBy('updated_at', 'desc');
