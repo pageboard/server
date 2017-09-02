@@ -23,10 +23,10 @@ Page.build(function(state) {
 			doc.documentElement.replaceChild(body, doc.body);
 
 			filterModules(Pageboard.view, 'stylesheets').forEach(function(href) {
-				doc.head.appendChild(doc.dom`\n <link rel="stylesheet" href="${href}" />`);
+				doc.head.appendChild(doc.dom`<link rel="stylesheet" href="${href}" />`);
 			});
 			filterModules(Pageboard.view, 'scripts').forEach(function(src) {
-				doc.head.appendChild(doc.dom`\n <script src="${src}"></script>`);
+				doc.head.appendChild(doc.dom`<script src="${src}"></script>`);
 			});
 
 			// used to be (doc, true) but this causes some problems with custom elements
