@@ -33,6 +33,11 @@ function QueryHref(data) {
 	var q = Href.query().select(Href.jsonColumns);
 	joinSite(q, data);
 
+	if (data.type) {
+		if (Array.isArray(data.type)) q.whereIn('href.type', data.type);
+		else q.where('href.type', data.type);
+	}
+
 	if (data.url) {
 		q.where('url', data.url);
 	} else if (data.text) {
@@ -47,7 +52,6 @@ function QueryHref(data) {
 			Href.raw(variant + "to_tsquery('unaccent', ?) AS query", [text]),
 			'href'
 		]));
-		if (data.type) q.where('href.type', data.type);
 		q.where('href.visible', true);
 		q.whereRaw('query @@ href.tsv');
 		q.orderByRaw('ts_rank(href.tsv, query) DESC');
