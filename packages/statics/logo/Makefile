@@ -1,12 +1,11 @@
-all: pageboard.*
+all: pageboard.ico
 
-pageboard.ico: pageboard.svg
-	convert pageboard.svg  -bordercolor white -border 0 \
-		\( -clone 0 -resize 16x16 \) \
-		\( -clone 0 -resize 32x32 \) \
-		\( -clone 0 -resize 48x48 \) \
-		\( -clone 0 -resize 64x64 \) \
-		-delete 0 -alpha off -colors 256 pageboard.ico
+clean:
+	rm -f pageboard.png
+	rm -f pageboard.ico
+
+pageboard.ico: pageboard.png
+	mogrify -format ico -define icon:auto-resize=64,32,16 pageboard.png
 
 pageboard.png: pageboard.svg
 	convert -background none pageboard.svg pageboard.png
