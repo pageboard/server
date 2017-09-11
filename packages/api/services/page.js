@@ -170,7 +170,18 @@ function addChanges(site, page, adds) {
 			return site.$relatedQuery('children').relate(alones);
 		}),
 		site.$relatedQuery('children').insert(childrenOfSite)
-	]);
+	]).then(function() {
+		return Promise.all(childrenOfSite
+			.filter(row => row.type == "page")
+			.map(function(row) {
+				return All.href.save({
+					url: All.domains.host(site.data.domain) + row.data.url,
+					domain: site.data.domain,
+					title: row.data.title
+				});
+			})
+		);
+	});
 }
 
 function removeChanges(site, page, removes) {
