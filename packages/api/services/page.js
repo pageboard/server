@@ -141,6 +141,14 @@ function updateChanges(site, page, updates) {
 			.where({
 				id: child.id
 			});
+		}).then(function() {
+			if (child.type == "page") {
+				return All.href.save({
+					url: All.domains.host(site.data.domain) + child.data.url,
+					domain: site.data.domain,
+					title: child.data.title
+				});
+			}
 		});
 	}));
 }
