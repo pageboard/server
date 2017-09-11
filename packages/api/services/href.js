@@ -130,6 +130,17 @@ exports.add = function(data) {
 	});
 };
 
+exports.save = function(data) {
+	var Href = All.api.Href;
+	return QueryHref(data).first().select('href._id').then(function(href) {
+		if (!href) {
+			return exports.add(data);
+		} else {
+			return Href.query().patch({title: data.title}).where('_id', href._id);
+		}
+	});
+};
+
 exports.del = function(data) {
 	if (!data.url) throw new HttpError.BadRequest("Missing url");
 	return QueryHref(data).select('href._id').first().then(function(href) {
