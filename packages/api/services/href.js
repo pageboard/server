@@ -33,9 +33,10 @@ function QueryHref(data) {
 	var q = Href.query().select(Href.jsonColumns);
 	joinSite(q, data);
 
-	if (data.type) {
-		if (Array.isArray(data.type)) q.whereIn('href.type', data.type);
-		else q.where('href.type', data.type);
+	var types = Array.isArray(data.type) ? data.type : (data.type && [data.type] || []);
+
+	if (types.length) {
+		q.whereIn('href.type', types);
 	}
 
 	if (data.url) {
