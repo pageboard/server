@@ -63,6 +63,7 @@ exports.init = function(opt) {
 	All.query = reqQuery.bind(All);
 	All.body = reqBody.bind(All);
 	All.install = install.bind(All);
+	All.domains = new Domains(All);
 
 	if (opt.global) global.All = All;
 
@@ -352,6 +353,7 @@ function viewsError(err, req, res, next) {
 }
 
 function reqBody(req, res, next) {
+	this.domains.host(req);
 	var opt = this.opt;
 	bodyParserJson(req, res, function() {
 		var obj = req.body;
@@ -362,9 +364,32 @@ function reqBody(req, res, next) {
 }
 
 function reqQuery(req, res, next) {
+	this.domains.host(req);
 	var obj = req.query;
 	// all payloads must contain domain
 	obj.domain = req.hostname;
 	next();
 }
+
+function Domains(All) {
+	this.All = All;
+	this.map = {};
+}
+
+Domains.prototype.host = function(req) {
+	var domain;
+	if (typeof req == "string") {
+		domain = req;
+		req = null;
+	} else {
+		domain = req.hostname;
+	}
+	var obj = this.map[domain];
+	if (!obj) obj = this.map[domain] = {};
+	if (!obj.host) {
+		if (req) obj.host = req.protocol + '://' + req.get('Host');
+		else throw new Error(`Unknown domain ${domain}`);
+	}
+	return obj.host;
+};
 
