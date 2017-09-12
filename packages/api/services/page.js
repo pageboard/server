@@ -85,7 +85,8 @@ exports.find = function(data) {
 	.omit(['content'])
 	.whereDomain(data.domain)
 	.where('block.type', 'page')
-	.whereJsonText('block.data:url', 'LIKE', `${data.url || ''}%`);
+	.whereJsonText('block.data:url', 'LIKE', `${data.url || ''}%`)
+	.orderBy(All.api.ref('block.data:url'));
 };
 
 exports.save = function(changes) {
