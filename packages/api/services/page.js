@@ -103,8 +103,8 @@ exports.save = function(changes) {
 	//   will only be removed later by a garbage collector if no longer used.
 
 	return All.api.DomainBlock(changes.domain).then(function(DomainBlock) {
+		var site, page;
 		return All.api.transaction(DomainBlock, function(Block) {
-			var site, page;
 			return Block.query().whereJsonText('block.data:domain', changes.domain)
 			.first().then(function(inst) {
 				if (!inst) throw new HttpError.NotFound("Site not found");
@@ -122,6 +122,20 @@ exports.save = function(changes) {
 			}).then(function() {
 				return updateChanges(site, page, changes.update);
 			});
+		}).then(function() {
+			// let's not delay response ON PURPOSE
+			var pages = changes.add.concat(changes.update).filter(function(block) {
+				return block.type == "page"; // might be obj.data.url but not sure
+			});
+			Promise.all(pages.map(function(child) {
+				return All.href.save({
+					url: All.domains.host(site.data.domain) + child.data.url,
+					domain: site.data.domain,
+					title: child.data.title
+				}).catch(function(err) {
+					console.error(err);
+				});
+			}));
 		});
 	});
 };
@@ -142,14 +156,6 @@ function updateChanges(site, page, updates) {
 			.where({
 				id: child.id
 			});
-		}).then(function() {
-			if (child.type == "page") {
-				return All.href.save({
-					url: All.domains.host(site.data.domain) + child.data.url,
-					domain: site.data.domain,
-					title: child.data.title
-				});
-			}
 		});
 	}));
 }
@@ -171,18 +177,7 @@ function addChanges(site, page, adds) {
 			return site.$relatedQuery('children').relate(alones);
 		}),
 		site.$relatedQuery('children').insert(childrenOfSite)
-	]).then(function() {
-		return Promise.all(childrenOfSite
-			.filter(row => row.type == "page")
-			.map(function(row) {
-				return All.href.save({
-					url: All.domains.host(site.data.domain) + row.data.url,
-					domain: site.data.domain,
-					title: row.data.title
-				});
-			})
-		);
-	});
+	]);
 }
 
 function removeChanges(site, page, removes) {
