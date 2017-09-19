@@ -38,6 +38,15 @@ function QueryHref(data) {
 	if (types.length) {
 		q.whereIn('href.type', types);
 	}
+	if (data.maxSize) {
+		q.where(All.api.ref('href.meta:size').castText(), '<=', data.maxSize);
+	}
+	if (data.maxWidth) {
+		q.where(All.api.ref('href.meta:width').castText(), '<=', data.maxWidth);
+	}
+	if (data.maxHeight) {
+		q.where(All.api.ref('href.meta:height').castText(), '<=', data.maxHeight);
+	}
 
 	if (data.url) {
 		q.where('url', data.url);
