@@ -39,13 +39,13 @@ function QueryHref(data) {
 		q.whereIn('href.type', types);
 	}
 	if (data.maxSize) {
-		q.where(All.api.ref('href.meta:size').castText(), '<=', data.maxSize);
+		q.where(All.api.ref('href.meta:size'), '<=', data.maxSize);
 	}
 	if (data.maxWidth) {
-		q.where(All.api.ref('href.meta:width').castText(), '<=', data.maxWidth);
+		q.where(All.api.ref('href.meta:width'), '<=', data.maxWidth);
 	}
 	if (data.maxHeight) {
-		q.where(All.api.ref('href.meta:height').castText(), '<=', data.maxHeight);
+		q.where(All.api.ref('href.meta:height'), '<=', data.maxHeight);
 	}
 
 	if (data.url) {
