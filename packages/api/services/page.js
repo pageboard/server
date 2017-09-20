@@ -104,11 +104,28 @@ exports.save = function(changes) {
 
 	return All.api.DomainBlock(changes.domain).then(function(DomainBlock) {
 		var site, page;
+		var pages = changes.add.concat(changes.update).filter(function(block) {
+			return block.type == "page"; // might be obj.data.url but not sure
+		});
 		return All.api.transaction(DomainBlock, function(Block) {
 			return Block.query().whereJsonText('block.data:domain', changes.domain)
 			.first().then(function(inst) {
 				if (!inst) throw new HttpError.NotFound("Site not found");
 				site = inst;
+			}).then(function() {
+				// this also effectively prevents removing a page and adding a new page
+				// with the same url as the one removed
+				return site.$relatedQuery('children').where('block.type', 'page').then(function(dbPages) {
+					var allUrl = {};
+					pages.forEach(function(page) {
+						if (allUrl[page.data.url]) throw new HttpError.BadRequest("Two pages with same url");
+						allUrl[page.data.url] = page.id;
+					});
+					dbPages.forEach(function(dbPage) {
+						var id = allUrl[dbPage.data.url];
+						if (id && dbPage.id != id) throw new HttpError.BadRequest("Page url already exists");
+					});
+				});
 			}).then(function() {
 				return site.$relatedQuery('children').where('block.id', changes.page)
 				.first().then(function(inst) {
@@ -123,10 +140,7 @@ exports.save = function(changes) {
 				return updateChanges(site, page, changes.update);
 			});
 		}).then(function() {
-			// let's not delay response ON PURPOSE
-			var pages = changes.add.concat(changes.update).filter(function(block) {
-				return block.type == "page"; // might be obj.data.url but not sure
-			});
+			// do not return that promise - reply now
 			Promise.all(pages.map(function(child) {
 				return All.href.save({
 					url: All.domains.host(site.data.domain) + child.data.url,
