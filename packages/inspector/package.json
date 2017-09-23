@@ -18,6 +18,6 @@
   "homepage": "https://github.com/pageboard/inspector#readme",
   "dependencies": {
     "got": "^6.7.1",
-    "url-inspector": "^2.1.3"
+    "url-inspector": "^2.1.4"
   }
 }
