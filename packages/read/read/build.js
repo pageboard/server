@@ -40,11 +40,26 @@ Page.build(function(state) {
 		modules.elements.forEach(function(mod) {
 			var list = mod[prop];
 			if (!list) return;
-			var url;
+			var url, prev;
 			for (var i=0; i < list.length; i++) {
 				url = list[i];
-				if (map[url]) continue;
-				map[url] = true;
+				prev = map[url];
+				if (prev) {
+					if (mod.priority != null) {
+						if (prev.priority == null) {
+							// move prev url on top of res
+							res = res.filter(function(lurl) {
+								return lurl != url;
+							});
+						} else if (prev.priority != mod.priority) {
+							console.warn(prop, url, "declared in element", mod.name, "with priority", mod.priority, "is already declared in element", prev.name, "with priority", prev.priority);
+							continue;
+						}
+					} else {
+						continue;
+					}
+				}
+				map[url] = mod;
 				res.push(url);
 			}
 		});
