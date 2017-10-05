@@ -32,20 +32,16 @@ function QueryBlock(data) {
 	var Block = All.Block;
 	var q = Block.query().select(Block.jsonColumns);
 	if (data.text) {
-		var text = data.text;
-		var variant = 'phrase';
-		if (text.indexOf(' ') < 0) {
-			// prefix matching when only one word is being typed
-			text += ':*';
-			variant = '';
-		}
+		var text = data.text.split(' ').filter(x => !!x).map(x => x + ':*').join(' <-> ');
 		q.from(Block.raw([
-			Block.raw(variant + "to_tsquery('unaccent', ?) AS query", [text]),
+			Block.raw("to_tsquery('unaccent', ?) AS query", [text]),
 			'block'
 		]));
 		if (data.type) q.where('type', data.type);
 		q.whereRaw('query @@ tsv');
 		q.orderByRaw('ts_rank(tsv, query) DESC');
+		q.orderBy('updated_at', 'desc');
+		if (data.paginate) q.offset(Math.max(parseInt(data.paginate) - 1 || 0, 0) * 10);
 		q.limit(10);
 	} else if (!data.id) {
 		throw new HttpError.BadRequest("Missing id");
