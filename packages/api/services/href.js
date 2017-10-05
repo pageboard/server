@@ -64,6 +64,7 @@ function QueryHref(data) {
 		q.where('href.visible', true);
 		q.orderBy('updated_at', 'desc');
 	}
+	if (data.paginate) q.offset(Math.max(parseInt(data.paginate) - 1 || 0, 0) * 10);
 	q.limit(10);
 	return q;
 }
