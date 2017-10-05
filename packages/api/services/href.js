@@ -51,15 +51,9 @@ function QueryHref(data) {
 	if (data.url) {
 		q.where('url', data.url);
 	} else if (data.text) {
-		var text = data.text;
-		var variant = 'phrase';
-		if (text.indexOf(' ') < 0) {
-			// prefix matching when only one word is being typed
-			text += ':*';
-			variant = '';
-		}
+		var text = data.text.split(' ').filter(x => !!x).map(x => x + ':*').join(' <-> ');
 		q.from(Href.raw([
-			Href.raw(variant + "to_tsquery('unaccent', ?) AS query", [text]),
+			Href.raw("to_tsquery('unaccent', ?) AS query", [text]),
 			'href'
 		]));
 		q.where('href.visible', true);
