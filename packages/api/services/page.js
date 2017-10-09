@@ -102,6 +102,10 @@ exports.save = function(changes) {
 	// - if it is removed, it is removed from the current page. The standalone block
 	//   will only be removed later by a garbage collector if no longer used.
 
+	if (!changes.add) changes.add = [];
+	if (!changes.update) changes.update = [];
+	if (!changes.remove) changes.remove = [];
+
 	return All.api.DomainBlock(changes.domain).then(function(DomainBlock) {
 		var site, page;
 		var pages = changes.add.concat(changes.update).filter(function(block) {
@@ -119,6 +123,7 @@ exports.save = function(changes) {
 					var allUrl = {};
 					pages.forEach(function(page) {
 						if (allUrl[page.data.url]) throw new HttpError.BadRequest("Two pages with same url");
+						if (!page.id) throw new HttpError.BadRequest("Page without id");
 						allUrl[page.data.url] = page.id;
 					});
 					dbPages.forEach(function(dbPage) {
@@ -127,7 +132,7 @@ exports.save = function(changes) {
 					});
 				});
 			}).then(function() {
-				return site.$relatedQuery('children').where('block.id', changes.page)
+				if (changes.page) return site.$relatedQuery('children').where('block.id', changes.page)
 				.first().then(function(inst) {
 					if (!inst) throw new HttpError.NotFound("Page not found");
 					page = inst;
@@ -142,8 +147,16 @@ exports.save = function(changes) {
 		}).then(function() {
 			// do not return that promise - reply now
 			Promise.all(pages.map(function(child) {
+				var host;
+				try {
+					host = All.domains.host(site.data.domain);
+				} catch(ex) {
+					console.warn("Unknown host for domain", site.data.domain);
+					console.info("This can happen when running from cli");
+					return;
+				}
 				return All.href.save({
-					url: All.domains.host(site.data.domain) + child.data.url,
+					url: host + child.data.url,
 					domain: site.data.domain,
 					title: child.data.title
 				}).catch(function(err) {
@@ -164,7 +177,7 @@ function updateChanges(site, page, updates) {
 		.where({
 			id: child.id
 		}).then(function() {
-			return page
+			if (page) return page
 			.$relatedQuery('children')
 			.patch(child)
 			.where({
@@ -185,18 +198,18 @@ function addChanges(site, page, adds) {
 		delete block.orphan;
 	});
 	return Promise.all([
-		page.$relatedQuery('children').insert(childrenOfPage).then(function(rows) {
+		page ? page.$relatedQuery('children').insert(childrenOfPage).then(function(rows) {
 			var alones = rows.filter(row => row.standalone).map(row => row._id);
 			if (alones.length == 0) return;
 			return site.$relatedQuery('children').relate(alones);
-		}),
+		}) : Promise.resolve(),
 		site.$relatedQuery('children').insert(childrenOfSite)
 	]);
 }
 
 function removeChanges(site, page, removes) {
 	var ids = removes.map(obj => obj.id);
-	return page.$relatedQuery('children')
+	if (page) return page.$relatedQuery('children')
 	.unrelate()
 	.whereIn('id', ids)
 	.then(function() {
@@ -212,7 +225,21 @@ function removeChanges(site, page, removes) {
 }
 
 exports.add = function(data) {
-	throw new HttpError.NotImplemented("TODO use save to add page blocks");
+	var emptyPage = {};
+	return All.api.DomainBlock(data.domain).then(function(DomainBlock) {
+		return DomainBlock.prototype.$beforeInsert.call(emptyPage).then(function() {
+			return exports.save({
+				domain: data.domain,
+				add: [{
+					id: emptyPage.id,
+					standalone: true,
+					orphan: true,
+					type: 'page',
+					data: data.data
+				}]
+			});
+		});
+	});
 };
 
 exports.del = function(data) {
