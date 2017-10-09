@@ -23,7 +23,6 @@
     "@pageboard/auth": "pageboard/auth",
     "@pageboard/cache": "pageboard/cache",
     "@pageboard/core": "pageboard/core",
-    "@pageboard/elements": "pageboard/elements",
     "@pageboard/github-webhook": "pageboard/github-webhook",
     "@pageboard/image": "pageboard/image",
     "@pageboard/inspector": "pageboard/inspector",
