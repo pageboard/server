@@ -29,8 +29,8 @@ Pageboard.elements.page = {
 	icon: '<i class="icon file outline"></i>',
 	render: function(doc, block) {
 		if (block.data.redirect && block.data.redirect != block.data.url) {
-			doc.head.appendChild(doc.dom`<meta http-equiv="Status" content="302 Found">
-	<meta http-equiv="Location" content="${block.data.redirect}">`);
+			doc.head.insertAdjacentHTML('beforeend', '<meta http-equiv="Status" content="302 Found">\
+<meta http-equiv="Location" content="${block.data.redirect}">');
 		}
 		doc.body.setAttribute('block-content', "body");
 		var title = doc.head.querySelector('title');
@@ -40,15 +40,7 @@ Pageboard.elements.page = {
 		}
 		title.textContent = block.data.title || '';
 		return doc.body;
-	},
-	stylesheets: [
-		'/.pageboard/semantic-ui/components/reset.css'
-	],
-	scripts: [
-		'/.pageboard/read/window-page.js',
-		'/.pageboard/read/dom-template-strings.js',
-		'../ui/custom-elements.min.js'
-	]
+	}
 };
 
 // extend page
@@ -61,7 +53,7 @@ Pageboard.elements.notfound = Object.assign({}, Pageboard.elements.page, {
 		}
 	},
 	render: function(doc, block) {
-		doc.head.appendChild(doc.dom`<meta http-equiv="Status" content="404 Not Found">`);
+		doc.head.insertAdjacentHTML('beforeend', '<meta http-equiv="Status" content="404 Not Found">');
 		return Pageboard.elements.page.render(doc, block);
 	}
 });
