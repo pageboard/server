@@ -113,6 +113,7 @@ exports.init = function(opt) {
 
 function initDirs(dirs) {
 	return Promise.all(Object.keys(dirs).map(function(key) {
+		debug("init dir", dirs[key]);
 		return mkdirp(dirs[key]);
 	}));
 }
@@ -182,6 +183,7 @@ function install({domain, dependencies}) {
 		elements: []
 	};
 	var pkgFile = Path.join(domainDir, 'package.json');
+	debug("create domain dir", domainDir);
 	return mkdirp(domainDir).then(function() {
 		var doInstall = true;
 		return fs.readFile(pkgFile).then(function(json) {
