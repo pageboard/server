@@ -24,5 +24,13 @@
     "passwd-user": "^2.1.0",
     "pg": "^7.3.0",
     "tosource": "^1.0.0"
+  },
+  "pageboard": {
+    "directories": [
+      "elements"
+    ],
+    "elements": [
+      "elements/"
+    ]
   }
 }
