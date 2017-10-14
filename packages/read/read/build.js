@@ -28,7 +28,11 @@ Page.build(function(state) {
 			filterModules(Pageboard.view, 'scripts').forEach(function(src) {
 				doc.head.appendChild(doc.dom`<script src="${src}"></script>`);
 			});
-
+			if (window.parent.Pageboard && window.parent.Pageboard.helpers) {
+				filterModules(Pageboard.view, 'helpers').forEach(function(src) {
+					doc.head.appendChild(doc.dom`<script src="${src}"></script>`);
+				});
+			}
 			// used to be (doc, true) but this causes some problems with custom elements
 			return Page.importDocument(doc);
 		});
