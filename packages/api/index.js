@@ -92,6 +92,12 @@ exports.install = function({elements, directories, domain}) {
 				} else {
 					delete elt.stylesheets;
 				}
+				if (elt.helpers != null) {
+					if (typeof elt.helpers == "string") elt.helpers = [elt.helpers];
+					elt.helpers = elt.helpers.map(promotePathFn);
+				} else {
+					delete elt.helpers;
+				}
 			}
 		});
 		Block.elements = eltsMap;
