@@ -22,16 +22,22 @@ Page.build(function(state) {
 			var doc = body.ownerDocument;
 			doc.documentElement.replaceChild(body, doc.body);
 
-			filterModules(Pageboard.view, 'stylesheets').forEach(function(href) {
-				doc.head.appendChild(doc.dom`<link rel="stylesheet" href="${href}" />`);
-			});
-			filterModules(Pageboard.view, 'scripts').forEach(function(src) {
-				doc.head.appendChild(doc.dom`<script src="${src}"></script>`);
-			});
+			doc.head.insertAdjacentHTML('beforeEnd', "\n" +
+				filterModules(Pageboard.view, 'stylesheets').map(function(href) {
+					return `<link rel="stylesheet" href="${href}" />`;
+				}).join("\n")
+			);
+			doc.head.insertAdjacentHTML('beforeEnd', "\n" +
+				filterModules(Pageboard.view, 'scripts').map(function(src) {
+					return `<script src="${src}"></script>`;
+				}).join("\n")
+			);
 			if (window.parent.Pageboard && window.parent.Pageboard.helpers) {
-				filterModules(Pageboard.view, 'helpers').forEach(function(src) {
-					doc.head.appendChild(doc.dom`<script src="${src}"></script>`);
-				});
+				doc.head.insertAdjacentHTML('beforeEnd',
+					filterModules(Pageboard.view, 'helpers').map(function(src) {
+						return `<script src="${src}"></script>`;
+					}).join("\n")
+				);
 			}
 			// used to be (doc, true) but this causes some problems with custom elements
 			return Page.importDocument(doc);
