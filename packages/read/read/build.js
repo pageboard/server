@@ -64,6 +64,8 @@ Page.build(function(state) {
 						} else if (prev.priority != mod.priority) {
 							console.warn(prop, url, "declared in element", mod.name, "with priority", mod.priority, "is already declared in element", prev.name, "with priority", prev.priority);
 							continue;
+						} else {
+							continue;
 						}
 					} else {
 						continue;
