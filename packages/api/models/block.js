@@ -40,6 +40,10 @@ Block.jsonSchema = {
 		standalone: { // a standalone block can have 0 or multiple parents
 			type: 'boolean',
 			default: false
+		},
+		updated_at: {
+			format: 'date-time',
+			type: 'string'
 		}
 	},
 	additionalProperties: false
