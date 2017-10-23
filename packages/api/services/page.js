@@ -20,7 +20,7 @@ function init(All) {
 		All.api.DomainBlock(req.query.domain).then(function(DomainBlock) {
 			res.type('text/javascript');
 			res.send('Pageboard.elements = ' + DomainBlock.source);
-		});
+		}).catch(next);
 	});
 	All.app.post('/.api/page', All.body, function(req, res, next) {
 		exports.add(req.body).then(function(page) {
