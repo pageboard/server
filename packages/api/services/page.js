@@ -73,7 +73,20 @@ exports.get = function(data) {
 		}).then(function(page) {
 			page.children = page.children.concat(page.standalones);
 			delete page.standalones;
-			return page;
+			var urlParts = data.url.split('/');
+			var urlParents = ['/'];
+			for (var i=1; i < urlParts.length - 1; i++) {
+				urlParents.push(urlParts.slice(0, i + 1).join('/'));
+			}
+			return DomainBlock.query().select([
+				All.api.ref('block.data:url').as('url'),
+				All.api.ref('block.data:title').as('title')
+			])
+			.where('block.type', 'page')
+			.whereJsonText('block.data:url', 'IN', urlParents).then(function(parents) {
+				page.ancestors = parents;
+				return page;
+			});
 		});
 	});
 };
