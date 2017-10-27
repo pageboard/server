@@ -22,5 +22,9 @@ Page.route(function(state) {
 		doc.head.appendChild(doc.createTextNode('\n'));
 		doc.head.appendChild(node);
 	});
+	return new Promise(function(resolve) {
+		// "jump" out of window load event for pageboard/write
+		setTimeout(resolve);
+	});
 });
 
