@@ -17,8 +17,7 @@ Page.build(function(state) {
 		Pageboard.view = new Pagecut.Viewer({
 			elements: Pageboard.elements
 		});
-		var blocks = Pageboard.view.blocks.initial = {};
-		return Pageboard.view.from(page, blocks).then(function(body) {
+		return Pageboard.view.from(page).then(function(body) {
 			if (body.nodeName != "BODY") throw new Error("Page renderer should fill document and return body");
 			var doc = body.ownerDocument;
 			doc.documentElement.replaceChild(body, doc.body);
