@@ -39,20 +39,20 @@ function init(All) {
 	});
 }
 
-function QueryPage(DomainBlock) {
-	return DomainBlock.query()
-	.select(DomainBlock.jsonColumns)
-	.whereDomain(DomainBlock.domain)
+function QueryPage(Block) {
+	return Block.query()
+	.select(Block.jsonColumns)
+	.whereDomain(Block.domain)
 	.first()
 	.eager(`[
 		children(childrenFilter),
 		children(standalonesFilter) as standalones .children
 	]`, {
 		childrenFilter: function(query) {
-			return query.select(DomainBlock.jsonColumns).where('block.standalone', false);
+			return query.select(Block.jsonColumns).where('block.standalone', false);
 		},
 		standalonesFilter: function(query) {
-			return query.select(DomainBlock.jsonColumns).where('block.standalone', true);
+			return query.select(Block.jsonColumns).where('block.standalone', true);
 		}
 	});
 }
@@ -61,12 +61,12 @@ exports.get = function(data) {
 	if (!data.domain) throw new HttpError.BadRequest("Missing domain");
 	if (!data.url) throw new HttpError.BadRequest("Missing url");
 
-	return All.api.DomainBlock(data.domain).then(function(DomainBlock) {
-		return QueryPage(DomainBlock).where('block.type', 'page')
+	return All.api.DomainBlock(data.domain).then(function(Block) {
+		return QueryPage(Block).where('block.type', 'page')
 		.whereJsonText("block.data:url", data.url)
 		.then(function(page) {
 			if (!page) {
-				return QueryPage(DomainBlock).where('block.type', 'notfound');
+				return QueryPage(Block).where('block.type', 'notfound');
 			} else {
 				return page;
 			}
