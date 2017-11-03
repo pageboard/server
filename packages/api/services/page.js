@@ -50,7 +50,7 @@ function QueryPage(Block) {
 	.eager(`[
 		children(childrenFilter),
 		children(standalonesFilter) as standalones .children
-	]`, {
+	]`, { // i don't understand the above relation expression "as standalones .children"
 		childrenFilter: function(query) {
 			return query.select(Block.jsonColumns).where('block.standalone', false);
 		},
