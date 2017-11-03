@@ -128,24 +128,21 @@ exports.find = function(data) {
 };
 
 exports.save = function(changes) {
-	// changes.remove, add, update are lists of blocks
-	// changes.page is the page id
-	// normal blocks belongs to the page
-	// standalone blocks follow these rules:
-	// - if it is added, it is added to the site, and to the current page as well
-	//   (it is not possible to add a standalone block without adding it to the current page)
-	// - if it is updated, it is already added to the current page
-	//   (a block cannot become standalone, only added blocks can be standalone, so when
-	//    the client wants to change a block to become standalone, it is actually a new copy).
-	// - if it is removed, it is removed from the current page. The standalone block
-	//   will only be removed later by a garbage collector if no longer used.
-
-	if (!changes.add) changes.add = [];
-	if (!changes.update) changes.update = [];
-	if (!changes.remove) changes.remove = [];
+	changes = Object.assign({
+		// blocks removed from their standalone parent (grouped by parent)
+		unrelate: {},
+		// non-standalone blocks unrelated from site and deleted
+		remove: [],
+		// any block added and related to site
+		add: [],
+		// block does not change parent
+		update: [],
+		// block add to a new standalone parent (grouped by parent)
+		relate: {}
+	}, changes);
 
 	return All.api.DomainBlock(changes.domain).then(function(DomainBlock) {
-		var site, page;
+		var site;
 		var pages = changes.add.concat(changes.update).filter(function(block) {
 			return block.type == "page"; // might be obj.data.url but not sure
 		});
@@ -157,30 +154,32 @@ exports.save = function(changes) {
 			}).then(function() {
 				// this also effectively prevents removing a page and adding a new page
 				// with the same url as the one removed
-				return site.$relatedQuery('children').where('block.type', 'page').then(function(dbPages) {
-					var allUrl = {};
+				var allUrl = {};
+				return site.$relatedQuery('children')
+				.select('block.id', ref('block.data:url').as('url'))
+				.where('block.type', 'page').then(function(dbPages) {
 					pages.forEach(function(page) {
 						if (allUrl[page.data.url]) throw new HttpError.BadRequest("Two pages with same url");
 						if (!page.id) throw new HttpError.BadRequest("Page without id");
 						allUrl[page.data.url] = page.id;
 					});
 					dbPages.forEach(function(dbPage) {
-						var id = allUrl[dbPage.data.url];
-						if (id && dbPage.id != id) throw new HttpError.BadRequest("Page url already exists");
+						var id = allUrl[dbPage.url];
+						if (id != null && dbPage.id != id) {
+							throw new HttpError.BadRequest("Page url already exists");
+						}
 					});
 				});
 			}).then(function() {
-				if (changes.page) return site.$relatedQuery('children').where('block.id', changes.page)
-				.first().then(function(inst) {
-					if (!inst) throw new HttpError.NotFound("Page not found");
-					page = inst;
+				return applyUnrelate(site, changes.unrelate).then(function() {
+					return applyRemove(site, changes.remove);
+				}).then(function() {
+					return applyAdd(site, changes.add);
+				}).then(function() {
+					return applyUpdate(site, changes.update);
+				}).then(function() {
+					return applyRelate(site, changes.relate);
 				});
-			}).then(function() {
-				return removeChanges(site, page, changes.remove);
-			}).then(function() {
-				return addChanges(site, page, changes.add);
-			}).then(function() {
-				return updateChanges(site, page, changes.update);
 			});
 		}).then(function() {
 			// do not return that promise - reply now
@@ -205,61 +204,69 @@ exports.save = function(changes) {
 	});
 };
 
-function updateChanges(site, page, updates) {
-	// here we just try to patch and let the db decide what was actually possible
-	return Promise.all(updates.map(function(child) {
-		delete child.orphan;
-		return site
-		.$relatedQuery('children')
-		.patch(child)
-		.where({
-			id: child.id
-		}).then(function() {
-			if (page) return page
-			.$relatedQuery('children')
-			.patch(child)
-			.where({
-				id: child.id
-			});
+function applyUnrelate(site, obj) {
+	return Promise.all(Object.keys(obj).map(function(parentId) {
+		return site.$relatedQuery('children').where('block.id', parentId).first().then(function(parent) {
+			return parent.$relatedQuery('children').unrelate().whereIn('block.id', obj[parentId]);
 		});
 	}));
 }
 
-function addChanges(site, page, adds) {
-	// insert page children then relate standalone blocks to site
-	// insert site children (orphans)
-	var childrenOfPage = [];
-	var childrenOfSite = [];
-	adds.forEach(function(block) {
-		if (block.orphan) childrenOfSite.push(block);
-		else childrenOfPage.push(block);
-		delete block.orphan;
-	});
-	return Promise.all([
-		page ? page.$relatedQuery('children').insert(childrenOfPage).then(function(rows) {
-			var alones = rows.filter(row => row.standalone).map(row => row._id);
-			if (alones.length == 0) return;
-			return site.$relatedQuery('children').relate(alones);
-		}) : Promise.resolve(),
-		site.$relatedQuery('children').insert(childrenOfSite)
-	]);
+function applyRemove(site, list) {
+	if (!list.length) return;
+	return site.$relatedQuery('children').delete()
+	.whereIn('block.id', list).whereNot('standalone', true);
 }
 
-function removeChanges(site, page, removes) {
-	var ids = removes.map(obj => obj.id);
-	if (page) return page.$relatedQuery('children')
-	.unrelate()
-	.whereIn('id', ids)
-	.then(function() {
-		// now remove all blocks that are not standalone blocks, trusting db only
-		return page
-		.$relatedQuery('children')
-		.delete()
-		.whereIn('id', ids)
-		.where('standalone', false);
+function applyAdd(site, list) {
+	if (!list.length) return;
+	// this relates site to inserted children
+	return site.$relatedQuery('children').insert(list);
+}
+
+function applyUpdate(site, list) {
+	return Promise.all(list.map(function(block) {
+		if (block.type == "page") {
+			return updatePage(site, block);
+		} else {
+			// simpler path
+			return site.$relatedQuery('children')
+			.where('block.id', block.id).patch(block).then(function(count) {
+				if (count == 0) throw new Error(`Block not found for update ${block.id}`);
+			});
+		}
+	}));
+}
+
+function updatePage(site, page) {
+	return site.$relatedQuery('children').where('block.id', page.id).where('block.type', 'page')
+	.select(ref('block.data:url').as('url')).first().then(function(dbPage) {
+		var oldUrl = dbPage.url;
+		var newUrl = page.data.url;
+		if (oldUrl == newUrl) return dbPage;
+		return site.$relatedQuery('children').whereNot('block.type', 'page')
+		.where(ref('block.data:url'), 'LIKE', `${oldUrl}%`)
+		.update({
+			'block.data:url': raw(`overlay(block.data->>'url' placing ? from 1 to ${oldUrl.length})`, newUrl)
+		}).then(function() { return dbPage; });
+	}).then(function(dbPage) {
+		return site.$relatedQuery('children').where('block.id', page.id).where('block.type', 'page').patch(page);
+	}).catch(function(err) {
+		console.error("cannot updatePage", err);
+		throw err;
 	});
-	// removal of orphans or of standalones that have become orphans is done
-	// by some garbage collector
+}
+
+function applyRelate(site, obj) {
+	return Promise.all(Object.keys(obj).map(function(parentId) {
+		return site.$relatedQuery('children').where('block.id', parentId)
+		.select('block._id').first().then(function(parent) {
+			return parent.$relatedQuery('children').select('block._id')
+			.whereIn('block.id', obj[parentId]).then(function(ids) {
+				return parent.$relatedQuery('children').relate(ids);
+			});
+		});
+	}));
 }
 
 exports.add = function(data) {
@@ -271,7 +278,6 @@ exports.add = function(data) {
 				add: [{
 					id: emptyPage.id,
 					standalone: true,
-					orphan: true,
 					type: 'page',
 					data: data.data
 				}]
