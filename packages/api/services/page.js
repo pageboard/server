@@ -261,7 +261,7 @@ function applyRelate(site, obj) {
 	return Promise.all(Object.keys(obj).map(function(parentId) {
 		return site.$relatedQuery('children').where('block.id', parentId)
 		.select('block._id').first().then(function(parent) {
-			return parent.$relatedQuery('children').select('block._id')
+			return site.$relatedQuery('children').select('block._id')
 			.whereIn('block.id', obj[parentId]).then(function(ids) {
 				return parent.$relatedQuery('children').relate(ids);
 			});
