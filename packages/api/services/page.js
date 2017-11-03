@@ -76,23 +76,45 @@ exports.get = function(data) {
 		}).then(function(page) {
 			page.children = page.children.concat(page.standalones);
 			delete page.standalones;
-			var urlParts = data.url.split('/');
-			var urlParents = ['/'];
-			for (var i=1; i < urlParts.length - 1; i++) {
-				urlParents.push(urlParts.slice(0, i + 1).join('/'));
-			}
-			return DomainBlock.query().select([
-				All.api.ref('block.data:url').as('url'),
-				All.api.ref('block.data:title').as('title')
-			])
-			.where('block.type', 'page')
-			.whereJsonText('block.data:url', 'IN', urlParents).then(function(parents) {
-				page.ancestors = parents;
+			var pageUrl = page.data.url;
+			return Promise.all([
+				getParents(Block, pageUrl),
+				getNavigation(Block, pageUrl),
+				getDirectory(Block, pageUrl)
+			]).then(function(list) {
+				page.links = {};
+				page.links.up = list[0];
+				Object.assign(page.links, list[1])
+				page.links.down = list[2];
 				return page;
 			});
 		});
 	});
 };
+
+function getParents(Block, url) {
+	var urlParts = url.split('/');
+	var urlParents = ['/'];
+	for (var i=1; i < urlParts.length - 1; i++) {
+		urlParents.push(urlParts.slice(0, i + 1).join('/'));
+	}
+	return Block.query().whereDomain(Block.domain).select([
+		ref('block.data:url').as('url'),
+		ref('block.data:title').as('title')
+	])
+	.where('block.type', 'page')
+	.whereJsonText('block.data:url', 'IN', urlParents);
+}
+
+function getNavigation(Block, url) {
+	// return prev, next, last, first by url
+	return {};
+}
+
+function getDirectory(Block, url) {
+	// return all url which have this url as parent
+	return [];
+}
 
 exports.find = function(data) {
 	var Block = All.api.Block;
