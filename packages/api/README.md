@@ -15,6 +15,11 @@ Configuration
   connection.host  
   connection.database  
 
+Commands
+--------
+
+* pageboard api.migrate
+
 
 Services
 --------
