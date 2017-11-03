@@ -1,3 +1,6 @@
+var ref = require('objection').ref;
+var raw = require('objection').raw;
+
 exports = module.exports = function(opt) {
 	return {
 		name: 'page',
@@ -99,7 +102,7 @@ exports.find = function(data) {
 	.whereDomain(data.domain)
 	.where('block.type', 'page')
 	.whereJsonText('block.data:url', 'LIKE', `${data.url || ''}%`)
-	.orderBy(All.api.ref('block.data:url'));
+	.orderBy(ref('block.data:url'));
 };
 
 exports.save = function(changes) {
