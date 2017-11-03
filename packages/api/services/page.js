@@ -79,13 +79,22 @@ exports.get = function(data) {
 			var pageUrl = page.data.url;
 			return Promise.all([
 				getParents(Block, pageUrl),
-				getNavigation(Block, pageUrl),
+				getDirectory(Block, pageUrl == "/" ? pageUrl : pageUrl + "/"),
 				getDirectory(Block, pageUrl)
 			]).then(function(list) {
 				page.links = {};
 				page.links.up = list[0];
-				Object.assign(page.links, list[1])
-				page.links.down = list[2];
+				page.links.down = list[1];
+				var siblings = list[2];
+				var position = siblings.findIndex(function(item) {
+					return item.url == pageUrl;
+				});
+				if (position > 0) page.links.prev = siblings[position - 1];
+				if (position < siblings.length - 1) page.links.next = siblings[position + 1];
+				if (siblings.length > 1) {
+					page.links.first = siblings[0];
+					page.links.last = siblings[siblings.length - 1];
+				}
 				return page;
 			});
 		});
@@ -106,14 +115,15 @@ function getParents(Block, url) {
 	.whereJsonText('block.data:url', 'IN', urlParents);
 }
 
-function getNavigation(Block, url) {
-	// return prev, next, last, first by url
-	return {};
-}
-
 function getDirectory(Block, url) {
 	// return all url which have this url as parent
-	return [];
+	var parentUrl = url.split('/').slice(0, -1).join('/') || '/';
+	return Block.query().whereDomain(Block.domain).select([
+		ref('block.data:url').as('url'),
+		ref('block.data:title').as('title')
+	])
+	.where('block.type', 'page')
+	.whereJsonText('block.data:url', '~', `^${parentUrl}/[^/]+$`);
 }
 
 exports.find = function(data) {
