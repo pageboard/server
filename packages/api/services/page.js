@@ -47,10 +47,12 @@ function QueryPage(Block) {
 	.select(Block.jsonColumns)
 	.whereDomain(Block.domain)
 	.first()
+	// eager load children (in which there are standalones)
+	// and children of standalones
 	.eager(`[
 		children(childrenFilter),
-		children(standalonesFilter) as standalones .children
-	]`, { // i don't understand the above relation expression "as standalones .children"
+		children(standalonesFilter) as standalones .children(childrenFilter)
+	]`, {
 		childrenFilter: function(query) {
 			return query.select(Block.jsonColumns).where('block.standalone', false);
 		},
