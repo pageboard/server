@@ -125,7 +125,9 @@ function getDirectory(Block, url) {
 		ref('block.data:title').as('title')
 	])
 	.where('block.type', 'page')
-	.whereJsonText('block.data:url', '~', `^${parentUrl}/[^/]+$`);
+	.whereJsonText('block.data:url', '~', `^${parentUrl}/[^/]+$`)
+	.orderBy(ref('block.data:index'))
+	.orderBy(ref('block.data:url'));
 }
 
 exports.find = function(data) {
