@@ -1,10 +1,13 @@
 exports.up = function(knex) {
 	// get sites
 	var numFixes = 0;
-	return knex.schema.raw("SELECT _id FROM block WHERE type='site'")
-	.then(function(result) {
-		return Promise.all(result.rows.map(processSite)).then(function() {
-			console.info("Added", numFixes, "relations to sites");
+	return knex.schema.raw("UPDATE block SET standalone = TRUE WHERE type = 'page'")
+	.then(function() {
+		return knex.schema.raw("SELECT _id FROM block WHERE type='site'")
+		.then(function(result) {
+			return Promise.all(result.rows.map(processSite)).then(function() {
+				console.info("Added", numFixes, "relations to sites");
+			});
 		});
 	});
 	function processSite(site) {
