@@ -78,7 +78,7 @@ exports.get = function(data) {
 		}).then(function(page) {
 			page.children = page.children.concat(page.standalones);
 			delete page.standalones;
-			var pageUrl = page.data.url;
+			var pageUrl = page.data.url || data.url;
 			return Promise.all([
 				getParents(Block, pageUrl),
 				getDirectory(Block, pageUrl == "/" ? pageUrl : pageUrl + "/"),
