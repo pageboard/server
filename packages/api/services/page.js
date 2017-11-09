@@ -81,13 +81,11 @@ exports.get = function(data) {
 			var pageUrl = page.data.url || data.url;
 			return Promise.all([
 				getParents(Block, pageUrl),
-				getDirectory(Block, pageUrl == "/" ? pageUrl : pageUrl + "/"),
 				getDirectory(Block, pageUrl)
 			]).then(function(list) {
 				page.links = {};
 				page.links.up = list[0];
-				page.links.down = list[1];
-				var siblings = list[2];
+				var siblings = list[1];
 				var position = siblings.findIndex(function(item) {
 					return item.url == pageUrl;
 				});
