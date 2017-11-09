@@ -81,7 +81,9 @@ exports.get = function(data) {
 			var pageUrl = page.data.url || data.url;
 			return Promise.all([
 				getParents(Block, pageUrl),
-				getDirectory(Block, pageUrl)
+				findPages(Block, {
+					parent: pageUrl.split('/').slice(0, -1).join('/') || '/'
+				})
 			]).then(function(list) {
 				page.links = {};
 				page.links.up = list[0];
@@ -115,28 +117,26 @@ function getParents(Block, url) {
 	.whereJsonText('block.data:url', 'IN', urlParents);
 }
 
-function getDirectory(Block, url) {
-	// return all url which have this url as parent
-	var parentUrl = url.split('/').slice(0, -1).join('/') || '/';
-	return Block.query().whereDomain(Block.domain).select([
-		ref('block.data:url').as('url'),
-		ref('block.data:title').as('title')
-	])
-	.where('block.type', 'page')
-	.whereJsonText('block.data:url', '~', `^${parentUrl}/[^/]+$`)
-	.orderBy(ref('block.data:index'))
-	.orderBy(ref('block.data:url'));
+function findPages(Block, data) {
+	var q = Block.query()
+	.select(Block.jsonColumns)
+	.omit(['content'])
+	.whereDomain(data.domain || Block.domain)
+	.where('block.type', 'page');
+	if (data.parent) {
+		q.whereJsonText('block.data:url', '~', `^${data.parent}/[^/]+$`)
+		.orderBy(ref('block.data:index'));
+	} else if (data.url) {
+		q.whereJsonText('block.data:url', 'LIKE', `${data.url || ''}%`);
+	} else {
+		// just return all pages for the sitemap
+	}
+	return q.orderBy(ref('block.data:url'));
 }
 
 exports.find = function(data) {
-	var Block = All.api.Block;
-	return Block.query()
-	.select(Block.jsonColumns)
-	.omit(['content'])
-	.whereDomain(data.domain)
-	.where('block.type', 'page')
-	.whereJsonText('block.data:url', 'LIKE', `${data.url || ''}%`)
-	.orderBy(ref('block.data:url'));
+	if (!data.domain) throw new HttpError.BadRequest("Missing domain");
+	return findPages(All.api.Block, data);
 };
 
 exports.save = function(changes) {
