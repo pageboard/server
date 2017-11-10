@@ -97,33 +97,37 @@ Block.extendSchema = function extendSchema(name, schemas) {
 	delete schema.properties;
 	delete schema.additionalProperties;
 
-	schema.switch = types.map(function(type) {
+	schema.select = {
+		"$data": '0/type'
+	};
+	schema.selectCases = {};
+
+	types.forEach(function(type) {
 		var element = Object.assign({
 			properties: {},
 			contents: {}
 		}, schemas[type]);
-		return {
-			if: {
-				properties: {
-					type: {
-						constant: type
-					}
-				}
-			},
-			then: {
-				properties: Object.assign({}, blockProps, {
-					data: Object.assign({}, blockProps.data, {
-						properties: element.properties,
-						additionalProperties: false,
-						required: element.required || []
-					}),
-					content: Object.assign({}, blockProps.content, {
-						properties: stringProperties(element.contents || {}),
-						additionalProperties: false
-					})
-				}),
-				additionalProperties: false
+		var standProp = element.standalone ? {
+			standalone: {
+				type: {
+					constant: true
+				},
+				default: true
 			}
+		} : {};
+		schema.selectCases[type] = {
+			properties: Object.assign({}, blockProps, standProp, {
+				data: Object.assign({}, blockProps.data, {
+					properties: element.properties,
+					additionalProperties: false,
+					required: element.required || []
+				}),
+				content: Object.assign({}, blockProps.content, {
+					properties: stringProperties(element.contents || {}),
+					additionalProperties: false
+				})
+			}),
+			additionalProperties: false
 		};
 	});
 	var DomainBlock = class extends Block {};

@@ -1,4 +1,6 @@
 var objection = require('objection');
+var AjvKeywords = require('ajv-keywords');
+
 var knex = require('knex');
 
 var Path = require('path');
@@ -38,6 +40,20 @@ exports = module.exports = function(opt) {
 function init(All) {
 	var opt = All.opt;
 	var knexInst = knex(knexConfig(opt));
+	objection.Model.createValidator = function() {
+		return new objection.AjvValidator({
+			onCreateAjv: function(ajv) {
+				AjvKeywords(ajv, 'select');
+			},
+			options: {
+				$data: true,
+				allErrors: true,
+				validateSchema: false,
+				ownProperties: true,
+				v5: true
+			}
+		});
+	};
 	objection.Model.knex(knexInst);
 
 	var models = {};
