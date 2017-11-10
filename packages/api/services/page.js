@@ -83,7 +83,10 @@ exports.get = function(data) {
 				getParents(Block, pageUrl),
 				findPages(Block, {
 					parent: pageUrl.split('/').slice(0, -1).join('/') || '/'
-				})
+				}).select([
+					ref('block.data:url').as('url'),
+					ref('block.data:title').as('title')
+				]).omit(Block.columns)
 			]).then(function(list) {
 				page.links = {};
 				page.links.up = list[0];
@@ -114,7 +117,8 @@ function getParents(Block, url) {
 		ref('block.data:title').as('title')
 	])
 	.where('block.type', 'page')
-	.whereJsonText('block.data:url', 'IN', urlParents);
+	.whereJsonText('block.data:url', 'IN', urlParents)
+	.orderByRaw("length(block.data->>'url') DESC");
 }
 
 function findPages(Block, data) {
