@@ -289,7 +289,6 @@ exports.add = function(data) {
 				domain: data.domain,
 				add: [{
 					id: emptyPage.id,
-					standalone: true,
 					type: 'page',
 					data: data.data
 				}]
