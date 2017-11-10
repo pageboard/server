@@ -64,7 +64,7 @@ exports.install = function({elements, directories, domain}) {
 	return Promise.all(elements.map(function(path) {
 		return importElements(path, eltsMap);
 	})).then(function() {
-		var Block = exports.models.Block.extendSchema(eltsMap);
+		var Block = exports.models.Block.extendSchema(domain, eltsMap);
 
 		Object.keys(eltsMap).forEach(function(name) {
 			var elt = eltsMap[name];

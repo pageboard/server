@@ -88,10 +88,11 @@ Block.relationMappings = {
 	}
 };
 
-Block.extendSchema = function extendSchema(schemas) {
+Block.extendSchema = function extendSchema(name, schemas) {
 	var types = Object.keys(schemas);
 	if (types.length === 0) return Block;
 	var schema = Object.assign({}, Block.jsonSchema);
+	schema.id += `/${name}`;
 	var blockProps = schema.properties;
 	delete schema.properties;
 	delete schema.additionalProperties;
