@@ -129,7 +129,8 @@ function promotePath(dir, path) {
 function importElements(path, eltsMap) {
 	return fs.readFile(path).then(function(buf) {
 		var script = new vm.Script(buf, {filename: path});
-		var sandbox = {Pageboard: {elements: {}}};
+		var copyMap = Object.assign({}, eltsMap);
+		var sandbox = {Pageboard: {elements: copyMap}};
 		try {
 			script.runInNewContext(sandbox, {filename: path, timeout: 1000});
 		} catch(ex) {
@@ -138,6 +139,7 @@ function importElements(path, eltsMap) {
 		}
 		var elts = sandbox.Pageboard.elements;
 		for (var name in elts) {
+			if (eltsMap[name]) continue;
 			elts[name].path = path;
 			eltsMap[name] = elts[name];
 		}
