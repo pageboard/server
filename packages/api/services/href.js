@@ -30,7 +30,7 @@ function init(All) {
 function QueryHref(data) {
 	if (!data.domain) throw new HttpError.BadRequest("Missing domain");
 	var Href = All.api.Href;
-	var q = Href.query().select(Href.jsonColumns);
+	var q = Href.query().select(Href.tableColumns);
 	joinSite(q, data);
 
 	var types = Array.isArray(data.type) ? data.type : (data.type && [data.type] || []);
@@ -64,6 +64,7 @@ function QueryHref(data) {
 		q.where('href.visible', true);
 		q.orderBy('updated_at', 'desc');
 	}
+	// TODO use objection pagination
 	if (data.paginate) q.offset(Math.max(parseInt(data.paginate) - 1 || 0, 0) * 10);
 	q.limit(10);
 	return q;
@@ -125,10 +126,10 @@ exports.add = function(data) {
 					_parent_id: Block.query().select('_id')
 						.where('type', 'site')
 						.where(ref('data:domain').castText(), data.domain)
-				}, result)).returning(Href.jsonColumns);
+				}, result)).returning(Href.tableColumns);
 			} else {
 				return Href.query().patch(result).where('_id', href._id)
-					.first().returning(Href.jsonColumns);
+					.first().returning(Href.tableColumns);
 			}
 		});
 	});

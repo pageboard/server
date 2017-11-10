@@ -30,7 +30,7 @@ function init(All) {
 
 function QueryBlock(data) {
 	var Block = All.Block;
-	var q = Block.query().select(Block.jsonColumns);
+	var q = Block.query().select(Block.tableColumns);
 	if (data.text) {
 		var text = data.text.split(' ').filter(x => !!x).map(x => x + ':*').join(' <-> ');
 		q.from(Block.raw([
@@ -62,7 +62,7 @@ exports.add = function(data) {
 		data.parents = [{
 			'#dbRef': parent._id
 		}];
-		return All.Block.query().insertGraph(data).returning(All.Block.jsonColumns)
+		return All.Block.query().insertGraph(data).returning(All.Block.tableColumns)
 	});
 };
 

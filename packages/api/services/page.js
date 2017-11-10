@@ -44,7 +44,7 @@ function init(All) {
 
 function QueryPage(Block) {
 	return Block.query()
-	.select(Block.jsonColumns)
+	.select(Block.tableColumns)
 	.whereDomain(Block.domain)
 	.first()
 	// eager load children (in which there are standalones)
@@ -54,10 +54,10 @@ function QueryPage(Block) {
 		children(standalonesFilter) as standalones .children(childrenFilter)
 	]`, {
 		childrenFilter: function(query) {
-			return query.select(Block.jsonColumns).where('block.standalone', false);
+			return query.select(Block.tableColumns).where('block.standalone', false);
 		},
 		standalonesFilter: function(query) {
-			return query.select(Block.jsonColumns).where('block.standalone', true);
+			return query.select(Block.tableColumns).where('block.standalone', true);
 		}
 	});
 }
@@ -119,7 +119,7 @@ function getParents(Block, url) {
 
 function findPages(Block, data) {
 	var q = Block.query()
-	.select(Block.jsonColumns)
+	.select(Block.tableColumns)
 	.omit(['content'])
 	.whereDomain(data.domain || Block.domain)
 	.where('block.type', 'page');
