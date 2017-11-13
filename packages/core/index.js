@@ -102,9 +102,9 @@ exports.init = function(opt) {
 		app.use(servicesError);
 		return initPlugins.call(All, pluginList, 'view');
 	}).then(function() {
-		return All.statics.install('pageboard', All.opt, All.opt.statics);
+		return All.statics.install(null, All.opt, All.opt.statics);
 	}).then(function() {
-		return All.api.install('pageboard', All.opt, All.opt.api);
+		return All.api.install(null, All.opt, All.opt.api);
 	}).then(function() {
 		app.use(viewsError);
 		return All;
