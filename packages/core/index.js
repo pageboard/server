@@ -102,9 +102,9 @@ exports.init = function(opt) {
 		app.use(servicesError);
 		return initPlugins.call(All, pluginList, 'view');
 	}).then(function() {
-		return All.statics.install({mounts: All.opt.directories, domain: 'pageboard'});
+		return All.statics.install('pageboard', All.opt, All.opt.statics);
 	}).then(function() {
-		return All.api.install({elements: All.opt.elements, directories: All.opt.directories});
+		return All.api.install('pageboard', All.opt, All.opt.api);
 	}).then(function() {
 		app.use(viewsError);
 		return All;
@@ -139,7 +139,7 @@ function initPlugins(plugins, type) {
 		p = p.then(function() {
 			var plugin = obj.plugin = Object.assign({}, obj.plugin); // make a copy
 			Object.keys(plugin).forEach(function(key) {
-				if (to[key] !== undefined) throw new Error(`module conflict ${obj.name}.${key}`);
+				if (to[key] !== undefined) throw new Error(`module conflict ${obj.name || 'All'}.${key}`);
 				to[key] = plugin[key];
 				delete plugin[key]; // we made a copy before
 			});
@@ -206,9 +206,11 @@ function install({domain, dependencies}) {
 			return initConfig(Path.join(domainDir, 'node_modules', module), domain, module, config);
 		}));
 	}).then(function() {
-		return All.statics.install({mounts: config.directories, domain: domain});
+		return All.statics.install(domain, config, All.opt.statics);
 	}).then(function() {
-		return All.api.install({elements: config.elements, directories: config.directories, domain: domain});
+		return All.api.install(domain, config, All.opt.api);
+	}).then(function() {
+		if (All.ssl) return All.ssl.install(domain, config, All.opt.ssl);
 	}).then(function() {
 		return config;
 	});
