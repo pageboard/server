@@ -74,8 +74,8 @@ function init(All) {
 	exports.blocksByDomain = {};
 }
 
-exports.install = function({elements, directories, domain}) {
-	debug("installing", domain || "pageboard", elements, directories);
+exports.install = function(domain, {elements, directories}) {
+	debug("installing", domain, elements, directories);
 	var eltsMap = {};
 	return Promise.all(elements.map(function(path) {
 		return importElements(path, eltsMap);
