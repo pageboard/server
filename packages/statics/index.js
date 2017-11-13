@@ -75,9 +75,9 @@ function init(All) {
 	});
 }
 
-exports.install = function({mounts, domain}) {
-	return rimraf(Path.join(All.opt.statics.runtime, domain)).then(function() {
-		return Promise.all(mounts.map(function(mount) {
+exports.install = function(domain, {directories}, opt) {
+	return rimraf(Path.join(opt.runtime, domain || 'pageboard')).then(function() {
+		return Promise.all(directories.map(function(mount) {
 			return mountPath(mount.from, mount.to);
 		}));
 	});
