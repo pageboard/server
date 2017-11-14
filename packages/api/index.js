@@ -72,6 +72,13 @@ function init(All) {
 	exports.migrate = migrate.bind(null, knexInst, opt.migrations);
 	exports.seed = seed.bind(null, knexInst, opt.seeds);
 	exports.blocksByDomain = {};
+
+	// used by proxies to quickly know if this domain is known
+	All.app.get('/.api', All.query, function(req, res, next) {
+		All.api.DomainBlock(req.query.domain).then(function(DomainBlock) {
+			res.type('text').sendStatus(200);
+		}).catch(next);
+	});
 }
 
 exports.install = function(domain, {elements, directories}) {
