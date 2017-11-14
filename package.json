@@ -30,7 +30,6 @@
     "@pageboard/read": "github:pageboard/read",
     "@pageboard/statics": "github:pageboard/statics",
     "@pageboard/upload": "github:pageboard/upload",
-    "@pageboard/write": "github:pageboard/write",
-    "@pageboard/ssl": "github:pageboard/ssl"
+    "@pageboard/write": "github:pageboard/write"
   }
 }
