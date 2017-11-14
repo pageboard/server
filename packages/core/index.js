@@ -210,8 +210,6 @@ function install({domain, dependencies}) {
 	}).then(function() {
 		return All.api.install(domain, config, All.opt.api);
 	}).then(function() {
-		if (All.ssl) return All.ssl.install(domain, config, All.opt.ssl);
-	}).then(function() {
 		return config;
 	});
 };
