@@ -261,7 +261,10 @@ function updatePage(site, page) {
 		var newUrl = page.data.url;
 		if (oldUrl == newUrl) return dbPage;
 		return site.$relatedQuery('children').whereNot('block.type', 'page')
-		.where(ref('block.data:url').castText(), 'LIKE', `${oldUrl}%`)
+		.where(function() {
+			this.where(ref('block.data:url').castText(), 'LIKE', `${oldUrl}/%`)
+			.orWhere(ref('block.data:url').castText(), oldUrl);
+		})
 		.patch({
 			'block.data:url': raw(`overlay(block.data->>'url' placing ? from 1 for ${oldUrl.length})`, newUrl)
 		}).then(function() { return dbPage; });
