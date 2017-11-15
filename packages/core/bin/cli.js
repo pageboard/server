@@ -4,7 +4,9 @@ var http = require('http');
 
 var pageboard = require('../');
 
-var config = pageboard.config();
+var pkgOpt = {};
+if (process.env.APPNAME) pkgOpt.name = process.env.APPNAME;
+var config = pageboard.config(pkgOpt);
 
 console.info(`${config.name} ${config.version}`);
 
