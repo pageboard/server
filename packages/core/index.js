@@ -290,6 +290,14 @@ function initConfig(moduleDir, domain, module, config) {
 			var absPath = Path.resolve(moduleDir, path);
 			return fs.stat(absPath).then(function(stat) {
 				if (stat.isDirectory()) return fs.readdir(absPath).then(function(paths) {
+					// make sure files are ordered by basename
+					paths.sort(function(a, b) {
+						a = Path.basename(a);
+						b = Path.basename(b);
+						if (a == b) return 0;
+						else if (a > b) return 1;
+						else if (a < b) return -1;
+					});
 					return paths.map(function(path) {
 						return Path.join(absPath, path);
 					});
