@@ -70,10 +70,10 @@ CacheState.prototype.open = function() {
 
 CacheState.prototype.install = function(domain, opt, All) {
 	if (!domain) return;
-	var obj = All.domains.map[domain];
-	if (!obj) throw new Error(`Domain ${domain} not requested before install`);
 	// avoid hanging loop: DomainBlock -> install -> .upcache -> (mem)DomainBlock
 	setTimeout(function() {
+		var obj = All.domains.map[domain];
+		if (!obj) throw new Error(`Domain ${domain} not requested before install`);
 		got.post(`${obj.host}/.upcache`).catch(function(err) {
 			// we don't want to crash in case of error
 			console.error(err);
@@ -88,6 +88,7 @@ CacheState.prototype.mw = function(req, res, next) {
 	var domain = req.hostname;
 	var dobj = this.data.domains[domain];
 	if (!dobj) dobj = this.data.domains[domain] = {};
+	console.info("Check cache for", domain);
 
 	if (!this.digest) {
 		var hash = crypto.createHash('sha256');
