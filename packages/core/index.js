@@ -143,6 +143,7 @@ function initPlugins(plugins, type) {
 			to = All;
 		}
 		if (type) p = p.then(() => obj[type].call(obj, All));
+		else if (obj.init) p = p.then(() => obj.init.call(obj, All));
 		p = p.then(function() {
 			var plugin = obj.plugin = Object.assign({}, obj.plugin); // make a copy
 			Object.keys(plugin).forEach(function(key) {
