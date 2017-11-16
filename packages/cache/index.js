@@ -37,10 +37,12 @@ function CacheState() {
 CacheState.prototype.init = function(All) {
 	this.opt = All.opt;
 	this.path = Path.join(opt.dirs.data, 'cache.json');
+	this.mtimes = {};
 	return this.open();
 };
 
-CacheState.prototype.save = function() {
+CacheState.prototype.saveNow = function() {
+	delete this.toSave;
 	var me = this;
 	return fs.writeFile(this.path, JSON.stringify(this.data)).catch(function(err) {
 		console.error("Error writing", me.path);
@@ -62,6 +64,7 @@ CacheState.prototype.open = function() {
 		console.info(`Unparsable ${me.path}, continuing anyway`);
 	}).then(function(data) {
 		me.data = data || {};
+		if (!me.data.domains) me.data.domains = {};
 	});
 };
 
@@ -79,30 +82,45 @@ CacheState.prototype.mw = function(req, res, next) {
 	var me = this;
 	var tags = [];
 	var doSave = false;
+	var domain = req.hostname;
+	var dobj = this.data.domains[domain];
+	if (!dobj) dobj = this.data.domains[domain] = {};
 
-	var hash = crypto.createHash('sha256');
-	hash.update(Stringify(this.opt));
-	var digest = hash.digest('hex');
 
-	if (this.data.hash) {
-		if (this.data.hash != digest) {
-			tags.push('app');
-			doSave = true;
-			console.info(`app tag changes`);
-		}
-	} else {
+	if (!this.digest) {
+		var hash = crypto.createHash('sha256');
+		hash.update(Stringify(this.opt));
+		this.hash = hash.digest('hex');
+	}
+	if (dobj.hash === undefined) {
 		doSave = true;
-		this.data.hash = digest;
+		dobj.hash = this.hash;
+	} else if (dobj.hash != this.hash) {
+		console.info(`app tag changes for domain ${domain}`);
+		doSave = true;
+		dobj.hash = this.hash;
+		tags.push('app');
 	}
 	this.refreshMtime().then(function(mtime) {
-		if (me.data.mtime === undefined) {
+		if (dobj.share === undefined) {
 			doSave = true;
-			me.data.mtime = mtime;
-		} else if (mtime > me.data.mtime) {
-			console.info('static tag changes');
+			dobj.share = mtime;
+		} else if (mtime > dobj.share) {
+			console.info(`share tag changes for domain ${domain}`);
 			doSave = true;
-			me.data.mtime = mtime;
-			tags.push('static');
+			dobj.share = mtime;
+			tags.push('share');
+		}
+		return me.refreshMtime(domain);
+	}).then(function(mtime) {
+		if (dobj.file === undefined) {
+			doSave = true;
+			dobj.file = mtime;
+		} else if (mtime > dobj.file) {
+			console.info(`file tag changes for domain ${domain}`);
+			doSave = true;
+			dobj.file = mtime;
+			tags.push('file');
 		}
 	}).then(function() {
 		if (tags.length) tag.apply(null, tags)(req, res, next);
@@ -111,22 +129,22 @@ CacheState.prototype.mw = function(req, res, next) {
 	});
 }
 
-CacheState.prototype.refreshMtime = function() {
-	if (this.mtime !== 0) return Promise.resolve(this.mtime);
-	var dirs = this.opt.statics.runtime;
-	// returns the last mtime of files in a list of directories and their subtrees
-	var pattern = Array.isArray(dirs)
-		? '{' + dirs.join(',') + '}/**'
-		: dirs + '/**';
+CacheState.prototype.refreshMtime = function(domain) {
+	var dir = Path.join(this.opt.statics.runtime, domain ? 'files/' + domain : 'pageboard');
+	var mtime = this.mtimes[domain || 'pageboard'];
+	if (mtime !== 0) return Promise.resolve(mtime);
+	mtime = 0;
+	var pattern = dir + '/**';
+	var me = this;
 
 	return new Promise(function(resolve, reject) {
-		var mtime = 0;
 		var g = new Glob(pattern, { stat: true, nodir: true });
 		g.on('stat', function(file, stat) {
 			var ftime = stat.mtime.getTime();
 			if (ftime > mtime) mtime = ftime;
 		})
 		g.on('end', function() {
+			me.mtimes[domain || 'pageboard'] = mtime;
 			resolve(mtime);
 		});
 		// not sure if end always happen, nor if error happens once
