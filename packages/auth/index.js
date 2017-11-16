@@ -15,6 +15,7 @@ exports = module.exports = function(opt) {
 	exports.restrict = exports.scope.restrict.bind(exports.scope);
 
 	return {
+		name: 'auth',
 		service: init
 	};
 };
