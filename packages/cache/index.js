@@ -34,8 +34,8 @@ function CacheState() {
 	this.mtime = 0;
 }
 
-CacheState.prototype.init = function(opt) {
-	this.opt = opt;
+CacheState.prototype.init = function(All) {
+	this.opt = All.opt;
 	this.path = Path.join(opt.dirs.data, 'cache.json');
 	return this.open();
 };
