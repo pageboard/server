@@ -81,7 +81,7 @@ function init(All) {
 	});
 }
 
-exports.install = function(domain, {elements, directories}) {
+exports.install = function(domain, {elements, directories}, All) {
 	debug("installing", domain, elements, directories);
 	var eltsMap = {};
 	return Promise.all(elements.map(function(path) {
