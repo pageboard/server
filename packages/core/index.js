@@ -102,11 +102,14 @@ exports.init = function(opt) {
 		app.use(servicesError);
 		return initPlugins.call(All, pluginList, 'view');
 	}).then(function() {
-		return All.statics.install(null, All.opt, All.opt.statics);
-	}).then(function() {
-		return All.api.install(null, All.opt, All.opt.api);
-	}).then(function() {
 		app.use(viewsError);
+	}).then(function() {
+		return All.statics.install(null, All.opt, All);
+	}).then(function() {
+		return All.api.install(null, All.opt, All);
+	}).then(function() {
+//		return All.cache.install(null, All.opt, All);
+	}).then(function() {
 		return All;
 	});
 }
@@ -206,9 +209,11 @@ function install({domain, dependencies}) {
 			return initConfig(Path.join(domainDir, 'node_modules', module), domain, module, config);
 		}));
 	}).then(function() {
-		return All.statics.install(domain, config, All.opt.statics);
+		return All.statics.install(domain, config, All);
 	}).then(function() {
-		return All.api.install(domain, config, All.opt.api);
+		return All.api.install(domain, config, All);
+	}).then(function() {
+		return All.cache.install(domain, config, All);
 	}).then(function() {
 		return config;
 	});
