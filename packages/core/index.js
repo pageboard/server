@@ -128,7 +128,11 @@ function initPlugins(plugins, type) {
 		if (!type && (obj.file || obj.service || obj.view)) return false;
 		return true;
 	}).sort(function(a, b) {
-		return (a.priority || 0) <= (b.priority || 0);
+		a = a.priority || Infinity;
+		b = b.priority || Infinity;
+		if (a == b) return 0;
+		else if (a > b) return 1;
+		else if (a < b) return -1;
 	});
 	var p = Promise.resolve();
 	plugins.forEach(function(obj) {
