@@ -44,7 +44,7 @@ function init(All) {
 		}).catch(next);
 	});
 
-	All.app.get('/.api/verify', All.tag.disable(), function(req, res, next) {
+	All.app.get('/.api/verify', All.cache.disable(), function(req, res, next) {
 		exports.verify(req.query).then(function(user) {
 			res.send(user);
 		}).catch(next);
