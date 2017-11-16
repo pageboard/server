@@ -7,6 +7,7 @@ var Path = require('path');
 var pify = require('util').promisify;
 var equal = require('esequal');
 var toSource = require('tosource');
+var mem = require('mem');
 
 var fs = {
 	readFile: pify(require('fs').readFile)
@@ -71,7 +72,6 @@ function init(All) {
 
 	exports.migrate = migrate.bind(null, knexInst, opt.migrations);
 	exports.seed = seed.bind(null, knexInst, opt.seeds);
-	exports.blocksByDomain = {};
 
 	All.app.use('/.api/*', All.cache.tag('api'));
 
@@ -135,8 +135,8 @@ exports.install = function(domain, {elements, directories}, All) {
 		Block.elements = eltsMap;
 		if (domain) {
 			Block.domain = domain;
-			exports.blocksByDomain[domain] = Block;
 			Block.source = toSource(Object.assign({}, exports.Block.elements, Block.elements));
+			return Block;
 		} else {
 			exports.Block = All.api.Block = Block;
 			Block.source = toSource(Block.elements);
@@ -144,14 +144,11 @@ exports.install = function(domain, {elements, directories}, All) {
 	});
 };
 
-exports.DomainBlock = function(domain) {
-	if (exports.blocksByDomain[domain]) return Promise.resolve(exports.blocksByDomain[domain]);
+exports.DomainBlock = mem(function(domain) {
 	return All.site.get({domain: domain}).then(function(site) {
-		return All.install(site.data).then(function() {
-			return exports.blocksByDomain[domain];
-		});
+		return All.install(site.data);
 	});
-};
+});
 
 function promotePath(dir, path) {
 	if (path.startsWith('/') || /^(http|https|data):/.test(path)) return path;
