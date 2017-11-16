@@ -184,6 +184,7 @@ function initLog(opt) {
 function install({domain, dependencies}) {
 	if (!domain) throw new Error("Missing domain");
 	var All = this;
+	var installedBlock;
 	var dataDir = Path.join(All.opt.dirs.data, 'sites');
 	var domainDir = Path.join(dataDir, domain);
 	var config = {
@@ -217,10 +218,13 @@ function install({domain, dependencies}) {
 		return All.statics.install(domain, config, All);
 	}).then(function() {
 		return All.api.install(domain, config, All);
-	}).then(function() {
+	}).then(function(Block) {
+		installedBlock = Block;
 		return All.cache.install(domain, config, All);
 	}).then(function() {
-		return config;
+		return installedBlock;
+	}).catch(function(err) {
+		console.error(err);
 	});
 };
 
@@ -334,7 +338,12 @@ function createApp(opt) {
 		res.setHeader('X-Frame-Options', 'SAMEORIGIN');
 		if (opt.env != "development") res.setHeader('Content-Security-Policy', "script-src 'self'");
 		res.setHeader('X-Content-Type-Options', 'nosniff');
-		next();
+		All.domains.host(req);
+		All.api.DomainBlock(req.hostname).then(function(DomainBlock) {
+			next();
+		}).catch(function(err) {
+			next(err);
+		});
 	});
 	return app;
 }
@@ -373,7 +382,6 @@ function viewsError(err, req, res, next) {
 }
 
 function reqBody(req, res, next) {
-	this.domains.host(req);
 	var opt = this.opt;
 	bodyParserJson(req, res, function() {
 		var obj = req.body;
@@ -384,7 +392,6 @@ function reqBody(req, res, next) {
 }
 
 function reqQuery(req, res, next) {
-	this.domains.host(req);
 	var obj = req.query;
 	// all payloads must contain domain
 	obj.domain = req.hostname;
