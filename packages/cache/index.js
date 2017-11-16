@@ -65,7 +65,7 @@ CacheState.prototype.open = function() {
 	});
 };
 
-CacheState.prototype.install = function(domain, All, opt) {
+CacheState.prototype.install = function(domain, opt, All) {
 	if (!domain) return;
 	var obj = All.domains.map[domain];
 	if (!obj) throw new Error(`Domain ${domain} not requested before install`);
