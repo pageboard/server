@@ -47,6 +47,11 @@ CacheState.prototype.save = function() {
 	});
 };
 
+CacheState.prototype.save = function() {
+	if (this.toSave) clearTimeout(this.toSave);
+	this.toSave = setTimeout(this.saveNow.bind(this), 5000);
+};
+
 CacheState.prototype.open = function() {
 	var me = this;
 	return fs.readFile(this.path, {flag: 'a+'}).then(function(buf) {
