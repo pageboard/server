@@ -14,6 +14,9 @@ var got = require('got');
 var state = new CacheState();
 
 exports = module.exports = function(opt) {
+	exports.tag = tag;
+	exports.disable = tag.disable;
+	exports.install = state.install.bind(state);
 	return {
 		init: function(All) {
 			return state.init(All).then(function() {
@@ -23,8 +26,6 @@ exports = module.exports = function(opt) {
 				});
 			});
 		},
-		tag: tag,
-		install: state.install.bind(state),
 		name: 'cache'
 	};
 };
