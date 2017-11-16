@@ -27,8 +27,13 @@ Href.jsonSchema = {
 			default: true
 		},
 		url: {
-			type: 'string',
-			format: 'uri'
+			oneOf: [{
+				type: 'string',
+				format: 'uri'
+			}, {
+				type: "string",
+				pattern: "^(\/[a-zA-Z0-9-._]*)+$"
+			}]
 		},
 		type: {
 			type: 'string'
@@ -56,8 +61,13 @@ Href.jsonSchema = {
 					type: ['string', 'null']
 				},
 				thumbnail: {
-					type: ['string', 'null'],
-					format: 'uri'
+					// local images are stored as data-uri, no need to path pattern
+					oneOf: [{
+						type: "null"
+					}, {
+						type: "string",
+						format: "uri"
+					}]
 				},
 				size: {
 					type: ['integer', 'null']
