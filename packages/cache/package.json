@@ -17,6 +17,8 @@
   },
   "homepage": "https://github.com/pageboard/cache#readme",
   "dependencies": {
+    "fast-json-stable-stringify": "^2.0.0",
+    "got": "^8.0.0",
     "upcache": "^0.6.1"
   }
 }
