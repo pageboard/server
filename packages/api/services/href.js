@@ -110,9 +110,20 @@ exports.get = function(data) {
 exports.add = function(data) {
 	if (!data.url) throw new HttpError.BadRequest("Missing url");
 	var ref = All.api.ref;
-	var url = data.url;
 	var Href = All.api.Href;
 	var Block = All.api.Block;
+
+	var url = data.url;
+	var objUrl = URL.parse(url);
+	var isLocal = false;
+	if (objUrl.hostname == data.domain) {
+		url = data.url;
+		data.url = objUrl.path;
+		isLocal = true;
+	} else if (!objUrl.hostname) {
+		url = All.domains.host(data.domain) + url;
+		isLocal = true;
+	}
 
 	return All.inspector.get(url).catch(function(err) {
 		// inspector failure
@@ -120,6 +131,7 @@ exports.add = function(data) {
 		throw err;
 	}).then(filterResult).then(embedThumbnail)
 	.then(function(result) {
+		if (isLocal) result.url = data.url;
 		return QueryHref(data).first().select('href._id').then(function(href) {
 			if (!href) {
 				return Href.query().insert(Object.assign({
