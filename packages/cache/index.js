@@ -89,7 +89,6 @@ CacheState.prototype.mw = function(req, res, next) {
 	var dobj = this.data.domains[domain];
 	if (!dobj) dobj = this.data.domains[domain] = {};
 
-
 	if (!this.digest) {
 		var hash = crypto.createHash('sha256');
 		hash.update(Stringify(this.opt));
@@ -135,13 +134,17 @@ CacheState.prototype.mw = function(req, res, next) {
 CacheState.prototype.refreshMtime = function(domain) {
 	var dir = Path.join(this.opt.statics.runtime, domain ? 'files/' + domain : 'pageboard');
 	var mtime = this.mtimes[domain || 'pageboard'];
-	if (mtime !== 0) return Promise.resolve(mtime);
+	if (mtime) return Promise.resolve(mtime);
 	mtime = 0;
 	var pattern = dir + '/**';
 	var me = this;
 
 	return new Promise(function(resolve, reject) {
-		var g = new Glob(pattern, { stat: true, nodir: true });
+		var g = new Glob(pattern, {
+			follow: true, // symlinks
+			stat: true,
+			nodir: true
+		});
 		g.on('stat', function(file, stat) {
 			var ftime = stat.mtime.getTime();
 			if (ftime > mtime) mtime = ftime;
