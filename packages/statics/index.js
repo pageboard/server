@@ -46,16 +46,18 @@ function init(All) {
 				switch(req.params.dir) {
 					case ".pageboard":
 						req.url = "/" + url.substring(2);
+						All.cache.tag('shared')(req, res, next);
 						break;
 					case ".uploads":
 						req.url = "/uploads/" + req.hostname + url.substring(9);
+						All.cache.tag('upload')(req, res, next);
 						break;
 					case ".files":
 						req.url = "/files/" + req.hostname + url.substring(7);
+						All.cache.tag('file')(req, res, next);
 						break;
 				}
 				debug("Static url", url, "rewritten to", req.url);
-				next();
 			},
 			serveStatic(statics.runtime, {
 				index: false,
