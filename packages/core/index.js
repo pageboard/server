@@ -340,7 +340,11 @@ function createApp(opt) {
 		res.setHeader('X-Content-Type-Options', 'nosniff');
 		All.domains.host(req);
 		All.api.DomainBlock(req.hostname).then(function(DomainBlock) {
-			next();
+			if (req.get('X-Redirect-Secure') && req.protocol == "http" && req.url != "/.api") {
+				res.redirect(301, "https://" + req.get('Host') + req.url);
+			} else {
+				next();
+			}
 		}).catch(function(err) {
 			next(err);
 		});
