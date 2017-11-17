@@ -1,5 +1,6 @@
 var ref = require('objection').ref;
 var raw = require('objection').raw;
+var URL = require('url');
 
 exports = module.exports = function(opt) {
 	return {
@@ -154,6 +155,13 @@ exports.save = function(changes) {
 	return All.api.DomainBlock(changes.domain).then(function(DomainBlock) {
 		var site;
 		var pages = changes.add.concat(changes.update).filter(function(block) {
+			var url = block.data && block.data.url;
+			if (url) {
+				var objUrl = URL.parse(url);
+				if (objUrl.hostname == changes.domain) {
+					block.data.url = objUrl.path;
+				}
+			}
 			return block.type == "page"; // might be obj.data.url but not sure
 		});
 		return All.api.transaction(DomainBlock, function(Block) {
@@ -194,16 +202,8 @@ exports.save = function(changes) {
 		}).then(function() {
 			// do not return that promise - reply now
 			Promise.all(pages.map(function(child) {
-				var host;
-				try {
-					host = All.domains.host(site.data.domain);
-				} catch(ex) {
-					console.warn("Unknown host for domain", site.data.domain);
-					console.info("This can happen when running from cli");
-					return;
-				}
 				return All.href.save({
-					url: host + child.data.url,
+					url: child.data.url,
 					domain: site.data.domain,
 					title: child.data.title
 				}).catch(function(err) {
