@@ -418,8 +418,11 @@ Domains.prototype.host = function(req) {
 	var obj = this.map[domain];
 	if (!obj) obj = this.map[domain] = {};
 	if (!obj.host) {
-		if (req) obj.host = req.protocol + '://' + req.get('Host');
-		else throw new Error(`Unknown domain ${domain}`);
+		if (req) {
+			obj.host = (req.get('X-Redirect-Secure') ? 'https' : req.protocol) + '://' + req.get('Host');
+		} else {
+			throw new Error(`Unknown domain ${domain}`);
+		}
 	}
 	return obj.host;
 };
