@@ -134,8 +134,12 @@ CacheState.prototype.mw = function(req, res, next) {
 
 CacheState.prototype.refreshMtime = function(domain) {
 	var dir = Path.join(this.opt.statics.runtime, domain ? 'files/' + domain : 'pageboard');
-	var mtime = this.mtimes[domain || 'pageboard'];
-	if (mtime) return Promise.resolve(mtime);
+	var mtime;
+	if (!domain) {
+		// do not actually refresh every time
+		mtime = this.mtimes.pageboard;
+		if (mtime) return Promise.resolve(mtime);
+	}
 	mtime = 0;
 	var pattern = dir + '/**';
 	var me = this;
