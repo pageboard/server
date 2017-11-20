@@ -9,6 +9,8 @@ var equal = require('esequal');
 var toSource = require('tosource');
 var mem = require('mem');
 
+var exec = pify(require('child_process').exec);
+
 var fs = {
 	readFile: pify(require('fs').readFile)
 };
@@ -40,7 +42,8 @@ exports = module.exports = function(opt) {
 
 function init(All) {
 	var opt = All.opt;
-	var knexInst = knex(knexConfig(opt));
+	var dbOpt = knexConfig(opt);
+	var knexInst = knex(dbOpt);
 	objection.Model.createValidator = function() {
 		return new objection.AjvValidator({
 			onCreateAjv: function(ajv) {
@@ -72,6 +75,7 @@ function init(All) {
 
 	exports.migrate = migrate.bind(null, knexInst, opt.migrations);
 	exports.seed = seed.bind(null, knexInst, opt.seeds);
+	exports.dump = dumpDb.bind(null, dbOpt.connection, opt);
 
 	All.app.use('/.api/*', All.cache.tag('api'));
 
@@ -199,6 +203,14 @@ function seed(knex, dirs) {
 			else console.log("No seed files in", dir);
 		});
 	}));
+}
+
+function dumpDb(conn, opt) {
+	var stamp = (new Date).toISOString().split('.')[0].replace(/[-:]/g, '');
+	var file = Path.join(opt.dirs.data, `${opt.name}-${stamp}.dump`);
+	return exec(`pg_dump --format=custom --file=${file} --username=${conn.user} ${conn.database}`, {}).then(function() {
+		return file;
+	});
 }
 
 function knexConfig(config) {
