@@ -8,8 +8,9 @@ Pageboard.elements.user = {
 		verification: {
 			type: ['string', 'null']
 		},
-		password: {
-			type: 'string'
+		origin: {
+			type: ['string', 'null'] // TODO the form id? type? that created this user
+			// could be registration, contact, newsletter forms...
 		},
 		nickname: {
 			type: 'string'
