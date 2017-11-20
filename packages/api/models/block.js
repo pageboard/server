@@ -62,6 +62,10 @@ Block.prototype.$beforeUpdate = function() {
 	this.updated_at = new Date().toISOString();
 };
 
+Block.createNotFoundError = function(data) {
+	return new HttpError.NotFound(data);
+};
+
 Block.relationMappings = {
 	children: {
 		relation: Model.ManyToManyRelation,
