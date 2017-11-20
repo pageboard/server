@@ -19,8 +19,6 @@ var vm = require('vm');
 var debug = require('debug')('pageboard:api');
 
 exports = module.exports = function(opt) {
-	if (!opt.database) opt.database = `postgres://localhost/${opt.name}`;
-
 	opt.plugins.unshift(
 		__dirname + '/services/user',
 		__dirname + '/services/site',
@@ -207,7 +205,7 @@ function seed(knex, dirs) {
 
 function dumpDb(conn, opt) {
 	var stamp = (new Date).toISOString().split('.')[0].replace(/[-:]/g, '');
-	var file = Path.join(opt.dirs.data, `${opt.name}-${stamp}.dump`);
+	var file = Path.join(opt.database.dump.dir, `${opt.name}-${stamp}.dump`);
 	return exec(`pg_dump --format=custom --file=${file} --username=${conn.user} ${conn.database}`, {}).then(function() {
 		return file;
 	});
@@ -215,7 +213,12 @@ function dumpDb(conn, opt) {
 
 function knexConfig(config) {
 	if (!process.env.HOME) process.env.HOME = require('passwd-user').sync(process.getuid()).homedir;
-	var parsed = require('url').parse(config.database, true);
+	var dbOpts = Object.assign({}, {
+		url: `postgres://localhost/${opt.name}`
+	}, config.database);
+	delete dbOpts.dump;
+	var parsed = require('url').parse(dbOpts.url, true);
+	delete dbOpts.url;
 	var conn = {};
 	var obj = { connection: conn };
 	if (parsed.host) conn.host = parsed.host;
@@ -225,19 +228,17 @@ function knexConfig(config) {
 		conn.user = auth[0];
 		if (auth.length > 1) conn.password = auth[1];
 	}
-	obj.client = parsed.protocol.slice(0, -1);
-	obj.debug = require('debug').enabled('pageboard:sql');
-	if (config.connection) {
-		if (config.connection.client) {
-			obj.client = config.connection.client;
-			delete config.connection.client;
-		}
-		if (config.connection.debug) {
-			obj.debug = config.connection.debug;
-			delete config.connection.debug;
-		}
-		Object.assign(conn, config.connection);
+	if (parsed.protocol) obj.client = parsed.protocol.slice(0, -1);
+	if (dbOpts.client) {
+		obj.client = dbOpts.client;
+		delete dbOpts.client;
 	}
+	obj.debug = require('debug').enabled('pageboard:sql');
+	if (dbOpts.debug) {
+		obj.debug = dbOpts.debug;
+		delete dbOpts.debug;
+	}
+	Object.assign(conn, dbOpts);
 	return obj;
 }
 
