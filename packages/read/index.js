@@ -3,6 +3,7 @@ var Path = require('path');
 
 module.exports = function(opt) {
 	return {
+		priority: 0,
 		view: init
 	};
 };
