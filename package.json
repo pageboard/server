@@ -26,6 +26,7 @@
     "@pageboard/github-webhook": "github:pageboard/github-webhook",
     "@pageboard/image": "github:pageboard/image",
     "@pageboard/inspector": "github:pageboard/inspector",
+    "@pageboard/mail": "github:pageboard/mail",
     "@pageboard/prerender": "github:pageboard/prerender",
     "@pageboard/read": "github:pageboard/read",
     "@pageboard/statics": "github:pageboard/statics",
