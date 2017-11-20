@@ -22,7 +22,7 @@
     "esequal": "^0.1.15",
     "knex": "^0.13.0",
     "mem": "^3.0.0",
-    "objection": "^0.9.0",
+    "objection": "^0.9.1",
     "passwd-user": "^2.1.0",
     "pg": "^7.3.0",
     "tosource": "^1.0.0"
