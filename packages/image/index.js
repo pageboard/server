@@ -13,7 +13,8 @@ exports = module.exports = function(opt) {
 		q: '70',
 		bg: 'white',
 		flatten: true,
-		hostnames: true
+		hostnames: true,
+		format: 'jpeg'
 	}, All.opt.thumbnail));
 
 	return {
