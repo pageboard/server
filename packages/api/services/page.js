@@ -66,7 +66,7 @@ exports.get = function(data) {
 		.whereJsonText("block.data:url", data.url)
 		.then(function(page) {
 			if (!page) {
-				return QueryPage(Block).where('block.type', 'notfound');
+				return QueryPage(Block).where('block.type', 'notfound').throwIfNotFound();
 			} else {
 				return page;
 			}
@@ -166,8 +166,7 @@ exports.save = function(changes) {
 		});
 		return All.api.transaction(DomainBlock, function(Block) {
 			return Block.query().whereJsonText('block.data:domain', changes.domain)
-			.first().then(function(inst) {
-				if (!inst) throw new HttpError.NotFound("Site not found");
+			.first().throwIfNotFound().then(function(inst) {
 				site = inst;
 			}).then(function() {
 				// this also effectively prevents removing a page and adding a new page
@@ -216,7 +215,8 @@ exports.save = function(changes) {
 
 function applyUnrelate(site, obj) {
 	return Promise.all(Object.keys(obj).map(function(parentId) {
-		return site.$relatedQuery('children').where('block.id', parentId).first().then(function(parent) {
+		return site.$relatedQuery('children').where('block.id', parentId)
+		.first().throwIfNotFound().then(function(parent) {
 			return parent.$relatedQuery('children').unrelate().whereIn('block.id', obj[parentId]);
 		});
 	}));
@@ -250,7 +250,7 @@ function applyUpdate(site, list) {
 
 function updatePage(site, page) {
 	return site.$relatedQuery('children').where('block.id', page.id).where('block.type', 'page')
-	.select(ref('block.data:url').as('url')).first().then(function(dbPage) {
+	.select(ref('block.data:url').as('url')).first().throwIfNotFound().then(function(dbPage) {
 		var oldUrl = dbPage.url;
 		var newUrl = page.data.url;
 		if (oldUrl == newUrl) return dbPage;
@@ -273,7 +273,7 @@ function updatePage(site, page) {
 function applyRelate(site, obj) {
 	return Promise.all(Object.keys(obj).map(function(parentId) {
 		return site.$relatedQuery('children').where('block.id', parentId)
-		.select('block._id').first().then(function(parent) {
+		.select('block._id').first().throwIfNotFound().then(function(parent) {
 			return site.$relatedQuery('children').select('block._id')
 			.whereIn('block.id', obj[parentId]).then(function(ids) {
 				return parent.$relatedQuery('children').relate(ids);
