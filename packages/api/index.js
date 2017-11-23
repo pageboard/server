@@ -53,7 +53,8 @@ function init(All) {
 				validateSchema: false,
 				ownProperties: true,
 				v5: true,
-				coerceTypes: true
+				coerceTypes: true,
+				removeAdditional: true
 			}
 		});
 	};
