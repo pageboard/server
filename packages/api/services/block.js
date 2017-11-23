@@ -29,26 +29,32 @@ function init(All) {
 }
 
 function QueryBlock(data) {
-	var Block = All.Block;
-	var q = Block.query().select(Block.tableColumns);
-	if (data.text) {
-		var text = data.text.split(' ').filter(x => !!x).map(x => x + ':*').join(' <-> ');
-		q.from(Block.raw([
-			Block.raw("to_tsquery('unaccent', ?) AS query", [text]),
-			'block'
-		]));
-		if (data.type) q.where('type', data.type);
-		q.whereRaw('query @@ tsv');
-		q.orderByRaw('ts_rank(tsv, query) DESC');
-		q.orderBy('updated_at', 'desc');
-		if (data.paginate) q.offset(Math.max(parseInt(data.paginate) - 1 || 0, 0) * 10);
-		q.limit(10);
-	} else if (!data.id) {
-		throw new HttpError.BadRequest("Missing id");
-	} else {
-		q.where('id', data.id);
-	}
-	return q;
+	if (!data.domain) throw new HttpError.BadRequest("Missing domain");
+	return All.api.DomainBlock(data.domain).then(function(Block) {
+		if (data.type == "user" || data.type == "site") {
+			// users and sites do not belong to sites. Only accept query by id.
+			return Block.query().select(Block.tableColumns).where('block.id', data.id);
+		}
+		var q = Block.query().select(Block.tableColumns).whereDomain(Block.domain);
+		if (data.text) {
+			var text = data.text.split(' ').filter(x => !!x).map(x => x + ':*').join(' <-> ');
+			q.from(Block.raw([
+				Block.raw("to_tsquery('unaccent', ?) AS query", [text]),
+				'block'
+			]));
+			if (data.type) q.where('type', data.type);
+			q.whereRaw('query @@ tsv');
+			q.orderByRaw('ts_rank(tsv, query) DESC');
+			q.orderBy('updated_at', 'desc');
+			if (data.paginate) q.offset(Math.max(parseInt(data.paginate) - 1 || 0, 0) * 10);
+			q.limit(10);
+		} else if (!data.id) {
+			throw new HttpError.BadRequest("Missing id");
+		} else {
+			q.where('block.id', data.id);
+		}
+		return q;
+	});
 }
 
 exports.get = function(data) {

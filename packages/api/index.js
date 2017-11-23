@@ -23,7 +23,7 @@ exports = module.exports = function(opt) {
 		__dirname + '/services/user',
 		__dirname + '/services/site',
 		__dirname + '/services/page',
-//		__dirname + '/services/block',
+		__dirname + '/services/block',
 		__dirname + '/services/href'
 	);
 	opt.models = [
