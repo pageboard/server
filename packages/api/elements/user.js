@@ -1,12 +1,25 @@
 Pageboard.elements.user = {
-	required: ['email', 'password', 'nickname', 'name'],
+	required: ['email', 'nickname', 'name'],
 	properties: {
 		email: {
 			type: 'string',
 			format: 'email'
 		},
-		verification: {
-			type: ['string', 'null']
+		session: {
+			type: 'object',
+			properties: {
+				done: {
+					type: 'boolean',
+					default: false
+				},
+				hash: {
+					type: ['string', 'null']
+				},
+				referer: {
+					type: 'string',
+					format: 'uri'
+				}
+			}
 		},
 		origin: {
 			type: ['string', 'null'] // TODO the form id? type? that created this user
