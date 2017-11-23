@@ -53,7 +53,7 @@ Block.columns = Object.keys(Block.jsonSchema.properties);
 Block.tableColumns = Block.columns.map(col => `block.${col}`);
 
 Block.prototype.$beforeInsert = function() {
-	if (!this.id) return genId(this).then(function(id) {
+	if (!this.id) return Block.genId(this).then(function(id) {
 		this.id = id;
 	}.bind(this));
 };
@@ -157,14 +157,15 @@ function stringProperties(obj) {
  * this is the only function in pageboard that is defined both for client and for server !!!
  * similar function is defined in pageboard-write#store.js
 */
-function genId() {
+Block.genId = function(length) {
+	if (!length) length = 8;
 	return new Promise(function(resolve, reject) {
-		crypto.randomBytes(8, function(err, buffer) {
+		crypto.randomBytes(length, function(err, buffer) {
 			if (err) reject(err);
 			else resolve(buffer.toString('hex'));
 		});
 	});
-}
+};
 
 QueryBuilder.prototype.whereDomain = function(domain) {
 	return this.joinRelation('parents')
