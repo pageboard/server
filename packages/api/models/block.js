@@ -53,7 +53,7 @@ Block.columns = Object.keys(Block.jsonSchema.properties);
 Block.tableColumns = Block.columns.map(col => `block.${col}`);
 
 Block.prototype.$beforeInsert = function() {
-	if (!this.id) return Block.genId(this).then(function(id) {
+	if (!this.id) return Block.genId().then(function(id) {
 		this.id = id;
 	}.bind(this));
 };
