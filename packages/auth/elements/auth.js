@@ -12,8 +12,9 @@ Pageboard.elements.auth = {
 	icon: '<b class="icon">Auth</b>',
 	group: 'block',
 	mount: function(block, blocks, view) {
-		return GET('/.api/auth/activate', {
-			id: Page.parse(document.location).query.id
+		var id = Page.parse(document.location).query.id;
+		if (id) return GET('/.api/auth/activate', {
+			id: id
 		}).then(function(validationBlock) {
 			block.data.href = validationBlock.data.href;
 		}).catch(function(err) {
