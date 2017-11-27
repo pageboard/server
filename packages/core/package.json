@@ -4,7 +4,8 @@
   "description": "Web pages content management - core server",
   "main": "index.js",
   "bin": {
-    "pageboard": "./bin/cli.js"
+    "pageboard": "./bin/cli.js",
+    "pageboard-debug": "./bin/cli-dev.sh"
   },
   "scripts": {
     "test": "echo \"Error: no test specified\" && exit 1",
