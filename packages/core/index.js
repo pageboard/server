@@ -50,10 +50,6 @@ exports.config = function(pkgOpt) {
 		plugins: [],
 		dependencies: pkgOpt.dependencies || {}
 	});
-	if (opt.env != "production") {
-		require('trace');
-		require('clarify');
-	}
 	return opt;
 };
 
