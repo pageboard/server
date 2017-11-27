@@ -17,8 +17,14 @@
   },
   "homepage": "https://github.com/pageboard/auth#readme",
   "dependencies": {
-    "bcrypt": "^0.8.7",
-    "pify": "^2.3.0",
-    "upcache": "^0.6.1"
+    "spawn-please": "^0.3.0",
+    "upcache": "^0.6.5"
+  },
+  "pageboard": {
+    "directories": [
+      "elements",
+      "ui"
+    ],
+    "elements": "elements/"
   }
 }

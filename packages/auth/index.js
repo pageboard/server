@@ -1,14 +1,17 @@
 var upcacheScope = require('upcache/scope');
-var pify = require('pify');
-var bcrypt = pify(require('bcrypt')); // consider using argon2
-var appSalt; // keep it private
+var Path = require('path');
+var pify = require('util').promisify;
+var fs = {
+	writeFile: pify(require('fs').writeFile),
+	readFile: pify(require('fs').readFile),
+	chmod: pify(require('fs').chmod)
+};
 
 exports = module.exports = function(opt) {
 	opt.scope = Object.assign({
 		issuer: opt.name,
 		maxAge: 3600 * 12,
-		userProperty: 'user',
-		saltRounds: 10 // this should grow over the years
+		userProperty: 'user'
 	}, opt.scope);
 
 	exports.scope = upcacheScope(opt.scope);
@@ -20,126 +23,121 @@ exports = module.exports = function(opt) {
 	};
 };
 
+// login: given an email, sets user.data.session.hash and returns user id
+// activate: given an id, returns an activation link
+// validate: process activation link and return bearer in cookie
+
 function init(All) {
-	All.app.post('/.api/login', function(req, res, next) {
-		exports.authenticate(req.body).then(function(user) {
+	All.app.use('/.api/auth/*', All.cache.disable());
+
+	All.app.get('/.api/auth/activate', All.query, function(req, res, next) {
+		exports.activate(req.query).then(function(linkObj) {
+			res.send(linkObj);
+		}).catch(next);
+	});
+
+	All.app.get('/.api/auth/validate', All.query, function(req, res, next) {
+		exports.validate(req.query).then(function(user) {
 			exports.scope.login(res, {
-				email: user.data.email,
-				scopes: user.data.grants
+				id: user.id,
+				scopes: user.data.grants || []
 			});
-		}).catch(next);
-	});
-	All.app.post('/.api/logout', function(req, res, next) {
-		exports.logout(res);
-	});
-
-	All.app.get('/.api/user', function(req, res, next) {
-		All.user.get(req.query).then(function(user) {
-			if (!user) throw new HttpError.NotFound("No user found");
-			if (All.scope.test(req, "user-" + user.id)) {
-				res.send(user);
-			} else {
-				throw new HttpError.Unauthorized("Cannot read another user");
-			}
+			res.redirect(user.data.session.referer || '/');
 		}).catch(next);
 	});
 
-	All.app.get('/.api/verify', All.cache.disable(), function(req, res, next) {
-		exports.verify(req.query).then(function(user) {
-			res.send(user);
-		}).catch(next);
+	All.app.get('/.api/auth/logout', function(req, res, next) {
+		exports.scope.logout(res);
+		res.redirect('back');
 	});
 
-	// TODO rate limit
-	All.app.post('/.api/user', function(req, res, next) {
-		exports.create(req.body).then(function(user) {
-			res.send(user);
-		}).catch(next);
-	});
-
-	All.app.put('/.api/user/:id', exports.restrict("user-:id"), function(req, res, next) {
-		delete req.body.password;
-		delete req.body.email;
-		delete req.body.verified;
-		req.body.id = req.params.id;
-		All.user.save(req.body).then(function(user) {
-			res.send(user);
-		}).catch(next);
-	});
-
-	All.app.delete('/.api/user/:id', exports.restrict("user-:id"), function(req, res, next) {
-		All.user.del(req.params).then(function(user) {
-			res.sendStatus(200);
-		}).catch(next);
-	});
-
-	return bcrypt.genSalt(All.opt.scope.saltRounds).then(function(salt) {
-		appSalt = salt;
-	});
+	return exports.keygen();
 }
 
-exports.authenticate = function(data) {
-	if (!data.email) {
-		throw new HttpError.BadRequest("Missing email");
-	}
-	if (!data.password) {
-		throw new HttpError.BadRequest("Missing password");
-	}
-	return All.user.get({email: data.email}).then(function(user) {
-		if (!user.password || !data.password) throw new HttpError.BadRequest("Cannot login without password");
-		return bcrypt.compare(data.password, user.password).then(function(isValid) {
-			if (!isValid) throw new HttpError.BadRequest("Wrong password");
+exports.login = function(data) {
+	return All.user.get(data).then(function(user) {
+		return All.api.Block.genId(16).then(function(hash) {
+			return user.$query().where('id', user.id).skipUndefined().patch({
+				'data:session': {
+					hash: hash,
+					done: false,
+					referer: data.referer
+				}
+			}).then(function(count) {
+				if (count == 0) throw new HttpError.NotFound("TODO use a transaction here");
+				return {id: user.id};
+			});
+		});
+	});
+};
+
+exports.activate = function(data) {
+	return All.user.get(data).then(function(user) {
+		var hash = user.data.session && user.data.session.hash;
+		if (!hash) {
+			throw new HttpError.BadRequest("Call auth.login before auth.validationLink");
+		}
+		return {
+			type: 'auth',
+			data: {
+				href: All.domains.host(data.domain) + `/.api/auth/validate?id=${user.id}&hash=${hash}`
+			}
+		};
+	});
+};
+
+exports.validate = function(data) {
+	return All.user.get(data).then(function(user) {
+		var hash = user.data.session && user.data.session.hash;
+		if (!hash) {
+			throw new HttpError.BadRequest("Unlogged user");
+		}
+		/* TODO REENABLE THIS
+		if (user.data.session.done) {
+			throw new HttpError.BadRequest("Already logged user");
+		}
+		*/
+		if (hash != data.hash) {
+			throw new HttpError.BadRequest("Bad validation link");
+		}
+		return user.$query().where('id', user.id).skipUndefined().patch({
+			'data:session.done': true
+		}).then(function(count) {
+			if (count == 0) throw new HttpError.NotFound("User has been deleted since activation");
 			return user;
 		});
 	});
 };
 
-exports.logout = function(res) {
-	exports.scope.logout(res);
-};
-
-// TODO transaction
-exports.create = function(data) {
-	return All.user.get({email: data.email}).then(function(user) {
-		if (user) throw new HttpError.BadRequest("User already exists");
-		if (!data.password) return data;
-		return Promise.all([
-			bcrypt.hash(data.password, appSalt),
-			bcrypt.hash(data.email, appSalt)
-		]);
-	}).then(function(hpass, hmail) {
-		data.password = hpass;
-		data.verification = hmail;
-		return All.user.add({
-			data: data
-		}).then(function(user) {
-			// TODO send email to user
-			console.log(`Send email to user with link to /.api/verify?email=${user.data.email}&verification=${user.data.verification}`);
-			if (user.data.password) delete user.data.password;
-			if (user.data.verification) delete user.data.verification;
-			return user;
+exports.keygen = function() {
+	var keysPath = Path.join(All.opt.dirs.data, 'keys.json');
+	return fs.readFile(keysPath).then(function(buf) {
+		return JSON.parse(buf.toString());
+	}).catch(function() {
+		// generate private/public keys and store in keysPath
+		return sshKeygen(All.opt.scope.keysize).then(function(obj) {
+			return fs.writeFile(keysPath, JSON.stringify(obj)).then(function() {
+				return fs.chmod(keysPath, 0600);
+			}).then(function() {
+				return obj;
+			});
 		});
+	}).then(function(keys) {
+		All.opt.scope.privateKey = keys.private;
+		All.opt.scope.publicKey = keys.public;
 	});
 };
 
-exports.verify = function(data) {
-	return All.user.get({email: data.email}).then(function(user) {
-		if (!user) throw new HttpError.NotFound("No user found");
-		if (!user.data.verification) return;
-		if (user.data.verification != data.verification) throw new HttpError.BadRequest("Wrong verification");
-		return All.user.save({
-			id: user.id,
-			'data.verification': null
+function sshKeygen(size) {
+	var spawn = require('spawn-please');
+	if (!size) size = 2048;
+	var obj = {};
+	return spawn('openssl', ['genrsa', size]).then(function(privBuf) {
+		obj.private = privBuf.toString();
+		return spawn('openssl', ['rsa', '-pubout'], obj.private).then(function(pubBuf) {
+			obj.public = pubBuf.toString();
+			return obj;
 		});
 	});
-};
-
-exports.passchange = function() {
-	// TODO a bit the same manipulation as create, but only for updating the password
-};
-
-// TODO probably need something better
-exports.delete = function(data) {
-	return All.user.del(data);
-};
+}
 
