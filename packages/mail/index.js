@@ -1,5 +1,6 @@
 var NodeMailer = require('nodemailer');
 var Mailgun = require('nodemailer-mailgun-transport');
+var got = require('got');
 // TODO https://nodemailer.com/dkim/
 
 var domemail = require('./express-dom-email');
@@ -28,13 +29,15 @@ exports = module.exports = function(opt) {
 
 	return {
 		priority: -10, // because default prerendering happens at 0
+		name: 'mail',
+		/* disable /.api/mail because mail.send is called by /.api/form
 		service: function(All) {
-			All.app.get('/.api/email', All.query, function(req, res, next) {
-				exports.get(req.query).then(function(result) {
+			All.app.post('/.api/email', All.body, function(req, res, next) {
+				exports.send(req.body).then(function(result) {
 					res.send(result);
 				}).catch(next);
 			});
-		},
+		},*/
 		view: function(All) {
 			return domemail.init().then(function() {
 				// TODO remove cache.tag call if express-dom keeps headers when proxying
@@ -46,12 +49,12 @@ exports = module.exports = function(opt) {
 
 function filterUser(id, builder) {
 	builder.select(this.tableColumns).where({
-		id: id,
-		type: 'user'
+		'block.id': id,
+		'block.type': 'user'
 	}).first().throwIfNotFound();
 }
 
-exports.get = function(data) {
+exports.send = function(data) {
 	if (!data.domain) throw new HttpError.BadRequest("Missing domain");
 	if (!data.url) throw new HttpError.BadRequest("Missing url");
 	if (!data.to) throw new HttpError.BadRequest("Missing to");
@@ -80,25 +83,31 @@ exports.get = function(data) {
 			filters.from = filterUser.bind(Block, data.from);
 		}
 
-		return Block.query().select(Block.tableColumns).whereDomain(Block.domain)
-		.eager(`[${what.join(',')}]`, filters).first().throwIfNotFound()
+		return Block.query().select(Block.tableColumns)
+		.whereJsonText('block.data:domain', data.domain)
+		.eager(`[${what.join(',')}]`, filters)
+		.where('block.type', 'site').first().throwIfNotFound();
 	}).then(function(site) {
 		if (!site.from) site.from = site.owner;
-		return got(site.page.data.url, {
+		return got(All.domains.host(site.data.domain) + site.page[0].data.url, {
+			json: true,
 			query: {
+				id: data.to,
 				email: true
 			}
+		}).then(function(response) {
+			return response.body;
 		}).then(function(obj) {
 			var mail = {
 				from: sender,
 				to: {
-					name: site.to.data.name,
-					address: site.to.data.email
+					name: site.to[0].data.name,
+					address: site.to[0].data.email
 				},
 				subject: obj.title,
 				replyTo: {
-					name: site.from.data.name,
-					address: site.from.data.email
+					name: site.from[0].data.name,
+					address: site.from[0].data.email
 				},
 				html: obj.html,
 				text: obj.text,
@@ -108,10 +117,6 @@ exports.get = function(data) {
 //					contentType: 'text/plain' // optional
 //				}]
 			};
-			var copy = Object.assign({}, mail);
-			copy.html = html.length + ' chars';
-			copy.text = text.length + ' chars';
-			console.info("Sending", copy);
 			return new Promise(function(resolve, reject) {
 				mailer.sendMail(mail, function (err, info) {
 					if (err) reject(err);
@@ -120,15 +125,4 @@ exports.get = function(data) {
 			});
 		});
 	});
-
-	// TODO handle attachments - data.files are files url
-	// it's up to another API to handle the uploads and return the files url
-
-	// 1. get from, to, url and check they match a block in this domain
-	// 2. get html from url - give some "internal" permission
-	// 3. send email !
-
-
-
-
 };

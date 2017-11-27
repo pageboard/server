@@ -19,17 +19,17 @@ exports.init = function() {
 };
 
 function mailPlugin(page, settings, request, response) {
-	settings.scripts.push(irBuf);
+//	settings.scripts.push(irBuf);
 	page.when('idle', function() {
 		return page.run(function(done) {
-			inlineresources.inlineReferences(document, {}).then(function (errors) {
+//			inlineresources.inlineReferences(document, {}).then(function (errors) {
 				done(null, {
-					errors: errors,
+//					errors: errors,
 					title: document.title,
-					html: document.documentElement.outerHTML,
+					html: `<html>${document.body.outerHTML}</html>`,
 					text: document.body.innerText
 				});
-			});
+//			});
 		}).then(function(obj) {
 			settings.output = false;
 			response.json(obj);
