@@ -8,15 +8,6 @@ var fs = {
 };
 
 exports = module.exports = function(opt) {
-	opt.scope = Object.assign({
-		issuer: opt.name,
-		maxAge: 3600 * 12,
-		userProperty: 'user'
-	}, opt.scope);
-
-	exports.scope = upcacheScope(opt.scope);
-	exports.restrict = exports.scope.restrict.bind(exports.scope);
-
 	return {
 		name: 'auth',
 		service: init
@@ -28,30 +19,40 @@ exports = module.exports = function(opt) {
 // validate: process activation link and return bearer in cookie
 
 function init(All) {
-	All.app.use('/.api/auth/*', All.cache.disable());
+	opt.scope = Object.assign({
+		issuer: opt.name,
+		maxAge: 3600 * 12,
+		userProperty: 'user',
+		keysize: 2048
+	}, opt.scope);
 
-	All.app.get('/.api/auth/activate', All.query, function(req, res, next) {
-		exports.activate(req.query).then(function(linkObj) {
-			res.send(linkObj);
-		}).catch(next);
+	return keygen(All).then(function() {
+		exports.scope = upcacheScope(opt.scope);
+		exports.restrict = exports.scope.restrict.bind(exports.scope);
+
+		All.app.use('/.api/auth/*', All.cache.disable());
+
+		All.app.get('/.api/auth/activate', All.query, function(req, res, next) {
+			exports.activate(req.query).then(function(linkObj) {
+				res.send(linkObj);
+			}).catch(next);
+		});
+
+		All.app.get('/.api/auth/validate', All.query, function(req, res, next) {
+			exports.validate(req.query).then(function(user) {
+				exports.scope.login(res, {
+					id: user.id,
+					scopes: user.data.grants || []
+				});
+				res.redirect(user.data.session.referer || '/');
+			}).catch(next);
+		});
+
+		All.app.get('/.api/auth/logout', function(req, res, next) {
+			exports.scope.logout(res);
+			res.redirect('back');
+		});
 	});
-
-	All.app.get('/.api/auth/validate', All.query, function(req, res, next) {
-		exports.validate(req.query).then(function(user) {
-			exports.scope.login(res, {
-				id: user.id,
-				scopes: user.data.grants || []
-			});
-			res.redirect(user.data.session.referer || '/');
-		}).catch(next);
-	});
-
-	All.app.get('/.api/auth/logout', function(req, res, next) {
-		exports.scope.logout(res);
-		res.redirect('back');
-	});
-
-	return exports.keygen();
 }
 
 exports.login = function(data) {
@@ -109,7 +110,7 @@ exports.validate = function(data) {
 	});
 };
 
-exports.keygen = function() {
+function keygen(All) {
 	var keysPath = Path.join(All.opt.dirs.data, 'keys.json');
 	return fs.readFile(keysPath).then(function(buf) {
 		return JSON.parse(buf.toString());
@@ -130,7 +131,6 @@ exports.keygen = function() {
 
 function sshKeygen(size) {
 	var spawn = require('spawn-please');
-	if (!size) size = 2048;
 	var obj = {};
 	return spawn('openssl', ['genrsa', size]).then(function(privBuf) {
 		obj.private = privBuf.toString();
