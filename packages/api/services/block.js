@@ -51,7 +51,7 @@ function QueryBlock(data) {
 		} else if (!data.id) {
 			throw new HttpError.BadRequest("Missing id");
 		} else {
-			q.where('block.id', data.id);
+			q.where('block.id', data.id).first().throwIfNotFound();
 		}
 		return q;
 	});
