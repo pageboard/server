@@ -61,6 +61,8 @@ exports.add = function(data) {
 			'#dbRef': user._id
 		}];
 		data.children = [{
+			'#dbRef': user._id // a user is also child of its own site
+		}, {
 			type: 'notfound',
 			standalone: true
 		}];
