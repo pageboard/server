@@ -21,7 +21,7 @@ exports = module.exports = function(opt) {
 
 function init(All) {
 	opt.scope = Object.assign({
-		maxAge: 3600 * 12,
+		maxAge: 60 * 60 * 24 * 31,
 		userProperty: 'user',
 		keysize: 2048
 	}, opt.scope);
