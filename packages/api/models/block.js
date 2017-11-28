@@ -44,6 +44,24 @@ Block.jsonSchema = {
 		updated_at: {
 			format: 'date-time',
 			type: 'string'
+		},
+		locks: {
+			type: 'array',
+			items: {
+				type: 'string',
+				pattern: '^\\w+$'
+			},
+			uniqueItems: true,
+			default: []
+		},
+		keys: {
+			type: 'array',
+			items: {
+				type: 'string',
+				pattern: '^\\w+$'
+			},
+			uniqueItems: true,
+			default: []
 		}
 	},
 	additionalProperties: false

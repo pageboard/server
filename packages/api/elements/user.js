@@ -34,14 +34,6 @@ Pageboard.elements.user = {
 		picture: {
 			type: 'string',
 			format: 'uri'
-		},
-		grants: {
-			type: 'array',
-			items: {
-				type: 'string'
-			},
-			uniqueItems: true,
-			default: []
 		}
 	}
 };
