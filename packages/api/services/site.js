@@ -8,22 +8,22 @@ exports = module.exports = function(opt) {
 };
 
 function init(All) {
-	All.app.get('/.api/site', All.query, function(req, res, next) {
+	All.app.get('/.api/site', All.auth.restrict('webmaster'), All.query, function(req, res, next) {
 		exports.get(req.query).then(function(site) {
 			res.send(site);
 		}).catch(next);
 	});
-	All.app.post('/.api/site', All.body, function(req, res, next) {
+	All.app.post('/.api/site', All.auth.restrict('webmaster'), All.body, function(req, res, next) {
 		exports.add(req.body).then(function(site) {
 			res.send(site);
 		}).catch(next);
 	});
-	All.app.put('/.api/site', All.body, function(req, res, next) {
+	All.app.put('/.api/site', All.auth.restrict('webmaster'), All.body, function(req, res, next) {
 		exports.save(req.body).then(function(site) {
 			res.send(site);
 		}).catch(next);
 	});
-	All.app.delete('/.api/site', All.query, function(req, res, next) {
+	All.app.delete('/.api/site', All.auth.restrict('webmaster'), All.query, function(req, res, next) {
 		exports.del(req.query).then(function(site) {
 			res.send(site);
 		}).catch(next);

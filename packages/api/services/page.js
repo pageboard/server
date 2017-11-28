@@ -20,17 +20,17 @@ function init(All) {
 			res.send(pages);
 		}).catch(next);
 	});
-	All.app.post('/.api/page', All.body, function(req, res, next) {
+	All.app.post('/.api/page', All.auth.restrict('webmaster'), All.body, function(req, res, next) {
 		exports.add(req.body).then(function(page) {
 			res.send(page);
 		}).catch(next);
 	});
-	All.app.put('/.api/page', All.body, function(req, res, next) {
+	All.app.put('/.api/page', All.auth.restrict('webmaster'), All.body, function(req, res, next) {
 		exports.save(req.body).then(function(page) {
 			res.send(page);
 		}).catch(next);
 	});
-	All.app.delete('/.api/page', All.query, function(req, res, next) {
+	All.app.delete('/.api/page', All.auth.restrict('webmaster'), All.query, function(req, res, next) {
 		exports.del(req.query).then(function(page) {
 			res.send(page);
 		}).catch(next);
