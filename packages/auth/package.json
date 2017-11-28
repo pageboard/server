@@ -18,7 +18,7 @@
   "homepage": "https://github.com/pageboard/auth#readme",
   "dependencies": {
     "spawn-please": "^0.3.0",
-    "upcache": "^0.6.5"
+    "upcache": "^0.7.0"
   },
   "pageboard": {
     "directories": [
