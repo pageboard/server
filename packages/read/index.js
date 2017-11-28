@@ -14,7 +14,7 @@ function init(All) {
 	// the route for load will use the preload route as source (view helper can pipe http requests)
 
 	return readFile(Path.join(__dirname, 'read/read.html')).then(function(buf) {
-		All.app.get('*', All.cache.tag('api', 'share', 'file'), All.dom(buf).load());
+		All.app.get('*', All.auth.restrict('*'), All.cache.tag('api', 'share', 'file'), All.dom(buf).load());
 	});
 }
 
