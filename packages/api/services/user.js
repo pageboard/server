@@ -7,13 +7,13 @@ exports = module.exports = function(opt) {
 
 function QueryUser(data) {
 	var Block = All.api.Block;
-	var q = Block.query().select(Block.tableColumns)
-	.first().throwIfNotFound().where('type', 'user');
+	var q = Block.query().alias('user').select(Block.columns)
+	.first().throwIfNotFound().where('user.type', 'user');
 	if (data.id) {
-		q.where('id', data.id);
+		q.where('user.id', data.id);
 		delete data.id;
 	} else if (data.email) {
-		q.whereJsonText('data:email', data.email);
+		q.whereJsonText('user.data:email', data.email);
 		delete data.email;
 	} else {
 		throw new HttpError.BadRequest("Cannot query user", data);
