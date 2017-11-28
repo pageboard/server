@@ -9,6 +9,7 @@ var fs = {
 
 exports = module.exports = function(opt) {
 	return {
+		priority: -1,
 		name: 'auth',
 		service: init
 	};
