@@ -88,7 +88,7 @@ exports.activate = function(data) {
 		return {
 			type: 'auth',
 			data: {
-				href: All.domains.host(data.domain) + `/.api/auth/validate?id=${user.id}&hash=${hash}`
+				href: `/.api/auth/validate?id=${user.id}&hash=${hash}`
 			}
 		};
 	});
