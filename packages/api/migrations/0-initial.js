@@ -6,6 +6,8 @@ exports.up = function(knex) {
 		table.string('type').notNullable().index();
 		table.jsonb('data').notNullable().defaultTo('{}');
 		table.jsonb('content').notNullable().defaultTo('{}');
+		table.jsonb('locks');
+		table.jsonb('keys');
 		table.string('lang');
 		table.boolean('standalone').notNullable().defaultTo(false);
 		table.timestamps(true, true); // created_at, updated_at, useTimestamps, defaultToNow

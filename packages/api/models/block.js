@@ -46,22 +46,28 @@ Block.jsonSchema = {
 			type: 'string'
 		},
 		locks: {
-			type: 'array',
-			items: {
-				type: 'string',
-				pattern: '^\\w+$'
-			},
-			uniqueItems: true,
-			default: []
+			oneOf: [{
+				type: 'array',
+				items: {
+					type: 'string',
+					pattern: '^\\w+$'
+				},
+				uniqueItems: true
+			}, {
+				type: 'null'
+			}]
 		},
 		keys: {
-			type: 'array',
-			items: {
-				type: 'string',
-				pattern: '^\\w+$'
-			},
-			uniqueItems: true,
-			default: []
+			oneOf: [{
+				type: 'array',
+				items: {
+					type: 'string',
+					pattern: '^\\w+$'
+				},
+				uniqueItems: true
+			}, {
+				type: 'null'
+			}]
 		}
 	},
 	additionalProperties: false
