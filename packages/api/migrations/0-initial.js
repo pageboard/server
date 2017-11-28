@@ -12,8 +12,10 @@ exports.up = function(knex) {
 	})
 	.createTable('relation', function (table) {
 		table.increments('id').primary();
-		table.integer('parent_id').notNullable().unsigned().references('_id').inTable('block').onDelete('CASCADE');
-		table.integer('child_id').notNullable().unsigned().references('_id').inTable('block').onDelete('CASCADE');
+		table.integer('parent_id').notNullable()
+		.unsigned().references('_id').inTable('block').onDelete('CASCADE');
+		table.integer('child_id').notNullable()
+		.unsigned().references('_id').inTable('block').onDelete('CASCADE');
 	})
 	.raw(
 		"CREATE UNIQUE INDEX ON block ((data#>>'{url}'), lang) WHERE data->'url' IS NOT NULL"
