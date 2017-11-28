@@ -63,7 +63,7 @@ Block.prototype.$beforeUpdate = function() {
 };
 
 Block.createNotFoundError = function(data) {
-	return new HttpError.NotFound(data);
+	return new HttpError.NotFound("Block not found");
 };
 
 Block.relationMappings = {
