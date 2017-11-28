@@ -49,7 +49,6 @@ exports.submit = function(data) {
 
 
 function execute(All, apiStr, data) {
-	console.log("form", apiStr, data);
 	var api = apiStr.split('.');
 	var modName = api[0];
 	var funName = api[1];
