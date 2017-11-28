@@ -20,15 +20,15 @@ exports = module.exports = function(opt) {
 
 function init(All) {
 	opt.scope = Object.assign({
-		issuer: opt.name,
 		maxAge: 3600 * 12,
 		userProperty: 'user',
 		keysize: 2048
 	}, opt.scope);
 
 	return keygen(All).then(function() {
-		exports.scope = upcacheScope(opt.scope);
-		exports.restrict = exports.scope.restrict.bind(exports.scope);
+		var scope = upcacheScope(opt.scope);
+		All.auth.restrict = scope.restrict.bind(scope);
+		All.auth.test = scope.test.bind(scope);
 
 		All.app.use('/.api/auth/*', All.cache.disable());
 
@@ -40,16 +40,23 @@ function init(All) {
 
 		All.app.get('/.api/auth/validate', All.query, function(req, res, next) {
 			exports.validate(req.query).then(function(user) {
-				exports.scope.login(res, {
+				// check if user owns this site
+				var owner = user.sites.some(function(site) {
+					return site.data.domain == req.query.domain;
+				});
+				// upcache sets jwt.issuer to req.hostname so we should be fine
+				var keys = user.keys || {};
+				if (owner) keys.webmaster = true;
+				scope.login(res, {
 					id: user.id,
-					scopes: user.data.grants || []
+					scopes: keys
 				});
 				res.redirect(user.data.session.referer || '/');
 			}).catch(next);
 		});
 
 		All.app.get('/.api/auth/logout', function(req, res, next) {
-			exports.scope.logout(res);
+			scope.logout(res);
 			res.redirect('back');
 		});
 	});
@@ -88,16 +95,16 @@ exports.activate = function(data) {
 };
 
 exports.validate = function(data) {
-	return All.user.get(data).then(function(user) {
+	return All.user.get(data).eager('children(sites) as sites', {
+		sites: function(builder) {builder.where('type', 'site');}
+	}).then(function(user) {
 		var hash = user.data.session && user.data.session.hash;
 		if (!hash) {
 			throw new HttpError.BadRequest("Unlogged user");
 		}
-		/* TODO REENABLE THIS
 		if (user.data.session.done) {
 			throw new HttpError.BadRequest("Already logged user");
 		}
-		*/
 		if (hash != data.hash) {
 			throw new HttpError.BadRequest("Bad validation link");
 		}
