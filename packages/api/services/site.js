@@ -91,3 +91,34 @@ exports.del = function(data) {
 	return QuerySite(data).del();
 };
 
+exports.own = function(data) {
+	if (!data.user) throw new HttpError.BadRequest("Missing user");
+	if (!data.domain) throw new HttpError.BadRequest("Missing domain");
+	return QuerySite(data).select('site._id').then(function(site) {
+		return All.user.get({email: data.user}).clearSelect().select('user._id')
+		.eager('[children(ownedSites), parents(owningSites)]', {
+			ownedSites: function(builder) {
+				builder.select('_id').whereJsonText('data:domain', data.domain)
+				.where('type', 'site');
+			},
+			owningSites: function(builder) {
+				builder.select('_id').whereJsonText('data:domain', data.domain)
+				.where('type', 'site');
+			}
+		}).then(function(user) {
+			var proms = [];
+			if (!user.children.length) {
+				proms.push(user.$relatedQuery('children').relate(site).then(function() {
+					return "user owns site";
+				}));
+			}
+			if (!user.parents.length) {
+				proms.push(user.$relatedQuery('parents').relate(site).then(function() {
+					return "site owns user";
+				}));
+			}
+			if (!proms.length) return "nothing to do";
+			else return Promise.all(proms);
+		});
+	});
+};
