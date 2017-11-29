@@ -42,7 +42,7 @@ function QuerySite(data) {
 }
 
 exports.get = function(data) {
-	return QuerySite(data).select(All.api.Block.tableColumns);
+	return QuerySite(data).select(All.api.Block.columns);
 };
 
 exports.add = function(data) {
