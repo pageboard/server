@@ -31,43 +31,43 @@ function init(All) {
 }
 
 function QuerySite(data) {
-	var q = All.api.Block.query();
+	var q = All.api.Block.query().alias('site').first().throwIfNotFound();
 	if (data.id) {
-		q.where('id', data.id);
+		q.where('site.id', data.id);
 	} else {
 		if (!data.domain) throw new HttpError.BadRequest("Missing domain");
-		q.whereJsonText('block.data:domain', data.domain).where('block.type', 'site');
+		q.whereJsonText('site.data:domain', data.domain).where('site.type', 'site');
 	}
 	return q;
 }
 
 exports.get = function(data) {
-	return QuerySite(data).select('block.*').first().then(function(site) {
-		if (!site) throw new HttpError.NotFound("No site found");
-		return site;
-	});
+	return QuerySite(data).select(All.api.Block.tableColumns);
 };
 
 exports.add = function(data) {
 	if (!data.user) throw new HttpError.BadRequest("Missing user");
-	data = Object.assign({
+	return QuerySite({domain: data.data.domain}).then(function(site) {
+		console.info("Not adding already existing site", data.data.domain);
+	}).catch(function(err) {
+		data = Object.assign({
 		type: 'site'
-	}, data);
-	return All.user.get({
-		type: 'user',
-		email: data.user
-	}).select('_id').then(function(user) {
-		data.parents = [{
-			'#dbRef': user._id
-		}];
-		data.children = [{
-			'#dbRef': user._id // a user is also child of its own site
-		}, {
-			type: 'notfound',
-			standalone: true
-		}];
-		delete data.user;
-		return All.api.Block.query().insertGraph(data);
+		}, data);
+		return All.user.get({
+			email: data.user
+		}).select('_id').then(function(user) {
+			data.parents = [{
+				'#dbRef': user._id
+			}];
+			data.children = [{
+				'#dbRef': user._id // a user is also child of its own site
+			}, {
+				type: 'notfound',
+				standalone: true
+			}];
+			delete data.user;
+			return All.api.Block.query().insertGraph(data);
+		});
 	});
 };
 
