@@ -1,6 +1,7 @@
 
 Pageboard.elements.authName = {
 	group: 'block',
+	menu: 'user',
 	render: function(doc, block) {
 		var d = block.data;
 		return doc.dom`<div class="username">${d.name}</div>`;
@@ -9,6 +10,7 @@ Pageboard.elements.authName = {
 
 Pageboard.elements.auth = {
 	title: 'Validate',
+	menu: 'user',
 	icon: '<b class="icon">Auth</b>',
 	group: 'block',
 	mount: function(block, blocks, view) {
