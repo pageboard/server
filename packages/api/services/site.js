@@ -46,15 +46,15 @@ exports.get = function(data) {
 };
 
 exports.add = function(data) {
-	if (!data.user) throw new HttpError.BadRequest("Missing user");
+	if (!data.email) throw new HttpError.BadRequest("Missing email");
 	return QuerySite({domain: data.data.domain}).then(function(site) {
 		console.info("Not adding already existing site", data.data.domain);
 	}).catch(function(err) {
 		data = Object.assign({
-		type: 'site'
+			type: 'site'
 		}, data);
 		return All.user.get({
-			email: data.user
+			email: data.email
 		}).select('_id').then(function(user) {
 			data.parents = [{
 				'#dbRef': user._id
@@ -65,7 +65,7 @@ exports.add = function(data) {
 				type: 'notfound',
 				standalone: true
 			}];
-			delete data.user;
+			delete data.email;
 			return All.api.Block.query().insertGraph(data);
 		});
 	});
@@ -92,10 +92,12 @@ exports.del = function(data) {
 };
 
 exports.own = function(data) {
-	if (!data.user) throw new HttpError.BadRequest("Missing user");
+	if (!data.email) throw new HttpError.BadRequest("Missing email");
 	if (!data.domain) throw new HttpError.BadRequest("Missing domain");
 	return QuerySite(data).select('site._id').then(function(site) {
-		return All.user.get({email: data.user}).clearSelect().select('user._id')
+		return All.user.get({
+			email: data.email
+		}).clearSelect().select('user._id')
 		.eager('[children(ownedSites), parents(owningSites)]', {
 			ownedSites: function(builder) {
 				builder.select('_id').whereJsonText('data:domain', data.domain)
