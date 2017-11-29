@@ -112,7 +112,7 @@ CacheState.prototype.mw = function(req, res, next) {
 			console.info(`share tag changes for domain ${domain}`);
 			doSave = true;
 			dobj.share = mtime;
-			tags.push('share');
+			tags.push('shared');
 		}
 		return me.refreshMtime(domain);
 	}).then(function(mtime) {
