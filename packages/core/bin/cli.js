@@ -34,7 +34,9 @@ pageboard.init(config).then(function(All) {
 		});
 	});
 	if (commands) {
-		return p.then(function() {
+		return p.catch(function(err) {
+			console.error(err.toString());
+		}).then(function() {
 			console.info(`Processed ${commands} commands, exiting...`);
 			process.exit();
 		});
