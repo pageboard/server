@@ -141,6 +141,11 @@ Other configurations not set in package.json:
 - global (wether All is available as a global or not)
 - listen
 - database (connection string)
+  database.user
+  database.dump (can be set to anything)
+  database.dump.interval (in days)
+  database.dump.dir (dir name in xdg data dir)
+  database.dump.keep (in days)
 - logFormat (for morgan)
 - seeds, migrations (lists of directories)
 - components (list of files)
