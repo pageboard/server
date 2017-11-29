@@ -99,7 +99,6 @@ CacheState.prototype.mw = function(req, res, next) {
 		doSave = true;
 		dobj.hash = this.hash;
 	} else if (dobj.hash != this.hash) {
-		console.info(`app tag changes for domain ${domain}`);
 		doSave = true;
 		dobj.hash = this.hash;
 		tags.push('app');
@@ -109,7 +108,6 @@ CacheState.prototype.mw = function(req, res, next) {
 			doSave = true;
 			dobj.share = mtime;
 		} else if (mtime > dobj.share) {
-			console.info(`share tag changes for domain ${domain}`);
 			doSave = true;
 			dobj.share = mtime;
 			tags.push('shared');
@@ -120,14 +118,17 @@ CacheState.prototype.mw = function(req, res, next) {
 			doSave = true;
 			dobj.file = mtime;
 		} else if (mtime > dobj.file) {
-			console.info(`file tag changes for domain ${domain}`);
 			doSave = true;
 			dobj.file = mtime;
 			tags.push('file');
 		}
 	}).then(function() {
-		if (tags.length) tag.apply(null, tags)(req, res, next);
-		else next();
+		if (tags.length) {
+			console.info(`cache change '${domain}' tags: ${tags.join(' ')}`);
+			tag.apply(null, tags)(req, res, next);
+		} else {
+			next();
+		}
 		if (doSave) me.save();
 	});
 }
