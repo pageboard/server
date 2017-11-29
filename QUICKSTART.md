@@ -6,7 +6,10 @@ pageboard user.add \
 pageboard site.add \
 --data.data.name=local \
 --data.data.domain=localhost \
---data.user='your@email.com'
+--data.email='your@email.com'
+
+TODO how to relate user -> site from cli
+and also site -> user to make sure the login form works.
 
 pageboard site.save \
 --data.domain=localhost \
@@ -26,4 +29,29 @@ pageboard auth.activate --data.email='you@email.com' --data.domain='localhost'
 
 You obtain a one-time activation link, and just need to prepend your site
 hostname to it to build an absolute url.
+
+
+How to set a user as webmaster for a site ?
+-------------------------------------------
+
+pageboard site.own --data.email='you@email.com' --data.domain='localhost'
+
+
+How to setup login ?
+--------------------
+
+This assumes a mail transport has been setup. See pageboard/mail.
+
+On "Page Not Found", insert a sitemap, and two pages in it:
+
+/login
+/login/email
+
+On /login, create a form with an input[name="email"] (format email, required)
+and the form must be
+action: submit auth.login
+reaction: submit mail.send, to: res.id, url: /login/email
+
+Then on /login/email, add a Auth Activation button.
+That's it !
 
