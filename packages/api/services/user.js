@@ -37,7 +37,7 @@ exports.add = function(data) {
 };
 
 exports.save = function(data) {
-	return QueryUser(data).patch(data);
+	return QueryUser(data).patch(data).skipUndefined();
 };
 
 exports.del = function(data) {

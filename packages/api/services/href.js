@@ -140,7 +140,7 @@ exports.add = function(data) {
 						.where(ref('data:domain').castText(), data.domain)
 				}, result)).returning(Href.tableColumns);
 			} else {
-				return Href.query().patch(result).where('_id', href._id)
+				return Href.query().patch(result).skipUndefined().where('_id', href._id)
 					.first().returning(Href.tableColumns);
 			}
 		});
@@ -153,7 +153,7 @@ exports.save = function(data) {
 		if (!href) {
 			return exports.add(data);
 		} else {
-			return Href.query().patch({title: data.title}).where('_id', href._id);
+			return Href.query().patch({title: data.title}).skipUndefined().where('_id', href._id);
 		}
 	});
 };
@@ -164,7 +164,7 @@ exports.del = function(data) {
 		if (!href) throw new HttpError.NotFound("No href found for this url");
 		return All.api.Href.query().patch({
 			visible: false
-		}).where('_id', href._id).then(function() {
+		}).skipUndefined().where('_id', href._id).then(function() {
 			href.visible = false;
 			return href;
 		});
