@@ -73,7 +73,7 @@ exports.add = function(data) {
 };
 
 exports.save = function(data) {
-	return QueryBlock(data).patch(data).skipUndefined();
+	return QueryBlock(data).patch(data);
 };
 
 exports.del = function(data) {

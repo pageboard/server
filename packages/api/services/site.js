@@ -80,7 +80,7 @@ exports.save = function(data) {
 		);
 		// ensure we don't just empty site.data by mistake
 		data.data = Object.assign({}, site.data, data.data);
-		return site.$query().where('id', site.id).patch(data).skipUndefined().then(function(result) {
+		return All.api.Block.query().where('id', site.id).patch(data).then(function(result) {
 			if (sameDeps == false) return All.install(data.data).then(() => result);
 			else return result;
 		});
