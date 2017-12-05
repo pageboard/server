@@ -124,7 +124,7 @@ CacheState.prototype.mw = function(req, res, next) {
 		}
 	}).then(function() {
 		if (tags.length) {
-			console.info(`cache change '${domain}' tags: ${tags.join(' ')}`);
+			console.info(` up tags: ${tags.join(' ')}`);
 			tag.apply(null, tags)(req, res, next);
 		} else {
 			next();
