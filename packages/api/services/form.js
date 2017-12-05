@@ -6,6 +6,9 @@ exports = module.exports = function(opt) {
 };
 
 function init(All) {
+	All.app.get("/.api/form", function(req, res, next) {
+		throw new HttpError.NotImplemented();
+	});
 	All.app.post("/.api/form", All.body, function(req, res, next) {
 		exports.submit(req.body).then(function(data) {
 			if (data.redirect && req.accepts('html') && !req.xhr) {
