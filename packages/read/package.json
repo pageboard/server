@@ -19,7 +19,7 @@
   "homepage": "https://github.com/pageboard/read#readme",
   "dependencies": {
     "dom-template-strings": "^2.4.2",
-    "pagecut": "^1.0.0-beta.11",
+    "pagecut": "^1.0.0-beta.32",
     "postinstall-links": "^0.3.0",
     "window-agent": "^1.2.0",
     "window-page": "^2.0.0-alpha.3"
