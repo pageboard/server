@@ -247,7 +247,7 @@ function npmInstall(domainDir) {
 					'package-lock': false
 				}, function(err) {
 					if (err) return reject(err);
-					npm.commands.install(function(err, data) {
+					npm.commands.update(function(err, data) {
 						if (err) reject(err);
 						else resolve(data);
 					});
