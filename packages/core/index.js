@@ -241,7 +241,7 @@ function npmInstall(domainDir) {
 					// with domainDir as the volume
 					'ignore-scripts': false,
 					only: 'prod',
-					loglevel: 'silent',
+					loglevel: 'error',
 					silent: true,
 					progress: false,
 					'package-lock': false
