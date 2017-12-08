@@ -149,8 +149,11 @@ function initPlugins(plugins, type) {
 		} else {
 			to = All;
 		}
-		if (type) p = p.then(() => obj[type].call(obj, All));
-		else if (obj.init) p = p.then(() => obj.init.call(obj, All));
+		if (type) {
+			p = p.then(() => obj[type].call(obj, All));
+		} else if (obj.init) {
+			p = p.then(() => obj.init.call(obj, All));
+		}
 		p = p.then(function() {
 			var plugin = obj.plugin = Object.assign({}, obj.plugin); // make a copy
 			Object.keys(plugin).forEach(function(key) {
@@ -204,7 +207,10 @@ function install({domain, dependencies}) {
 		var doInstall = true;
 		return fs.readFile(pkgFile).then(function(json) {
 			var obj = JSON.parse(json);
-			if (equal(obj.dependencies, dependencies)) doInstall = false;
+			if (equal(obj.dependencies, dependencies)) {
+				debug("no change in dependencies");
+				doInstall = false;
+			}
 		}).catch(function(ex) {
 			// whatever
 		}).then(function() {
