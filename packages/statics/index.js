@@ -98,7 +98,9 @@ function mountPath(src, dst) {
 
 	return mkdirp(Path.dirname(absDst)).then(function() {
 		return fs.unlink(absDst).catch(function(err) {}).then(function() {
-			return fs.symlink(src, absDst);
+			return fs.symlink(src, absDst).catch(function(err) {
+				console.error("Was not able to symlink", err);
+			});
 		});
 	});
 }
