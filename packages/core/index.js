@@ -10,7 +10,6 @@ var rc = require('rc');
 var mkdirp = pify(require('mkdirp'));
 var xdg = require('xdg-basedir');
 var pkgup = require('pkg-up');
-var PQueue = require('p-queue');
 var equal = require('esequal');
 var debug = require('debug')('pageboard:core');
 
@@ -22,8 +21,9 @@ var fs = {
 	unlink: pify(require('fs').unlink)
 };
 
-var npm = require('npm');
-var npmQueue = new PQueue({concurrency: 1});
+var cp = {
+	exec: pify(require('child_process').exec)
+};
 
 // exceptional but so natural
 global.HttpError = require('http-errors');
@@ -237,30 +237,18 @@ function install({domain, dependencies}) {
 
 function npmInstall(domainDir) {
 	debug("Installing dependencies", domainDir);
-	return npmQueue.add(function() {
-		return fs.unlink(Path.join(domainDir, 'package-lock.json')).catch(function(){})
-		.then(function() {
-			return new Promise(function(resolve, reject) {
-				npm.load({
-					prefix: domainDir,
-					// TODO use binci to run in a docker container
-					// with domainDir as the volume
-					'ignore-scripts': false,
-					only: 'prod',
-					loglevel: 'error',
-					silent: true,
-					progress: false,
-					'package-lock': false
-				}, function(err) {
-					if (err) return reject(err);
-					npm.commands.update(function(err, data) {
-						if (err) console.error(err);
-						else debug(" Done");
-						resolve();
-					});
-				});
-			});
-		});
+	return cp.exec("npm install", {
+		cwd: domainDir,
+		timeout: 60 * 1000,
+		env: {
+			PATH: process.env.PATH,
+			npm_config_userconfig: '', // attempt to disable user config
+			npm_config_ignore_scripts: 'false',
+			npm_config_loglevel: 'error',
+			npm_config_progress: 'false',
+			npm_config_package_lock: 'false',
+			npm_config_only: 'prod'
+		}
 	});
 }
 

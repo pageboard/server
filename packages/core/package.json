@@ -34,8 +34,6 @@
     "method-override": "^2.3.4",
     "mkdirp": "^0.5.1",
     "morgan": "^1.8.2",
-    "npm": "^5.6.0",
-    "p-queue": "^1.0.0",
     "pad": "^1.1.0",
     "pkg-up": "^2.0.0",
     "pretty-bytes": "^4.0.2",
