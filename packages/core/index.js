@@ -75,7 +75,13 @@ exports.init = function(opt) {
 
 	while (opt.plugins.length) {
 		var module = opt.plugins.shift();
-		var plugin = require(module);
+		var plugin;
+		try {
+			plugin = require(module);
+		} catch(ex) {
+			console.error("Cannot require plugin", module);
+			continue;
+		}
 		if (typeof plugin != "function") continue;
 		var obj = plugin(opt) || {};
 		obj.plugin = plugin;
