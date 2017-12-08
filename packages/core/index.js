@@ -211,7 +211,7 @@ function install({domain, dependencies}) {
 			if (!doInstall) return;
 			return npmInstall(domainDir);
 		});
-	}).then(function(data) {
+	}).then(function() {
 		return Promise.all(Object.keys(dependencies || {}).map(function(module) {
 			return initConfig(Path.join(domainDir, 'node_modules', module), domain, module, config);
 		}));
@@ -248,8 +248,9 @@ function npmInstall(domainDir) {
 				}, function(err) {
 					if (err) return reject(err);
 					npm.commands.update(function(err, data) {
-						if (err) reject(err);
-						else resolve(data);
+						if (err) console.error(err);
+						else debug(" Done");
+						resolve();
 					});
 				});
 			});
