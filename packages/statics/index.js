@@ -80,7 +80,9 @@ function init(All) {
 exports.install = function(domain, {directories}, All) {
 	return rimraf(Path.join(All.opt.statics.runtime, domain || 'pageboard')).then(function() {
 		return Promise.all(directories.map(function(mount) {
-			return mountPath(mount.from, mount.to);
+			return mountPath(mount.from, mount.to).catch(function(err) {
+				console.error("Cannot simultaneously install", mount, directories);
+			});
 		}));
 	});
 };
@@ -98,9 +100,7 @@ function mountPath(src, dst) {
 
 	return mkdirp(Path.dirname(absDst)).then(function() {
 		return fs.unlink(absDst).catch(function(err) {}).then(function() {
-			return fs.symlink(src, absDst).catch(function(err) {
-				console.error("Was not able to symlink", err);
-			});
+			return fs.symlink(src, absDst);
 		});
 	});
 }
