@@ -105,6 +105,9 @@ exports.init = function(opt) {
 		app.use(All.log);
 		return initPlugins.call(All, pluginList, 'service');
 	}).then(function() {
+		app.use('/.api/*', function(req, res, next) {
+			next(new HttpError.NotFound(`Cannot ${req.method} ${req.originalUrl}`));
+		});
 		app.use(servicesError);
 		return initPlugins.call(All, pluginList, 'view');
 	}).then(function() {
