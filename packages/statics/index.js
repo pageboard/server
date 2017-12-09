@@ -81,7 +81,7 @@ exports.install = function(domain, {directories}, All) {
 	return rimraf(Path.join(All.opt.statics.runtime, domain || 'pageboard')).then(function() {
 		return Promise.all(directories.map(function(mount) {
 			return mountPath(mount.from, mount.to).catch(function(err) {
-				console.error("Cannot simultaneously install", mount, directories);
+				console.error("Cannot mount", mount.from, mount.to);
 			});
 		}));
 	});
