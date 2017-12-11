@@ -60,6 +60,7 @@ exports.init = function(opt) {
 		app: app,
 		opt: opt
 	};
+	All.run = run.bind(All);
 	All.query = reqQuery.bind(All);
 	All.body = reqBody.bind(All);
 	All.install = install.bind(All);
@@ -405,6 +406,19 @@ function reqQuery(req, res, next) {
 	// all payloads must contain domain
 	obj.domain = req.hostname;
 	next();
+}
+
+function run(apiStr, data) {
+	return Promise.resolve().then(function() {
+		var api = apiStr.split('.');
+		var modName = api[0];
+		var funName = api[1];
+		var mod = this[modName];
+		if (!mod) throw new HttpError.BadRequest(`Unknown api module ${modName}`);
+		var fun = mod[funName];
+		if (!fun) throw new HttpError.BadRequest(`Unknown api method ${funName}`);
+		return fun.call(mod, data || {});
+	}.bind(this));
 }
 
 function Domains(All) {

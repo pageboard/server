@@ -12,32 +12,17 @@ console.info(`${config.name} ${config.version}`);
 
 pageboard.init(config).then(function(All) {
 	var p = Promise.resolve();
-	var commands = 0;
-	All.opt._.forEach(function(str) {
-		var tokens = str.split('.');
-		var token, obj = All;
-		while (obj && (token = tokens.shift())) {
-			obj = obj[token];
-		}
-		if (typeof obj != "function") return;
-		commands++;
-		p = p.then(function() {
-			if (config.data) {
-				console.info(`Run ${str}(${JSON.stringify(config.data, null, "  ")})`);
-				return obj(config.data);
-			} else {
-				console.info(`Run ${str}`);
-				return obj();
-			}
-		}).then(function(data) {
-			console.info(`Done ${str}: ${JSON.stringify(data, null, "  ")}`);
-		});
-	});
-	if (commands) {
-		return p.catch(function(err) {
+	if (All.opt._.length > 1) {
+		console.error("Cannot process arguments", All.opt._);
+		process.exit(1);
+	}
+	if (All.opt._.length == 1) {
+		var command = All.opt._[0];
+		return All.run(command, config.data).catch(function(err) {
 			console.error(err.toString());
+			process.exit(1);
 		}).then(function() {
-			console.info(`Processed ${commands} commands, exiting...`);
+			console.info(`${command} done.`);
 			process.exit();
 		});
 	}
