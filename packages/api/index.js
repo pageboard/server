@@ -25,7 +25,8 @@ exports = module.exports = function(opt) {
 		__dirname + '/services/page',
 		__dirname + '/services/block',
 		__dirname + '/services/href',
-		__dirname + '/services/form'
+		__dirname + '/services/form',
+		__dirname + '/services/query'
 	);
 	opt.models = [
 		__dirname + '/models/block',
