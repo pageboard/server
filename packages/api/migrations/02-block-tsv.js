@@ -4,7 +4,7 @@ exports.up = function(knex) {
 	.raw("ALTER TABLE block ADD COLUMN tsv tsvector")
 	.raw(`CREATE OR REPLACE FUNCTION block_tsv_update() RETURNS trigger AS $$
 BEGIN
-	new.tsv := to_tsvector('unaccent', string_agg(value, ' ')) FROM jsonb_each_text(new.content);
+	new.tsv := to_tsvector('unaccent', new.data->>'title' || ' ' || string_agg(value, ' ')) FROM jsonb_each_text(new.content);
 	RETURN new;
 END
 $$ LANGUAGE plpgsql`)
