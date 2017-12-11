@@ -28,7 +28,7 @@ exports.submit = function(data) {
 		var fd = form.data;
 		if (fd.action.method != "post") throw new HttpError.MethodNotAllowed("Only post allowed");
 		var api = fd.action.call.split('.');
-		return execute(All, fd.action.call, data).then(function(response) {
+		return All.run(fd.action.call, data).then(function(response) {
 			if (!fd.reaction.call || fd.reaction.method != "post") return response;
 			// process fd.reaction.data
 			var rdata = {};
@@ -39,7 +39,7 @@ exports.submit = function(data) {
 				rdata[key] = val;
 			});
 			rdata.domain = data.domain;
-			return execute(All, fd.reaction.call, rdata);
+			return All.run(fd.reaction.call, rdata);
 		}).then(function() {
 			var result = {};
 			if (fd.redirect) {
@@ -49,18 +49,6 @@ exports.submit = function(data) {
 		});
 	});
 };
-
-
-function execute(All, apiStr, data) {
-	var api = apiStr.split('.');
-	var modName = api[0];
-	var funName = api[1];
-	var mod = All[modName];
-	if (!mod) throw new HttpError.BadRequest(`Unknown api module ${modName}`);
-	var fun = mod[funName];
-	if (!fun) throw new HttpError.BadRequest(`Unknown api method ${funName}`);
-	return fun.call(mod, data);
-}
 
 function accessKey(path, data) {
 	var val = data;
