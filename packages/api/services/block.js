@@ -42,10 +42,10 @@ function QueryBlock(data) {
 				Block.raw("to_tsquery('unaccent', ?) AS query", [text]),
 				'block'
 			]));
-			if (data.type) q.where('type', data.type);
-			q.whereRaw('query @@ tsv');
-			q.orderByRaw('ts_rank(tsv, query) DESC');
-			q.orderBy('updated_at', 'desc');
+			if (data.type) q.where('block.type', data.type);
+			q.whereRaw('query @@ block.tsv');
+			q.orderByRaw('ts_rank(block.tsv, query) DESC');
+			q.orderBy('updated_at', 'block.desc');
 			if (data.paginate) q.offset(Math.max(parseInt(data.paginate) - 1 || 0, 0) * 10);
 			q.limit(10);
 		} else if (!data.id) {
