@@ -20,8 +20,3 @@ exports.down = function(knex) {
 	.raw("ALTER TABLE block DROP COLUMN tsv");
 };
 
-
-
-
-
-
