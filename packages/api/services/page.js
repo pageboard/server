@@ -178,7 +178,8 @@ function textSearchPages(Block, data) {
 	*/
 
 	var limit = 10;
-	var page = Math.max(parseInt(data.page || 0), 1);
+	var page = !data.page ? 1 : parseInt(data.page);
+	if (isNaN(page) || page <= 0) throw new HttpError.BadRequest("page must be a positive integer");
 
 	var q = Block.raw(`SELECT json_build_object(
 		'count', count,
@@ -226,7 +227,9 @@ function textSearchPages(Block, data) {
 	return q.then(function(results) {
 		var result = results.rows[0].result;
 		result.limit = limit;
+		result.pages = Math.ceil(result.count / limit);
 		result.page = page;
+		delete result.count;
 		return result;
 	});
 }
