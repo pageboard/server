@@ -16,7 +16,7 @@ function init(All) {
 		}).catch(next);
 	});
 	All.app.get('/.api/pages', All.query, function(req, res, next) {
-		exports.find(req.query).then(function(pages) {
+		exports.list(req.query).then(function(pages) {
 			res.send(pages);
 		}).catch(next);
 	});
@@ -76,7 +76,7 @@ exports.get = function(data) {
 			var pageUrl = page.data.url || data.url;
 			return Promise.all([
 				getParents(Block, pageUrl),
-				findPages(Block, {
+				listPages(Block, {
 					parent: pageUrl.split('/').slice(0, -1).join('/') || '/'
 				}).select([
 					ref('block.data:url').as('url'),
@@ -116,7 +116,7 @@ function getParents(Block, url) {
 	.orderByRaw("length(block.data->>'url') DESC");
 }
 
-function findPages(Block, data) {
+function listPages(Block, data) {
 	var q = Block.query()
 	.select(Block.tableColumns)
 	.omit(['content'])
@@ -133,7 +133,8 @@ function findPages(Block, data) {
 	return q.orderBy(ref('block.data:url'));
 }
 
-function textSearchPages(Block, data) {
+function searchPages(Block, data) {
+	if (!data.text) return Promise.resolve({results:[],pages:0,page:0});
 	var text = data.text.split(' ')
 	.filter(x => !!x)
 	.map(x => x + ':*')
@@ -234,13 +235,14 @@ function textSearchPages(Block, data) {
 	});
 }
 
-exports.find = function(data) {
+exports.search = function(data) {
 	if (!data.domain) throw new HttpError.BadRequest("Missing domain");
-	if (data.text != null) {
-		return textSearchPages(All.api.Block, data);
-	} else {
-		return findPages(All.api.Block, data);
-	}
+	return searchPages(All.api.Block, data);
+};
+
+exports.list = function(data) {
+	if (!data.domain) throw new HttpError.BadRequest("Missing domain");
+	return listPages(All.api.Block, data);
 };
 
 exports.save = function(changes) {
