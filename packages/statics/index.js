@@ -79,11 +79,15 @@ function init(All) {
 
 exports.install = function(domain, {directories}, All) {
 	return rimraf(Path.join(All.opt.statics.runtime, domain || 'pageboard')).then(function() {
-		return Promise.all(directories.map(function(mount) {
-			return mountPath(mount.from, mount.to).catch(function(err) {
-				console.error("Cannot mount", mount.from, mount.to);
+		var p = Promise.resolve();
+		directories.forEach(function(mount) {
+			p.then(function() {
+				return mountPath(mount.from, mount.to).catch(function(err) {
+					console.error("Cannot mount", mount.from, mount.to);
+				});
 			});
-		}));
+		});
+		return p;
 	});
 };
 
