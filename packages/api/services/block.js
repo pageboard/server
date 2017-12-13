@@ -36,7 +36,7 @@ function QueryBlock(data) {
 			return Block.query().select(Block.tableColumns).where('block.id', data.id);
 		}
 		var q = Block.query().select(Block.tableColumns).whereDomain(Block.domain);
-		if (data.text) {
+		if (data.text != null) {
 			var text = data.text.split(' ').filter(x => !!x).map(x => x + ':*').join(' <-> ');
 			q.from(Block.raw([
 				Block.raw("to_tsquery('unaccent', ?) AS query", [text]),
