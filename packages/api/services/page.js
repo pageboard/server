@@ -133,9 +133,98 @@ function findPages(Block, data) {
 	return q.orderBy(ref('block.data:url'));
 }
 
+function textSearchPages(Block, data) {
+	var text = data.text.split(' ')
+	.filter(x => !!x)
+	.map(x => x + ':*')
+	.join(' <-> ');
+
+	/* // i tried using knex/objection but i failed miserably
+	var q = Block.query()
+	.select([
+		'title',
+		'url',
+		'updated_at',
+		raw("sum(rank) AS srank"),
+		raw("jsonb_agg(content) AS contents")
+	])
+	.groupBy('title', 'url', 'updated_at')
+	.orderBy('srank', 'desc')
+	.orderBy('updated_at', 'desc');
+	if (data.paginate) q.offset(Math.max(parseInt(data.paginate) - 1 || 0, 0) * 10);
+	q.limit(10);
+	q.from(function(builder) {
+		builder.select([
+			ref('page.data:title').castText().as('title'),
+			ref('page.data:url').castText().as('url'),
+			'page.updated_at',
+			'block.content',
+			raw("ts_rank(block.tsv, query) AS rank")
+		])
+		.join('relation', 'block._id', 'relation.child_id')
+		.join('block AS page', 'relation._parent_id', 'block._id')
+		.join('relation', 'relation._parent_id', 'block._id')
+		.joinRelation("[parents as page,parents as site]")
+		.where('site.type', 'site')
+		.where(ref('site.data:domain').castText(), data.domain)
+		.whereNotIn('block.type', ['site', 'user'])
+		.where('page.type', 'page')
+		.whereRaw('query @@ block.tsv')
+		.from(raw([
+			raw("to_tsquery('unaccent', ?) AS query", [text]),
+			'block'
+		])).as('sub');
+	});
+	*/
+
+	var limit = 10;
+
+	var q = Block.raw(`SELECT
+		title,
+		url,
+		updated_at,
+		sum(rank) AS srank,
+		jsonb_agg(headline) AS headlines
+	FROM (
+		SELECT
+			page.data->>'title' AS title,
+			page.data->>'url' AS url,
+			page.updated_at,
+			(SELECT array_agg(value) FROM jsonb_each_text(ts_headline('unaccent', block.content, search.query))) AS headline,
+			ts_rank(block.tsv, search.query) AS rank
+		FROM
+			block AS site,
+			relation AS rs,
+			block,
+			relation AS rp,
+			block AS page,
+			(SELECT to_tsquery('unaccent', ?) AS query) AS search
+		WHERE
+			site.type = 'site' AND site.data->>'domain' = ?
+			AND rs.parent_id = site._id AND block._id = rs.child_id
+			AND block.type NOT IN ('site', 'user', 'page')
+			AND rp.child_id = block._id AND page._id = rp.parent_id
+			AND page.type = 'page'
+			AND search.query @@ block.tsv
+	) AS results
+	GROUP BY title, url, updated_at ORDER BY srank DESC OFFSET ? LIMIT ?`, [
+		text,
+		data.domain,
+		Math.max(parseInt(data.paginate || 0) - 1 || 0, 0) * limit,
+		limit
+	]);
+	return q.then(function(results) {
+		return results.rows;
+	});
+}
+
 exports.find = function(data) {
 	if (!data.domain) throw new HttpError.BadRequest("Missing domain");
-	return findPages(All.api.Block, data);
+	if (data.text != null) {
+		return textSearchPages(All.api.Block, data);
+	} else {
+		return findPages(All.api.Block, data);
+	}
 };
 
 exports.save = function(changes) {
