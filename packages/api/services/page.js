@@ -134,7 +134,7 @@ function listPages(Block, data) {
 }
 
 function searchPages(Block, data) {
-	if (!data.text) return Promise.resolve({results:[],pages:0,page:0});
+	if (!data.text) return Promise.resolve({rows:[],pages:0,page:0});
 	var text = data.text.split(' ')
 	.filter(x => !!x)
 	.map(x => x + ':*')
@@ -184,7 +184,7 @@ function searchPages(Block, data) {
 
 	var q = Block.raw(`SELECT json_build_object(
 		'count', count,
-		'results', json_agg(
+		'rows', json_agg(
 			json_build_object(
 				'title', title,
 				'url', url,
@@ -226,6 +226,7 @@ function searchPages(Block, data) {
 		limit
 	]);
 	return q.then(function(results) {
+		if (results.rowCount == 0) return {rows:[], pages: 0, page: 0};
 		var result = results.rows[0].result;
 		result.limit = limit;
 		result.pages = Math.ceil(result.count / limit);
