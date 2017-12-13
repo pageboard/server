@@ -84,7 +84,7 @@ function init(All) {
 	All.app.get('/.api/elements.js', All.cache.tag('share', 'file'), All.query, function(req, res, next) {
 		All.api.DomainBlock(req.query.domain).then(function(DomainBlock) {
 			res.type('text/javascript');
-			res.send('Pageboard.elements = ' + DomainBlock.source);
+			res.send('if (!window.Pageboard) window.Pageboard = {};\nPageboard.elements = ' + DomainBlock.source);
 		}).catch(next);
 	});
 
