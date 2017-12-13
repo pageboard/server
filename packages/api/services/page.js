@@ -178,43 +178,56 @@ function textSearchPages(Block, data) {
 	*/
 
 	var limit = 10;
+	var page = Math.max(parseInt(data.page || 0), 1);
 
-	var q = Block.raw(`SELECT
-		title,
-		url,
-		updated_at,
-		sum(rank) AS srank,
-		jsonb_agg(headline) AS headlines
-	FROM (
+	var q = Block.raw(`SELECT json_build_object(
+		'count', count,
+		'results', json_agg(
+			json_build_object(
+				'title', title,
+				'url', url,
+				'updated_at', updated_at,
+				'headlines', headlines,
+				'rank', rank
+			)
+		)) AS result FROM (
 		SELECT
-			page.data->>'title' AS title,
-			page.data->>'url' AS url,
-			page.updated_at,
-			(SELECT array_agg(value) FROM jsonb_each_text(ts_headline('unaccent', block.content, search.query))) AS headline,
-			ts_rank(block.tsv, search.query) AS rank
-		FROM
-			block AS site,
-			relation AS rs,
-			block,
-			relation AS rp,
-			block AS page,
-			(SELECT to_tsquery('unaccent', ?) AS query) AS search
-		WHERE
-			site.type = 'site' AND site.data->>'domain' = ?
-			AND rs.parent_id = site._id AND block._id = rs.child_id
-			AND block.type NOT IN ('site', 'user', 'page')
-			AND rp.child_id = block._id AND page._id = rp.parent_id
-			AND page.type = 'page'
-			AND search.query @@ block.tsv
-	) AS results
-	GROUP BY title, url, updated_at ORDER BY srank DESC OFFSET ? LIMIT ?`, [
+			title, url, updated_at, headlines, sum(qrank) AS rank,
+			count(*) OVER() AS count
+		FROM (
+			SELECT
+				page.data->>'title' AS title,
+				page.data->>'url' AS url,
+				page.updated_at,
+				(SELECT jsonb_agg(value) FROM jsonb_each_text(ts_headline('unaccent', block.content, search.query))) AS headlines,
+				ts_rank(block.tsv, search.query) AS qrank
+			FROM
+				block AS site,
+				relation AS rs,
+				block,
+				relation AS rp,
+				block AS page,
+				(SELECT to_tsquery('unaccent', ?) AS query) AS search
+			WHERE
+				site.type = 'site' AND site.data->>'domain' = ?
+				AND rs.parent_id = site._id AND block._id = rs.child_id
+				AND block.type NOT IN ('site', 'user', 'page')
+				AND rp.child_id = block._id AND page._id = rp.parent_id
+				AND page.type = 'page'
+				AND search.query @@ block.tsv
+		) AS results
+		GROUP BY title, url, updated_at, headlines ORDER BY rank DESC OFFSET ? LIMIT ?
+	) AS foo GROUP BY count`, [
 		text,
 		data.domain,
-		Math.max(parseInt(data.paginate || 0) - 1 || 0, 0) * limit,
+		(page - 1) * limit,
 		limit
 	]);
 	return q.then(function(results) {
-		return results.rows;
+		var result = results.rows[0].result;
+		result.limit = limit;
+		result.page = page;
+		return result;
 	});
 }
 
