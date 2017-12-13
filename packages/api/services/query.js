@@ -35,9 +35,8 @@ exports.query = function(data) {
 		Object.keys(fd.vars || {}).forEach(function(key) {
 			if (data[key] !== undefined) params[key] = data[key];
 		});
-		// TODO use fd.call ?
 		params.domain = data.domain;
-		return All.run("block.get", params);
+		return All.run(fd.call, params);
 	});
 };
 
