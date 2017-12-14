@@ -80,7 +80,7 @@ exports.init = function(opt) {
 		try {
 			plugin = require(module);
 		} catch(ex) {
-			console.error("Cannot require plugin", module);
+			console.error("Cannot require plugin", module, ex);
 			continue;
 		}
 		if (typeof plugin != "function") continue;
