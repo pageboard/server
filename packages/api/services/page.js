@@ -194,14 +194,14 @@ function searchPages(Block, data) {
 			)
 		)) AS result FROM (
 		SELECT
-			title, url, updated_at, json_agg(headlines) AS headlines, sum(qrank) AS rank,
+			title, url, updated_at, json_agg(DISTINCT headlines) AS headlines, sum(qrank) AS rank,
 			count(*) OVER() AS count
 		FROM (
 			SELECT
 				page.data->>'title' AS title,
 				page.data->>'url' AS url,
 				page.updated_at,
-				(SELECT array_agg(value) FROM jsonb_each_text(ts_headline('unaccent', block.content, search.query))) AS headlines,
+				(SELECT DISTINCT trim(value) FROM jsonb_each_text(ts_headline('unaccent', block.content, search.query)) WHERE length(trim(value)) > 0) AS headlines,
 				ts_rank(block.tsv, search.query) AS qrank
 			FROM
 				block AS site,
