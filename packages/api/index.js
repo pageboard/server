@@ -120,19 +120,19 @@ exports.install = function(domain, {elements, directories}, All) {
 				var promotePathFn = promotePath.bind(null, eltDirPath);
 				if (elt.scripts != null) {
 					if (typeof elt.scripts == "string") elt.scripts = [elt.scripts];
-					elt.scripts = elt.scripts.map(promotePathFn);
+					elt.scripts = elt.scripts.map(promotePathFn).filter(x => !!x);
 				} else {
 					delete elt.scripts;
 				}
 				if (elt.stylesheets != null) {
 					if (typeof elt.stylesheets == "string") elt.stylesheets = [elt.stylesheets];
-					elt.stylesheets = elt.stylesheets.map(promotePathFn);
+					elt.stylesheets = elt.stylesheets.map(promotePathFn).filter(x => !!x);
 				} else {
 					delete elt.stylesheets;
 				}
 				if (elt.helpers != null) {
 					if (typeof elt.helpers == "string") elt.helpers = [elt.helpers];
-					elt.helpers = elt.helpers.map(promotePathFn);
+					elt.helpers = elt.helpers.map(promotePathFn).filter(x => !!x);
 				} else {
 					delete elt.helpers;
 				}
@@ -157,6 +157,7 @@ exports.DomainBlock = mem(function(domain) {
 });
 
 function promotePath(dir, path) {
+	if (!path) return;
 	if (path.startsWith('/') || /^(http|https|data):/.test(path)) return path;
 	return Path.join(dir, path);
 }
