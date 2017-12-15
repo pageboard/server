@@ -19,7 +19,7 @@
   "homepage": "https://github.com/pageboard/read#readme",
   "dependencies": {
     "dom-template-strings": "^2.4.2",
-    "pagecut": "^1.0.0-beta.32",
+    "pagecut": "^1.0.0-beta.36",
     "postinstall-links": "^0.3.0",
     "window-agent": "^1.2.0",
     "window-page": "^2.0.0-alpha.3"
@@ -32,6 +32,7 @@
     "pagecut/dist/pagecut-menu.css": "pagecut/",
     "pagecut/dist/prosemirror.css": "pagecut/",
     "pagecut/dist/prosemirror-menu.css": "pagecut/",
+    "pagecut/dist/prosemirror-gapcursor.css": "pagecut/",
     "window-page/window-page.js": "read/",
     "dom-template-strings/dist/dom-template-strings.js": "read/",
     "window-agent/agent.js": "read/"
