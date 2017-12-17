@@ -18,6 +18,9 @@ module.exports = function(opt) {
 	}, opt.prerender);
 
 	dom.settings.helpers.push(dom.helpers.develop);
+	dom.settings.load.plugins.unshift(dom.plugins.cookies({
+		bearer: true // allow only auth cookie
+	}));
 	dom.settings.load.plugins.unshift(dom.plugins.httpequivs);
 	dom.settings.load.plugins.unshift(dom.plugins.httplinkpreload);
 
