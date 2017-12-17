@@ -41,7 +41,11 @@ exports = module.exports = function(opt) {
 		view: function(All) {
 			return domemail.init().then(function() {
 				// TODO remove cache.tag call if express-dom keeps headers when proxying
-				All.app.get('*', All.cache.tag('api', 'share', 'file'), All.dom(domemail.mw));
+				All.app.get('*',
+					All.cache.tag('api', 'share', 'file'),
+					All.query,
+					domemail.mw(All.dom)
+				);
 			});
 		}
 	};
@@ -89,11 +93,20 @@ exports.send = function(data) {
 		.where('block.type', 'site').first().throwIfNotFound();
 	}).then(function(site) {
 		if (!site.from) site.from = site.owner;
-		return got(All.domains.host(site.data.domain) + site.page[0].data.url, {
+		var emailUrl = All.domains.host(site.data.domain) + site.page[0].data.url;
+		var authCookie = All.auth.cookie({hostname: site.data.domain}, {
+			scopes: {
+				"auth.activate": true
+			}
+		});
+		return got(emailUrl, {
 			json: true,
 			query: {
 				id: data.to,
 				email: true
+			},
+			headers: {
+				cookie: authCookie
 			}
 		}).then(function(response) {
 			return response.body;

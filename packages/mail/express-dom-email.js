@@ -3,13 +3,23 @@ var readFile = require('util').promisify(require('fs').readFile);
 
 var irBuf;
 
-exports.mw = function(mw, settings, request, response) {
-	var opts = request.query.email;
-	if (opts == null) return Promise.reject('route');
-	delete request.query.email;
-	mw.load({plugins: [mailPlugin]});
-	// sets the view to be fetched from current request url, effectively doing a subrequest
-	settings.view = settings.location;
+// TODO can't we just add a load plugin on current All.dom middleware ?
+// that would spare a second dom load
+
+exports.mw = function(dom) {
+	return function(req, res, next) {
+		var opts = req.query.email;
+		if (opts == null) return next('route');
+		delete req.query.email;
+		dom(function(mw, settings) {
+			// express-dom 5.9.0 gets the cookie in settings.location
+			settings.view = settings.location;
+		}).load({
+			plugins: [
+				mailPlugin
+			]
+		})(req, res, next);
+	};
 };
 
 exports.init = function() {
