@@ -33,7 +33,7 @@ function init(All) {
 
 		All.app.use('/.api/auth/*', All.cache.disable());
 
-		All.app.get('/.api/auth/activate', All.query, function(req, res, next) {
+		All.app.get('/.api/auth/activate', All.auth.restrict("auth.activate"), All.query, function(req, res, next) {
 			exports.activate(req.query).then(function(linkObj) {
 				res.send(linkObj);
 			}).catch(next);
