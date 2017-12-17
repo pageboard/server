@@ -29,6 +29,9 @@ Pageboard.elements.auth = {
 	},
 	render: function(doc, block) {
 		var loc = document.location;
+		if (!block.data.href) doc.head.appendChild(
+			doc.dom`<meta http-equiv="Status" content="403 Forbidden">`
+		);
 		return doc.dom`<a class="ui auth button" href="${loc.protocol}//${loc.host}${block.data.href}" block-content="text">login</a>`;
 	},
 	stylesheets: [
