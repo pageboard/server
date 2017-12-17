@@ -30,6 +30,7 @@ function init(All) {
 		var scope = upcacheScope(opt.scope);
 		All.auth.restrict = scope.restrict.bind(scope);
 		All.auth.test = scope.test.bind(scope);
+		All.auth.cookie = scope.serializeBearer.bind(scope);
 
 		All.app.use('/.api/auth/*', All.cache.disable());
 
