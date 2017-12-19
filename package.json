@@ -3,6 +3,9 @@
   "version": "0.1.0",
   "description": "Web pages content management",
   "main": "index.js",
+  "bin": {
+    "pageboard": "./pageboard"
+  },
   "scripts": {
     "test": "echo \"Error: no test specified\" && exit 1",
     "start": "pageboard",
