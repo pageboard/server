@@ -2,7 +2,7 @@
 
 var http = require('http');
 
-var pageboard = require('../');
+var pageboard = require(__dirname);
 
 var pkgOpt = {};
 if (process.env.APPNAME) pkgOpt.name = process.env.APPNAME;
