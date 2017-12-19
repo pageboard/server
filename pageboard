@@ -1,0 +1,8 @@
+#!/usr/bin/node
+
+var Path = require('path');
+process.chdir(__dirname);
+require(
+	Path.join(Path.dirname(require.resolve('@pageboard/core')), 'cli.js')
+);
+
