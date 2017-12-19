@@ -21,7 +21,8 @@ pageboard.init(config).then(function(All) {
 		return All.run(command, config.data).catch(function(err) {
 			console.error(err.toString());
 			process.exit(1);
-		}).then(function() {
+		}).then(function(results) {
+			console.log(JSON.stringify(results, null, ' '));
 			console.info(`${command} done.`);
 			process.exit();
 		});
