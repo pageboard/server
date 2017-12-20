@@ -1,21 +1,11 @@
-
-Pageboard.elements.authName = {
-	group: 'block',
+Pageboard.elements.login = {
+	title: 'Login',
 	menu: 'user',
-	render: function(doc, block) {
-		var d = block.data;
-		return doc.dom`<div class="username">${d.name}</div>`;
-	}
-}
-
-Pageboard.elements.auth = {
-	title: 'Validate',
-	menu: 'user',
-	icon: '<b class="icon">Auth</b>',
+	icon: '<b class="icon">Login</b>',
 	group: 'block',
 	mount: function(block, blocks, view) {
 		var urlObj = Page.parse(document.location);
-		if (urlObj.query.id) return GET('/.api/auth/activate', {
+		if (urlObj.query.id) return GET('/.api/auth/login', {
 			id: urlObj.query.id
 		}).then(function(validationBlock) {
 			block.data.href = validationBlock.data.href;
@@ -37,4 +27,4 @@ Pageboard.elements.auth = {
 	stylesheets: [
 		'../ui/auth.css'
 	]
-}
+};

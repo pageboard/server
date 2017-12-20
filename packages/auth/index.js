@@ -15,8 +15,7 @@ exports = module.exports = function(opt) {
 	};
 };
 
-// login: given an email, sets user.data.session.hash and returns user id
-// activate: given an id, returns an activation link
+// login: given an email, sets user.data.session.hash and returns an activation link
 // validate: process activation link and return bearer in cookie
 
 function init(All) {
@@ -34,8 +33,8 @@ function init(All) {
 
 		All.app.use('/.api/auth/*', All.cache.disable());
 
-		All.app.get('/.api/auth/activate', All.auth.restrict("auth.activate"), All.query, function(req, res, next) {
-			exports.activate(req.query).then(function(linkObj) {
+		All.app.get('/.api/auth/login', All.auth.restrict("auth.login"), All.query, function(req, res, next) {
+			exports.login(req.query).then(function(linkObj) {
 				res.send(linkObj);
 			}).catch(next);
 		});
@@ -75,24 +74,14 @@ exports.login = function(data) {
 				}
 			}).then(function(count) {
 				if (count == 0) throw new HttpError.NotFound("TODO use a transaction here");
-				return {id: user.id};
+				return {
+					type: 'login',
+					data: {
+						href: `/.api/auth/validate?id=${user.id}&hash=${hash}`
+					}
+				};
 			});
 		});
-	});
-};
-
-exports.activate = function(data) {
-	return All.user.get(data).then(function(user) {
-		var hash = user.data.session && user.data.session.hash;
-		if (!hash) {
-			throw new HttpError.BadRequest("Call auth.login before auth.validationLink");
-		}
-		return {
-			type: 'auth',
-			data: {
-				href: `/.api/auth/validate?id=${user.id}&hash=${hash}`
-			}
-		};
 	});
 };
 
