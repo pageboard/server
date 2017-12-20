@@ -96,7 +96,7 @@ exports.send = function(data) {
 		var emailUrl = All.domains.host(site.data.domain) + site.page[0].data.url;
 		var authCookie = All.auth.cookie({hostname: site.data.domain}, {
 			scopes: {
-				"auth.activate": true
+				"auth.login": true
 			}
 		});
 		return got(emailUrl, {
