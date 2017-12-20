@@ -2,10 +2,17 @@
 
 var http = require('http');
 
-var pageboard = require(__dirname);
-
 var pkgOpt = {};
 if (process.env.APPNAME) pkgOpt.name = process.env.APPNAME;
+
+if (process.argv.length > 2 && process.argv[2].startsWith('--') == false) {
+	for (var i=3; i < process.argv.length; i++) {
+		process.argv[i] = '--data.' + process.argv[i];
+	}
+}
+
+var pageboard = require(__dirname);
+
 var config = pageboard.config(pkgOpt);
 
 console.info(`${config.name} ${config.version}`);
