@@ -112,7 +112,7 @@ exports.install = function(domain, {elements, directories}, All) {
 				return eltPath.startsWith(mount.from);
 			});
 			if (!mount) {
-				console.warn(`Warning: element ${path} cannot be mounted`);
+				console.warn(`Warning: element ${eltPath} cannot be mounted`);
 			} else {
 				var basePath = domain ? mount.to.replace(domain + "/", "") : mount.to;
 				var eltPathname = Path.join(basePath, eltPath.substring(mount.from.length));
