@@ -18,7 +18,8 @@ var fs = {
 	readFile: pify(require('fs').readFile),
 	readdir: pify(require('fs').readdir),
 	stat: pify(require('fs').stat),
-	unlink: pify(require('fs').unlink)
+	unlink: pify(require('fs').unlink),
+	symlink: pify(require('fs').symlink)
 };
 
 var cp = {
@@ -50,8 +51,18 @@ exports.config = function(pkgOpt) {
 		plugins: [],
 		dependencies: pkgOpt.dependencies || {}
 	});
+	symlinkDir(opt, 'sites');
+	symlinkDir(opt, 'uploads');
+	symlinkDir(opt, 'dumps');
 	return opt;
 };
+
+function symlinkDir(opt, name) {
+	return fs.symlink(
+		Path.join(opt.dirs.data, name),
+		Path.join(opt.cwd, name)
+	).catch(function() {});
+}
 
 exports.init = function(opt) {
 	var app = createApp(opt);
