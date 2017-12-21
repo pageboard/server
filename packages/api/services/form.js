@@ -24,10 +24,15 @@ exports.submit = function(data) {
 	return All.block.get({
 		id: data.parent,
 		domain: data.domain
-	}).then(function(form) {
-		var fd = form.data;
+	}).then(function(parent) {
+		var fd = parent.data;
 		if (fd.action.method != "post") throw new HttpError.MethodNotAllowed("Only post allowed");
-		return All.run(fd.action.call, data).then(function(response) {
+		var params = Object.assign({}, data);
+		delete data.parent;
+		mapVars(params, fd.action.vars);
+		Object.assign(params, fd.action.consts);
+
+		return All.run(fd.action.call, params).then(function(response) {
 			if (fd.redirection && fd.redirection.url) {
 				// TODO build redirection using fd.redirection.url, consts, vars
 				response.redirect = fd.redirection.url;
@@ -36,4 +41,14 @@ exports.submit = function(data) {
 		});
 	});
 };
+
+function mapVars(params, vars) {
+	if (vars) Object.keys(vars).forEach(function(key) {
+		var val = params[key];
+		if (val !== undefined) {
+			delete params[key];
+			params[vars[key]] = val;
+		}
+	});
+}
 
