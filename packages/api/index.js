@@ -113,32 +113,32 @@ exports.install = function(domain, {elements, directories}, All) {
 			});
 			if (!mount) {
 				console.warn(`Warning: element ${eltPath} cannot be mounted`);
+				return;
+			}
+			var basePath = domain ? mount.to.replace(domain + "/", "") : mount.to;
+			var eltPathname = Path.join(basePath, eltPath.substring(mount.from.length));
+			var eltDirPath = Path.dirname(eltPathname);
+			var promotePathFn = promotePath.bind(null, eltDirPath);
+			if (elt.scripts != null) {
+				if (typeof elt.scripts == "string") elt.scripts = [elt.scripts];
+				elt.scripts = elt.scripts.map(promotePathFn)
+				.filter(removeEmptyPath.bind(null, 'scripts', name));
 			} else {
-				var basePath = domain ? mount.to.replace(domain + "/", "") : mount.to;
-				var eltPathname = Path.join(basePath, eltPath.substring(mount.from.length));
-				var eltDirPath = Path.dirname(eltPathname);
-				var promotePathFn = promotePath.bind(null, eltDirPath);
-				if (elt.scripts != null) {
-					if (typeof elt.scripts == "string") elt.scripts = [elt.scripts];
-					elt.scripts = elt.scripts.map(promotePathFn)
-					.filter(removeEmptyPath.bind(null, 'scripts', name));
-				} else {
-					delete elt.scripts;
-				}
-				if (elt.stylesheets != null) {
-					if (typeof elt.stylesheets == "string") elt.stylesheets = [elt.stylesheets];
-					elt.stylesheets = elt.stylesheets.map(promotePathFn)
-					.filter(removeEmptyPath.bind(null, 'scripts', name));
-				} else {
-					delete elt.stylesheets;
-				}
-				if (elt.helpers != null) {
-					if (typeof elt.helpers == "string") elt.helpers = [elt.helpers];
-					elt.helpers = elt.helpers.map(promotePathFn)
-					.filter(removeEmptyPath.bind(null, 'scripts', name));
-				} else {
-					delete elt.helpers;
-				}
+				delete elt.scripts;
+			}
+			if (elt.stylesheets != null) {
+				if (typeof elt.stylesheets == "string") elt.stylesheets = [elt.stylesheets];
+				elt.stylesheets = elt.stylesheets.map(promotePathFn)
+				.filter(removeEmptyPath.bind(null, 'scripts', name));
+			} else {
+				delete elt.stylesheets;
+			}
+			if (elt.helpers != null) {
+				if (typeof elt.helpers == "string") elt.helpers = [elt.helpers];
+				elt.helpers = elt.helpers.map(promotePathFn)
+				.filter(removeEmptyPath.bind(null, 'scripts', name));
+			} else {
+				delete elt.helpers;
 			}
 		});
 		Block.elements = eltsMap;
