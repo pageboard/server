@@ -39,7 +39,7 @@ pageboard.init(config).then(function(All) {
 	server.listen(All.opt.listen);
 
 	process.title = All.opt.name;
-	console.info(`http://localhost:${All.opt.listen}`);
+	console.info(`Listening on port ${All.opt.listen}`);
 }).catch(function(err) {
 	console.error(err);
 });
