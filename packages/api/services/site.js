@@ -28,6 +28,13 @@ function init(All) {
 			res.send(site);
 		}).catch(next);
 	});
+	if (All.opt.env == "development") {
+		All.app.post('/.api/reinstall', All.query, function(req, res, next) {
+			exports.reinstall(req.query).then(function(result) {
+				res.send(result);
+			}).catch(next);
+		});
+	}
 }
 
 function QuerySite(data) {
@@ -68,6 +75,12 @@ exports.add = function(data) {
 			delete data.email;
 			return All.api.Block.query().insertGraph(data);
 		});
+	});
+};
+
+exports.reinstall = function(data) {
+	return exports.get(data).then(function(site) {
+		return All.install(site.data);
 	});
 };
 
