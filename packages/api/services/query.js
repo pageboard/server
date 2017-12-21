@@ -30,7 +30,7 @@ exports.query = function(data) {
 		id: data.parent,
 		domain: data.domain
 	}).then(function(parent) {
-		var fd = parent.data;
+		var fd = parent.data.query;
 		var params = Object.assign({}, fd.consts || {});
 		Object.keys(fd.vars || {}).forEach(function(key) {
 			if (data[key] !== undefined) params[key] = data[key];
