@@ -27,34 +27,13 @@ exports.submit = function(data) {
 	}).then(function(form) {
 		var fd = form.data;
 		if (fd.action.method != "post") throw new HttpError.MethodNotAllowed("Only post allowed");
-		var api = fd.action.call.split('.');
 		return All.run(fd.action.call, data).then(function(response) {
-			if (!fd.reaction.call || fd.reaction.method != "post") return response;
-			// process fd.reaction.data
-			var rdata = {};
-			Object.keys(fd.reaction.data || {}).forEach(function(key) {
-				var path = fd.reaction.data[key];
-				var val = accessKey(path, {req: data, res:response});
-				if (val === undefined) val = path;
-				rdata[key] = val;
-			});
-			rdata.domain = data.domain;
-			return All.run(fd.reaction.call, rdata);
-		}).then(function() {
-			var result = {};
-			if (fd.redirect) {
-				result.redirect = fd.redirect;
+			if (fd.redirection && fd.redirection.url) {
+				// TODO build redirection using fd.redirection.url, consts, vars
+				response.redirect = fd.redirection.url;
 			}
-			return result;
+			return response;
 		});
 	});
 };
 
-function accessKey(path, data) {
-	var val = data;
-	path.split('.').forEach(function(key) {
-		if (val == null) return;
-		val = val[key];
-	});
-	return val;
-}
