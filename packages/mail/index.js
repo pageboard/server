@@ -51,11 +51,11 @@ exports = module.exports = function(opt) {
 	};
 };
 
-function filterUser(id, builder) {
-	builder.select(this.tableColumns).where({
-		'block.id': id,
-		'block.type': 'user'
-	}).first().throwIfNotFound();
+function filterUser(email, builder) {
+	builder.select(this.tableColumns)
+		.whereJsonText('block.data:email', email)
+		.where('block.type', 'user')
+		.first().throwIfNotFound();
 }
 
 exports.send = function(data) {
@@ -99,10 +99,12 @@ exports.send = function(data) {
 				"auth.login": true
 			}
 		});
+
 		return got(emailUrl, {
 			json: true,
 			query: {
-				id: data.to,
+				from: site.from[0].id,
+				to: site.to[0].id,
 				email: true
 			},
 			headers: {
