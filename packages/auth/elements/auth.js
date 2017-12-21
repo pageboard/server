@@ -5,8 +5,8 @@ Pageboard.elements.login = {
 	group: 'block',
 	mount: function(block, blocks, view) {
 		var urlObj = Page.parse(document.location);
-		if (urlObj.query.id) return GET('/.api/auth/login', {
-			id: urlObj.query.id
+		if (urlObj.query.to) return GET('/.api/auth/login', {
+			id: urlObj.query.to
 		}).then(function(validationBlock) {
 			block.data.href = validationBlock.data.href;
 		}).catch(function(err) {
