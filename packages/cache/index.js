@@ -72,9 +72,9 @@ CacheState.prototype.install = function(domain, opt, All) {
 	if (!domain) return;
 	// avoid hanging loop: DomainBlock -> install -> .upcache -> (mem)DomainBlock
 	setTimeout(function() {
-		var obj = All.domains.map[domain];
-		if (!obj) throw new Error(`Domain ${domain} not requested before install`);
-		got.post(`${obj.host}/.upcache`).catch(function(err) {
+		var host = All.domains.host(domain);
+		if (!host) throw new Error(`Domain ${domain} not requested before install`);
+		got.post(`${host}/.upcache`).catch(function(err) {
 			// we don't want to crash in case of error
 			console.error(err);
 		});
