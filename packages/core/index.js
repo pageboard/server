@@ -439,6 +439,13 @@ function Domains(All) {
 	this.map = {};
 }
 
+Domains.prototype.block = function(domain, block) {
+	var obj = this.map[domain];
+	if (!obj) obj = this.map[domain] = {};
+	if (block) obj.block = block;
+	return obj.block;
+};
+
 Domains.prototype.host = function(req) {
 	var domain;
 	if (typeof req == "string") {
