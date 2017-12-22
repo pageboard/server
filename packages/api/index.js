@@ -7,7 +7,6 @@ var Path = require('path');
 var pify = require('util').promisify;
 var equal = require('esequal');
 var toSource = require('tosource');
-var mem = require('mem');
 
 var exec = pify(require('child_process').exec);
 
@@ -103,7 +102,6 @@ exports.install = function(domain, {elements, directories}, All) {
 		return importElements(path, eltsMap);
 	})).then(function() {
 		var Block = exports.models.Block.extendSchema(domain, eltsMap);
-
 		Object.keys(eltsMap).forEach(function(name) {
 			var elt = eltsMap[name];
 			var eltPath = elt.path;
@@ -145,7 +143,7 @@ exports.install = function(domain, {elements, directories}, All) {
 		if (domain) {
 			Block.domain = domain;
 			Block.source = toSource(Object.assign({}, exports.Block.elements, Block.elements));
-			return Block;
+			return All.domains.block(domain, Block);
 		} else {
 			exports.Block = All.api.Block = Block;
 			Block.source = toSource(Block.elements);
@@ -153,11 +151,13 @@ exports.install = function(domain, {elements, directories}, All) {
 	});
 };
 
-exports.DomainBlock = mem(function(domain) {
+exports.DomainBlock = function(domain) {
+	var Block = All.domains.block(domain);
+	if (Block) return Promise.resolve(Block);
 	return All.site.get({domain: domain}).then(function(site) {
 		return All.install(site.data);
 	});
-});
+};
 
 function promotePath(dir, path) {
 	if (!path) return;
