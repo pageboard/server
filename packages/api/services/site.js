@@ -80,7 +80,11 @@ exports.add = function(data) {
 
 exports.reinstall = function(data) {
 	return exports.get(data).then(function(site) {
-		return All.install(site.data);
+		return All.install({
+			domain: site.data.domain,
+			dependencies: site.data.dependencies,
+			reinstall: true
+		});
 	});
 };
 
