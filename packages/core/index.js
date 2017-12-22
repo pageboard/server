@@ -208,7 +208,7 @@ function initLog(opt) {
 	return morgan(opt.logFormat);
 }
 
-function install({domain, dependencies}) {
+function install({domain, dependencies, reinstall}) {
 	if (!domain) throw new Error("Missing domain");
 	var All = this;
 	var installedBlock;
@@ -224,7 +224,7 @@ function install({domain, dependencies}) {
 		var doInstall = true;
 		return fs.readFile(pkgFile).then(function(json) {
 			var obj = JSON.parse(json);
-			if (equal(obj.dependencies, dependencies)) {
+			if (!reinstall && equal(obj.dependencies, dependencies)) {
 				debug("no change in dependencies");
 				doInstall = false;
 			}
