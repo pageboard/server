@@ -130,6 +130,8 @@ CacheState.prototype.mw = function(req, res, next) {
 			next();
 		}
 		if (doSave) me.save();
+	}).catch(function(err) {
+		console.error("Error in cacheState mw", err);
 	});
 }
 
