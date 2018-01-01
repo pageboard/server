@@ -97,6 +97,10 @@ function init(All) {
 
 exports.install = function(domain, {elements, directories}, All) {
 	debug("installing", domain, elements, directories);
+	// TODO chicken and egg problem, we want to sort using the element priority
+	// but we can't load it if it's not in the right order
+	// at least be predictable
+	elements.sort();
 	var eltsMap = {};
 	return Promise.all(elements.map(function(path) {
 		return importElements(path, eltsMap);
