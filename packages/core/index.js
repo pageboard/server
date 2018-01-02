@@ -242,7 +242,8 @@ function install({domain, dependencies, reinstall}) {
 		});
 	}).then(function() {
 		return Promise.all(Object.keys(dependencies || {}).map(function(module) {
-			return initConfig(Path.join(domainDir, 'node_modules', module), domain, module, config);
+			var moduleDir = Path.join(domainDir, 'node_modules', module);
+			return initConfig(moduleDir, domain, module, config);
 		}));
 	}).then(function() {
 		return All.statics.install(domain, config, All);
@@ -290,10 +291,12 @@ function initConfig(moduleDir, domain, module, config) {
 			return;
 		}
 		var meta = JSON.parse(buf);
-		if (!meta.pageboard) return; // nothing to do
+		if (!meta.pageboard) {
+			return; // nothing to do
+		}
 		var directories = meta.pageboard.directories || [];
 		if (!Array.isArray(directories)) directories = [directories];
-		debug("processing directories", directories);
+		debug("processing directories from", moduleDir, directories);
 		directories.forEach(function(mount) {
 			if (typeof mount == "string") mount = {
 				from: mount,
@@ -318,7 +321,7 @@ function initConfig(moduleDir, domain, module, config) {
 
 		var elements = meta.pageboard.elements || [];
 		if (!Array.isArray(elements)) elements = [elements];
-		debug("processing elements", elements);
+		debug("processing elements from", moduleDir, elements);
 		return Promise.all(elements.map(function(path) {
 			var absPath = Path.resolve(moduleDir, path);
 			return fs.stat(absPath).then(function(stat) {
@@ -338,7 +341,9 @@ function initConfig(moduleDir, domain, module, config) {
 				else return [absPath];
 			}).then(function(paths) {
 				paths.forEach(function(path) {
-					if (path.endsWith('.js')) config.elements.push(path);
+					if (path.endsWith('.js')) {
+						config.elements.push(path);
+					}
 				});
 			});
 		}));
