@@ -99,50 +99,14 @@ exports.install = function(domain, {elements, directories}, All) {
 	debug("installing", domain, elements, directories);
 	// TODO chicken and egg problem, we want to sort using the element priority
 	// but we can't load it if it's not in the right order
-	// at least be predictable
-	elements.sort();
+	// besides that, mind that elements are already ordered in their directory by core initConfig
 	var eltsMap = {};
-	return Promise.all(elements.map(function(path) {
-		return importElements(path, eltsMap);
+	var allDirs = domain ? All.opt.directories.concat(directories) : directories;
+	var allElts = domain ? All.opt.elements.concat(elements) : elements;
+	return Promise.all(allElts.map(function(path) {
+		return importElements(path, eltsMap, domain, allDirs);
 	})).then(function() {
 		var Block = exports.models.Block.extendSchema(domain, eltsMap);
-		Object.keys(eltsMap).forEach(function(name) {
-			var elt = eltsMap[name];
-			var eltPath = elt.path;
-			delete elt.path;
-			var mount = directories.find(function(mount) {
-				return eltPath.startsWith(mount.from);
-			});
-			if (!mount) {
-				console.warn(`Warning: element ${eltPath} cannot be mounted`);
-				return;
-			}
-			var basePath = domain ? mount.to.replace(domain + "/", "") : mount.to;
-			var eltPathname = Path.join(basePath, eltPath.substring(mount.from.length));
-			var eltDirPath = Path.dirname(eltPathname);
-			var promotePathFn = promotePath.bind(null, eltDirPath);
-			if (elt.scripts != null) {
-				if (typeof elt.scripts == "string") elt.scripts = [elt.scripts];
-				elt.scripts = elt.scripts.map(promotePathFn)
-				.filter(removeEmptyPath.bind(null, 'scripts', name));
-			} else {
-				delete elt.scripts;
-			}
-			if (elt.stylesheets != null) {
-				if (typeof elt.stylesheets == "string") elt.stylesheets = [elt.stylesheets];
-				elt.stylesheets = elt.stylesheets.map(promotePathFn)
-				.filter(removeEmptyPath.bind(null, 'scripts', name));
-			} else {
-				delete elt.stylesheets;
-			}
-			if (elt.helpers != null) {
-				if (typeof elt.helpers == "string") elt.helpers = [elt.helpers];
-				elt.helpers = elt.helpers.map(promotePathFn)
-				.filter(removeEmptyPath.bind(null, 'scripts', name));
-			} else {
-				delete elt.helpers;
-			}
-		});
 		Block.elements = eltsMap;
 		if (domain) {
 			Block.domain = domain;
@@ -178,7 +142,42 @@ function removeEmptyPath(what, name, path) {
 	}
 }
 
-function importElements(path, eltsMap) {
+function rewriteElementPaths(name, path, elt, domain, directories) {
+	var mount = directories.find(function(mount) {
+		return path.startsWith(mount.from);
+	});
+	if (!mount) {
+		console.warn(`Warning: element ${path} cannot be mounted`);
+		return;
+	}
+	var basePath = domain ? mount.to.replace(domain + "/", "") : mount.to;
+	var eltPathname = Path.join(basePath, path.substring(mount.from.length));
+	var eltDirPath = Path.dirname(eltPathname);
+	var promotePathFn = promotePath.bind(null, eltDirPath);
+	if (elt.scripts != null) {
+		if (typeof elt.scripts == "string") elt.scripts = [elt.scripts];
+		elt.scripts = elt.scripts.map(promotePathFn)
+		.filter(removeEmptyPath.bind(null, 'scripts', name));
+	} else {
+		delete elt.scripts;
+	}
+	if (elt.stylesheets != null) {
+		if (typeof elt.stylesheets == "string") elt.stylesheets = [elt.stylesheets];
+		elt.stylesheets = elt.stylesheets.map(promotePathFn)
+		.filter(removeEmptyPath.bind(null, 'scripts', name));
+	} else {
+		delete elt.stylesheets;
+	}
+	if (elt.helpers != null) {
+		if (typeof elt.helpers == "string") elt.helpers = [elt.helpers];
+		elt.helpers = elt.helpers.map(promotePathFn)
+		.filter(removeEmptyPath.bind(null, 'scripts', name));
+	} else {
+		delete elt.helpers;
+	}
+}
+
+function importElements(path, eltsMap, domain, directories) {
 	return fs.readFile(path).then(function(buf) {
 		var script = new vm.Script(buf, {filename: path});
 		var copyMap = Object.assign({}, eltsMap);
@@ -190,10 +189,17 @@ function importElements(path, eltsMap) {
 			return;
 		}
 		var elts = sandbox.Pageboard.elements;
+		var elt, oelt;
 		for (var name in elts) {
-			if (eltsMap[name]) continue;
-			elts[name].path = path;
-			eltsMap[name] = elts[name];
+			elt = elts[name];
+			oElt = eltsMap[name];
+			if (oElt) {
+				if (name == "user" || name == "site") {
+					continue;
+				}
+			}
+			rewriteElementPaths(name, path, elt, domain, directories);
+			eltsMap[name] = elt;
 		}
 	}).catch(function(err) {
 		console.error(`Error inspecting element path ${path}`, err);
