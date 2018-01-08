@@ -10,7 +10,6 @@ var rc = require('rc');
 var mkdirp = pify(require('mkdirp'));
 var xdg = require('xdg-basedir');
 var pkgup = require('pkg-up');
-var equal = require('esequal');
 var debug = require('debug')('pageboard:core');
 
 var fs = {
