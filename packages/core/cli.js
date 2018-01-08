@@ -36,10 +36,10 @@ pageboard.init(config).then(function(All) {
 	}
 
 	var server = http.createServer(All.app);
-	server.listen(All.opt.listen);
+	server.listen(All.opt.core.listen);
 
 	process.title = All.opt.name;
-	console.info(`Listening on port ${All.opt.listen}`);
+	console.info(`Listening on port ${All.opt.core.listen}`);
 }).catch(function(err) {
 	console.error(err);
 });

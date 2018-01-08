@@ -36,8 +36,6 @@ exports.config = function(pkgOpt) {
 		name: name,
 		version: pkgOpt.version,
 		global: true,
-		listen: 3000,
-		logFormat: ':method :status :time :size :type :url',
 		dirs: {
 			cache: Path.join(xdg.cache, name),
 			data: Path.join(xdg.data, name),
@@ -46,7 +44,11 @@ exports.config = function(pkgOpt) {
 		elements: [],
 		directories: [],
 		plugins: [],
-		dependencies: pkgOpt.dependencies || {}
+		dependencies: pkgOpt.dependencies || {},
+		core: {
+			listen: 3000,
+			log: ':method :status :time :size :type :url'
+		}
 	});
 	symlinkDir(opt, 'sites');
 	symlinkDir(opt, 'uploads');
@@ -202,7 +204,7 @@ function initLog(opt) {
 		return pad(6, (len && prettyBytes(len) || '0 B').replace(/ /g, ''));
 	});
 
-	return morgan(opt.logFormat);
+	return morgan(opt.core.log);
 }
 
 function install({domain, module}) {
