@@ -258,13 +258,15 @@ function installModules(opt, domainDir, siteModule) {
 	debug("Installing site module", domainDir, siteModule);
 	var pkgPath = Path.join(domainDir, 'package.json');
 	return mkdirp(domainDir).then(function() {
+		var keep = false;
 		return fs.readFile(pkgPath).then(function(buf) {
 			var pkg = JSON.parse(buf.toString());
-			if (pkg.keep) return false;
-			else return fs.writeFile(pkgPath, JSON.stringify({
-				dependencies: {} // npm will populate it for us
-			}));
-		});
+			keep = pkg.keep;
+		}).catch(function(err) {});
+		if (keep) return false;
+		return fs.writeFile(pkgPath, JSON.stringify({
+			dependencies: {} // npm will populate it for us
+		}));
 	}).then(function(install) {
 		if (!install) return;
 		if (opt.core.installer == "yarn") {
