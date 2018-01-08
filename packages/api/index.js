@@ -5,7 +5,6 @@ var knex = require('knex');
 
 var Path = require('path');
 var pify = require('util').promisify;
-var equal = require('esequal');
 var toSource = require('tosource');
 
 var exec = pify(require('child_process').exec);

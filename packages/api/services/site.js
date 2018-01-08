@@ -1,5 +1,3 @@
-var equal = require('esequal');
-
 exports = module.exports = function(opt) {
 	return {
 		name: 'site',
@@ -28,13 +26,6 @@ function init(All) {
 			res.send(site);
 		}).catch(next);
 	});
-	if (All.opt.env == "development") {
-		All.app.post('/.api/reinstall', All.query, function(req, res, next) {
-			exports.reinstall(req.query).then(function(result) {
-				res.send(result);
-			}).catch(next);
-		});
-	}
 }
 
 function QuerySite(data) {
@@ -78,27 +69,14 @@ exports.add = function(data) {
 	});
 };
 
-exports.reinstall = function(data) {
-	return exports.get(data).then(function(site) {
-		return All.install({
-			domain: site.data.domain,
-			dependencies: site.data.dependencies,
-			reinstall: true
-		});
-	});
-};
-
 exports.save = function(data) {
 	return exports.get(data).then(function(site) {
 		if (data.domain) delete data.domain;
-		var sameDeps = equal(
-			data.data && data.data.dependencies || null,
-			site.data && site.data.dependencies || null
-		);
+		var sameModule = (data.data && data.data.module || null) == (site.data && site.data.module || null);
 		// ensure we don't just empty site.data by mistake
 		data.data = Object.assign({}, site.data, data.data);
 		return All.api.Block.query().where('id', site.id).patch(data).then(function(result) {
-			if (sameDeps == false) return All.install(data.data).then(() => result);
+			if (sameModule == false) return All.install(data.data).then(() => result);
 			else return result;
 		});
 	});
