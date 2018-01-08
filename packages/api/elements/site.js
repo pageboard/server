@@ -1,13 +1,10 @@
 Pageboard.elements.site = {
-	required: ['name', 'domain'],
+	required: ['domain'],
 	properties : {
-		name: {
-			type: 'string'
-		},
 		domain: {
 			type: 'string'
 		},
-		title: {
+		module: {
 			type: 'string'
 		}
 	}
