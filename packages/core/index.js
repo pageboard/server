@@ -258,15 +258,19 @@ function installModules(opt, domainDir, siteModule) {
 	debug("Installing site module", domainDir, siteModule);
 	var pkgPath = Path.join(domainDir, 'package.json');
 	return mkdirp(domainDir).then(function() {
-		var keep = false;
 		return fs.readFile(pkgPath).then(function(buf) {
 			var pkg = JSON.parse(buf.toString());
-			keep = pkg.keep;
-		}).catch(function(err) {});
-		if (keep) return false;
-		return fs.writeFile(pkgPath, JSON.stringify({
-			dependencies: {} // npm will populate it for us
-		}));
+			return pkg.keep;
+		}).catch(function(err) {
+			return false;
+		}).then(function(keep) {
+			if (keep) return false;
+			return fs.writeFile(pkgPath, JSON.stringify({
+				dependencies: {} // npm will populate it for us
+			})).then(function() {
+				return true;
+			});
+		});
 	}).then(function(install) {
 		if (!install) return;
 		if (opt.core.installer == "yarn") {
@@ -305,7 +309,7 @@ function installModules(opt, domainDir, siteModule) {
 			});
 		}
 	}).then(function(out) {
-		debug(out);
+		if (out) debug(out);
 		return fs.readFile(pkgPath).then(function(buf) {
 			var pkg = JSON.parse(buf.toString());
 			var deps = Object.keys(pkg.dependencies);
