@@ -11,6 +11,7 @@ var mkdirp = pify(require('mkdirp'));
 var xdg = require('xdg-basedir');
 var pkgup = require('pkg-up');
 var debug = require('debug')('pageboard:core');
+var which = pify(require('which'));
 
 var fs = {
 	writeFile: pify(require('fs').writeFile),
@@ -25,6 +26,8 @@ var spawn = require('spawn-please');
 
 // exceptional but so natural
 global.HttpError = require('http-errors');
+
+var installerPath;
 
 exports.config = function(pkgOpt) {
 	var cwd = process.cwd();
@@ -46,6 +49,7 @@ exports.config = function(pkgOpt) {
 		plugins: [],
 		dependencies: pkgOpt.dependencies || {},
 		core: {
+			installer: "npm",  // or yarn
 			listen: 3000,
 			log: ':method :status :time :size :type :url'
 		}
@@ -101,11 +105,16 @@ exports.init = function(opt) {
 
 	All.log = initLog(opt);
 
-	return Promise.all(Object.keys(opt.dependencies).map(function(module) {
-		return pkgup(require.resolve(module)).then(function(pkgPath) {
-			return initConfig(Path.dirname(pkgPath), null, module, All.opt);
-		});
-	})).then(function() {
+	return which(opt.core.installer).then(function(path) {
+		console.info("using core installer", path);
+		installerPath = path;
+	}).then(function() {
+		return Promise.all(Object.keys(opt.dependencies).map(function(module) {
+			return pkgup(require.resolve(module)).then(function(pkgPath) {
+				return initConfig(Path.dirname(pkgPath), null, module, All.opt);
+			});
+		}));
+	}).then(function() {
 		return initDirs(opt.dirs);
 	}).then(function() {
 		return initPlugins.call(All, pluginList);
@@ -218,7 +227,7 @@ function install({domain, module}) {
 		elements: []
 	};
 	debug("install domain in", domainDir);
-	return npmInstall(domainDir, module).then(function(moduleName) {
+	return installModules(All.opt.core, domainDir, module).then(function(moduleName) {
 		var siteModuleDir = Path.join(domainDir, 'node_modules', moduleName);
 		return fs.readFile(Path.join(siteModuleDir, "package.json")).then(function(buf) {
 			return JSON.parse(buf.toString());
@@ -246,7 +255,7 @@ function install({domain, module}) {
 	});
 };
 
-function npmInstall(domainDir, siteModule) {
+function installModules(opts, domainDir, siteModule) {
 	if (!siteModule) throw new Error("no domain module to install"); // this won't be logged
 	debug("Installing site module", domainDir, siteModule);
 	var pkgPath = Path.join(domainDir, 'package.json');
@@ -255,21 +264,43 @@ function npmInstall(domainDir, siteModule) {
 			dependencies: {} // npm will populate it for us
 		}))
 	}).then(function() {
-		return spawn("npm", ["install", "--save", siteModule], {
-			cwd: domainDir,
-			timeout: 60 * 1000,
-			env: {
-				PATH: process.env.PATH,
-				npm_config_userconfig: '', // attempt to disable user config
-				npm_config_ignore_scripts: 'false',
-				npm_config_loglevel: 'error',
-				npm_config_progress: 'false',
-				npm_config_package_lock: 'false',
-				npm_config_only: 'prod',
-				npm_config_prefer_offline: 'true'
-			}
-		});
-	}).then(function() {
+		if (opts.installer == "yarn") {
+			return spawn(installerPath, [
+				"--non-interactive",
+				"--ignore-optional",
+				"--prefer-offline",
+				"--production",
+				"--no-lockfile",
+				"--silent",
+				"add", siteModule
+			], {
+				cwd: domainDir,
+				timeout: 60 * 1000,
+				env: {
+					PATH: process.env.PATH
+				}
+			});
+		} else {
+			return spawn(installerPath, [
+				"install",
+				"--save", siteModule
+			], {
+				cwd: domainDir,
+				timeout: 60 * 1000,
+				env: {
+					PATH: process.env.PATH,
+					npm_config_userconfig: '', // attempt to disable user config
+					npm_config_ignore_scripts: 'false',
+					npm_config_loglevel: 'error',
+					npm_config_progress: 'false',
+					npm_config_package_lock: 'false',
+					npm_config_only: 'prod',
+					npm_config_prefer_offline: 'true'
+				}
+			});
+		}
+	}).then(function(out) {
+		debug(out);
 		return fs.readFile(pkgPath).then(function(buf) {
 			var pkg = JSON.parse(buf.toString());
 			var deps = Object.keys(pkg.dependencies);
