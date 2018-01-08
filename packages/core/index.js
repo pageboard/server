@@ -238,7 +238,7 @@ function install({domain, module}) {
 			});
 		});
 	}).catch(function(err) {
-		if (module) console.error("Could not install", domainDir, module);
+		if (module) console.error("Could not install", domainDir, module, err);
 	}).then(function() {
 		return All.statics.install(domain, config, All);
 	}).then(function() {
