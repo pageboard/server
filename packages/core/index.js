@@ -264,7 +264,8 @@ function npmInstall(domainDir, siteModule) {
 				npm_config_loglevel: 'error',
 				npm_config_progress: 'false',
 				npm_config_package_lock: 'false',
-				npm_config_only: 'prod'
+				npm_config_only: 'prod',
+				npm_config_prefer_offline: 'true'
 			}
 		});
 	}).then(function() {
