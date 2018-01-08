@@ -33,15 +33,13 @@ function init(All) {
 			var payload = JSON.parse(req.body);
 			var fullName = payload.repository.full_name;
 			var save = false;
-			Object.keys(site.data.dependencies || {}).forEach(function(name) {
-				var spec = site.data.dependencies[name];
-				if (spec.startsWith(fullName) &&
-				(spec.length == fullName.length || spec[fullName.length] == "#")
-				) {
-					site.data.dependencies[name] = fullName + '#' + payload.after;
+			var module = site.data.module;
+			if (module.startsWith(fullName) &&
+				(module.length == fullName.length || module[fullName.length] == "#")
+			) {
+					site.data.module = fullName + '#' + payload.after;
 					save = true;
-				}
-			});
+			}
 			if (save) return All.site.save(site).then(function(result) {
 				console.info(result);
 				res.sendStatus(200);
