@@ -22,9 +22,7 @@ var fs = {
 	symlink: pify(require('fs').symlink)
 };
 
-var cp = {
-	exec: pify(require('child_process').exec)
-};
+var spawn = require('spawn-please');
 
 // exceptional but so natural
 global.HttpError = require('http-errors');
@@ -208,7 +206,7 @@ function initLog(opt) {
 	return morgan(opt.logFormat);
 }
 
-function install({domain, dependencies, reinstall}) {
+function install({domain, module}) {
 	if (!domain) throw new Error("Missing domain");
 	var All = this;
 	var installedBlock;
@@ -218,33 +216,21 @@ function install({domain, dependencies, reinstall}) {
 		directories: [],
 		elements: []
 	};
-	var pkgFile = Path.join(domainDir, 'package.json');
-	debug("create domain dir", domainDir);
-	return mkdirp(domainDir).then(function() {
-		var doInstall = true;
-		return fs.readFile(pkgFile).then(function(json) {
-			var obj = JSON.parse(json);
-			if (!reinstall && equal(obj.dependencies, dependencies)) {
-				debug("no change in dependencies");
-				doInstall = false;
-			}
-		}).catch(function(ex) {
-			// whatever
-		}).then(function() {
-			if (!doInstall) return;
-			return fs.writeFile(pkgFile, JSON.stringify({
-				name: domain,
-				dependencies: dependencies
-			}));
-		}).then(function() {
-			if (!doInstall) return;
-			return npmInstall(domainDir);
+	debug("install domain in", domainDir);
+	return npmInstall(domainDir, module).then(function(moduleName) {
+		var siteModuleDir = Path.join(domainDir, 'node_modules', moduleName);
+		return fs.readFile(Path.join(siteModuleDir, "package.json")).then(function(buf) {
+			return JSON.parse(buf.toString());
+		}).then(function(pkg) {
+			return initConfig(siteModuleDir, domain, moduleName, config).then(function() {
+				return Promise.all(Object.keys(pkg.dependencies || {}).map(function(subModule) {
+					var moduleDir = Path.join(domainDir, 'node_modules', subModule);
+					return initConfig(moduleDir, domain, subModule, config);
+				}));
+			});
 		});
-	}).then(function() {
-		return Promise.all(Object.keys(dependencies || {}).map(function(module) {
-			var moduleDir = Path.join(domainDir, 'node_modules', module);
-			return initConfig(moduleDir, domain, module, config);
-		}));
+	}).catch(function(err) {
+		if (module) console.error("Could not install", domainDir, module);
 	}).then(function() {
 		return All.statics.install(domain, config, All);
 	}).then(function() {
@@ -259,20 +245,35 @@ function install({domain, dependencies, reinstall}) {
 	});
 };
 
-function npmInstall(domainDir) {
-	debug("Installing dependencies", domainDir);
-	return cp.exec("npm install", {
-		cwd: domainDir,
-		timeout: 60 * 1000,
-		env: {
-			PATH: process.env.PATH,
-			npm_config_userconfig: '', // attempt to disable user config
-			npm_config_ignore_scripts: 'false',
-			npm_config_loglevel: 'error',
-			npm_config_progress: 'false',
-			npm_config_package_lock: 'false',
-			npm_config_only: 'prod'
-		}
+function npmInstall(domainDir, siteModule) {
+	if (!siteModule) throw new Error("no domain module to install"); // this won't be logged
+	debug("Installing site module", domainDir, siteModule);
+	var pkgPath = Path.join(domainDir, 'package.json');
+	return mkdirp(domainDir).then(function() {
+		return fs.writeFile(pkgPath, JSON.stringify({
+			dependencies: {} // npm will populate it for us
+		}))
+	}).then(function() {
+		return spawn("npm", ["install", "--save", siteModule], {
+			cwd: domainDir,
+			timeout: 60 * 1000,
+			env: {
+				PATH: process.env.PATH,
+				npm_config_userconfig: '', // attempt to disable user config
+				npm_config_ignore_scripts: 'false',
+				npm_config_loglevel: 'error',
+				npm_config_progress: 'false',
+				npm_config_package_lock: 'false',
+				npm_config_only: 'prod'
+			}
+		});
+	}).then(function() {
+		return fs.readFile(pkgPath).then(function(buf) {
+			var pkg = JSON.parse(buf.toString());
+			var deps = Object.keys(pkg.dependencies);
+			if (!deps.length) throw new Error("Could not install " + siteModule);
+			return deps[0];
+		});
 	});
 }
 

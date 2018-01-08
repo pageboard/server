@@ -35,6 +35,7 @@
     "pretty-bytes": "^4.0.2",
     "rc": "^1.2.1",
     "serve-favicon": "^2.4.3",
+    "spawn-please": "^0.3.0",
     "util-promisify": "^2.0.0",
     "xdg-basedir": "^2.0.0"
   },
