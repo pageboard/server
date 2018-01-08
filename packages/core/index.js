@@ -27,8 +27,6 @@ var spawn = require('spawn-please');
 // exceptional but so natural
 global.HttpError = require('http-errors');
 
-var installerPath;
-
 exports.config = function(pkgOpt) {
 	var cwd = process.cwd();
 	pkgOpt = Object.assign({}, require(cwd + '/package.json'), pkgOpt);
@@ -107,7 +105,7 @@ exports.init = function(opt) {
 
 	return which(opt.core.installer).then(function(path) {
 		console.info("using core installer", path);
-		installerPath = path;
+		opt.installerPath = path;
 	}).then(function() {
 		return Promise.all(Object.keys(opt.dependencies).map(function(module) {
 			return pkgup(require.resolve(module)).then(function(pkgPath) {
@@ -227,7 +225,7 @@ function install({domain, module}) {
 		elements: []
 	};
 	debug("install domain in", domainDir);
-	return installModules(All.opt.core, domainDir, module).then(function(moduleName) {
+	return installModules(All.opt, domainDir, module).then(function(moduleName) {
 		var siteModuleDir = Path.join(domainDir, 'node_modules', moduleName);
 		return fs.readFile(Path.join(siteModuleDir, "package.json")).then(function(buf) {
 			return JSON.parse(buf.toString());
@@ -255,17 +253,22 @@ function install({domain, module}) {
 	});
 };
 
-function installModules(opts, domainDir, siteModule) {
+function installModules(opt, domainDir, siteModule) {
 	if (!siteModule) throw new Error("no domain module to install"); // this won't be logged
 	debug("Installing site module", domainDir, siteModule);
 	var pkgPath = Path.join(domainDir, 'package.json');
 	return mkdirp(domainDir).then(function() {
-		return fs.writeFile(pkgPath, JSON.stringify({
-			dependencies: {} // npm will populate it for us
-		}))
-	}).then(function() {
-		if (opts.installer == "yarn") {
-			return spawn(installerPath, [
+		return fs.readFile(pkgPath).then(function(buf) {
+			var pkg = JSON.parse(buf.toString());
+			if (pkg.keep) return false;
+			else return fs.writeFile(pkgPath, JSON.stringify({
+				dependencies: {} // npm will populate it for us
+			}));
+		});
+	}).then(function(install) {
+		if (!install) return;
+		if (opt.core.installer == "yarn") {
+			return spawn(opt.installerPath, [
 				"--non-interactive",
 				"--ignore-optional",
 				"--prefer-offline",
@@ -281,7 +284,7 @@ function installModules(opts, domainDir, siteModule) {
 				}
 			});
 		} else {
-			return spawn(installerPath, [
+			return spawn(opt.installerPath, [
 				"install",
 				"--save", siteModule
 			], {
