@@ -273,6 +273,14 @@ function installModules(opt, domainDir, siteModule) {
 		});
 	}).then(function(install) {
 		if (!install) return;
+		var baseEnv = {
+			HOME: process.env.HOME,
+			PATH: process.env.PATH
+		};
+		if (opt.env == "development" && process.env.SSH_AUTH_SOCK) {
+			// some local setup require to pass this to be able to use ssh keys
+			baseEnv.SSH_AUTH_SOCK = process.env.SSH_AUTH_SOCK;
+		}
 		if (opt.core.installer == "yarn") {
 			return spawn(opt.installerPath, [
 				"--non-interactive",
@@ -285,9 +293,7 @@ function installModules(opt, domainDir, siteModule) {
 			], {
 				cwd: domainDir,
 				timeout: 60 * 1000,
-				env: {
-					PATH: process.env.PATH
-				}
+				env: baseEnv
 			});
 		} else {
 			return spawn(opt.installerPath, [
@@ -296,8 +302,7 @@ function installModules(opt, domainDir, siteModule) {
 			], {
 				cwd: domainDir,
 				timeout: 60 * 1000,
-				env: {
-					PATH: process.env.PATH,
+				env: Object.assign(baseEnv, {
 					npm_config_userconfig: '', // attempt to disable user config
 					npm_config_ignore_scripts: 'false',
 					npm_config_loglevel: 'error',
@@ -305,7 +310,7 @@ function installModules(opt, domainDir, siteModule) {
 					npm_config_package_lock: 'false',
 					npm_config_only: 'prod',
 					npm_config_prefer_offline: 'true'
-				}
+				})
 			});
 		}
 	}).then(function(out) {
