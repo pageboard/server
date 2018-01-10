@@ -512,11 +512,33 @@ Domains.prototype.host = function(req) {
 	if (!obj.host) {
 		if (req) {
 			obj.host = (req.get('X-Redirect-Secure') ? 'https' : req.protocol) + '://' + req.get('Host');
+			obj.ip = req.get('X-Forwarded-By') || req.socket.address().address;
 		} else {
 			throw new Error(`Unknown domain ${domain}`);
 		}
 	}
 	return obj.host;
+};
+
+Domains.prototype.resolvable = function(domain) {
+	var obj = this.map[domain];
+	if (!obj || !obj.ip) return Promise.reject(new HttpError.NotFound(`Unknown domain`));
+	if (obj.resolvable) return Promise.resolve();
+	return new Promise(function(resolve, reject) {
+		require('dns').lookup(domain, {
+			all: false,
+			family: 4
+		}, function(err, address, family) {
+			if (err) return reject(err);
+			if (address == obj.ip) {
+				obj.resolvable = true;
+				return resolve(true);
+			} else {
+				obj.resolvable = false;
+				reject(new HttpError.NotFound(`Wrong ip for domain: ${address}, expected ${obj.ip}`));
+			}
+		});
+	});
 };
 
 function initDumps(All) {
