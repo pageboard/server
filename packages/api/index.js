@@ -88,8 +88,10 @@ function init(All) {
 
 	// used by proxies to quickly know if this domain is known
 	All.app.get('/.api', All.query, function(req, res, next) {
-		All.api.DomainBlock(req.query.domain).then(function(DomainBlock) {
-			res.type('text').sendStatus(200);
+		All.domains.resolvable(req.query.domain).then(function() {
+			return All.api.DomainBlock(req.query.domain).then(function(DomainBlock) {
+				res.type('text').sendStatus(200);
+			});
 		}).catch(next);
 	});
 }
