@@ -1,6 +1,7 @@
 var dom = require('express-dom');
 var expressHref = require('express-href');
 var Path = require('path');
+var formPlugin = require('./plugins/form');
 
 module.exports = function(opt) {
 	if (!opt.prerender) opt.prerender = {};
@@ -23,6 +24,7 @@ module.exports = function(opt) {
 	}));
 	dom.settings.load.plugins.unshift(dom.plugins.httpequivs);
 	dom.settings.load.plugins.unshift(dom.plugins.httplinkpreload);
+	dom.settings.load.plugins.unshift(formPlugin);
 
 	Object.assign(dom.pool, {
 		max: 8
