@@ -1,3 +1,5 @@
+var ref = require('objection').ref;
+
 exports = module.exports = function(opt) {
 	return {
 		name: 'block',
@@ -36,22 +38,32 @@ function QueryBlock(data) {
 			return Block.query().select(Block.tableColumns).where('block.id', data.id);
 		}
 		var q = Block.query().select(Block.tableColumns).whereDomain(Block.domain);
-		if (data.text != null) {
-			var text = data.text.split(' ').filter(x => !!x).map(x => x + ':*').join(' <-> ');
-			q.from(Block.raw([
-				Block.raw("to_tsquery('unaccent', ?) AS query", [text]),
-				'block'
-			]));
-			if (data.type) q.where('block.type', data.type);
-			q.whereRaw('query @@ block.tsv');
-			q.orderByRaw('ts_rank(block.tsv, query) DESC');
-			q.orderBy('updated_at', 'block.desc');
-			if (data.paginate) q.offset(Math.max(parseInt(data.paginate) - 1 || 0, 0) * 10);
-			q.limit(10);
-		} else if (!data.id) {
-			throw new HttpError.BadRequest("Missing id");
-		} else {
+		if (data.id) {
 			q.where('block.id', data.id).first().throwIfNotFound();
+		} else if (data.text != null || data.data) {
+			if (data.data) {
+				var refs = {};
+				asPaths(data.data, refs, 'block.data:');
+				for (var k in refs) {
+					q.where(ref(k).castText(), Array.isArray(refs[k]) ? 'IN' : '=', refs[k]);
+				}
+				if (!data.text) data.text = "";
+			}
+			if (data.text != null) {
+				var text = data.text.split(' ').filter(x => !!x).map(x => x + ':*').join(' <-> ');
+				q.from(Block.raw([
+					Block.raw("to_tsquery('unaccent', ?) AS query", [text]),
+					'block'
+				]));
+				if (data.type) q.where('block.type', data.type);
+				q.whereRaw('query @@ block.tsv');
+				q.orderByRaw('ts_rank(block.tsv, query) DESC');
+				q.orderBy('updated_at', 'block.desc');
+				if (data.paginate) q.offset(Math.max(parseInt(data.paginate) - 1 || 0, 0) * 10);
+				q.limit(10);
+			}
+		} else {
+			throw new HttpError.BadRequest("Missing id, text, or data");
 		}
 		return q;
 	});
@@ -79,4 +91,21 @@ exports.save = function(data) {
 exports.del = function(data) {
 	return QueryBlock(data).del();
 };
+
+
+function asPaths(obj, ret, pre) {
+	if (!ret) ret = {};
+	Object.keys(obj).forEach(function(key) {
+		var val = obj[key];
+		var cur = `${pre || ""}${key}`;
+		if (Array.isArray(val) || typeof val != "object") {
+			ret[cur] = val;
+		} else if (typeof val == "object") {
+			asPaths(val, ret, cur + '.');
+		} else {
+			throw new HttpError.BadRequest(`Cannot convert query ${cur}: ${val}`);
+		}
+	});
+	return ret;
+}
 
