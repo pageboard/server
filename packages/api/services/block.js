@@ -38,6 +38,7 @@ function QueryBlock(data) {
 			return Block.query().select(Block.tableColumns).where('block.id', data.id);
 		}
 		var q = Block.query().select(Block.tableColumns).whereDomain(Block.domain);
+		if (data.type) q.where('block.type', data.type);
 		if (data.id) {
 			q.where('block.id', data.id).first().throwIfNotFound();
 		} else if (data.text != null || data.data) {
@@ -54,7 +55,6 @@ function QueryBlock(data) {
 					Block.raw("to_tsquery('unaccent', ?) AS query", [text]),
 					'block'
 				]));
-				if (data.type) q.where('block.type', data.type);
 				q.whereRaw('query @@ block.tsv');
 				q.orderByRaw('ts_rank(block.tsv, query) DESC');
 			}
