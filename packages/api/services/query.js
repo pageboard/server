@@ -32,6 +32,11 @@ exports.query = function(data) {
 	}).then(function(parent) {
 		var fd = parent.data.query || {};
 		var params = mapData(data, fd.consts, fd.vars);
+		if (fd.type) {
+			// when bound to an element, all keys are supposed to be in block.data
+			// TODO check params against that type schema
+			params = {data: params};
+		}
 		params.domain = data.domain;
 		return All.run(fd.call, params);
 	});
