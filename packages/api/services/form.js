@@ -55,11 +55,11 @@ exports.submit = function(data) {
 		// TODO vars should either be replaced by schema validation or at least populated with a mapping
 		// schema validation could be done through form.data.type ?
 		var params = {};
-		for (var k in data) All.api.query.setVar(params, k, data[k]);
+		for (var k in data) All.search.setVar(params, k, data[k]);
 		delete params._parent;
 		var consts = fd.action.consts;
 		if (consts) Object.keys(consts).forEach(function(key) {
-			All.api.query.setVar(params, key, consts[key]);
+			All.search.setVar(params, key, consts[key]);
 		});
 
 		return All.run(fd.action.call, params).then(function(response) {

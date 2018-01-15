@@ -1,6 +1,6 @@
 exports = module.exports = function(opt) {
 	return {
-		name: 'query',
+		name: 'search',
 		service: init
 	};
 };
