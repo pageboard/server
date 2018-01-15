@@ -74,18 +74,23 @@ exports.get = function(data) {
 };
 
 exports.add = function(data) {
-	var parent = data.parent;
-	delete data.parent;
-	return All.Block.query().select('_id').where('_id', parent).first().then(function(parent) {
-		data.parents = [{
-			'#dbRef': parent._id
-		}];
-		return All.Block.query().insertGraph(data).returning(All.Block.tableColumns)
+	if (!data.domain) throw new HttpError.BadRequest("Missing domain");
+	return All.api.DomainBlock(data.domain).then(function(Block) {
+		return Block.query().whereJsonText('block.data:domain', data.domain)
+			.first().throwIfNotFound().then(function(site) {
+				delete data.domain;
+				return site.$relatedQuery('children').insert(data);
+			});
 	});
 };
 
 exports.save = function(data) {
-	return QueryBlock(data).patch(data);
+	if (!data.domain) throw new HttpError.BadRequest("Missing domain");
+	if (!data.id) throw new HttpError.BadRequest("Missing id");
+	return All.api.DomainBlock(data.domain).then(function(Block) {
+		delete data.domain;
+		return Block.query().where('block.id', data.id).patch(data);
+	});
 };
 
 exports.del = function(data) {
