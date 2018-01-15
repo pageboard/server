@@ -35,6 +35,8 @@ exports.query = function(data) {
 		delete data.domain;
 		delete data._parent;
 		var params = {};
+		// consts: destPath: val
+		// vars: destPath: queryPath
 		// allow rewriting variables
 //		if (fd.vars) Object.keys(fd.vars).forEach(function(key) {
 //			var val = getVar(data, fd.vars[key]);
@@ -55,22 +57,6 @@ exports.query = function(data) {
 		return All.run(fd.call, params);
 	});
 };
-
-// consts: destPath: val
-// vars: destPath: queryPath
-function mapData(data, consts, vars) {
-	var out = {};
-	if (vars) Object.keys(vars).forEach(function(key) {
-		var val = getVar(data, vars[key]);
-		if (val === undefined) return;
-		setVar(out, key, val);
-	});
-	if (consts) Object.keys(consts).forEach(function(key) {
-		setVar(out, key, consts[key]);
-	});
-	return out;
-}
-
 
 exports.getVar = getVar;
 function getVar(obj, path) {
