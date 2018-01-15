@@ -47,7 +47,6 @@ function QueryBlock(data) {
 				for (var k in refs) {
 					q.where(ref(k).castText(), Array.isArray(refs[k]) ? 'IN' : '=', refs[k]);
 				}
-				if (!data.text) data.text = "";
 			}
 			if (data.text != null) {
 				var text = data.text.split(' ').filter(x => !!x).map(x => x + ':*').join(' <-> ');
@@ -58,10 +57,10 @@ function QueryBlock(data) {
 				if (data.type) q.where('block.type', data.type);
 				q.whereRaw('query @@ block.tsv');
 				q.orderByRaw('ts_rank(block.tsv, query) DESC');
-				q.orderBy('updated_at', 'block.desc');
-				if (data.paginate) q.offset(Math.max(parseInt(data.paginate) - 1 || 0, 0) * 10);
-				q.limit(10);
 			}
+			q.orderBy('updated_at', 'block.desc');
+			if (data.paginate) q.offset(Math.max(parseInt(data.paginate) - 1 || 0, 0) * 10);
+			q.limit(10);
 		} else {
 			throw new HttpError.BadRequest("Missing id, text, or data");
 		}
