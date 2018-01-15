@@ -31,13 +31,27 @@ exports.query = function(data) {
 		domain: data.domain
 	}).then(function(parent) {
 		var fd = parent.data.query || {};
-		var params = mapData(data, fd.consts, fd.vars);
+		var domain = data.domain;
+		delete data.domain;
+		delete data._parent;
+		var params = {};
+		// allow rewriting variables
+//		if (fd.vars) Object.keys(fd.vars).forEach(function(key) {
+//			var val = getVar(data, fd.vars[key]);
+//			if (val === undefined) return;
+//			setVar(params, key, val);
+//		});
 		if (fd.type) {
 			// when bound to an element, all keys are supposed to be in block.data
 			// TODO check params against that type schema
-			params = {data: params};
+			params = {data: data};
 		}
-		params.domain = data.domain;
+		// overwriting values
+		if (fd.consts) Object.keys(fd.consts).forEach(function(key) {
+			setVar(params, key, fd.consts[key]);
+		});
+
+		params.domain = domain;
 		return All.run(fd.call, params);
 	});
 };
