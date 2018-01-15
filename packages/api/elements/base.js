@@ -71,9 +71,9 @@ Pageboard.elements.page = {
 Pageboard.elements.notfound = Object.assign({}, Pageboard.elements.page, {
 	title: 'Page not found',
 	properties: Object.assign({}, Pageboard.elements.page.properties),
-	render: function(doc, block) {
+	render: function(doc, block, view) {
 		doc.head.appendChild(doc.dom`<meta http-equiv="Status" content="404 Not Found">`);
-		return Pageboard.elements.page.render(doc, block);
+		return view.render(block, {type: 'page'});
 	}
 });
 delete Pageboard.elements.notfound.properties.url;
