@@ -24,6 +24,6 @@
   "dependencies": {
     "express-dom": "^5.9.0",
     "express-href": "^1.0.0",
-    "webkitgtk": "^4.6.0"
+    "webkitgtk": "^4.7.0"
   }
 }
