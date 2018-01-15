@@ -27,8 +27,8 @@ exports.query = function(data) {
 		id: data._parent,
 		domain: data.domain
 	}).then(function(form) {
-		var type = form.data.action.consts.type;
-		if (!type) throw new HttpError.BadRequest("Missing form action.consts.type");
+		var type = (form.data.action || {}).type;
+		if (!type) throw new HttpError.BadRequest("Missing form action.type");
 		return All.block.get({
 			id: data.id,
 			type: type,
