@@ -42,34 +42,35 @@ exports.submit = function(data) {
 		id: data._parent,
 		domain: data.domain
 	}).then(function(form) {
-		var fd = form.data;
-		if (fd.action.method != "post") throw new HttpError.MethodNotAllowed("Only post allowed");
-		// TODO:
-		// - if fd.schema is set, validate against that custom schema
-		// - a helper that builds data.schema out of current form input content
-		// - this is crucial because it filters out unwanted data
-		// action.call block.add, block.save...
-		// TODO how a query element can populate a form ? it's crucial so that
-		// shopmaster can modify a product in database
+		var fd = form.data.action || {};
+		if (fd.method != "post") throw new HttpError.MethodNotAllowed("Only post allowed");
+		var domain = data.domain;
+		delete data.domain;
+		delete data._parent;
 
-		// TODO vars should either be replaced by schema validation or at least populated with a mapping
-		// schema validation could be done through form.data.type ?
+		var setVar = All.search.setVar;
+		var getVar = All.search.getVar;
 		var params = {};
-		for (var k in data) All.search.setVar(params, k, data[k]);
-		delete params._parent;
-		if (fd.action.type) {
+		if (fd.vars) Object.keys(fd.vars).forEach(function(key) {
+			var val = getVar(data, fd.vars[key]);
+			if (val === undefined) return;
+			setVar(params, key, val);
+		});
+		if (fd.type) {
 			// when bound to an element, all keys are supposed to be in block.data
 			params = {data: params};
 		}
-		var consts = fd.action.consts;
-		if (consts) Object.keys(consts).forEach(function(key) {
-			All.search.setVar(params, key, consts[key]);
+		// overwriting values
+		if (fd.consts) Object.keys(fd.consts).forEach(function(key) {
+			setVar(params, key, fd.consts[key]);
 		});
 
-		return All.run(fd.action.call, params).then(function(response) {
-			if (fd.redirection && fd.redirection.url) {
+		params.domain = domain;
+		return All.run(fd.call, params).then(function(response) {
+			var redirect = form.data.redirection && form.data.redirection.url;
+			if (redirect) {
 				// TODO build redirection using fd.redirection.url, consts, vars
-				response.redirect = fd.redirection.url;
+				response.redirect = redirect;
 			}
 			return response;
 		});
