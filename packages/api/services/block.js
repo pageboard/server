@@ -102,8 +102,6 @@ function asPaths(obj, ret, pre) {
 			ret[cur] = val;
 		} else if (typeof val == "object") {
 			asPaths(val, ret, cur + '.');
-		} else {
-			throw new HttpError.BadRequest(`Cannot convert query ${cur}: ${val}`);
 		}
 	});
 	return ret;
