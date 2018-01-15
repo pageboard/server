@@ -34,19 +34,22 @@ exports.query = function(data) {
 		var domain = data.domain;
 		delete data.domain;
 		delete data._parent;
-		var params = {};
+		var params = Object.assign({}, data); // TODO import data using fd.type schema
 		// consts: destPath: val
 		// vars: destPath: queryPath
 		// allow rewriting variables
-//		if (fd.vars) Object.keys(fd.vars).forEach(function(key) {
-//			var val = getVar(data, fd.vars[key]);
-//			if (val === undefined) return;
-//			setVar(params, key, val);
-//		});
+		if (fd.vars) Object.keys(fd.vars).forEach(function(key) {
+			var val = getVar(data, fd.vars[key]);
+			if (val === undefined) return;
+			setVar(params, key, val);
+		});
 		if (fd.type) {
 			// when bound to an element, all keys are supposed to be in block.data
 			// TODO check params against that type schema
-			params = {data: data};
+			params = {
+				type: fd.type,
+				data: data
+			};
 		}
 		// overwriting values
 		if (fd.consts) Object.keys(fd.consts).forEach(function(key) {

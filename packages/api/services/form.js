@@ -50,7 +50,7 @@ exports.submit = function(data) {
 
 		var setVar = All.search.setVar;
 		var getVar = All.search.getVar;
-		var params = {};
+		var params = Object.assign({}, data); // TODO import data using fd.type schema
 		if (fd.vars) Object.keys(fd.vars).forEach(function(key) {
 			var val = getVar(data, fd.vars[key]);
 			if (val === undefined) return;
@@ -58,7 +58,10 @@ exports.submit = function(data) {
 		});
 		if (fd.type) {
 			// when bound to an element, all keys are supposed to be in block.data
-			params = {data: params};
+			params = {
+				type: fd.type,
+				data: params
+			};
 		}
 		// overwriting values
 		if (fd.consts) Object.keys(fd.consts).forEach(function(key) {
