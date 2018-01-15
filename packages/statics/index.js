@@ -83,7 +83,8 @@ exports.install = function(domain, {directories}, All) {
 		directories.forEach(function(mount) {
 			p.then(function() {
 				return mountPath(mount.from, mount.to).catch(function(err) {
-					console.error("Cannot mount", mount.from, mount.to);
+					console.error("Cannot mount", mount.from, mount.to, err);
+					console.error("directories", directories);
 				});
 			});
 		});
