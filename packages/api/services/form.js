@@ -57,6 +57,10 @@ exports.submit = function(data) {
 		var params = {};
 		for (var k in data) All.search.setVar(params, k, data[k]);
 		delete params._parent;
+		if (fd.action.type) {
+			// when bound to an element, all keys are supposed to be in block.data
+			params = {data: params};
+		}
 		var consts = fd.action.consts;
 		if (consts) Object.keys(consts).forEach(function(key) {
 			All.search.setVar(params, key, consts[key]);
