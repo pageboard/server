@@ -8,7 +8,7 @@ exports = module.exports = function(opt) {
 
 function init(All) {
 	var opt = All.opt;
-	exports.get = function(url) {
+	exports.get = function({url: url}) {
 		var p;
 		if (opt.inspector.url) {
 			p = require('got')({
