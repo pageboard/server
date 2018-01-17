@@ -1,7 +1,24 @@
+database
+--------
+
+First create a postgres user and database, and on that database:
+CREATE EXTENSION unaccent;
+
+pageboard api.migrate
+
+To restore an existing pageboard dump:
+pg_restore -c -d pageboard pageboard-20180117T020001.dump
+
+user
+----
+
 pageboard user.add \
 data.email='your@email.com' \
 data.name='John Doe' \
 data.nickname=root
+
+site
+----
 
 pageboard site.add \
 data.name=local \
