@@ -254,7 +254,7 @@ function install({domain, module}) {
 };
 
 function installModules(opt, domainDir, siteModule) {
-	if (!siteModule) throw new Error("no domain module to install"); // this won't be logged
+	if (!siteModule) return Promise.reject(new Error("no domain module to install"));
 	debug("Installing site module", domainDir, siteModule);
 	var pkgPath = Path.join(domainDir, 'package.json');
 	return mkdirp(domainDir).then(function() {
