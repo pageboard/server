@@ -125,7 +125,7 @@ exports.add = function(data) {
 		isLocal = true;
 	}
 
-	return All.inspector.get({url: url}).catch(function(err) {
+	return All.inspector.get({url: url, nofavicon: isLocal}).catch(function(err) {
 		// inspector failure
 		if (typeof err == 'number') err = new HttpError[err]("Inspector failure");
 		throw err;
