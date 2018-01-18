@@ -8,18 +8,21 @@ exports = module.exports = function(opt) {
 
 function init(All) {
 	var opt = All.opt;
-	exports.get = function({url: url}) {
+	exports.get = function({url, nofavicon}) {
 		var p;
 		if (opt.inspector.url) {
 			p = require('got')({
 				url: opt.inspector.url,
 				query: {
-					url: url
+					url: url,
+					nofavicon: nofavicon
 				}
 			});
 		} else {
 			p = new Promise(function(resolve, reject) {
-				require('url-inspector')(url, opt.inspector, function(err, result) {
+				require('url-inspector')(url, Object.assign({
+					nofavicon: nofavicon
+				}, opt.inspector), function(err, result) {
 					if (err) return reject(err);
 					resolve(result);
 				});
