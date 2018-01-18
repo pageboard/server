@@ -20,6 +20,6 @@
     "bl": "^1.2.0",
     "datauri": "^1.0.5",
     "express-urlrewrite": "^1.2.0",
-    "sharpie": "^2.7.0"
+    "sharpie": "^2.8.0"
   }
 }
