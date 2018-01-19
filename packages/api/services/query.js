@@ -34,7 +34,7 @@ exports.query = function(data) {
 		var domain = data.domain;
 		delete data.domain;
 		delete data._parent;
-		var params = Object.assign({}, data); // TODO import data using fd.type schema
+		var params = {};
 		// consts: destPath: val
 		// vars: destPath: queryPath
 		// allow rewriting variables
@@ -44,8 +44,6 @@ exports.query = function(data) {
 			setVar(params, key, val);
 		});
 		if (fd.type) {
-			// when bound to an element, all keys are supposed to be in block.data
-			// TODO check params against that type schema
 			params = {
 				type: fd.type,
 				data: data
