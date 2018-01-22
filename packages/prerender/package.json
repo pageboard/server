@@ -22,6 +22,7 @@
   },
   "homepage": "https://github.com/pageboard/prerender#readme",
   "dependencies": {
+    "content-security-policy-builder": "^1.1.0",
     "express-dom": "^5.9.0",
     "express-href": "^1.0.0",
     "webkitgtk": "^4.7.0"
