@@ -403,12 +403,12 @@ function initConfig(moduleDir, domain, module, config) {
 function createApp(opt) {
 	var app = express();
 	// https://www.smashingmagazine.com/2017/04/secure-web-app-http-headers/
+	// for csp headers, see prerender and write
 	app.set("env", opt.env);
 	app.disable('x-powered-by');
 	app.use(function(req, res, next) {
 		res.setHeader('X-XSS-Protection','1;mode=block');
 		res.setHeader('X-Frame-Options', 'SAMEORIGIN');
-		if (opt.env != "development") res.setHeader('Content-Security-Policy', "script-src 'self'");
 		res.setHeader('X-Content-Type-Options', 'nosniff');
 		All.domains.host(req);
 		All.api.DomainBlock(req.hostname).then(function(DomainBlock) {
