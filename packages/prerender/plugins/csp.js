@@ -12,7 +12,7 @@ module.exports = function cspPlugin(page, settings, request, response) {
 			});
 			return Object.keys(hosts);
 		}).then(function(hosts) {
-			response.setHeader('Content-Secutiry-Policy', csp({
+			response.setHeader('Content-Security-Policy', csp({
 				directives: {
 					defaultSrc: ["'self'"],
 					scriptSrc: hosts
