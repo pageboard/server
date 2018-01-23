@@ -18,6 +18,10 @@ Page.route(function(state) {
 		"/.api/elements.js"
 	];
 
+	if (window.parent.Pageboard && window.parent.Pageboard.hook) {
+		scripts.unshift('/.pageboard/pagecut/editor.js');
+	}
+
 	scripts.forEach(function(src) {
 		var node = doc.createElement('script');
 		node.setAttribute('src', src);
