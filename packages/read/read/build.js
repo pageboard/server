@@ -5,6 +5,9 @@
 if (!window.Pageboard) window.Pageboard = {elements: {}};
 
 Page.build(function(state) {
+	if (window.parent.Pageboard && window.parent.Pageboard.hook) {
+		window.parent.Pageboard.hook(state);
+	}
 	return GET('/.api/page', {
 		url: state.pathname
 	}).catch(function(err) {
