@@ -7,6 +7,8 @@ Page.route(function(state) {
 	html.appendChild(doc.createElement('body'));
 	// --
 	state.document = doc;
+	delete window.Pagecut;
+	delete window.Pageboard;
 
 	var scripts = [
 		"/.pageboard/read/window-page.js",
