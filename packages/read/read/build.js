@@ -6,9 +6,6 @@
 if (!window.Pageboard) window.Pageboard = {elements: {}};
 
 Page.build(function(state) {
-	if (window.parent.Pageboard && window.parent.Pageboard.hook) {
-		window.parent.Pageboard.hook(state);
-	}
 	return GET('/.api/page', {
 		url: state.pathname
 	}).catch(function(err) {
@@ -25,6 +22,9 @@ Page.build(function(state) {
 			if (body.nodeName != "BODY") throw new Error("Page renderer should fill document and return body");
 			var doc = body.ownerDocument;
 			doc.documentElement.replaceChild(body, doc.body);
+			if (window.parent.Pageboard && window.parent.Pageboard.hook) {
+				window.parent.Pageboard.hook(doc);
+			}
 
 			doc.head.insertAdjacentHTML('beforeEnd', "\n" +
 				filterModules(Pageboard.view, 'stylesheets').map(function(href) {
