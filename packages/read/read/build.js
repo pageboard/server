@@ -1,6 +1,7 @@
-		// TODO monkey-patch window-page so that Page.state.query has accessors
-		// and that after prerendering, if some query parameters were not accessed,
-		// a 302 Temporary redirection goes to the same url without those query parameters
+		// TODO if query.develop has a value
+		// if there is no form with input id,
+		// if there is no query element instantiated on the page
+		// then do 302 Temporary redirection goes to the same url without those query parameters
 		// to setup that redirection, use meta http-equiv="Status" content="302"
 if (!window.Pageboard) window.Pageboard = {elements: {}};
 
