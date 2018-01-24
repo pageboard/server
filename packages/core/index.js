@@ -12,6 +12,7 @@ var xdg = require('xdg-basedir');
 var pkgup = require('pkg-up');
 var debug = require('debug')('pageboard:core');
 var which = pify(require('which'));
+var csp = require('content-security-policy-builder');
 
 var fs = {
 	writeFile: pify(require('fs').writeFile),
@@ -406,10 +407,21 @@ function createApp(opt) {
 	// for csp headers, see prerender and write
 	app.set("env", opt.env);
 	app.disable('x-powered-by');
+	var cspDefault = ["'self'", 'https:'];
+	var cspHeader = csp({
+		directives: {
+			defaultSrc: cspDefault,
+			scriptSrc: cspDefault.concat(["'unsafe-eval'"]),
+			styleSrc: cspDefault.concat(["'unsafe-inline'"]),
+			fontSrc: cspDefault.concat(["data:"]),
+			imgSrc: cspDefault.concat(["data:"])
+		}
+	});
 	app.use(function(req, res, next) {
 		res.setHeader('X-XSS-Protection','1;mode=block');
 		res.setHeader('X-Frame-Options', 'SAMEORIGIN');
 		res.setHeader('X-Content-Type-Options', 'nosniff');
+		res.setHeader('Content-Security-Policy', cspHeader);
 		All.domains.host(req);
 		All.api.DomainBlock(req.hostname).then(function(DomainBlock) {
 			if (req.get('X-Redirect-Secure') && req.protocol == "http" && req.url != "/.api") {
