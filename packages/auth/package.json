@@ -22,9 +22,8 @@
   },
   "pageboard": {
     "directories": [
-      "elements",
-      "ui"
+      "auth"
     ],
-    "elements": "elements/auth.js"
+    "elements": "auth/elements/auth.js"
   }
 }
