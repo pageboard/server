@@ -231,11 +231,11 @@ function install({domain, module}) {
 		return fs.readFile(Path.join(siteModuleDir, "package.json")).then(function(buf) {
 			return JSON.parse(buf.toString());
 		}).then(function(pkg) {
-			return initConfig(siteModuleDir, domain, moduleName, config).then(function() {
-				return Promise.all(Object.keys(pkg.dependencies || {}).map(function(subModule) {
-					var moduleDir = Path.join(domainDir, 'node_modules', subModule);
-					return initConfig(moduleDir, domain, subModule, config);
-				}));
+			return Promise.all(Object.keys(pkg.dependencies || {}).map(function(subModule) {
+				var moduleDir = Path.join(domainDir, 'node_modules', subModule);
+				return initConfig(moduleDir, domain, subModule, config);
+			})).then(function() {
+				return initConfig(siteModuleDir, domain, moduleName, config);
 			});
 		});
 	}).catch(function(err) {
