@@ -1,6 +1,8 @@
 pageboard-core -- Web pages content management
 ==============================================
 
+This README is deprecated, see pageboard/pageboard README.md instead.
+
 command-line usage
 ------------------
 
