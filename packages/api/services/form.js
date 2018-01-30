@@ -58,10 +58,13 @@ exports.submit = function(data) {
 		});
 		if (fd.type) {
 			// when bound to an element, all keys are supposed to be in block.data
+			var id = params._id;
+			delete params._id;
 			params = {
 				type: fd.type,
 				data: params
 			};
+			if (id) params.id = id;
 		}
 		// overwriting values
 		if (fd.consts) Object.keys(fd.consts).forEach(function(key) {
