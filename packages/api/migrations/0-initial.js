@@ -2,7 +2,7 @@ exports.up = function(knex) {
 	return knex.schema
 	.createTable('block', function (table) {
 		table.increments('_id').primary();
-		table.string('id', 16).index();
+		table.string('id', 16).notNullable().unique();
 		table.string('type').notNullable().index();
 		table.jsonb('data').notNullable().defaultTo('{}');
 		table.jsonb('content').notNullable().defaultTo('{}');
