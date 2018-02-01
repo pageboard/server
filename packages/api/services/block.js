@@ -93,7 +93,13 @@ exports.save = function(data) {
 };
 
 exports.del = function(data) {
-	return QueryBlock(data).del();
+	if (!data.domain) throw new HttpError.BadRequest("Missing domain");
+	if (!data.id) throw new HttpError.BadRequest("Missing id");
+	return All.api.DomainBlock(data.domain).then(function(Block) {
+		return Block.query().where('id',
+			Block.query().select('block.id').where('block.id', data.id).whereDomain(Block.domain)
+		).delete();
+	});
 };
 
 
