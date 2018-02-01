@@ -30,46 +30,61 @@ function init(All) {
 	});
 }
 
-function QueryBlock(data) {
-	if (!data.domain) throw new HttpError.BadRequest("Missing domain");
-	return All.api.DomainBlock(data.domain).then(function(Block) {
-		if (data.type == "user" || data.type == "site") {
-			// users and sites do not belong to sites. Only accept query by id.
-			return Block.query().select(Block.tableColumns).where('block.id', data.id);
-		}
-		var q = Block.query().select(Block.tableColumns).whereDomain(Block.domain);
-		if (data.type) q.where('block.type', data.type);
-		if (data.id) {
-			q.where('block.id', data.id).first().throwIfNotFound();
-		} else if (data.text != null || data.data) {
-			if (data.data) {
-				var refs = {};
-				asPaths(data.data, refs, 'block.data:');
-				for (var k in refs) {
-					q.where(ref(k).castText(), Array.isArray(refs[k]) ? 'IN' : '=', refs[k]);
-				}
+function QueryBlock(Block, data) {
+	if (data.type == "user" || data.type == "site") {
+		// users and sites do not belong to sites. Only accept query by id.
+		if (!data.id) throw new HttpError.BadRequest("Missing id");
+		return Block.query().select(Block.tableColumns).where('block.id', data.id);
+	}
+	var q = Block.query().select(Block.tableColumns).whereDomain(Block.domain);
+	if (data.type) q.where('block.type', data.type);
+	if (data.id) {
+		q.where('block.id', data.id).first().throwIfNotFound();
+	} else if (data.text != null || data.data) {
+		if (data.data) {
+			var refs = {};
+			asPaths(data.data, refs, 'block.data:');
+			for (var k in refs) {
+				q.where(ref(k).castText(), Array.isArray(refs[k]) ? 'IN' : '=', refs[k]);
 			}
-			if (data.text != null) {
-				var text = data.text.split(' ').filter(x => !!x).map(x => x + ':*').join(' <-> ');
-				q.from(Block.raw([
-					Block.raw("to_tsquery('unaccent', ?) AS query", [text]),
-					'block'
-				]));
-				q.whereRaw('query @@ block.tsv');
-				q.orderByRaw('ts_rank(block.tsv, query) DESC');
-			}
-			q.orderBy('updated_at', 'block.desc');
-			if (data.paginate) q.offset(Math.max(parseInt(data.paginate) - 1 || 0, 0) * 10);
-			q.limit(10);
-		} else {
-			throw new HttpError.BadRequest("Missing id, text, or data");
 		}
-		return q;
-	});
+		if (data.text != null) {
+			var text = data.text.split(' ').filter(x => !!x).map(x => x + ':*').join(' <-> ');
+			q.from(Block.raw([
+				Block.raw("to_tsquery('unaccent', ?) AS query", [text]),
+				'block'
+			]));
+			q.whereRaw('query @@ block.tsv');
+			q.orderByRaw('ts_rank(block.tsv, query) DESC');
+		}
+		q.orderBy('updated_at', 'block.desc');
+		if (data.paginate) q.offset(Math.max(parseInt(data.paginate) - 1 || 0, 0) * 10);
+		q.limit(10);
+	} else {
+		throw new HttpError.BadRequest("Missing id, text, or data");
+	}
+	return q;
 }
 
 exports.get = function(data) {
-	return QueryBlock(data);
+	return All.api.DomainBlock(data.domain).then(function(Block) {
+		return QueryBlock(Block, data);
+	});
+};
+
+exports.search = function(data) {
+	if (!data.domain) throw new HttpError.BadRequest("Missing domain");
+	return All.api.DomainBlock(data.domain).then(function(Block) {
+		return QueryBlock(Block, data).then(function(rows) {
+			var obj = {
+				data: rows
+			};
+			if (data.type && Block.jsonSchema.selectCases[data.type]) {
+				obj.schema = Block.jsonSchema.selectCases[data.type];
+			}
+			return obj;
+		});
+	});
 };
 
 exports.add = function(data) {
