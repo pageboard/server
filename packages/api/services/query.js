@@ -31,6 +31,7 @@ exports.query = function(data) {
 		domain: data.domain
 	}).then(function(parent) {
 		var fd = parent.data.query || {};
+		if (!fd.call) throw new HttpError.BadRequest("Missing query.call");
 		var domain = data.domain;
 		delete data.domain;
 		delete data._parent;
