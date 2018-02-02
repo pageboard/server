@@ -30,8 +30,7 @@ function init(All) {
 function QueryHref(data) {
 	if (!data.domain) throw new HttpError.BadRequest("Missing domain");
 	var Href = All.api.Href;
-	var q = Href.query().select(Href.tableColumns);
-	joinSite(q, data);
+	var q = Href.query().select(Href.tableColumns).whereParentDomain(data.domain);
 
 	var types = Array.isArray(data.type) ? data.type : (data.type && [data.type] || []);
 
@@ -68,12 +67,6 @@ function QueryHref(data) {
 	if (data.paginate) q.offset(Math.max(parseInt(data.paginate) - 1 || 0, 0) * 10);
 	q.limit(10);
 	return q;
-}
-
-function joinSite(q, data) {
-	return q.joinRelation('parent')
-		.where('parent.type', 'site')
-		.where(All.api.ref('parent.data:domain').castText(), data.domain);
 }
 
 function filterResult(result) {

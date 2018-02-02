@@ -1,4 +1,6 @@
-var Model = require('objection').Model;
+var objection = require('objection');
+var Model = objection.Model;
+var QueryBuilder = objection.QueryBuilder;
 
 class Href extends Model {}
 
@@ -109,5 +111,11 @@ Href.relationMappings = {
 			to: 'block._id'
 		}
 	}
+};
+
+QueryBuilder.prototype.whereParentDomain = function(domain) {
+	return this.joinRelation('parent')
+		.where('parent.type', 'site')
+		.whereJsonText('parent.data:domain', domain);
 };
 
