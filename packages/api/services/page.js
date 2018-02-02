@@ -369,7 +369,17 @@ function updatePage(site, page) {
 		})
 		.patch({
 			'block.data:url': raw(`overlay(block.data->>'url' placing ? from 1 for ${oldUrl.length})`, newUrl)
-		}).skipUndefined().then(function() { return dbPage; });
+		}).skipUndefined().then(function() {
+			var Href = All.api.Href;
+			return Href.query().where('_parent_id', site._id)
+			.where('type', 'link')
+			.where(function() {
+				this.where('url', 'LIKE', `${oldUrl}/%`)
+				.orWhere('url', oldUrl);
+			}).delete();
+		}).then(function() {
+			return dbPage;
+		});
 	}).then(function(dbPage) {
 		return site.$relatedQuery('children').where('block.id', page.id).where('block.type', 'page').patch(page).skipUndefined();
 	}).catch(function(err) {
