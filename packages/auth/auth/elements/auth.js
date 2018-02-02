@@ -1,7 +1,7 @@
 Pageboard.elements.login = {
 	title: 'Login',
 	menu: 'user',
-	icon: '<b class="icon">Login</b>',
+	icon: '<i class="user icon"></i>',
 	group: 'block',
 	mount: function(block, blocks, view) {
 		var urlObj = Page.parse(document.location);
