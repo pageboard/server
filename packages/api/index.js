@@ -34,6 +34,7 @@ exports = module.exports = function(opt) {
 	opt.migrations = [__dirname + '/migrations'];
 	return {
 		name: 'api',
+		priority: -1,
 		service: init
 	};
 };
