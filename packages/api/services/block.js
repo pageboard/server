@@ -8,26 +8,6 @@ exports = module.exports = function(opt) {
 };
 
 function init(All) {
-	All.app.get("/.api/block", All.auth.restrict('webmaster'), All.query, function(req, res, next) {
-		exports.get(req.query).then(function(block) {
-			res.send(block);
-		}).catch(next);
-	});
-	All.app.post("/.api/block", All.auth.restrict('webmaster'), All.body, function(req, res, next) {
-		exports.add(req.body).then(function(block) {
-			res.send(block);
-		}).catch(next);
-	});
-	All.app.put("/.api/block", All.auth.restrict('webmaster'), All.body, function(req, res, next) {
-		exports.save(req.body).then(function(block) {
-			res.send(block);
-		}).catch(next);
-	});
-	All.app.delete("/.api/block", All.auth.restrict('webmaster'), All.query, function(req, res, next) {
-		exports.del(req.query).then(function(block) {
-			res.send(block);
-		}).catch(next);
-	});
 }
 
 function QueryBlock(Block, data) {
