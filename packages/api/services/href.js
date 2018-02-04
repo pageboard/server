@@ -118,12 +118,31 @@ exports.add = function(data) {
 		isLocal = true;
 	}
 
-	return All.inspector.get({url: url, nofavicon: isLocal}).catch(function(err) {
-		// inspector failure
-		if (typeof err == 'number') err = new HttpError[err]("Inspector failure");
-		throw err;
-	}).then(filterResult).then(embedThumbnail)
-	.then(function(result) {
+	var p;
+
+	if (isLocal && !data.url.startsWith('/.')) {
+		// consider it's a page
+		p = All.block.get({
+			data: {url: data.url},
+			domain: data.domain
+		}).then(function(pageBlock) {
+			return {
+				mime: 'text/html; charset=utf-8',
+				type: 'link',
+				title: pageBlock.data.title,
+				site: data.domain,
+				ext: 'html',
+				pathname: objUrl.pathname
+			};
+		});
+	} else {
+		p = All.inspector.get({url: url, nofavicon: isLocal}).catch(function(err) {
+			// inspector failure
+			if (typeof err == 'number') err = new HttpError[err]("Inspector failure");
+			throw err;
+		}).then(filterResult).then(embedThumbnail);
+	}
+	return p.then(function(result) {
 		if (isLocal) result.url = data.url;
 		return QueryHref(data).first().select('href._id').then(function(href) {
 			if (!href) {
