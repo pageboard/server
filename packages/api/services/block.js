@@ -102,8 +102,14 @@ exports.save = function(data) {
 	if (!data.domain) throw new HttpError.BadRequest("Missing domain");
 	if (!data.id) throw new HttpError.BadRequest("Missing id");
 	return All.api.DomainBlock(data.domain).then(function(Block) {
-		delete data.domain;
-		return Block.query().where('block.id', data.id).patch(data);
+		return Block.query().whereJsonText('block.data:domain', data.domain)
+		.first().throwIfNotFound().then(function(site) {
+			delete data.domain;
+			return site.$relatedQuery('children')
+			.where('block.id', data.id).patch(data).skipUndefined().then(function(count) {
+				if (count == 0) throw new Error(`Block not found for update ${data.id}`);
+			});
+		});
 	});
 };
 

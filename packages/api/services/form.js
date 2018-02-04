@@ -50,7 +50,10 @@ exports.submit = function(data) {
 
 		var setVar = All.search.setVar;
 		var getVar = All.search.getVar;
-		var params = Object.assign({}, data); // TODO import data using fd.type schema
+		var params = {}; // TODO import data using fd.type schema
+		Object.keys(data).forEach(function(key) {
+			setVar(params, key, data[key]);
+		});
 		if (fd.vars) Object.keys(fd.vars).forEach(function(key) {
 			var val = getVar(data, fd.vars[key]);
 			if (val === undefined) return;
@@ -73,6 +76,7 @@ exports.submit = function(data) {
 
 		params.domain = domain;
 		return All.run(fd.call, params).then(function(response) {
+			if (typeof response != "obj") response = {};
 			var redirect = form.data.redirection && form.data.redirection.url;
 			if (redirect) {
 				// TODO build redirection using fd.redirection.url, consts, vars
