@@ -147,9 +147,7 @@ exports.add = function(data) {
 		return QueryHref(data).first().select('href._id').then(function(href) {
 			if (!href) {
 				return Href.query().insert(Object.assign({
-					_parent_id: Block.query().select('_id')
-						.where('type', 'site')
-						.where(ref('data:domain').castText(), data.domain)
+					_parent_id: All.site.get({domain: data.domain}).clearSelect().select('_id')
 				}, result)).returning(Href.tableColumns);
 			} else {
 				return Href.query().patch(result).where('_id', href._id)
