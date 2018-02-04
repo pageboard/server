@@ -19,7 +19,7 @@ function QueryBlock(Block, data) {
 	var q = Block.query().select(Block.tableColumns).whereDomain(Block.domain);
 	if (data.type) q.where('block.type', data.type);
 	if (data.id) {
-		q.where('block.id', data.id).first().throwIfNotFound();
+		q.where('block.id', data.id);
 	} else if (data.text != null || data.data) {
 		if (data.data) {
 			var refs = {};
@@ -48,7 +48,7 @@ function QueryBlock(Block, data) {
 
 exports.get = function(data) {
 	return All.api.DomainBlock(data.domain).then(function(Block) {
-		return QueryBlock(Block, data);
+		return QueryBlock(Block, data).first().throwIfNotFound();
 	});
 };
 
