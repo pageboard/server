@@ -82,7 +82,8 @@ exports.save = function(data) {
 	if (!data.domain) throw new HttpError.BadRequest("Missing domain");
 	if (!data.id) throw new HttpError.BadRequest("Missing id");
 	return All.api.DomainBlock(data.domain).then(function(Block) {
-		return All.site.get({domain: data.domain}).then(function(site) {
+		return All.site.get({domain: data.domain}).clearSelect().select('site._id')
+		.then(function(site) {
 			delete data.domain;
 			return site.$relatedQuery('children')
 			.where('block.id', data.id).patch(data).skipUndefined().then(function(count) {
