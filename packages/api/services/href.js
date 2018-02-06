@@ -181,3 +181,14 @@ exports.del = function(data) {
 	});
 };
 
+exports.gc = function(days) {
+	return All.api.Href.raw(`DELETE FROM href USING (
+		SELECT href.type, count(block.*) AS count, href.url FROM href
+			LEFT OUTER JOIN block ON (block.data->>'url' = href.url)
+			WHERE extract('day' from now() - href.updated_at) >= ?
+			GROUP BY href.url, href.type
+		) AS usage WHERE usage.count = 0 AND href._id = usage._id
+		RETURNING href.type, href.url`, [
+			days
+		]);
+};

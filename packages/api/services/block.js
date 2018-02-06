@@ -103,6 +103,18 @@ exports.del = function(data) {
 	});
 };
 
+exports.gc = function(days) {
+	return All.api.Block.raw(`DELETE FROM block USING (
+		SELECT count(relation.child_id), b._id FROM block AS b
+			LEFT OUTER JOIN relation ON (relation.child_id = b._id)
+			LEFT JOIN block AS p ON (p._id = relation.parent_id AND p.type='site')
+			WHERE extract('day' from now() - b.updated_at) >= ?
+		WHERE b.type NOT IN ('user', 'site') GROUP BY b._id
+	) AS usage WHERE usage.count = 0 AND block._id = usage._id`, [
+		days
+	]);
+};
+
 
 function asPaths(obj, ret, pre) {
 	if (!ret) ret = {};
