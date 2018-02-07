@@ -2,9 +2,13 @@ var multer = require('multer');
 var Path = require('path');
 var crypto = require('crypto');
 var mkdirp = require('mkdirp');
-var mkdirpp = require('util').promisify(mkdirp);
+var pify = require('util').promisify;
+var mkdirpp = pify(mkdirp);
 var speaking = require('speakingurl');
 var throttle = require('express-throttle-bandwidth');
+var fs = {
+	unlink: pify(require('fs').unlink)
+};
 
 exports = module.exports = function(opt) {
 	if (!opt.upload) opt.upload = {};
@@ -24,6 +28,7 @@ exports = module.exports = function(opt) {
 	});
 
 	return {
+		name: 'upload',
 		service: init,
 		dest: dest
 	};
@@ -76,4 +81,17 @@ function init(All) {
 		});
 	});
 }
+
+exports.gc = function(hostname, pathname) {
+	var uploadDir = All.opt.upload.dir;
+	if (!hostname || !pathname.startsWith('/.' + uploadDir)) {
+		return Promise.resolve();
+	}
+	var file = Path.join(uploadDir, hostname, pathname);
+	return fs.unlink(file).catch(function() {
+		// ignore error
+	}).then(function() {
+		console.info("gc uploaded file", file);
+	});
+};
 
