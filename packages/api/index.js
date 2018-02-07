@@ -289,8 +289,12 @@ exports.gc = function(All) {
 		All.block.gc(blockDays),
 		All.href.gc(hrefDays)
 	]).then(function([blockResult, hrefResult]) {
-		console.info(`gc: ${blockResult.length} blocks since ${blockDays} days`);
-		console.info(`gc: ${hrefResult.length} hrefs since ${hrefDays} days`);
+		if (blockResult.length) {
+			console.info(`gc: ${blockResult.length} blocks since ${blockDays} days`);
+		}
+		if (hrefResult.length) {
+			console.info(`gc: ${hrefResult.length} hrefs since ${hrefDays} days`);
+		}
 		return Promise.all(hrefResult.map(function(obj) {
 			if (obj.type == "link") return Promise.resolve();
 			return All.upload.gc(obj.hostname, obj.pathname).catch(function(ex) {
