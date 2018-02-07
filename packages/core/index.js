@@ -13,6 +13,7 @@ var pkgup = require('pkg-up');
 var debug = require('debug')('pageboard:core');
 var which = pify(require('which'));
 var csp = require('content-security-policy-builder');
+var http = require('http');
 
 var fs = {
 	writeFile: pify(require('fs').writeFile),
@@ -143,7 +144,16 @@ exports.init = function(opt) {
 		initDumps(All);
 		return All;
 	});
-}
+};
+
+exports.start = function(All) {
+	var server = http.createServer(All.app);
+	server.listen(All.opt.core.listen);
+	console.info(`Listening on port ${All.opt.core.listen}`);
+	setTimeout(function() {
+		All.api.gc(All);
+	}, 1000);
+};
 
 function initDirs(dirs) {
 	return Promise.all(Object.keys(dirs).map(function(key) {

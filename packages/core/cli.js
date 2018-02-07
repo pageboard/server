@@ -1,7 +1,5 @@
 #!/usr/bin/env node
 
-var http = require('http');
-
 var pkgOpt = {};
 if (process.env.APPNAME) pkgOpt.name = process.env.APPNAME;
 
@@ -14,6 +12,7 @@ if (process.argv.length > 2 && process.argv[2].startsWith('--') == false) {
 var pageboard = require(__dirname);
 
 var config = pageboard.config(pkgOpt);
+process.title = pkgOpt.name;
 
 console.info(`${config.name} ${config.version}`);
 
@@ -33,13 +32,9 @@ pageboard.init(config).then(function(All) {
 			console.info(`${command} done.`);
 			process.exit();
 		});
+	} else {
+		return pageboard.start(All);
 	}
-
-	var server = http.createServer(All.app);
-	server.listen(All.opt.core.listen);
-
-	process.title = All.opt.name;
-	console.info(`Listening on port ${All.opt.core.listen}`);
 }).catch(function(err) {
 	console.error(err);
 });
