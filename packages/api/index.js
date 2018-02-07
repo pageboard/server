@@ -271,3 +271,31 @@ function knexConfig(config) {
 	return obj;
 }
 
+
+exports.gc = function(All) {
+	var opts = All.opt.gc;
+	if (!opts) opts = All.opt.gc = {};
+	var blockDays = parseInt(opts.block);
+	if (isNaN(blockDays)) blockDays = 1;
+	var hrefDays = parseInt(opts.href);
+	if (isNaN(hrefDays)) hrefDays = 7;
+	opts.block = blockDays;
+	opts.href = hrefDays;
+
+	var interval = Math.max(Math.min(blockDays, hrefDays), 1) * 24 * 60 * 60 * 1000;
+	setTimeout(exports.gc.bind(null, All), interval);
+
+	return Promise.all([
+		All.block.gc(blockDays),
+		All.href.gc(hrefDays)
+	]).then(function([blockResult, hrefResult]) {
+		console.info(`gc: ${blockResult.length} blocks since ${blockDays} days`);
+		console.info(`gc: ${hrefResult.length} hrefs since ${hrefDays} days`);
+		return Promise.all(hrefResult.map(function(obj) {
+			if (obj.type == "link") return Promise.resolve();
+			return All.upload.gc(obj.hostname, obj.pathname).catch(function(ex) {
+				console.error("gc error", obj.domain, obj.url, ex);
+			});
+		}));
+	});
+};

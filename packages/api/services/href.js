@@ -181,14 +181,27 @@ exports.del = function(data) {
 	});
 };
 
+exports.migrate = function(data) {
+	if (!data.domain) throw new HttpError.BadRequest("Missing domain");
+	if (!data.data || !data.data.domain) throw new HttpError.BadRequest("Missing data.domain");
+	return All.api.Href.query().where('site', data.domain).patch({
+		site: data.data.domain
+	}).skipUndefined();
+};
+
 exports.gc = function(days) {
 	return All.api.Href.raw(`DELETE FROM href USING (
-		SELECT href.type, count(block.*) AS count, href.url FROM href
-			LEFT OUTER JOIN block ON (block.data->>'url' = href.url)
-			WHERE extract('day' from now() - href.updated_at) >= ?
-			GROUP BY href.url, href.type
-		) AS usage WHERE usage.count = 0 AND href._id = usage._id
-		RETURNING href.type, href.url`, [
-			days
-		]);
+		SELECT count(block.*) AS count, href._id FROM href
+		LEFT OUTER JOIN block ON (block.data->>'url' = href.url)
+		LEFT JOIN relation AS r ON (r.child_id = block._id)
+		LEFT JOIN block AS p ON (p._id = r.parent_id AND p.type='site' AND p.data->>'domain' = href.site)
+		WHERE extract('day' from now() - href.updated_at) >= ?
+		GROUP BY href._id
+	) AS usage WHERE usage.count = 0 AND href._id = usage._id
+	RETURNING href.type, href.pathname, href.site AS hostname`, [
+		days
+	]).then(function(result) {
+		return result.rows;
+	});
 };
+

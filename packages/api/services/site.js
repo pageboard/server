@@ -52,10 +52,21 @@ exports.add = function(data) {
 exports.save = function(data) {
 	return exports.get(data).then(function(site) {
 		if (data.domain) delete data.domain;
+		var sameDomain = (data.data && data.data.domain || null) == (site.data && site.data.domain || null);
 		var sameModule = (data.data && data.data.module || null) == (site.data && site.data.module || null);
 		// ensure we don't just empty site.data by mistake
 		data.data = Object.assign({}, site.data, data.data);
 		return All.api.Block.query().where('id', site.id).patch(data).then(function(result) {
+			if (sameDomain) return result;
+			return All.href.migrate({
+				domain: site.data.domain,
+				data: {
+					domain: data.data.domain
+				}
+			}).then(function() {
+				return result;
+			});
+		}).then(function(result) {
 			if (sameModule == false) return All.install(data.data).then(() => result);
 			else return result;
 		});
