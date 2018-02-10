@@ -20,20 +20,13 @@
   "dependencies": {
     "document-register-element": "^1.7.0",
     "dom-template-strings": "^2.4.2",
-    "pagecut": "1.0.0-beta.53",
+    "pagecut": "1.0.0-beta.54",
     "postinstall-links": "^0.3.0",
     "window-agent": "^1.2.0",
     "window-page": "^2.0.0-alpha.3"
   },
   "links": {
-    "pagecut/dist/pagecut-viewer.js": "pagecut/viewer.js",
-    "pagecut/dist/pagecut-editor.js": "pagecut/editor.js",
-    "pagecut/dist/pagecut-menu.js": "pagecut/menu.js",
-    "pagecut/dist/pagecut.css": "pagecut/",
-    "pagecut/dist/pagecut-menu.css": "pagecut/",
-    "pagecut/dist/prosemirror.css": "pagecut/",
-    "pagecut/dist/prosemirror-menu.css": "pagecut/",
-    "pagecut/dist/prosemirror-gapcursor.css": "pagecut/",
+    "pagecut/dist": "pagecut",
     "document-register-element/build/document-register-element.js": "read/custom-elements.min.js",
     "window-page/window-page.js": "read/",
     "dom-template-strings/dist/dom-template-strings.js": "read/",
