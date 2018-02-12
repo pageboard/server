@@ -123,6 +123,7 @@ exports.add = function(data) {
 	if (isLocal && !data.url.startsWith('/.')) {
 		// consider it's a page
 		p = All.block.get({
+			type: 'page',
 			data: {url: data.url},
 			domain: data.domain
 		}).then(function(pageBlock) {
@@ -163,7 +164,7 @@ exports.save = function(data) {
 		if (!href) {
 			return exports.add(data);
 		} else {
-			return Href.query().patch({title: data.title}).where('_id', href._id);
+			return Href.query().patch({title: data.title}).skipUndefined().where('_id', href._id);
 		}
 	});
 };
