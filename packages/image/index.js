@@ -14,7 +14,8 @@ exports = module.exports = function(opt) {
 		bg: 'white',
 		flatten: true,
 		hostnames: true,
-		format: 'jpeg'
+		format: 'jpeg',
+		lqip: false
 	}, All.opt.thumbnail));
 
 	return {
@@ -37,7 +38,7 @@ function initFile(All) {
 		uploadDir = "." + uploadDir;
 		console.info("Images resizable by upload at", "/" + uploadDir);
 		All.app.get(`:url(/${uploadDir}/*)`, function(req, res, next) {
-			if (!req.query.rs && !req.query.ex) next('route');
+			if (!req.query.rs && !req.query.ex && !req.query.lqip) next('route');
 			else next();
 		}, sharpie(All.opt.image));
 	}
