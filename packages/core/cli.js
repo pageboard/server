@@ -12,9 +12,10 @@ if (process.argv.length > 2 && process.argv[2].startsWith('--') == false) {
 var pageboard = require(__dirname);
 
 var config = pageboard.config(pkgOpt);
-process.title = pkgOpt.name;
+var title = `${config.name} ${config.version}`;
+process.title = title;
 
-console.info(`${config.name} ${config.version}`);
+console.info(title);
 
 pageboard.init(config).then(function(All) {
 	var p = Promise.resolve();
