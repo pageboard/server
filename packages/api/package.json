@@ -17,13 +17,13 @@
   },
   "homepage": "https://github.com/pageboard/api#readme",
   "dependencies": {
-    "ajv": "^5.5.1",
-    "ajv-keywords": "^2.1.1",
+    "ajv": "^6.1.1",
+    "ajv-keywords": "^3.1.0",
     "debug": "^2.6.8",
-    "knex": "^0.14.2",
-    "objection": "^0.9.4",
+    "knex": "^0.14.3",
+    "objection": "^1.0.0",
     "passwd-user": "^2.1.0",
-    "pg": "^7.4.0",
+    "pg": "^7.4.1",
     "tosource": "^1.0.0"
   },
   "pageboard": {
