@@ -42,8 +42,15 @@ exports = module.exports = function(opt) {
 			return domemail.init().then(function() {
 				// TODO remove cache.tag call if express-dom keeps headers when proxying
 				All.app.get('*',
+					function(req, res, next) {
+						if (req.query.email != null) {
+							delete req.query.email;
+							next();
+						} else {
+							next('route');
+						}
+					},
 					All.cache.tag('api', 'share', 'file'),
-					All.query,
 					domemail.mw(All.dom)
 				);
 			});

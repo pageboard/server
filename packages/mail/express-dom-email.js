@@ -8,9 +8,6 @@ var irBuf;
 
 exports.mw = function(dom) {
 	return function(req, res, next) {
-		var opts = req.query.email;
-		if (opts == null) return next('route');
-		delete req.query.email;
 		dom(function(mw, settings) {
 			// express-dom 5.9.0 gets the cookie in settings.location
 			settings.view = settings.location;
