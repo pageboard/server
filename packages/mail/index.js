@@ -43,7 +43,7 @@ exports = module.exports = function(opt) {
 				// TODO remove cache.tag call if express-dom keeps headers when proxying
 				All.app.get('*',
 					function(req, res, next) {
-						if (req.query.email != null) {
+						if (req.query.email !== undefined) {
 							delete req.query.email;
 							next();
 						} else {
