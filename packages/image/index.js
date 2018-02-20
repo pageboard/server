@@ -9,12 +9,16 @@ exports = module.exports = function(opt) {
 	if (!opt.image.dir) opt.image.dir = ".image";
 
 	thumbnailer = sharpie(Object.assign({
-		rs: 'h:64,max',
+		rs: 'h-64_max',
 		q: '70',
 		bg: 'white',
 		flatten: true,
 		hostnames: true,
 		format: 'jpeg',
+		signs: {
+			assignment: '-',
+			separator: '_'
+		}
 	}, All.opt.thumbnail));
 
 	return {
