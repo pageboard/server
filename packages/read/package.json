@@ -20,8 +20,8 @@
   "dependencies": {
     "document-register-element": "^1.7.0",
     "dom-template-strings": "^2.4.2",
-    "pagecut": "1.0.0-beta.56",
-    "postinstall-links": "^0.3.0",
+    "pagecut": "1.0.0-beta.57",
+    "postinstall-links": "^0.3.99",
     "window-agent": "^1.2.0",
     "window-page": "^2.0.0-alpha.3"
   },
