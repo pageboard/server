@@ -15,7 +15,6 @@ exports = module.exports = function(opt) {
 		flatten: true,
 		hostnames: true,
 		format: 'jpeg',
-		lqip: false
 	}, All.opt.thumbnail));
 
 	return {
