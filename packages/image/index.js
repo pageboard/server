@@ -8,17 +8,19 @@ exports = module.exports = function(opt) {
 	if (!opt.image) opt.image = {};
 	if (!opt.image.dir) opt.image.dir = ".image";
 
+	if (!opt.image.signs) opt.image.signs = {
+		assignment: '-',
+		separator: '_'
+	};
+
 	thumbnailer = sharpie(Object.assign({
-		rs: 'h-64_max',
+		rs: `h${opt.image.signs.assignment}64${opt.image.signs.separator}max`,
 		q: '70',
 		bg: 'white',
 		flatten: true,
 		hostnames: true,
 		format: 'jpeg',
-		signs: {
-			assignment: '-',
-			separator: '_'
-		}
+		signs: opt.image.signs
 	}, All.opt.thumbnail));
 
 	return {
