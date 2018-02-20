@@ -18,7 +18,7 @@ Block.idColumn = '_id';
 Block.jsonSchema = {
 	type: 'object',
 	required: ['type'],
-	id: '/api/blocks',
+	$id: '/api/blocks',
 	properties: {
 		id: {
 			type: 'string'
@@ -121,7 +121,7 @@ Block.extendSchema = function extendSchema(name, schemas) {
 	var types = Object.keys(schemas);
 	if (types.length === 0) return Block;
 	var schema = Object.assign({}, Block.jsonSchema);
-	schema.id += `/${name}`;
+	schema.$id += `/${name}`;
 	var blockProps = schema.properties;
 	delete schema.properties;
 	delete schema.additionalProperties;

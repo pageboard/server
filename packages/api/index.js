@@ -46,6 +46,7 @@ function init(All) {
 	objection.Model.createValidator = function() {
 		return new objection.AjvValidator({
 			onCreateAjv: function(ajv) {
+				ajv.addMetaSchema(require('ajv/lib/refs/json-schema-draft-06.json'));
 				AjvKeywords(ajv, 'select');
 			},
 			options: {

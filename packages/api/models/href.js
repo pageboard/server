@@ -15,7 +15,7 @@ Href.idColumn = '_id';
 Href.jsonSchema = {
 	type: 'object',
 	required: ['url', 'mime'],
-	id: '/api/href',
+	$id: '/api/href',
 	properties: {
 		updated_at: {
 			type: 'string',
