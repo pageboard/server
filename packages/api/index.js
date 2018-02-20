@@ -272,7 +272,7 @@ function knexConfig(config) {
 	return obj;
 }
 
-
+var gcTimeout;
 exports.gc = function(All) {
 	var opts = All.opt.gc;
 	if (!opts) opts = All.opt.gc = {};
@@ -284,7 +284,9 @@ exports.gc = function(All) {
 	opts.href = hrefDays;
 
 	var interval = Math.max(Math.min(blockDays, hrefDays), 1) * 24 * 60 * 60 * 1000;
-	setTimeout(exports.gc.bind(null, All), interval);
+	var jump = gcTimeout == null;
+	gcTimeout = setTimeout(exports.gc.bind(null, All), interval);
+	if (jump) return;
 
 	return Promise.all([
 		All.block.gc(blockDays),
