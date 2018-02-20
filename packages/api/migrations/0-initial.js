@@ -45,6 +45,7 @@ exports.up = function(knex) {
 		table.jsonb('meta').notNullable().defaultTo('{}');
 		table.string('lang');
 		table.timestamps(true, true); // created_at, updated_at, useTimestamps, defaultToNow
+		table.integer('usage');
 	})
 	.raw(
 		"CREATE UNIQUE INDEX ON href (_parent_id, url, lang)"

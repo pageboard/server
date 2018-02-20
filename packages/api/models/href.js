@@ -55,6 +55,11 @@ Href.jsonSchema = {
 		lang: {
 			type: ['string', 'null']
 		},
+		usage: {
+			type: 'integer',
+			minimum: 0,
+			default: 0
+		},
 		meta: {
 			type: 'object',
 			default: {},
