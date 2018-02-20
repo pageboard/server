@@ -1,6 +1,6 @@
 Pageboard.elements.login = {
 	title: 'Login',
-	menu: 'user',
+	menu: 'link',
 	icon: '<i class="user icon"></i>',
 	group: 'block',
 	mount: function(block, blocks, view) {
