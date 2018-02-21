@@ -41,4 +41,4 @@ jspm_packages
 /read/window-page.js
 /read/custom-elements.min.js
 
-/pagecut/*
+/pagecut
