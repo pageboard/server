@@ -17,6 +17,7 @@ module.exports = function formPlugin(page) {
 						if (opt.selected) setAttr(el, 'selected', null);
 					});
 					else if (el.matches('textarea')) el.innerHTML = el.value;
+					else setAttr(el, 'value', el.value);
 				});
 			});
 		});
