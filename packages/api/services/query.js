@@ -16,7 +16,7 @@ exports = module.exports = function(opt) {
 
 function init(All) {
 	All.app.get("/.api/query", All.query, function(req, res, next) {
-		exports.query(req.query).then(function(data) {
+		All.run('search.query', req.query).then(function(data) {
 			res.json(data);
 		}).catch(next);
 	});

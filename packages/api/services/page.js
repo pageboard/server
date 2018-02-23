@@ -11,27 +11,27 @@ exports = module.exports = function(opt) {
 
 function init(All) {
 	All.app.get('/.api/page', All.query, function(req, res, next) {
-		exports.get(req.query).then(function(page) {
+		All.run('page.get', req.query).then(function(page) {
 			res.send(page);
 		}).catch(next);
 	});
 	All.app.get('/.api/pages', All.query, function(req, res, next) {
-		exports.list(req.query).then(function(pages) {
+		All.run('page.list', req.query).then(function(pages) {
 			res.send(pages);
 		}).catch(next);
 	});
 	All.app.post('/.api/page', All.auth.restrict('webmaster'), All.body, function(req, res, next) {
-		exports.add(req.body).then(function(page) {
+		All.run('page.add', req.body).then(function(page) {
 			res.send(page);
 		}).catch(next);
 	});
 	All.app.put('/.api/page', All.auth.restrict('webmaster'), All.body, function(req, res, next) {
-		exports.save(req.body).then(function(page) {
+		All.run('page.save', req.body).then(function(page) {
 			res.send(page);
 		}).catch(next);
 	});
 	All.app.delete('/.api/page', All.auth.restrict('webmaster'), All.query, function(req, res, next) {
-		exports.del(req.query).then(function(page) {
+		All.run('page.del', req.query).then(function(page) {
 			res.send(page);
 		}).catch(next);
 	});

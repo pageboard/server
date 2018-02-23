@@ -11,17 +11,17 @@ exports = module.exports = function(opt) {
 
 function init(All) {
 	All.app.get("/.api/href", All.auth.restrict('webmaster'), All.query, function(req, res, next) {
-		exports.get(req.query).then(function(href) {
+		All.run('href.get', req.query).then(function(href) {
 			res.send(href);
 		}).catch(next);
 	});
 	All.app.post("/.api/href", All.auth.restrict('webmaster'), All.body, function(req, res, next) {
-		exports.add(req.body).then(function(href) {
+		All.run('href.add', req.body).then(function(href) {
 			res.send(href);
 		}).catch(next);
 	});
 	All.app.delete("/.api/href", All.auth.restrict('webmaster'), All.query, function(req, res, next) {
-		exports.del(req.query).then(function(href) {
+		All.run('href.del', req.query).then(function(href) {
 			res.send(href);
 		}).catch(next);
 	});
