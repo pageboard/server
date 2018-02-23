@@ -5,8 +5,8 @@ var ajvApi = require('ajv')({
 	allErrors: true,
 	validateSchema: true,
 	ownProperties: true,
-	removeAdditional: true,
 	coerceTypes: 'array',
+	removeAdditional: false,
 	useDefaults: true
 });
 
