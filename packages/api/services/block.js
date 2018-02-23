@@ -10,17 +10,33 @@ exports = module.exports = function(opt) {
 function init(All) {
 }
 
-function QueryBlock(Block, data) {
-	if (data.type == "user" || data.type == "site") {
-		// users and sites do not belong to sites. Only accept query by id.
-		if (!data.id) throw new HttpError.BadRequest("Missing id");
-		return Block.query().select(Block.tableColumns).where('block.id', data.id);
+exports.get = function(data) {
+	return All.api.DomainBlock(data.domain).then(function(Block) {
+		return Block.query()
+			.select(Block.tableColumns)
+			.whereDomain(Block.domain)
+			.where('block.id', data.id)
+			.first().throwIfNotFound();
+	});
+};
+exports.get.schema = {
+	required: ['id', 'domain'],
+	properties: {
+		id: {
+			type: 'string'
+		},
+		domain: {
+			type: 'string'
+		}
 	}
-	var q = Block.query().select(Block.tableColumns).whereDomain(Block.domain);
-	if (data.type) q.where('block.type', data.type);
-	if (data.id) {
-		q.where('block.id', data.id);
-	} else if (data.text != null || data.data) {
+};
+
+exports.search = function(data) {
+	return All.api.DomainBlock(data.domain).then(function(Block) {
+		var q = Block.query()
+			.select(Block.tableColumns)
+			.whereDomain(Block.domain);
+			.where('block.type', data.type);
 		if (data.data) {
 			var refs = {};
 			asPaths(data.data, refs, 'block.data:');
@@ -38,37 +54,66 @@ function QueryBlock(Block, data) {
 			q.orderByRaw('ts_rank(block.tsv, query) DESC');
 		}
 		q.orderBy('updated_at', 'block.desc');
-		if (data.paginate) q.offset(Math.max(parseInt(data.paginate) - 1 || 0, 0) * 10);
-		q.limit(10);
-	} else {
-		throw new HttpError.BadRequest("Missing id, text, or data");
-	}
-	return q;
-}
-
-exports.get = function(data) {
-	return All.api.DomainBlock(data.domain).then(function(Block) {
-		return QueryBlock(Block, data).first().throwIfNotFound();
-	});
-};
-
-exports.search = function(data) {
-	if (!data.domain) throw new HttpError.BadRequest("Missing domain");
-	return All.api.DomainBlock(data.domain).then(function(Block) {
-		return QueryBlock(Block, data).then(function(rows) {
+		q.offset(data.offset).limit(data.limit);
+		return q.then(function(rows) {
 			var obj = {
-				data: rows
+				data: rows,
+				offset: data.offset,
+				limit: data.limit
 			};
-			if (data.type && Block.jsonSchema.selectCases[data.type]) {
-				obj.schema = Block.jsonSchema.selectCases[data.type];
-			}
+			obj.schemas = {};
+			data.type.forEach(function(type) {
+				var sch = Block.jsonSchema.selectCases[type];
+				if (sch) obj.schemas[type] = sch;
+			});
 			return obj;
 		});
 	});
 };
+exports.search.schema = {
+	anyOf: [{
+		required: ['domain', 'text', 'type']
+	}, {
+		required: ['domain', 'data', 'type']
+	}],
+	properties: {
+		text: {
+			type: 'string'
+		},
+		data: {
+			type: 'object'
+		},
+		type: {
+			type: 'array',
+			items: {
+				type: 'string',
+				not:
+					oneOf: [{
+						const: "user"
+					}, {
+						const: "site"
+					}]
+				}
+			}
+		},
+		domain: {
+			type: 'string'
+		},
+		limit: {
+			type: 'integer',
+			minimum: 0,
+			maximum: 50,
+			default: 10
+		},
+		offset: {
+			type: 'integer',
+			minimum: 0,
+			default: 0
+		}
+	}
+};
 
 exports.add = function(data) {
-	if (!data.domain) throw new HttpError.BadRequest("Missing domain");
 	return All.api.DomainBlock(data.domain).then(function(Block) {
 		return Block.query().whereJsonText('block.data:domain', data.domain)
 			.first().throwIfNotFound().then(function(site) {
@@ -77,10 +122,16 @@ exports.add = function(data) {
 			});
 	});
 };
+exports.add.schema = {
+	required: ['domain'],
+	properties: {
+		domain: {
+			type: 'string'
+		}
+	}
+};
 
 exports.save = function(data) {
-	if (!data.domain) throw new HttpError.BadRequest("Missing domain");
-	if (!data.id) throw new HttpError.BadRequest("Missing id");
 	return All.api.DomainBlock(data.domain).then(function(Block) {
 		return All.site.get({domain: data.domain}).clearSelect().select('site._id')
 		.then(function(site) {
@@ -92,16 +143,26 @@ exports.save = function(data) {
 		});
 	});
 };
+exports.add.schema = {
+	required: ['domain', 'id'],
+	properties: {
+		domain: {
+			type: 'string'
+		},
+		id: {
+			type: 'string'
+		}
+	}
+};
 
 exports.del = function(data) {
-	if (!data.domain) throw new HttpError.BadRequest("Missing domain");
-	if (!data.id) throw new HttpError.BadRequest("Missing id");
 	return All.api.DomainBlock(data.domain).then(function(Block) {
 		return Block.query().where('id',
 			Block.query().select('block.id').where('block.id', data.id).whereDomain(Block.domain)
 		).delete();
 	});
 };
+exports.del.schema = exports.add.schema;
 
 exports.gc = function(days) {
 	return All.api.Block.raw(`DELETE FROM block USING (
