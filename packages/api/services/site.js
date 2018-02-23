@@ -13,7 +13,6 @@ function QuerySite(data) {
 	if (data.id) {
 		q.where('site.id', data.id);
 	} else {
-		if (!data.domain) throw new HttpError.BadRequest("Missing domain");
 		q.whereJsonText('site.data:domain', data.domain).where('site.type', 'site');
 	}
 	return q;
@@ -23,8 +22,25 @@ exports.get = function(data) {
 	return QuerySite(data).select(All.api.Block.columns);
 };
 
+exports.get.schema = {
+	oneOf: [{
+		required: ['domain'],
+		properties: {
+			domain: {
+				type: 'string'
+			}
+		}
+	}, {
+		required: ['id'],
+		properties: {
+			id: {
+				type: 'string'
+			}
+		}
+	}]
+};
+
 exports.add = function(data) {
-	if (!data.email) throw new HttpError.BadRequest("Missing email");
 	return QuerySite({domain: data.data.domain}).then(function(site) {
 		console.info("Not adding already existing site", data.data.domain);
 	}).catch(function(err) {
@@ -47,6 +63,17 @@ exports.add = function(data) {
 			return All.api.Block.query().insertGraph(data);
 		});
 	});
+};
+
+exports.add.schema = {
+	required: ['email', 'data'],
+	properties: {
+		email: {
+			type: 'string',
+			format: 'email'
+		},
+		data: Block.jsonSchema.selectCases.site
+	}
 };
 
 exports.save = function(data) {
@@ -72,10 +99,20 @@ exports.save = function(data) {
 		});
 	});
 };
+exports.save.schema = {
+	required: ['domain', 'data'],
+	properties: {
+		domain: {
+			type: 'string'
+		},
+		data: Block.jsonSchema.selectCases.site
+	}
+};
 
 exports.del = function(data) {
 	return QuerySite(data).del();
 };
+exports.del.schema = exports.get.schema;
 
 exports.own = function(data) {
 	if (!data.email) throw new HttpError.BadRequest("Missing email");
@@ -109,4 +146,16 @@ exports.own = function(data) {
 			else return Promise.all(proms);
 		});
 	});
+};
+exports.own.schema = {
+	required: ['email', 'domain'],
+	properties: {
+		email: {
+			type: 'string',
+			format: 'email'
+		},
+		domain: {
+			type: 'string'
+		}
+	}
 };
