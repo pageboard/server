@@ -37,7 +37,8 @@ exports.get.schema = {
 				type: 'string'
 			}
 		}
-	}]
+	}],
+	additionalProperties: false
 };
 
 exports.add = function(data) {
@@ -72,8 +73,11 @@ exports.add.schema = {
 			type: 'string',
 			format: 'email'
 		},
-		data: Block.jsonSchema.selectCases.site
-	}
+		data: {
+			type: 'object'
+		}
+	},
+	additionalProperties: false
 };
 
 exports.save = function(data) {
@@ -105,8 +109,11 @@ exports.save.schema = {
 		domain: {
 			type: 'string'
 		},
-		data: Block.jsonSchema.selectCases.site
-	}
+		data: {
+			type: 'object'
+		}
+	},
+	additionalProperties: false
 };
 
 exports.del = function(data) {
@@ -157,5 +164,6 @@ exports.own.schema = {
 		domain: {
 			type: 'string'
 		}
-	}
+	},
+	additionalProperties: false
 };

@@ -23,7 +23,7 @@ function init(All) {
 }
 
 exports.query = function(data) {
-	return All.block.get({
+	return All.run('block.get', {
 		id: data._parent,
 		domain: data.domain
 	}).then(function(form) {
@@ -36,9 +36,20 @@ exports.query = function(data) {
 		});
 	});
 };
+exports.query.schema = {
+	required: ["_parent", "domain"],
+	properties: {
+		_parent: {
+			type: 'string'
+		},
+		domain: {
+			type: 'string'
+		}
+	}
+};
 
 exports.submit = function(data) {
-	return All.block.get({
+	return All.run('block.get', {
 		id: data._parent,
 		domain: data.domain
 	}).then(function(form) {
@@ -85,5 +96,16 @@ exports.submit = function(data) {
 			return response;
 		});
 	});
+};
+exports.submit.schema = {
+	required: ["_parent", "domain"],
+	properties: {
+		_parent: {
+			type: 'string'
+		},
+		domain: {
+			type: 'string'
+		}
+	}
 };
 

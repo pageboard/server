@@ -195,7 +195,9 @@ exports.search = function(data) {
 			obj.data = result.rows;
 			obj.total = result.count;
 		}
-		obj.schema = All.api.Block.jsonSchema.selectCases.page;
+		obj.schemas = {
+			page: All.api.schema('page')
+		};
 		return obj;
 	});
 };
@@ -219,13 +221,27 @@ exports.search.schema = {
 			type: 'integer',
 			minimum: 0,
 			default: 0
-		}
+		},
+		additionalProperties: false
 	}
 };
 
 exports.list = function(data) {
-	if (!data.domain) throw new HttpError.BadRequest("Missing domain");
 	return listPages(All.api.Block, data);
+};
+exports.list.schema = {
+	required: ['domain'],
+	properties: {
+		domain: {
+			type: 'string'
+		},
+		parent: {
+			type: 'string'
+		},
+		url: {
+			type: 'string'
+		}
+	}
 };
 
 exports.save = function(changes) {
@@ -301,6 +317,38 @@ exports.save = function(changes) {
 			}));
 		});
 	});
+};
+exports.save.schema = {
+	required: ['domain'],
+	properties: {
+		domain: {
+			type: 'string'
+		},
+		add: {
+			type: 'array',
+			items: {
+				type: 'object'
+			}
+		},
+		update: {
+			type: 'array',
+			items: {
+				type: 'object'
+			}
+		},
+		remove: {
+			type: 'array',
+			items: {
+				type: 'object'
+			}
+		},
+		relate: {
+			type: 'object'
+		},
+		unrelate: {
+			type: 'object'
+		}
+	}
 };
 
 function applyUnrelate(site, obj) {
@@ -397,8 +445,30 @@ exports.add = function(data) {
 		});
 	});
 };
+exports.add.schema = {
+	required: ['domain'],
+	properties: {
+		domain: {
+			type: 'string'
+		},
+		data: {
+			type: 'object'
+		}
+	},
+	additionalProperties: false
+};
 
 exports.del = function(data) {
+	// TODO deleting a page should be done in TWO steps
+	// 1) data.url = null -> the page becomes only accessible through admin
+	// 2) actual deletion
+	// consequences:
+	// - if there are links starting or equal to that page url, it's not possible
+	// to delete that url
+	// - sitemap needs a specific zone that displays pages that have no url
+	// - deleting a page from that zone actually deletes the page
+	// - moving a page to that zone removes the url of the page (when saving,
+	// and when possible)
 	throw new HttpError.NotImplemented("TODO use save to delete page blocks");
 };
 

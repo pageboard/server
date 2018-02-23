@@ -28,14 +28,15 @@ exports.get.schema = {
 		domain: {
 			type: 'string'
 		}
-	}
+	},
+	additionalProperties: false
 };
 
 exports.search = function(data) {
 	return All.api.DomainBlock(data.domain).then(function(Block) {
 		var q = Block.query()
 			.select(Block.tableColumns)
-			.whereDomain(Block.domain);
+			.whereDomain(Block.domain)
 			.where('block.type', data.type);
 		if (data.data) {
 			var refs = {};
@@ -63,7 +64,7 @@ exports.search = function(data) {
 			};
 			obj.schemas = {};
 			data.type.forEach(function(type) {
-				var sch = Block.jsonSchema.selectCases[type];
+				var sch = All.api.schema(type);
 				if (sch) obj.schemas[type] = sch;
 			});
 			return obj;
@@ -87,7 +88,7 @@ exports.search.schema = {
 			type: 'array',
 			items: {
 				type: 'string',
-				not:
+				not: {
 					oneOf: [{
 						const: "user"
 					}, {
@@ -110,7 +111,8 @@ exports.search.schema = {
 			minimum: 0,
 			default: 0
 		}
-	}
+	},
+	additionalProperties: false
 };
 
 exports.add = function(data) {
@@ -128,7 +130,8 @@ exports.add.schema = {
 		domain: {
 			type: 'string'
 		}
-	}
+	},
+	additionalProperties: true
 };
 
 exports.save = function(data) {
@@ -143,7 +146,7 @@ exports.save = function(data) {
 		});
 	});
 };
-exports.add.schema = {
+exports.save.schema = {
 	required: ['domain', 'id'],
 	properties: {
 		domain: {
@@ -152,7 +155,8 @@ exports.add.schema = {
 		id: {
 			type: 'string'
 		}
-	}
+	},
+	additionalProperties: true
 };
 
 exports.del = function(data) {
@@ -162,7 +166,18 @@ exports.del = function(data) {
 		).delete();
 	});
 };
-exports.del.schema = exports.add.schema;
+exports.del.schema = {
+	required: ['domain', 'id'],
+	properties: {
+		domain: {
+			type: 'string'
+		},
+		id: {
+			type: 'string'
+		}
+	},
+	additionalProperties: false
+};
 
 exports.gc = function(days) {
 	return All.api.Block.raw(`DELETE FROM block USING (

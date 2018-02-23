@@ -15,14 +15,30 @@ function QueryUser(data) {
 	} else if (data.email) {
 		q.whereJsonText('user.data:email', data.email);
 		delete data.email;
-	} else {
-		throw new HttpError.BadRequest("Cannot query user", data);
 	}
 	return q;
 }
 
 exports.get = function(data) {
 	return QueryUser(data);
+};
+exports.get.schema = {
+	oneOf: [{
+		required: ['email'],
+		properties: {
+			email: {
+				type: 'string'
+			}
+		}
+	}, {
+		required: ['id'],
+		properties: {
+			id: {
+				type: 'string'
+			}
+		}
+	}],
+	additionalProperties: false
 };
 
 exports.add = function(data) {
