@@ -26,7 +26,7 @@ function init(All) {
 }
 
 exports.query = function(data) {
-	return All.block.get({
+	return All.run('block.get', {
 		id: data._parent,
 		domain: data.domain
 	}).then(function(parent) {
