@@ -505,7 +505,7 @@ function run(apiStr, data) {
 		if (!mod) throw new HttpError.BadRequest(`Unknown api module ${modName}`);
 		var fun = mod[funName];
 		if (!fun) throw new HttpError.BadRequest(`Unknown api method ${funName}`);
-		return fun.call(mod, data || {});
+		return fun.call(mod, this.api.check(fun, data || {}));
 	}.bind(this));
 }
 
