@@ -28,14 +28,11 @@ function init(All) {
 }
 
 function QueryHref(data) {
-	if (!data.domain) throw new HttpError.BadRequest("Missing domain");
 	var Href = All.api.Href;
 	var q = Href.query().select(Href.tableColumns).whereParentDomain(data.domain);
 
-	var types = Array.isArray(data.type) ? data.type : (data.type && [data.type] || []);
-
-	if (types.length) {
-		q.whereIn('href.type', types);
+	if (data.type && data.type.length > 1) {
+		q.whereIn('href.type', data.type);
 	}
 	if (data.maxSize) {
 		q.where(All.api.ref('href.meta:size'), '<=', data.maxSize);
@@ -63,9 +60,7 @@ function QueryHref(data) {
 		q.where('href.visible', true);
 		q.orderBy('updated_at', 'desc');
 	}
-	// TODO use objection pagination
-	if (data.paginate) q.offset(Math.max(parseInt(data.paginate) - 1 || 0, 0) * 10);
-	q.limit(10);
+	q.offset(data.offset).limit(data.limit);
 	return q;
 }
 
@@ -97,7 +92,58 @@ function embedThumbnail(obj) {
 }
 
 exports.get = function(data) {
-	return QueryHref(data);
+	return QueryHref(data).then(function(rows) {
+		return {
+			data: rows,
+			offset: data.offset,
+			limit: data.limit
+		};
+	});
+};
+exports.get.schema = {
+	type: 'object',
+	required: ['domain'],
+	properties: {
+		domain: {
+			type: 'string'
+		},
+		type: {
+			type: 'array',
+			items: {
+				type: 'string'
+			}
+		},
+		maxSize: {
+			type: 'integer',
+			minimum: 0
+		},
+		maxWidth: {
+			type: 'integer',
+			minimum: 0
+		},
+		maxHeight: {
+			type: 'integer',
+			minimum: 0
+		},
+		url: {
+			type: 'string'
+		},
+		text: {
+			type: 'string'
+		},
+		limit: {
+			type: 'integer',
+			minimum: 0,
+			maximum: 50,
+			default: 10
+		},
+		offset: {
+			type: 'integer',
+			minimum: 0,
+			default: 0
+		}
+	},
+	additionalProperties: false
 };
 
 exports.add = function(data) {
