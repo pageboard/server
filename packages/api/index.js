@@ -1,5 +1,14 @@
 var objection = require('objection');
 var AjvKeywords = require('ajv-keywords');
+var ajvApi = require('ajv')({
+	$data: true,
+	allErrors: true,
+	validateSchema: true,
+	ownProperties: true,
+	coerceTypes: true,
+	removeAdditional: true,
+	useDefaults: true
+});
 
 var knex = require('knex');
 
@@ -96,6 +105,20 @@ function init(All) {
 		}).catch(next);
 	});
 }
+
+exports.check = function(fun, data) {
+	if (!fun.schema) return data;
+	if (!fun.validate) {
+		fun.validate = ajvApi.compile(fun.schema);
+	}
+	// coerceTypes mutates data
+	if (fun.validate(data)) {
+		return data;
+	} else {
+		var messages = fun.validate.errors.map(x => x.message).join(',\n');
+		throw new HttpError.BadRequest(`Bad api parameters: \n${messages}`);
+	}
+};
 
 exports.install = function(domain, {elements, directories}, All) {
 	debug("installing", domain, elements, directories);
