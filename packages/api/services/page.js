@@ -133,56 +133,13 @@ function listPages(Block, data) {
 	return q.orderBy(ref('block.data:url'));
 }
 
-function searchPages(Block, data) {
-	if (!data.text) return Promise.resolve({rows:[],pages:0,page:0});
+exports.search = function(data) {
 	var text = data.text.split(' ')
 	.filter(x => !!x)
 	.map(x => x + ':*')
 	.join(' <-> ');
 
-	/* // i tried using knex/objection but i failed miserably
-	var q = Block.query()
-	.select([
-		'title',
-		'url',
-		'updated_at',
-		raw("sum(rank) AS srank"),
-		raw("jsonb_agg(content) AS contents")
-	])
-	.groupBy('title', 'url', 'updated_at')
-	.orderBy('srank', 'desc')
-	.orderBy('updated_at', 'desc');
-	if (data.paginate) q.offset(Math.max(parseInt(data.paginate) - 1 || 0, 0) * 10);
-	q.limit(10);
-	q.from(function(builder) {
-		builder.select([
-			ref('page.data:title').castText().as('title'),
-			ref('page.data:url').castText().as('url'),
-			'page.updated_at',
-			'block.content',
-			raw("ts_rank(block.tsv, query) AS rank")
-		])
-		.join('relation', 'block._id', 'relation.child_id')
-		.join('block AS page', 'relation._parent_id', 'block._id')
-		.join('relation', 'relation._parent_id', 'block._id')
-		.joinRelation("[parents as page,parents as site]")
-		.where('site.type', 'site')
-		.where(ref('site.data:domain').castText(), data.domain)
-		.whereNotIn('block.type', ['site', 'user'])
-		.where('page.type', 'page')
-		.whereRaw('query @@ block.tsv')
-		.from(raw([
-			raw("to_tsquery('unaccent', ?) AS query", [text]),
-			'block'
-		])).as('sub');
-	});
-	*/
-
-	var limit = 10;
-	var page = !data.page ? 1 : parseInt(data.page);
-	if (isNaN(page) || page <= 0) throw new HttpError.BadRequest("page must be a positive integer");
-
-	var q = Block.raw(`SELECT json_build_object(
+	var q = All.api.Block.raw(`SELECT json_build_object(
 		'count', count,
 		'rows', json_agg(
 			json_build_object(
@@ -222,23 +179,48 @@ function searchPages(Block, data) {
 	) AS foo GROUP BY count`, [
 		text,
 		data.domain,
-		(page - 1) * limit,
-		limit
+		data.offset,
+		data.limit
 	]);
 	return q.then(function(results) {
-		if (results.rowCount == 0) return {rows:[], pages: 0, page: 0};
-		var result = results.rows[0].result;
-		result.limit = limit;
-		result.pages = Math.ceil(result.count / limit);
-		result.page = page;
-		delete result.count;
-		return result;
+		var obj = {
+			offset: data.offset,
+			limit: data.limit,
+			total: 0
+		};
+		if (results.rowCount == 0) {
+			obj.data = [];
+		} else {
+			var result = results.rows[0].result;
+			obj.data = result.rows;
+			obj.total = result.count;
+		}
+		obj.schema = All.api.Block.jsonSchema.selectCases.page;
+		return obj;
 	});
-}
+};
 
-exports.search = function(data) {
-	if (!data.domain) throw new HttpError.BadRequest("Missing domain");
-	return searchPages(All.api.Block, data);
+exports.search.schema = {
+	required: ['domain', 'text'],
+	properties: {
+		text: {
+			type: 'string'
+		},
+		domain: {
+			type: 'string'
+		},
+		limit: {
+			type: 'integer',
+			minimum: 0,
+			maximum: 50,
+			default: 10
+		},
+		offset: {
+			type: 'integer',
+			minimum: 0,
+			default: 0
+		}
+	}
 };
 
 exports.list = function(data) {
