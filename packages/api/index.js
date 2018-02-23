@@ -54,7 +54,6 @@ function init(All) {
 				allErrors: true,
 				validateSchema: false,
 				ownProperties: true,
-				v5: true,
 				coerceTypes: true,
 				removeAdditional: true
 			}
