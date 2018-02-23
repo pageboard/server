@@ -115,7 +115,10 @@ exports.check = function(fun, data) {
 	if (fun.validate(data)) {
 		return data;
 	} else {
-		var messages = fun.validate.errors.map(x => x.message).join(',\n');
+		var messages = fun.validate.errors.map(function(err) {
+			if (err.dataPath) return `${err.dataPath} ${err.message}`;
+			else return err.message;
+		}).join(',\n');
 		throw new HttpError.BadRequest(`Bad api parameters: \n${messages}`);
 	}
 };
