@@ -10,8 +10,8 @@ exports = module.exports = function(opt) {
 };
 
 function init(All) {
-	All.app.get("/.api/href", All.auth.restrict('webmaster'), All.query, function(req, res, next) {
-		All.run('href.get', req.query).then(function(href) {
+	All.app.get("/.api/hrefs", All.auth.restrict('webmaster'), All.query, function(req, res, next) {
+		All.run('href.search', req.query).then(function(href) {
 			res.send(href);
 		}).catch(next);
 	});
@@ -27,7 +27,51 @@ function init(All) {
 	});
 }
 
-function QueryHref(data) {
+function filterResult(result) {
+	var obj = {meta:{}};
+	['mime', 'url', 'type', 'title', 'icon', 'site']
+	.forEach(function(key) {
+		if (result[key] !== undefined) obj[key] = result[key];
+	});
+	if (result.url) obj.pathname = URL.parse(result.url).pathname;
+	var meta = {};
+	['width', 'height', 'duration', 'size', 'thumbnail', 'description']
+	.forEach(function(key) {
+		if (result[key] !== undefined) obj.meta[key] = result[key];
+	});
+	if (obj.type == "image" && obj.mime != "text/html" && !obj.meta.thumbnail) {
+		obj.meta.thumbnail = obj.url;
+	}
+	return obj;
+}
+
+function embedThumbnail(obj) {
+	var thumb = obj.meta.thumbnail;
+	if (!thumb) return obj;
+	return All.image.thumbnail(thumb).then(function(datauri) {
+		obj.meta.thumbnail = datauri;
+		return obj;
+	});
+}
+
+exports.get = function(data) {
+	return All.api.Href.query().select('_id').whereParentDomain(data.domain).where('url', data.url).first();
+};
+
+exports.get.schema = {
+	required: ['domain', 'url'],
+	properties: {
+		domain: {
+			type: 'string'
+		},
+		url: {
+			type: 'string'
+		}
+	},
+	additionalProperties: false
+};
+
+exports.search = function(data) {
 	var Href = All.api.Href;
 	var q = Href.query().select(Href.tableColumns).whereParentDomain(data.domain);
 
@@ -61,38 +105,7 @@ function QueryHref(data) {
 		q.orderBy('updated_at', 'desc');
 	}
 	q.offset(data.offset).limit(data.limit);
-	return q;
-}
-
-function filterResult(result) {
-	var obj = {meta:{}};
-	['mime', 'url', 'type', 'title', 'icon', 'site']
-	.forEach(function(key) {
-		if (result[key] !== undefined) obj[key] = result[key];
-	});
-	if (result.url) obj.pathname = URL.parse(result.url).pathname;
-	var meta = {};
-	['width', 'height', 'duration', 'size', 'thumbnail', 'description']
-	.forEach(function(key) {
-		if (result[key] !== undefined) obj.meta[key] = result[key];
-	});
-	if (obj.type == "image" && obj.mime != "text/html" && !obj.meta.thumbnail) {
-		obj.meta.thumbnail = obj.url;
-	}
-	return obj;
-}
-
-function embedThumbnail(obj) {
-	var thumb = obj.meta.thumbnail;
-	if (!thumb) return obj;
-	return All.image.thumbnail(thumb).then(function(datauri) {
-		obj.meta.thumbnail = datauri;
-		return obj;
-	});
-}
-
-exports.get = function(data) {
-	return QueryHref(data).then(function(rows) {
+	return q.then(function(rows) {
 		return {
 			data: rows,
 			offset: data.offset,
@@ -100,8 +113,8 @@ exports.get = function(data) {
 		};
 	});
 };
-exports.get.schema = {
-	type: 'object',
+
+exports.search.schema = {
 	required: ['domain'],
 	properties: {
 		domain: {
@@ -147,7 +160,6 @@ exports.get.schema = {
 };
 
 exports.add = function(data) {
-	if (!data.url) throw new HttpError.BadRequest("Missing url");
 	var ref = All.api.ref;
 	var Href = All.api.Href;
 	var Block = All.api.Block;
@@ -191,7 +203,7 @@ exports.add = function(data) {
 	}
 	return p.then(function(result) {
 		if (isLocal) result.url = data.url;
-		return QueryHref(data).first().select('href._id').then(function(href) {
+		return exports.get(data).then(function(href) {
 			if (!href) {
 				return Href.query().insert(Object.assign({
 					_parent_id: All.site.get({domain: data.domain}).clearSelect().select('_id')
@@ -204,9 +216,22 @@ exports.add = function(data) {
 	});
 };
 
+exports.add.schema = {
+	required: ['domain', 'url'],
+	properties: {
+		domain: {
+			type: 'string'
+		},
+		url: {
+			type: 'string'
+		}
+	},
+	additionalProperties: false
+};
+
 exports.save = function(data) {
 	var Href = All.api.Href;
-	return QueryHref(data).first().select('href._id').then(function(href) {
+	return exports.get(data).then(function(href) {
 		if (!href) {
 			return exports.add(data);
 		} else {
@@ -215,10 +240,24 @@ exports.save = function(data) {
 	});
 };
 
+exports.save.schema = {
+	required: ['domain', 'url', 'title'],
+	properties: {
+		domain: {
+			type: 'string'
+		},
+		url: {
+			type: 'string'
+		},
+		title: {
+			type: 'string'
+		}
+	},
+	additionalProperties: false
+};
+
 exports.del = function(data) {
-	if (!data.url) throw new HttpError.BadRequest("Missing url");
-	return QueryHref(data).select('href._id').first().then(function(href) {
-		if (!href) throw new HttpError.NotFound("No href found for this url");
+	return exports.get(data).throwIfNotFound().then(function(href) {
 		return All.api.Href.query().patch({
 			visible: false
 		}).where('_id', href._id).then(function() {
@@ -228,12 +267,41 @@ exports.del = function(data) {
 	});
 };
 
+exports.del.schema = {
+	required: ['domain', 'url'],
+	properties: {
+		domain: {
+			type: 'string'
+		},
+		url: {
+			type: 'string'
+		}
+	},
+	additionalProperties: false
+};
+
 exports.migrate = function(data) {
-	if (!data.domain) throw new HttpError.BadRequest("Missing domain");
-	if (!data.data || !data.data.domain) throw new HttpError.BadRequest("Missing data.domain");
 	return All.api.Href.query().where('site', data.domain).patch({
 		site: data.data.domain
 	}).skipUndefined();
+};
+
+exports.migrate.schema = {
+	required: ['domain', 'data'],
+	properties: {
+		domain: {
+			type: 'string'
+		},
+		data: {
+			type: 'object',
+			required: ['domain'],
+			properties: {
+				domain: {
+					type: 'string'
+				}
+			}
+		}
+	}
 };
 
 exports.gc = function(days) {
