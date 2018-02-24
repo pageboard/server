@@ -37,7 +37,7 @@ exports.search = function(data) {
 		var q = Block.query()
 			.select(Block.tableColumns)
 			.whereDomain(Block.domain)
-			.where('block.type', data.type);
+			.whereIn('block.type', data.type);
 		if (data.data) {
 			var refs = {};
 			asPaths(data.data, refs, 'block.data:');
