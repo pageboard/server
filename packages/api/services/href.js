@@ -55,7 +55,9 @@ function embedThumbnail(obj) {
 }
 
 exports.get = function(data) {
-	return All.api.Href.query().select('_id').whereParentDomain(data.domain).where('url', data.url).first();
+	return All.api.Href.query().select('href._id')
+		.whereParentDomain(data.domain)
+		.where('href.url', data.url).first();
 };
 
 exports.get.schema = {
@@ -180,9 +182,8 @@ exports.add = function(data) {
 
 	if (isLocal && !data.url.startsWith('/.')) {
 		// consider it's a page
-		p = All.block.get({
-			type: 'page',
-			data: {url: data.url},
+		p = All.page.get({
+			url: data.url,
 			domain: data.domain
 		}).then(function(pageBlock) {
 			return {
@@ -206,7 +207,7 @@ exports.add = function(data) {
 		return exports.get(data).then(function(href) {
 			if (!href) {
 				return Href.query().insert(Object.assign({
-					_parent_id: All.site.get({domain: data.domain}).clearSelect().select('_id')
+					_parent_id: All.site.get({domain: data.domain}).clearSelect().select('site._id')
 				}, result)).returning(Href.tableColumns);
 			} else {
 				return Href.query().patch(result).where('_id', href._id)

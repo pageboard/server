@@ -58,9 +58,6 @@ function QueryPage(Block) {
 }
 
 exports.get = function(data) {
-	if (!data.domain) throw new HttpError.BadRequest("Missing domain");
-	if (!data.url) throw new HttpError.BadRequest("Missing url");
-
 	return All.api.DomainBlock(data.domain).then(function(Block) {
 		return QueryPage(Block).where('block.type', 'page')
 		.whereJsonText("block.data:url", data.url)
@@ -99,6 +96,17 @@ exports.get = function(data) {
 			});
 		});
 	});
+};
+exports.get.schema = {
+	required: ['domain', 'url'],
+	properties: {
+		domain: {
+			type: 'string'
+		},
+		url: {
+			type: 'string'
+		}
+	}
 };
 
 function getParents(Block, url) {
