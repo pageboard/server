@@ -89,12 +89,16 @@ function init(All) {
 
 	All.app.use('/.api/*', All.cache.tag('api'));
 
-	All.app.get('/.api/elements.js', All.cache.tag('share', 'file'), All.query, function(req, res, next) {
-		All.api.DomainBlock(req.query.domain).then(function(DomainBlock) {
-			res.type('text/javascript');
-			res.send('if (!window.Pageboard) window.Pageboard = {};\nPageboard.elements = ' + DomainBlock.source);
-		}).catch(next);
-	});
+	All.app.get('/.api/elements.js',
+		All.cache.tag('share', 'file').for('5s'),
+		All.query,
+		function(req, res, next) {
+			All.api.DomainBlock(req.query.domain).then(function(DomainBlock) {
+				res.type('text/javascript');
+				res.send('Pageboard.elements = ' + DomainBlock.source);
+			}).catch(next);
+		}
+	);
 
 	// used by proxies to quickly know if this domain is known
 	All.app.get('/.api', All.query, function(req, res, next) {
