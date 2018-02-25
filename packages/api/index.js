@@ -9,6 +9,7 @@ var ajvApi = require('ajv')({
 	removeAdditional: false,
 	useDefaults: true
 });
+ajvApi.addMetaSchema(require('ajv/lib/refs/json-schema-draft-06.json'));
 
 var knex = require('knex');
 
