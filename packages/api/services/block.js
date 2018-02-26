@@ -42,6 +42,9 @@ exports.search = function(data) {
 			.select(Block.tableColumns)
 			.whereDomain(Block.domain)
 			.whereIn('block.type', data.type);
+		if (data.parent) {
+			q.joinRelation('parents as parent').where('parent.id', data.parent);
+		}
 		if (data.data) {
 			var refs = {};
 			asPaths(data.data, refs, 'block.data:');
@@ -83,6 +86,9 @@ exports.search.schema = {
 	}],
 	properties: {
 		text: {
+			type: 'string'
+		},
+		parent: {
 			type: 'string'
 		},
 		data: {
