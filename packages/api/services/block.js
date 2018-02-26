@@ -12,11 +12,12 @@ function init(All) {
 
 exports.get = function(data) {
 	return All.api.DomainBlock(data.domain).then(function(Block) {
-		return Block.query()
+		var q = Block.query()
 			.select(Block.tableColumns)
 			.whereDomain(Block.domain)
-			.where('block.id', data.id)
-			.first().throwIfNotFound();
+			.where('block.id', data.id);
+		if (data.type) q.where('block.type', data.type);
+		return q.first().throwIfNotFound();
 	});
 };
 exports.get.schema = {
@@ -26,6 +27,9 @@ exports.get.schema = {
 			type: 'string'
 		},
 		domain: {
+			type: 'string'
+		},
+		type: {
 			type: 'string'
 		}
 	},
