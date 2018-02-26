@@ -347,7 +347,7 @@ exports.save.schema = {
 		remove: {
 			type: 'array',
 			items: {
-				type: 'object'
+				type: 'string'
 			}
 		},
 		relate: {
