@@ -24,22 +24,23 @@ function init(All) {
 
 exports.query = function(data) {
 	return All.run('block.get', {
-		id: data._parent,
+		id: data._id,
 		domain: data.domain
 	}).then(function(form) {
-		var type = (form.data.action || {}).type;
-		if (!type) throw new HttpError.BadRequest("Missing form action.type");
-		return All.block.get({
-			id: data.id,
-			type: type,
+		var fd = form.data.action || {};
+		if (!fd.type) throw new HttpError.BadRequest("Missing form action.type");
+		var id = fd.vars && fd.vars.id && data[fd.vars.id] || data.id;
+		return All.run('block.get', {
+			id: id,
+			type: fd.type,
 			domain: data.domain
 		});
 	});
 };
 exports.query.schema = {
-	required: ["_parent", "domain"],
+	required: ["_id", "domain"],
 	properties: {
-		_parent: {
+		_id: {
 			type: 'string'
 		},
 		domain: {
@@ -50,14 +51,14 @@ exports.query.schema = {
 
 exports.submit = function(data) {
 	return All.run('block.get', {
-		id: data._parent,
+		id: data._id,
 		domain: data.domain
 	}).then(function(form) {
 		var fd = form.data.action || {};
 		if (fd.method != "post") throw new HttpError.MethodNotAllowed("Only post allowed");
 		var domain = data.domain;
 		delete data.domain;
-		delete data._parent;
+		delete data._id;
 
 		var setVar = All.search.setVar;
 		var getVar = All.search.getVar;
@@ -72,13 +73,13 @@ exports.submit = function(data) {
 		});
 		if (fd.type) {
 			// when bound to an element, all keys are supposed to be in block.data
-			var id = params._id;
-			delete params._id;
+			var id = params.id;
+			delete params.id;
 			params = {
+				id: id,
 				type: fd.type,
 				data: params
 			};
-			if (id) params.id = id;
 		}
 		// overwriting values
 		if (fd.consts) Object.keys(fd.consts).forEach(function(key) {
@@ -98,9 +99,9 @@ exports.submit = function(data) {
 	});
 };
 exports.submit.schema = {
-	required: ["_parent", "domain"],
+	required: ["_id", "domain"],
 	properties: {
-		_parent: {
+		_id: {
 			type: 'string'
 		},
 		domain: {

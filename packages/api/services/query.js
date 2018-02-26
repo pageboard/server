@@ -27,14 +27,14 @@ function init(All) {
 
 exports.query = function(data) {
 	return All.run('block.get', {
-		id: data._parent,
+		id: data._id,
 		domain: data.domain
 	}).then(function(parent) {
 		var fd = parent.data.query || {};
 		if (!fd.call) throw new HttpError.BadRequest("Missing query.call");
 		var domain = data.domain;
 		delete data.domain;
-		delete data._parent;
+		delete data._id;
 		var params = {};
 		// consts: destPath: val
 		// vars: destPath: queryPath
@@ -42,13 +42,12 @@ exports.query = function(data) {
 		if (fd.vars) Object.keys(fd.vars).forEach(function(key) {
 			var val = getVar(data, fd.vars[key]);
 			if (val === undefined) return;
+			setVar(data, fd.vars[key]);
 			setVar(params, key, val);
 		});
 		if (fd.type) {
-			params = {
-				type: fd.type,
-				data: data
-			};
+			params.type = fd.type;
+			params.data = data;
 		}
 		// overwriting values
 		if (fd.consts) Object.keys(fd.consts).forEach(function(key) {
@@ -82,6 +81,7 @@ function setVar(obj, path, val) {
 		if (obj[name] == null) obj[name] = {};
 		obj = obj[name];
 	}
-	obj[last] = val;
+	if (val === undefined) delete obj[last];
+	else obj[last] = val;
 }
 
