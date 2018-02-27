@@ -66,9 +66,6 @@ function filterUser(email, builder) {
 }
 
 exports.send = function(data) {
-	if (!data.domain) throw new HttpError.BadRequest("Missing domain");
-	if (!data.url) throw new HttpError.BadRequest("Missing url");
-	if (!data.to) throw new HttpError.BadRequest("Missing to");
 	return All.api.DomainBlock(data.domain).then(function(Block) {
 		var what = [
 			'parents(owner) as owner',
@@ -147,4 +144,19 @@ exports.send = function(data) {
 			});
 		});
 	});
+};
+exports.send.schema = {
+	required: ['domain', 'url', 'to'],
+	properties: {
+		domain: {
+			type: 'string'
+		},
+		url: {
+			type: 'string'
+		},
+		to: {
+			type: 'string',
+			format: 'email'
+		}
+	}
 };
