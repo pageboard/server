@@ -69,6 +69,7 @@ exports.submit = function(data) {
 		if (fd.vars) Object.keys(fd.vars).forEach(function(key) {
 			var val = getVar(data, fd.vars[key]);
 			if (val === undefined) return;
+			setVar(params, fd.vars[key]);
 			setVar(params, key, val);
 		});
 		if (fd.type) {
