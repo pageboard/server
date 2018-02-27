@@ -71,7 +71,7 @@ exports.search = function(data) {
 			};
 			obj.schemas = {};
 			data.type.forEach(function(type) {
-				var sch = All.api.schema(type);
+				var sch = Block.schemaByType(type);
 				if (sch) obj.schemas[type] = sch;
 			});
 			return obj;

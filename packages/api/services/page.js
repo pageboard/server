@@ -203,10 +203,12 @@ exports.search = function(data) {
 			obj.data = result.rows;
 			obj.total = result.count;
 		}
-		obj.schemas = {
-			page: All.api.schema('page')
-		};
-		return obj;
+		return All.api.DomainBlock(data.domain).then(function(DomainBlock) {
+			obj.schemas = {
+				page: DomainBlock.schemaByType('page')
+			};
+			return obj;
+		});
 	});
 };
 

@@ -167,6 +167,10 @@ Block.extendSchema = function extendSchema(name, schemas) {
 	return DomainBlock;
 }
 
+Block.schemaByType = function(type) {
+	return this.jsonSchema.selectCases[type];
+};
+
 function stringProperties(obj) {
 	var props = {};
 	for (var k in obj) {

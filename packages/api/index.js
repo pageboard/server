@@ -128,10 +128,6 @@ exports.check = function(fun, data) {
 	}
 };
 
-exports.schema = function(type) {
-	return All.api.Block.jsonSchema.selectCases[type];
-};
-
 exports.install = function(domain, {elements, directories}, All) {
 	debug("installing", domain, elements, directories);
 	// TODO chicken and egg problem, we want to sort using the element priority
