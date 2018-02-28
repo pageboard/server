@@ -1,3 +1,5 @@
+var URL = require('url');
+
 exports = module.exports = function(opt) {
 	return {
 		name: 'form',
@@ -76,11 +78,14 @@ exports.submit = function(data) {
 			// when bound to an element, all keys are supposed to be in block.data
 			var id = params.id;
 			delete params.id;
+			var parent = params.parent;
+			delete params.parent;
 			params = {
 				id: id,
 				type: fd.type,
 				data: params
 			};
+			if (parent) params.parent = parent;
 		}
 		// overwriting values
 		if (fd.consts) Object.keys(fd.consts).forEach(function(key) {
@@ -90,10 +95,25 @@ exports.submit = function(data) {
 		params.domain = domain;
 		return All.run(fd.call, params).then(function(response) {
 			if (typeof response != "obj") response = {};
-			var redirect = form.data.redirection && form.data.redirection.url;
-			if (redirect) {
-				// TODO build redirection using fd.redirection.url, consts, vars
-				response.redirect = redirect;
+			var fd = form.data.redirection;
+			if (fd.url) {
+				var query = {};
+				var obj = URL.parse(fd.url);
+				delete obj.path;
+				obj.query = query;
+				var rr = {
+					request: data,
+					response: response
+				};
+				if (fd.vars) Object.keys(fd.vars).forEach(function(key) {
+					var val = getVar(rr, fd.vars[key]);
+					if (val === undefined) return;
+					setVar(query, key, val);
+				});
+				if (fd.consts) Object.keys(fd.consts).forEach(function(key) {
+					setVar(query, key, fd.consts[key]);
+				});
+				response.redirect = URL.format(obj);
 			}
 			return response;
 		});
