@@ -127,17 +127,29 @@ exports.search.schema = {
 
 exports.add = function(data) {
 	return All.api.DomainBlock(data.domain).then(function(Block) {
-		return Block.query().whereJsonText('block.data:domain', data.domain)
-			.first().throwIfNotFound().then(function(site) {
-				delete data.domain;
-				return site.$relatedQuery('children').insert(data);
+		var domain = data.domain;
+		delete data.domain;
+		var id = data.parent;
+		delete data.parent;
+		return Block.query().whereJsonText('block.data:domain', domain)
+		.first().throwIfNotFound().then(function(site) {
+			return site.$relatedQuery('children').insert(data).then(function(child) {
+				if (!id) return child;
+				return site.$relatedQuery('children').where('block.id', id)
+				.select('_id').first().throwIfNotFound().then(function(parent) {
+					return parent.$relatedQuery('children').relate(child);
+				});
 			});
+		});
 	});
 };
 exports.add.schema = {
 	required: ['domain'],
 	properties: {
 		domain: {
+			type: 'string'
+		},
+		parent: {
 			type: 'string'
 		}
 	},
