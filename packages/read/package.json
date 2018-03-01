@@ -22,15 +22,13 @@
     "dom-template-strings": "^2.4.2",
     "pagecut": "1.0.0-beta.58",
     "postinstall-links": "^0.3.99",
-    "window-agent": "^1.2.0",
     "window-page": "2.0.0-alpha.4"
   },
   "links": {
     "pagecut/dist": "pagecut",
     "document-register-element/build/document-register-element.js": "read/custom-elements.min.js",
     "window-page/window-page.js": "read/",
-    "dom-template-strings/dist/dom-template-strings.js": "read/",
-    "window-agent/agent.js": "read/"
+    "dom-template-strings/dist/dom-template-strings.js": "read/"
   },
   "pageboard": {
     "directories": [
