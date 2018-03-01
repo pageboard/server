@@ -96,7 +96,7 @@ function init(All) {
 		function(req, res, next) {
 			All.api.DomainBlock(req.query.domain).then(function(DomainBlock) {
 				res.type('text/javascript');
-				res.send('Pageboard.elements = ' + DomainBlock.source);
+				res.send('if (!window.Pageboard) Pageboard = {};\nPageboard.elements = ' + DomainBlock.source);
 			}).catch(next);
 		}
 	);
