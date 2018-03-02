@@ -1,9 +1,3 @@
-		// TODO if query.develop has a value
-		// if there is no form with input id,
-		// if there is no query element instantiated on the page
-		// then do 302 Temporary redirection goes to the same url without those query parameters
-		// to setup that redirection, use meta http-equiv="Status" content="302"
-
 Page.route(function(state) {
 	return fetch('/.api/page?url=' + encodeURIComponent(state.pathname), {
 		headers: {
@@ -28,66 +22,22 @@ Page.route(function(state) {
 			elements: Pageboard.elements
 		});
 		return Pageboard.view.from(page).then(function(body) {
-			if (body.nodeName != "BODY") throw new Error("Page renderer should fill document and return body");
+			if (body.nodeName != "BODY") {
+				throw new Error("Element page.render did not return a body node");
+			}
 			var doc = body.ownerDocument;
 			doc.documentElement.replaceChild(body, doc.body);
-			if (window.parent.Pageboard && window.parent.Pageboard.hook) {
-				doc.head.insertAdjacentHTML('beforeEnd', `\n<script src="/.pageboard/pagecut/editor.js"></script>`);
-				window.parent.Pageboard.hook(doc);
+
+			if (window.parent.Pageboard && window.parent.Pageboard.write) {
+				Pageboard.write = true;
+				window.parent.Pageboard.install(doc);
 			}
 
-			doc.head.insertAdjacentHTML('beforeEnd', "\n" +
-				filterModules(Pageboard.view, 'stylesheets').map(function(href) {
-					return `<link rel="stylesheet" href="${href}" />`;
-				}).join("\n")
-			);
-			doc.head.insertAdjacentHTML('beforeEnd', "\n" +
-				filterModules(Pageboard.view, 'scripts').map(function(src) {
-					return `<script src="${src}"></script>`;
-				}).join("\n")
-			);
-			if (window.parent.Pageboard && window.parent.Pageboard.helpers) {
-				doc.head.insertAdjacentHTML('beforeEnd',
-					filterModules(Pageboard.view, 'helpers').map(function(src) {
-						return `<script src="${src}"></script>`;
-					}).join("\n")
-				);
-			}
-			return Page.importDocument(doc);
+			return Promise.all(Pageboard.view.elements.map(function(el) {
+				if (el.install) return el.install.call(el, doc, Pageboard);
+			})).then(function() {
+				return Page.importDocument(doc);
+			});
 		});
 	});
-
-	function filterModules(modules, prop) {
-		var map = {};
-		var res = [];
-		modules.elements.forEach(function(mod) {
-			var list = mod[prop];
-			if (!list) return;
-			var url, prev;
-			for (var i=0; i < list.length; i++) {
-				url = list[i];
-				prev = map[url];
-				if (prev) {
-					if (mod.priority != null) {
-						if (prev.priority == null) {
-							// move prev url on top of res
-							res = res.filter(function(lurl) {
-								return lurl != url;
-							});
-						} else if (prev.priority != mod.priority) {
-							console.warn(prop, url, "declared in element", mod.name, "with priority", mod.priority, "is already declared in element", prev.name, "with priority", prev.priority);
-							continue;
-						} else {
-							continue;
-						}
-					} else {
-						continue;
-					}
-				}
-				map[url] = mod;
-				res.push(url);
-			}
-		});
-		return res;
-	}
 });
