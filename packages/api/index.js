@@ -168,7 +168,7 @@ function promotePath(dir, path) {
 
 function removeEmptyPath(what, name, path) {
 	if (!path) {
-		console.warn("element", name, "has empty", what);
+		console.warn(`${name}.${what} does not resolve to a path`);
 		return false;
 	} else {
 		return true;
@@ -197,16 +197,16 @@ function rewriteElementPaths(name, path, elt, domain, directories) {
 	if (elt.stylesheets != null) {
 		if (typeof elt.stylesheets == "string") elt.stylesheets = [elt.stylesheets];
 		elt.stylesheets = elt.stylesheets.map(promotePathFn)
-		.filter(removeEmptyPath.bind(null, 'scripts', name));
+		.filter(removeEmptyPath.bind(null, 'stylesheets', name));
 	} else {
 		delete elt.stylesheets;
 	}
-	if (elt.helpers != null) {
-		if (typeof elt.helpers == "string") elt.helpers = [elt.helpers];
-		elt.helpers = elt.helpers.map(promotePathFn)
-		.filter(removeEmptyPath.bind(null, 'scripts', name));
+	if (elt.resources != null) {
+		if (typeof elt.resources == "string") elt.resources = [elt.resources];
+		elt.resources = elt.resources.map(promotePathFn)
+		.filter(removeEmptyPath.bind(null, 'resources', name));
 	} else {
-		delete elt.helpers;
+		delete elt.resources;
 	}
 }
 
