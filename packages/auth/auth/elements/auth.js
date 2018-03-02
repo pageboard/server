@@ -27,5 +27,6 @@ Pageboard.elements.login = {
 	},
 	stylesheets: [
 		'../ui/auth.css'
-	]
+	],
+	polyfills: ['fetch']
 };
