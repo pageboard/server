@@ -5,8 +5,10 @@ Pageboard.elements.login = {
 	group: 'block',
 	mount: function(block, blocks, view) {
 		var urlObj = Page.parse(document.location);
-		if (urlObj.query.to) return fetch('/.api/auth/login?id=' + encodeURIComponent(urlObj.query.to))
-		.then(function(res) {
+		if (!urlObj.query.to) return;
+		return fetch('/.api/auth/login?id=' + encodeURIComponent(urlObj.query.to), {
+			credentials: "same-origin"
+		}).then(function(res) {
 			return res.json();
 		}).then(function(validationBlock) {
 			block.data.href = validationBlock.data.href;
