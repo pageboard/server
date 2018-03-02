@@ -64,6 +64,58 @@ Pageboard.elements.page = {
 		}
 		title.textContent = block.data.title || '';
 		return doc.body;
+	},
+	install: function(doc, Pb) {
+		// must happen after all el.install methods have been called
+		return (new Promise(function(resolve) {
+			setTimeout(resolve);
+		})).then(function() {
+			var list = Pb.view.elements;
+			doc.head.insertAdjacentHTML('beforeEnd', "\n" +
+				this.filter(list, 'stylesheets').map(function(href) {
+					return `<link rel="stylesheet" href="${href}" />`;
+				}).join("\n")
+			);
+			doc.head.insertAdjacentHTML('beforeEnd', "\n" +
+				this.filter(list, 'scripts').map(function(src) {
+					return `<script src="${src}"></script>`;
+				}).join("\n")
+			);
+		}.bind(this));
+	},
+	filter: function(elements, prop) {
+		var map = {};
+		var res = [];
+		elements.forEach(function(el) {
+			var list = el[prop];
+			if (!list) return;
+			if (typeof list == "string") list = [list];
+			var url, prev;
+			for (var i=0; i < list.length; i++) {
+				url = list[i];
+				prev = map[url];
+				if (prev) {
+					if (el.priority != null) {
+						if (prev.priority == null) {
+							// move prev url on top of res
+							res = res.filter(function(lurl) {
+								return lurl != url;
+							});
+						} else if (prev.priority != el.priority) {
+							console.warn(prop, url, "declared in element", el.name, "with priority", el.priority, "is already declared in element", prev.name, "with priority", prev.priority);
+							continue;
+						} else {
+							continue;
+						}
+					} else {
+						continue;
+					}
+				}
+				map[url] = el;
+				res.push(url);
+			}
+		});
+		return res;
 	}
 };
 
@@ -74,7 +126,8 @@ Pageboard.elements.notfound = Object.assign({}, Pageboard.elements.page, {
 	render: function(doc, block, view) {
 		doc.head.appendChild(doc.dom`<meta http-equiv="Status" content="404 Not Found">`);
 		return Pageboard.elements.page.render(doc, block, view);
-	}
+	},
+	install: null
 });
 delete Pageboard.elements.notfound.properties.url;
 
