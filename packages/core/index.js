@@ -225,7 +225,10 @@ function initLog(opt) {
 	return morgan(opt.core.log);
 }
 
-function install({domain, module}) {
+function install(data) {
+	// actually site.data
+	var domain = data.domain;
+	var module = data.module;
 	if (!domain) throw new Error("Missing domain");
 	var All = this;
 	var installedBlock;
@@ -514,11 +517,15 @@ function Domains(All) {
 	this.map = {};
 }
 
-Domains.prototype.block = function(domain, block) {
-	var obj = this.map[domain];
-	if (!obj) obj = this.map[domain] = {};
-	if (block) obj.block = block;
-	return obj.block;
+Domains.prototype.get = function(domain) {
+	return this.map[domain];
+};
+
+Domains.prototype.set = function(domain, obj) {
+	var prev = this.map[domain];
+	if (!prev) prev = this.map[domain] = {};
+	Object.assign(prev, obj);
+	return prev;
 };
 
 Domains.prototype.host = function(req) {
@@ -529,8 +536,7 @@ Domains.prototype.host = function(req) {
 	} else {
 		domain = req.hostname;
 	}
-	var obj = this.map[domain];
-	if (!obj) obj = this.map[domain] = {};
+	var obj = this.get(domain) || this.set(domain, {});
 	if (!obj.host) {
 		if (req) {
 			obj.host = (req.get('X-Redirect-Secure') ? 'https' : req.protocol) + '://' + req.get('Host');
@@ -543,7 +549,7 @@ Domains.prototype.host = function(req) {
 };
 
 Domains.prototype.resolvable = function(domain) {
-	var obj = this.map[domain];
+	var obj = this.get(domain);
 	if (!obj || !obj.ip) return Promise.reject(new HttpError.NotFound(`Unknown domain`));
 	if (obj.resolvable) return Promise.resolve();
 	return new Promise(function(resolve, reject) {
