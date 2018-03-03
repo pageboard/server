@@ -44,14 +44,38 @@ exports.get.schema = {
 exports.search = function(data) {
 	var Block = All.api.Block;
 	return Block.query().select(Block.tableColumns)
-		.joinRelation('parents as owners')
-		.whereJsonText('owners.data:email', data.email);
+	.joinRelation('parents as owners')
+	.whereJsonText('owners.data:email', data.email)
+	.orderBy('updated_at', 'block.desc')
+	.offset(data.offset)
+	.limit(data.limit).then(function(rows) {
+		var obj = {
+			data: rows,
+			offset: data.offset,
+			limit: data.limit
+		};
+		obj.schemas = {
+			site: Block.schemaByType('site')
+		};
+		return obj;
+	});
 };
 exports.search.schema = {
 	required: ['email'],
 	properties: {
 		email: {
 			type: 'string'
+		},
+		limit: {
+			type: 'integer',
+			minimum: 0,
+			maximum: 50,
+			default: 10
+		},
+		offset: {
+			type: 'integer',
+			minimum: 0,
+			default: 0
 		}
 	}
 };
