@@ -41,6 +41,21 @@ exports.get.schema = {
 	additionalProperties: false
 };
 
+exports.search = function(data) {
+	var Block = All.api.Block;
+	return Block.query().select(Block.tableColumns)
+		.joinRelation('parents as owners')
+		.whereJsonText('owners.data:email', data.email);
+};
+exports.search.schema = {
+	required: ['email'],
+	properties: {
+		email: {
+			type: 'string'
+		}
+	}
+};
+
 exports.add = function(data) {
 	return QuerySite({domain: data.data.domain}).then(function(site) {
 		console.info("Not adding already existing site", data.data.domain);
