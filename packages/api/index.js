@@ -190,27 +190,15 @@ function rewriteElementPaths(name, path, elt, domain, directories) {
 	var eltPathname = Path.join(basePath, path.substring(mount.from.length));
 	var eltDirPath = Path.dirname(eltPathname);
 	var promotePathFn = promotePath.bind(null, eltDirPath);
-	if (elt.scripts != null) {
-		if (typeof elt.scripts == "string") elt.scripts = [elt.scripts];
-		elt.scripts = elt.scripts.map(promotePathFn)
-		.filter(removeEmptyPath.bind(null, 'scripts', name));
-	} else {
-		delete elt.scripts;
-	}
-	if (elt.stylesheets != null) {
-		if (typeof elt.stylesheets == "string") elt.stylesheets = [elt.stylesheets];
-		elt.stylesheets = elt.stylesheets.map(promotePathFn)
-		.filter(removeEmptyPath.bind(null, 'stylesheets', name));
-	} else {
-		delete elt.stylesheets;
-	}
-	if (elt.resources != null) {
-		if (typeof elt.resources == "string") elt.resources = [elt.resources];
-		elt.resources = elt.resources.map(promotePathFn)
-		.filter(removeEmptyPath.bind(null, 'resources', name));
-	} else {
-		delete elt.resources;
-	}
+	['scripts', 'stylesheets', 'resources'].forEach(function(what) {
+		if (elt[what] != null) {
+			if (typeof elt[what] == "string") elt[what] = [elt[what]];
+			elt[what] = elt[what].map(promotePathFn)
+			.filter(removeEmptyPath.bind(null, what, name));
+		} else {
+			delete elt[what];
+		}
+	});
 }
 
 function importElements(path, eltsMap, domain, directories) {
