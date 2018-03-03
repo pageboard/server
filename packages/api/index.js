@@ -142,9 +142,8 @@ exports.install = function(domain, {elements, directories}, All) {
 		var Block = exports.models.Block.extendSchema(domain, eltsMap);
 		Block.elements = eltsMap;
 		if (domain) {
-			Block.domain = domain;
 			Block.source = toSource(Object.assign({}, exports.Block.elements, Block.elements));
-			return All.domains.block(domain, Block);
+			return Block;
 		} else {
 			exports.Block = All.api.Block = Block;
 			Block.source = toSource(Block.elements);
@@ -153,10 +152,14 @@ exports.install = function(domain, {elements, directories}, All) {
 };
 
 exports.DomainBlock = function(domain) {
-	var Block = All.domains.block(domain);
-	if (Block) return Promise.resolve(Block);
+	var info = All.domains.get(domain);
+	if (info && info.block) return Promise.resolve(info.block);
 	return All.site.get({domain: domain}).then(function(site) {
-		return All.install(site.data);
+		return All.install(site.data).then(function(Block) {
+			Block.site = site.data;
+			All.domains.set(domain, {block: Block});
+			return Block;
+		});
 	});
 };
 

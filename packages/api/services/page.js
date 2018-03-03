@@ -40,7 +40,7 @@ function init(All) {
 function QueryPage(Block) {
 	return Block.query()
 	.select(Block.tableColumns)
-	.whereDomain(Block.domain)
+	.whereDomain(Block.site.domain)
 	.first()
 	// eager load children (in which there are standalones)
 	// and children of standalones
@@ -68,6 +68,7 @@ exports.get = function(data) {
 				return page;
 			}
 		}).then(function(page) {
+			page.site = Block.site;
 			page.children = page.children.concat(page.standalones);
 			delete page.standalones;
 			var pageUrl = page.data.url || data.url;
@@ -115,7 +116,7 @@ function getParents(Block, url) {
 	for (var i=1; i < urlParts.length - 1; i++) {
 		urlParents.push(urlParts.slice(0, i + 1).join('/'));
 	}
-	return Block.query().whereDomain(Block.domain).select([
+	return Block.query().whereDomain(Block.site.domain).select([
 		ref('block.data:url').as('url'),
 		ref('block.data:title').as('title')
 	])
@@ -128,7 +129,7 @@ function listPages(Block, data) {
 	var q = Block.query()
 	.select(Block.tableColumns)
 	.omit(['content'])
-	.whereDomain(data.domain || Block.domain)
+	.whereDomain(data.domain || Block.site.domain)
 	.where('block.type', 'page');
 	if (data.parent) {
 		q.whereJsonText('block.data:url', '~', `^${data.parent}/[^/]+$`)

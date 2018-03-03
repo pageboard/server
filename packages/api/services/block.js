@@ -14,7 +14,7 @@ exports.get = function(data) {
 	return All.api.DomainBlock(data.domain).then(function(Block) {
 		var q = Block.query()
 			.select(Block.tableColumns)
-			.whereDomain(Block.domain)
+			.whereDomain(Block.site.domain)
 			.where('block.id', data.id);
 		if (data.type) q.where('block.type', data.type);
 		return q.first().throwIfNotFound();
@@ -40,7 +40,7 @@ exports.search = function(data) {
 	return All.api.DomainBlock(data.domain).then(function(Block) {
 		var q = Block.query()
 			.select(Block.tableColumns)
-			.whereDomain(Block.domain)
+			.whereDomain(Block.site.domain)
 			.whereIn('block.type', data.type);
 		if (data.parent) {
 			q.joinRelation('parents as parent').where('parent.id', data.parent);
@@ -184,7 +184,7 @@ exports.save.schema = {
 exports.del = function(data) {
 	return All.api.DomainBlock(data.domain).then(function(Block) {
 		return Block.query().where('id',
-			Block.query().select('block.id').where('block.id', data.id).whereDomain(Block.domain)
+			Block.query().select('block.id').where('block.id', data.id).whereDomain(Block.site.domain)
 		).delete();
 	});
 };
