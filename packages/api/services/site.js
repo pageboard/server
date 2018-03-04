@@ -24,20 +24,18 @@ exports.get = function(data) {
 
 exports.get.schema = {
 	oneOf: [{
-		required: ['domain'],
-		properties: {
-			domain: {
-				type: 'string'
-			}
-		}
+		required: ['domain']
 	}, {
-		required: ['id'],
-		properties: {
-			id: {
-				type: 'string'
-			}
-		}
+		required: ['id']
 	}],
+	properties: {
+		id: {
+			type: 'string'
+		},
+		domain: {
+			type: 'string'
+		}
+	},
 	additionalProperties: false
 };
 
