@@ -88,7 +88,6 @@ function init(All) {
 	exports.seed = seed.bind(null, knexInst, opt.seeds);
 	exports.dump = dumpDb.bind(null, dbOpt.connection, opt);
 
-	All.app.use('/.api/*', All.cache.tag('api'));
 
 	All.app.get('/.api/elements.js',
 		All.cache.tag('share', 'file').for('5s'),
@@ -109,6 +108,7 @@ function init(All) {
 			});
 		}).catch(next);
 	});
+	All.app.use('/.api/*', All.cache.tag('api'));
 }
 
 exports.check = function(fun, data) {
