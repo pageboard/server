@@ -96,6 +96,7 @@ function init(All) {
 			res.send('if (!window.Pageboard) Pageboard = {};\nPageboard.elements = ' + source);
 		}
 	);
+
 	All.app.use('/.api/*', All.cache.tag('api'));
 }
 
@@ -129,10 +130,13 @@ exports.install = function(domain, {elements, directories}, All) {
 	})).then(function() {
 		var Block = exports.models.Block.extendSchema(domain, eltsMap);
 		if (domain) {
-			preparePage(eltsMap);
-			Block.source = toSource(eltsMap);
-			Block.domain = domain;
-			return Block;
+			var site = (All.domain(domain) || {}).site;
+			if (!site) return Block; // happens when using from cli
+			return preparePage(All.domain(domain).site, eltsMap).then(function() {
+				Block.source = toSource(eltsMap);
+				Block.domain = domain;
+				return Block;
+			});
 		} else {
 			exports.Block = All.api.Block = Block;
 		}
@@ -148,7 +152,8 @@ exports.initDomainBlock = function(domain, obj) {
 	});
 };
 
-function preparePage(elts) {
+function preparePage(site, elts) {
+	var prod = site.data.production;
 	var list = Object.keys(elts).map(function(key) {
 		var el = elts[key];
 		if (!el.name) el.name = key;
@@ -157,8 +162,26 @@ function preparePage(elts) {
 		return (a.priority || 0) - (b.priority || 0);
 	});
 	elts.page = Object.assign({}, elts.page);
-	elts.page.scripts = filter(list, 'scripts');
-	elts.page.stylesheets = filter(list, 'stylesheets');
+	var scripts = filter(list, 'scripts');
+	var styles = filter(list, 'stylesheets');
+	if (!prod) {
+		elts.page.scripts = scripts;
+		elts.page.stylesheets = styles;
+		return Promise.resolve();
+	}
+	var version = site.data.version;
+	if (version == null) {
+		version = site.data.module.split('#');
+		if (version.length == 2) version = version.pop();
+		else version = '0';
+	}
+	return Promise.all([
+		All.statics.bundle(site.data.domain, scripts, `scripts-${version}.js`),
+		All.statics.bundle(site.data.domain, styles, `styles-${version}.css`)
+	]).then(function(both) {
+		elts.page.scripts = [both[0]];
+		elts.page.stylesheets = [both[1]];
+	});
 }
 
 function filter(elements, prop) {
