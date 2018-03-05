@@ -21,6 +21,25 @@ Pageboard.elements.site = {
 			title: 'Production',
 			type: 'boolean',
 			default: false
+		},
+		favicon: {
+			title: 'Favicon',
+			oneOf: [{
+				type: "null"
+			}, {
+				type: "string",
+				pattern: "^(/[\\w-.]*)+$"
+			}],
+			input: {
+				name: 'href',
+				display: 'icon',
+				filter: {
+					type: ["image", "svg"],
+					maxSize: 20000,
+					maxWidth: 320,
+					maxHeight: 320
+				}
+			}
 		}
 	}
 };
