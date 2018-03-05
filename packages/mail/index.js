@@ -66,39 +66,40 @@ function filterUser(email, builder) {
 }
 
 exports.send = function(data) {
-	return All.api.DomainBlock(data.domain).then(function(Block) {
-		var what = [
-			'parents(owner) as owner',
-			'children(to) as to',
-			'children(page) as page'
-		];
-		var filters = {
-			to: filterUser.bind(Block, data.to),
-			page: function(builder) {
-				builder.select(Block.tableColumns)
-					.where('type', 'page')
-					.whereJsonText('block.data:url', data.url)
-					.first().throwIfNotFound();
-			},
-			owner: function(builder) {
-				builder.select(Block.tableColumns)
-					.where('type', 'user')
-					.first().throwIfNotFound();
-			}
-		};
-		if (data.from) {
-			what.push('children(from) as from');
-			filters.from = filterUser.bind(Block, data.from);
+	var domain = All.domain(data.domain);
+	var Block = domain.Block;
+	var what = [
+		'parents(owner) as owner',
+		'children(to) as to',
+		'children(page) as page'
+	];
+	var filters = {
+		to: filterUser.bind(Block, data.to),
+		page: function(builder) {
+			builder.select(Block.tableColumns)
+				.where('type', 'page')
+				.whereJsonText('block.data:url', data.url)
+				.first().throwIfNotFound();
+		},
+		owner: function(builder) {
+			builder.select(Block.tableColumns)
+				.where('type', 'user')
+				.first().throwIfNotFound();
 		}
+	};
+	if (data.from) {
+		what.push('children(from) as from');
+		filters.from = filterUser.bind(Block, data.from);
+	}
 
-		return Block.query().select(Block.tableColumns)
-		.whereJsonText('block.data:domain', data.domain)
-		.eager(`[${what.join(',')}]`, filters)
-		.where('block.type', 'site').first().throwIfNotFound();
-	}).then(function(site) {
+	return Block.query().select(Block.tableColumns)
+	.whereJsonText('block.data:domain', data.domain)
+	.eager(`[${what.join(',')}]`, filters)
+	.where('block.type', 'site').first().throwIfNotFound()
+	.then(function(site) {
 		if (!site.from) site.from = site.owner;
-		var emailUrl = All.domains.host(site.data.domain) + site.page[0].data.url;
-		var authCookie = All.auth.cookie({hostname: site.data.domain}, {
+		var emailUrl = domain.host + site.page[0].data.url;
+		var authCookie = All.auth.cookie({hostname: data.domain}, {
 			scopes: {
 				"auth.login": true
 			}
