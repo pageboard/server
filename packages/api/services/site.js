@@ -122,6 +122,7 @@ exports.save = function(data) {
 		if (data.domain) delete data.domain;
 		var sameDomain = (data.data && data.data.domain || null) == (site.data && site.data.domain || null);
 		var sameModule = (data.data && data.data.module || null) == (site.data && site.data.module || null);
+		var sameVersion = (data.data && data.data.version || null) == (site.data && site.data.version || null);
 		// ensure we don't just empty site.data by mistake
 		data.data = Object.assign({}, site.data, data.data);
 		return All.api.Block.query().where('id', site.id).patch(data).then(function(result) {
@@ -135,8 +136,11 @@ exports.save = function(data) {
 				return result;
 			});
 		}).then(function(result) {
-			if (sameModule == false) return All.install(data.data).then(() => result);
-			else return result;
+			if (sameModule == false || sameVersion == false) {
+				return All.install(data.data).then(() => result);
+			} else {
+				return result;
+			}
 		});
 	});
 };

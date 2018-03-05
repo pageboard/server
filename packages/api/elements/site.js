@@ -17,7 +17,7 @@ Pageboard.elements.site = {
 			title: 'Module version',
 			type: 'string'
 		},
-		env: {
+		production: {
 			title: 'Production',
 			type: 'boolean',
 			default: false

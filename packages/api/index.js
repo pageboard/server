@@ -139,10 +139,11 @@ exports.install = function(domain, {elements, directories}, All) {
 	});
 };
 
-exports.initDomainBlock = function(domain) {
+exports.initDomainBlock = function(domain, obj) {
 	return All.site.get({domain: domain}).then(function(site) {
+		obj.site = site;
 		return All.install(site.data).then(function(Block) {
-			return {Block: Block, site: site};
+			obj.Block = Block;
 		});
 	});
 };
