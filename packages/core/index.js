@@ -132,8 +132,6 @@ exports.init = function(opt) {
 			next(new HttpError.NotFound(`Cannot ${req.method} ${req.originalUrl}`));
 		});
 		app.use(servicesError);
-		// view do not declare explicite permissions - vary on all of them
-		app.use(All.auth.restrict('*'));
 		return initPlugins.call(All, pluginList, 'view');
 	}).then(function() {
 		app.use(viewsError);
