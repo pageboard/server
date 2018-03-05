@@ -128,14 +128,13 @@ exports.install = function(domain, {elements, directories}, All) {
 		return importElements(path, eltsMap, domain, allDirs);
 	})).then(function() {
 		var Block = exports.models.Block.extendSchema(domain, eltsMap);
-		Block.elements = eltsMap;
 		if (domain) {
-			Block.source = toSource(Object.assign({}, exports.Block.elements, Block.elements));
+			preparePage(eltsMap);
+			Block.source = toSource(eltsMap);
 			Block.domain = domain;
 			return Block;
 		} else {
 			exports.Block = All.api.Block = Block;
-			Block.source = toSource(Block.elements);
 		}
 	});
 };
@@ -147,6 +146,55 @@ exports.initDomainBlock = function(domain) {
 		});
 	});
 };
+
+function preparePage(elts) {
+	var list = Object.keys(elts).map(function(key) {
+		var el = elts[key];
+		if (!el.name) el.name = key;
+		return el;
+	}).sort(function(a, b) {
+		return (a.priority || 0) - (b.priority || 0);
+	});
+	elts.page = Object.assign({}, elts.page);
+	elts.page.scripts = filter(list, 'scripts');
+	elts.page.stylesheets = filter(list, 'stylesheets');
+}
+
+function filter(elements, prop) {
+	var map = {};
+	var res = [];
+	elements.forEach(function(el) {
+		var list = el[prop];
+		if (!list) return;
+		delete el[prop];
+		if (typeof list == "string") list = [list];
+		var url, prev;
+		for (var i=0; i < list.length; i++) {
+			url = list[i];
+			prev = map[url];
+			if (prev) {
+				if (el.priority != null) {
+					if (prev.priority == null) {
+						// move prev url on top of res
+						res = res.filter(function(lurl) {
+							return lurl != url;
+						});
+					} else if (prev.priority != el.priority) {
+						console.warn(prop, url, "declared in element", el.name, "with priority", el.priority, "is already declared in element", prev.name, "with priority", prev.priority);
+						continue;
+					} else {
+						continue;
+					}
+				} else {
+					continue;
+				}
+			}
+			map[url] = el;
+			res.push(url);
+		}
+	});
+	return res;
+}
 
 function promotePath(dir, path) {
 	if (!path) return;
