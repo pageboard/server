@@ -47,7 +47,9 @@ exports.query = function(data) {
 		});
 		if (fd.type) {
 			params.type = fd.type;
-			params.data = data;
+			if (Object.keys(data).length > 0) {
+				params.data = data;
+			}
 		}
 		// overwriting values
 		if (fd.consts) Object.keys(fd.consts).forEach(function(key) {

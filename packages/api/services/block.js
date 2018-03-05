@@ -44,6 +44,9 @@ exports.search = function(data) {
 	if (data.parent) {
 		q.joinRelation('parents as parent').where('parent.id', data.parent);
 	}
+	if (data.id) {
+		q.where('block.id', data.id);
+	}
 	if (data.data) {
 		var refs = {};
 		asPaths(data.data, refs, 'block.data:');
@@ -77,16 +80,15 @@ exports.search = function(data) {
 	});
 };
 exports.search.schema = {
-	anyOf: [{
-		required: ['domain', 'text', 'type']
-	}, {
-		required: ['domain', 'data', 'type']
-	}],
+	required: ['domain', 'type'],
 	properties: {
 		text: {
 			type: 'string'
 		},
 		parent: {
+			type: 'string'
+		},
+		id: {
 			type: 'string'
 		},
 		data: {
@@ -118,6 +120,42 @@ exports.search.schema = {
 			type: 'integer',
 			minimum: 0,
 			default: 0
+		}
+	},
+	additionalProperties: false
+};
+
+exports.find = function(data) {
+	data.limit = 1;
+	data.offset = 0;
+	return exports.search(data).then(function(obj) {
+		return {
+			data: obj.data.length == 1 ? obj.data[0] : null,
+			schemas: obj.schemas
+		};
+	});
+};
+exports.find.schema = {
+	required: ['domain', 'id', 'type'],
+	properties: {
+		id: {
+			type: 'string'
+		},
+		type: {
+			type: 'array',
+			items: {
+				type: 'string',
+				not: { // TODO permissions should be managed dynamically
+					oneOf: [{
+						const: "user"
+					}, {
+						const: "site"
+					}]
+				}
+			}
+		},
+		domain: {
+			type: 'string'
 		}
 	},
 	additionalProperties: false
