@@ -559,7 +559,6 @@ Domains.prototype.init = function(req) {
 			all: false,
 		}, function(err, address, family) {
 			if (err) return reject(err);
-			console.log(obj);
 			var expected = obj['ip' + family];
 			if (address == expected) {
 				return resolve(true);
