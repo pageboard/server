@@ -21,7 +21,7 @@ exports = module.exports = function(opt) {
 		init: function(All) {
 			return state.init(All).then(function() {
 				All.app.get('*', tag('app'));
-				All.app.post('/.upcache', state.mw.bind(state), function(req, res) {
+				All.app.post('/.well-known/upcache', state.mw.bind(state), function(req, res) {
 					res.sendStatus(204);
 				});
 			});
@@ -70,11 +70,11 @@ CacheState.prototype.open = function() {
 
 CacheState.prototype.install = function(domain, opt, All) {
 	if (!domain) return;
-	// avoid hanging loop: DomainBlock -> install -> .upcache -> (mem)DomainBlock
+	// avoid hanging loop: DomainBlock -> install -> .well-known/upcache -> (mem)DomainBlock
 	setTimeout(function() {
 		var host = All.domains.host(domain);
 		if (!host) throw new Error(`Domain ${domain} not requested before install`);
-		got.post(`${host}/.upcache`).catch(function(err) {
+		got.post(`${host}/.well-known/upcache`).catch(function(err) {
 			// we don't want to crash in case of error
 			console.error(err);
 		});
