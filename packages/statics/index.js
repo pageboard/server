@@ -1,5 +1,7 @@
 var serveStatic = require('serve-static');
 var serveFavicon = require('serve-favicon');
+var ConcatMap = require('fast-sourcemap-concat');
+var URL = require('url');
 var Path = require('path');
 var pify = require('util').promisify;
 var fs = {
@@ -75,6 +77,30 @@ function init(All) {
 			}
 		);
 	});
+}
+
+exports.bundle = function(domain, list, filename) {
+	var opts = All.opt.statics;
+	var outUrl = '/.files/' + filename;
+	var bundle = new ConcatMap({
+		outputFile: urlToPath(opts, domain, '/.files/' + filename)
+	});
+	list.forEach(function(url) {
+		bundle.addFile(urlToPath(opts, domain, url));
+		bundle.addSpace('\n');
+	});
+	return bundle.end().then(function() {
+		return outUrl;
+	});
+};
+
+function urlToPath(opts, domain, url) {
+	var obj = URL.parse(url);
+	var list = obj.pathname.substring(1).split('/');
+	if (list[0].startsWith('.') == false) throw new Error(`Bad ${domain} url: ${url}`);
+	list[0] = list[0].substring(1);
+	if (list[0] != "pageboard") list.splice(1, 0, domain);
+	return Path.join(opts.runtime, list.join('/'));
 }
 
 exports.install = function(domain, {directories}, All) {

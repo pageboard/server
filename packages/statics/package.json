@@ -18,6 +18,7 @@
   "homepage": "https://github.com/pageboard/statics#readme",
   "dependencies": {
     "debug": "^2.3.2",
+    "fast-sourcemap-concat": "^1.2.4",
     "mkdirp": "^0.5.1",
     "rimraf": "^2.6.2",
     "serve-favicon": "^2.4.3",
