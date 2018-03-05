@@ -14,6 +14,7 @@ function init(All) {
 		}).catch(next);
 	});
 	All.app.post("/.api/form", All.body, function(req, res, next) {
+		req.body._referer = req.headers.referer;
 		All.run('form.submit', req.body).then(function(data) {
 			if (data.redirect && req.accepts('html') && !req.xhr) {
 				res.location(data.redirect);
@@ -52,6 +53,8 @@ exports.query.schema = {
 };
 
 exports.submit = function(data) {
+	var referer = URL.parse(data._referer, true);
+	delete data._referer;
 	return All.run('block.get', {
 		id: data._id,
 		domain: data.domain
@@ -91,7 +94,6 @@ exports.submit = function(data) {
 		if (fd.consts) Object.keys(fd.consts).forEach(function(key) {
 			setVar(params, key, fd.consts[key]);
 		});
-
 		params.domain = domain;
 		return All.run(fd.call, params).then(function(response) {
 			if (typeof response != "obj") response = {};
@@ -101,12 +103,8 @@ exports.submit = function(data) {
 				var obj = URL.parse(fd.url);
 				delete obj.path;
 				obj.query = query;
-				var rr = {
-					request: data,
-					response: response
-				};
 				if (fd.vars) Object.keys(fd.vars).forEach(function(key) {
-					var val = getVar(rr, fd.vars[key]);
+					var val = getVar(referer.query, fd.vars[key]);
 					if (val === undefined) return;
 					setVar(query, key, val);
 				});
