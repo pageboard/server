@@ -223,12 +223,15 @@ exports.del = function(data) {
 	).delete();
 };
 exports.del.schema = {
-	required: ['domain', 'id'],
+	required: ['domain', 'id', 'type'],
 	properties: {
 		domain: {
 			type: 'string'
 		},
 		id: {
+			type: 'string'
+		},
+		type: {
 			type: 'string'
 		}
 	},
