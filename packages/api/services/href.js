@@ -174,7 +174,7 @@ exports.add = function(data) {
 		data.url = objUrl.path;
 		isLocal = true;
 	} else if (!objUrl.hostname) {
-		url = All.domains.host(data.domain) + url;
+		url = All.domain(data.domain).host + url;
 		isLocal = true;
 	}
 

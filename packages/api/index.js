@@ -88,26 +88,14 @@ function init(All) {
 	exports.seed = seed.bind(null, knexInst, opt.seeds);
 	exports.dump = dumpDb.bind(null, dbOpt.connection, opt);
 
-
 	All.app.get('/.api/elements.js',
 		All.cache.tag('share', 'file').for('5s'),
-		All.query,
 		function(req, res, next) {
-			All.api.DomainBlock(req.query.domain).then(function(DomainBlock) {
-				res.type('text/javascript');
-				res.send('if (!window.Pageboard) Pageboard = {};\nPageboard.elements = ' + DomainBlock.source);
-			}).catch(next);
+			res.type('text/javascript');
+			var source = All.domain(req.hostname).Block.source;
+			res.send('if (!window.Pageboard) Pageboard = {};\nPageboard.elements = ' + source);
 		}
 	);
-
-	// used by proxies to quickly know if this domain is known
-	All.app.get('/.api', All.query, function(req, res, next) {
-		All.domains.resolvable(req.query.domain).then(function() {
-			return All.api.DomainBlock(req.query.domain).then(function(DomainBlock) {
-				res.type('text').sendStatus(200);
-			});
-		}).catch(next);
-	});
 	All.app.use('/.api/*', All.cache.tag('api'));
 }
 
@@ -143,6 +131,7 @@ exports.install = function(domain, {elements, directories}, All) {
 		Block.elements = eltsMap;
 		if (domain) {
 			Block.source = toSource(Object.assign({}, exports.Block.elements, Block.elements));
+			Block.domain = domain;
 			return Block;
 		} else {
 			exports.Block = All.api.Block = Block;
@@ -151,14 +140,10 @@ exports.install = function(domain, {elements, directories}, All) {
 	});
 };
 
-exports.DomainBlock = function(domain) {
-	var info = All.domains.get(domain);
-	if (info && info.block) return Promise.resolve(info.block);
+exports.initDomainBlock = function(domain) {
 	return All.site.get({domain: domain}).then(function(site) {
 		return All.install(site.data).then(function(Block) {
-			Block.site = site.data;
-			All.domains.set(domain, {block: Block});
-			return Block;
+			return {Block: Block, site: site};
 		});
 	});
 };

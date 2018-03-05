@@ -11,14 +11,13 @@ function init(All) {
 }
 
 exports.get = function(data) {
-	return All.api.DomainBlock(data.domain).then(function(Block) {
-		var q = Block.query()
-			.select(Block.tableColumns)
-			.whereDomain(Block.site.domain)
-			.where('block.id', data.id);
-		if (data.type) q.where('block.type', data.type);
-		return q.first().throwIfNotFound();
-	});
+	var Block = All.domain(data.domain).Block;
+	var q = Block.query()
+		.select(Block.tableColumns)
+		.whereDomain(Block.domain)
+		.where('block.id', data.id);
+	if (data.type) q.where('block.type', data.type);
+	return q.first().throwIfNotFound();
 };
 exports.get.schema = {
 	required: ['id', 'domain'],
@@ -37,45 +36,44 @@ exports.get.schema = {
 };
 
 exports.search = function(data) {
-	return All.api.DomainBlock(data.domain).then(function(Block) {
-		var q = Block.query()
-			.select(Block.tableColumns)
-			.whereDomain(Block.site.domain)
-			.whereIn('block.type', data.type);
-		if (data.parent) {
-			q.joinRelation('parents as parent').where('parent.id', data.parent);
+	var Block = All.domain(data.domain).Block;
+	var q = Block.query()
+		.select(Block.tableColumns)
+		.whereDomain(Block.domain)
+		.whereIn('block.type', data.type);
+	if (data.parent) {
+		q.joinRelation('parents as parent').where('parent.id', data.parent);
+	}
+	if (data.data) {
+		var refs = {};
+		asPaths(data.data, refs, 'block.data:');
+		for (var k in refs) {
+			q.where(ref(k).castText(), Array.isArray(refs[k]) ? 'IN' : '=', refs[k]);
 		}
-		if (data.data) {
-			var refs = {};
-			asPaths(data.data, refs, 'block.data:');
-			for (var k in refs) {
-				q.where(ref(k).castText(), Array.isArray(refs[k]) ? 'IN' : '=', refs[k]);
-			}
-		}
-		if (data.text != null) {
-			var text = data.text.split(' ').filter(x => !!x).map(x => x + ':*').join(' <-> ');
-			q.from(Block.raw([
-				Block.raw("to_tsquery('unaccent', ?) AS query", [text]),
-				'block'
-			]));
-			q.whereRaw('query @@ block.tsv');
-			q.orderByRaw('ts_rank(block.tsv, query) DESC');
-		}
-		q.orderBy('updated_at', 'block.desc');
-		q.offset(data.offset).limit(data.limit);
-		return q.then(function(rows) {
-			var obj = {
-				data: rows,
-				offset: data.offset,
-				limit: data.limit
-			};
-			obj.schemas = {};
-			data.type.forEach(function(type) {
-				var sch = Block.schemaByType(type);
-				if (sch) obj.schemas[type] = sch;
-			});
-			return obj;
+	}
+	if (data.text != null) {
+		var text = data.text.split(' ').filter(x => !!x).map(x => x + ':*').join(' <-> ');
+		q.from(Block.raw([
+			Block.raw("to_tsquery('unaccent', ?) AS query", [text]),
+			'block'
+		]));
+		q.whereRaw('query @@ block.tsv');
+		q.orderByRaw('ts_rank(block.tsv, query) DESC');
+	}
+	q.orderBy('updated_at', 'block.desc');
+	q.offset(data.offset).limit(data.limit);
+	return q.then(function(rows) {
+		var obj = {
+			data: rows,
+			offset: data.offset,
+			limit: data.limit
+		};
+		obj.schemas = {};
+		data.type.forEach(function(type) {
+			var sch = Block.schemaByType(type);
+			if (sch) obj.schemas[type] = sch;
 		});
+		return obj;
 	});
 };
 exports.search.schema = {
@@ -98,7 +96,7 @@ exports.search.schema = {
 			type: 'array',
 			items: {
 				type: 'string',
-				not: {
+				not: { // TODO permissions should be managed dynamically
 					oneOf: [{
 						const: "user"
 					}, {
@@ -126,19 +124,17 @@ exports.search.schema = {
 };
 
 exports.add = function(data) {
-	return All.api.DomainBlock(data.domain).then(function(Block) {
-		var domain = data.domain;
-		delete data.domain;
-		var id = data.parent;
-		delete data.parent;
-		return Block.query().whereJsonText('block.data:domain', domain)
-		.first().throwIfNotFound().then(function(site) {
-			return site.$relatedQuery('children').insert(data).then(function(child) {
-				if (!id) return child;
-				return site.$relatedQuery('children').where('block.id', id)
-				.select('_id').first().throwIfNotFound().then(function(parent) {
-					return parent.$relatedQuery('children').relate(child);
-				});
+	var domain = data.domain;
+	delete data.domain;
+	var id = data.parent;
+	delete data.parent;
+	return All.domain(domain).Block.query().whereJsonText('block.data:domain', domain)
+	.first().throwIfNotFound().then(function(site) {
+		return site.$relatedQuery('children').insert(data).then(function(child) {
+			if (!id) return child;
+			return site.$relatedQuery('children').where('block.id', id)
+			.select('_id').first().throwIfNotFound().then(function(parent) {
+				return parent.$relatedQuery('children').relate(child);
 			});
 		});
 	});
@@ -157,14 +153,12 @@ exports.add.schema = {
 };
 
 exports.save = function(data) {
-	return All.api.DomainBlock(data.domain).then(function(Block) {
-		return All.site.get({domain: data.domain}).clearSelect().select('site._id')
-		.then(function(site) {
-			delete data.domain;
-			return site.$relatedQuery('children')
-			.where('block.id', data.id).patch(data).skipUndefined().then(function(count) {
-				if (count == 0) throw new Error(`Block not found for update ${data.id}`);
-			});
+	return All.site.get({domain: data.domain}).clearSelect().select('site._id')
+	.then(function(site) {
+		delete data.domain;
+		return site.$relatedQuery('children')
+		.where('block.id', data.id).patch(data).skipUndefined().then(function(count) {
+			if (count == 0) throw new Error(`Block not found for update ${data.id}`);
 		});
 	});
 };
@@ -182,11 +176,10 @@ exports.save.schema = {
 };
 
 exports.del = function(data) {
-	return All.api.DomainBlock(data.domain).then(function(Block) {
-		return Block.query().where('id',
-			Block.query().select('block.id').where('block.id', data.id).whereDomain(Block.site.domain)
-		).delete();
-	});
+	var Block = All.domain(data.domain).Block;
+	return Block.query().where('id',
+		Block.query().select('block.id').where('block.id', data.id).whereDomain(data.domain)
+	).delete();
 };
 exports.del.schema = {
 	required: ['domain', 'id'],

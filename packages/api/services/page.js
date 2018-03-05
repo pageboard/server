@@ -37,10 +37,10 @@ function init(All) {
 	});
 }
 
-function QueryPage(Block) {
-	return Block.query()
-	.select(Block.tableColumns)
-	.whereDomain(Block.site.domain)
+function QueryPage(DomainBlock) {
+	return DomainBlock.query()
+	.select(DomainBlock.tableColumns)
+	.whereDomain(DomainBlock.domain)
 	.first()
 	// eager load children (in which there are standalones)
 	// and children of standalones
@@ -49,52 +49,52 @@ function QueryPage(Block) {
 		children(standalonesFilter) as standalones .children(childrenFilter)
 	]`, {
 		childrenFilter: function(query) {
-			return query.select(Block.tableColumns).where('block.standalone', false);
+			return query.select(DomainBlock.tableColumns).where('block.standalone', false);
 		},
 		standalonesFilter: function(query) {
-			return query.select(Block.tableColumns).where('block.standalone', true);
+			return query.select(DomainBlock.tableColumns).where('block.standalone', true);
 		}
 	});
 }
 
 exports.get = function(data) {
-	return All.api.DomainBlock(data.domain).then(function(Block) {
-		return QueryPage(Block).where('block.type', 'page')
-		.whereJsonText("block.data:url", data.url)
-		.then(function(page) {
-			if (!page) {
-				return QueryPage(Block).where('block.type', 'notfound').throwIfNotFound();
-			} else {
-				return page;
-			}
-		}).then(function(page) {
-			page.site = Block.site;
-			page.children = page.children.concat(page.standalones);
-			delete page.standalones;
-			var pageUrl = page.data.url || data.url;
-			return Promise.all([
-				getParents(Block, pageUrl),
-				listPages(Block, {
-					parent: pageUrl.split('/').slice(0, -1).join('/') || '/'
-				}).select([
-					ref('block.data:url').as('url'),
-					ref('block.data:title').as('title')
-				]).omit(Block.columns)
-			]).then(function(list) {
-				page.links = {};
-				page.links.up = list[0];
-				var siblings = list[1];
-				var position = siblings.findIndex(function(item) {
-					return item.url == pageUrl;
-				});
-				if (position > 0) page.links.prev = siblings[position - 1];
-				if (position < siblings.length - 1) page.links.next = siblings[position + 1];
-				if (siblings.length > 1) {
-					page.links.first = siblings[0];
-					page.links.last = siblings[siblings.length - 1];
-				}
-				return page;
+	var meta = All.domain(data.domain);
+	var Block = meta.Block;
+	return QueryPage(Block).where('block.type', 'page')
+	.whereJsonText("block.data:url", data.url)
+	.then(function(page) {
+		if (!page) {
+			return QueryPage(Block).where('block.type', 'notfound').throwIfNotFound();
+		} else {
+			return page;
+		}
+	}).then(function(page) {
+		page.site = meta.site.data;
+		page.children = page.children.concat(page.standalones);
+		delete page.standalones;
+		var pageUrl = page.data.url || data.url;
+		return Promise.all([
+			getParents(Block, pageUrl),
+			listPages(Block, {
+				parent: pageUrl.split('/').slice(0, -1).join('/') || '/'
+			}).select([
+				ref('block.data:url').as('url'),
+				ref('block.data:title').as('title')
+			]).omit(Block.columns)
+		]).then(function(list) {
+			page.links = {};
+			page.links.up = list[0];
+			var siblings = list[1];
+			var position = siblings.findIndex(function(item) {
+				return item.url == pageUrl;
 			});
+			if (position > 0) page.links.prev = siblings[position - 1];
+			if (position < siblings.length - 1) page.links.next = siblings[position + 1];
+			if (siblings.length > 1) {
+				page.links.first = siblings[0];
+				page.links.last = siblings[siblings.length - 1];
+			}
+			return page;
 		});
 	});
 };
@@ -116,7 +116,7 @@ function getParents(Block, url) {
 	for (var i=1; i < urlParts.length - 1; i++) {
 		urlParents.push(urlParts.slice(0, i + 1).join('/'));
 	}
-	return Block.query().whereDomain(Block.site.domain).select([
+	return Block.query().whereDomain(Block.domain).select([
 		ref('block.data:url').as('url'),
 		ref('block.data:title').as('title')
 	])
@@ -129,7 +129,7 @@ function listPages(Block, data) {
 	var q = Block.query()
 	.select(Block.tableColumns)
 	.omit(['content'])
-	.whereDomain(data.domain || Block.site.domain)
+	.whereDomain(data.domain || Block.domain)
 	.where('block.type', 'page');
 	if (data.parent) {
 		q.whereJsonText('block.data:url', '~', `^${data.parent}/[^/]+$`)
@@ -204,12 +204,10 @@ exports.search = function(data) {
 			obj.data = result.rows;
 			obj.total = result.count;
 		}
-		return All.api.DomainBlock(data.domain).then(function(DomainBlock) {
-			obj.schemas = {
-				page: DomainBlock.schemaByType('page')
-			};
-			return obj;
-		});
+		obj.schemas = {
+			page: All.domain(data.domain).Block.schemaByType('page')
+		};
+		return obj;
 	});
 };
 
@@ -269,64 +267,63 @@ exports.save = function(changes) {
 		relate: {}
 	}, changes);
 
-	return All.api.DomainBlock(changes.domain).then(function(DomainBlock) {
-		var site;
-		var pages = changes.add.concat(changes.update).filter(function(block) {
-			var url = block.data && block.data.url;
-			if (url) {
-				var objUrl = URL.parse(url);
-				if (objUrl.hostname == changes.domain) {
-					block.data.url = objUrl.path;
-				}
+	var DomainBlock = All.domain(changes.domain).Block;
+	var site;
+	var pages = changes.add.concat(changes.update).filter(function(block) {
+		var url = block.data && block.data.url;
+		if (url) {
+			var objUrl = URL.parse(url);
+			if (objUrl.hostname == changes.domain) {
+				block.data.url = objUrl.path;
 			}
-			return block.type == "page"; // might be obj.data.url but not sure
-		});
-		return All.api.transaction(DomainBlock, function(Block) {
-			return Block.query().whereJsonText('block.data:domain', changes.domain)
-			.first().throwIfNotFound().then(function(inst) {
-				site = inst;
-			}).then(function() {
-				// this also effectively prevents removing a page and adding a new page
-				// with the same url as the one removed
-				var allUrl = {};
-				return site.$relatedQuery('children')
-				.select('block.id', ref('block.data:url').as('url'))
-				.where('block.type', 'page').then(function(dbPages) {
-					pages.forEach(function(page) {
-						if (allUrl[page.data.url]) throw new HttpError.BadRequest("Two pages with same url");
-						if (!page.id) throw new HttpError.BadRequest("Page without id");
-						allUrl[page.data.url] = page.id;
-					});
-					dbPages.forEach(function(dbPage) {
-						var id = allUrl[dbPage.url];
-						if (id != null && dbPage.id != id) {
-							throw new HttpError.BadRequest("Page url already exists");
-						}
-					});
+		}
+		return block.type == "page"; // might be obj.data.url but not sure
+	});
+	return All.api.transaction(DomainBlock, function(Block) {
+		return Block.query().whereJsonText('block.data:domain', changes.domain)
+		.first().throwIfNotFound().then(function(inst) {
+			site = inst;
+		}).then(function() {
+			// this also effectively prevents removing a page and adding a new page
+			// with the same url as the one removed
+			var allUrl = {};
+			return site.$relatedQuery('children')
+			.select('block.id', ref('block.data:url').as('url'))
+			.where('block.type', 'page').then(function(dbPages) {
+				pages.forEach(function(page) {
+					if (allUrl[page.data.url]) throw new HttpError.BadRequest("Two pages with same url");
+					if (!page.id) throw new HttpError.BadRequest("Page without id");
+					allUrl[page.data.url] = page.id;
 				});
-			}).then(function() {
-				return applyUnrelate(site, changes.unrelate).then(function() {
-					return applyRemove(site, changes.remove);
-				}).then(function() {
-					return applyAdd(site, changes.add);
-				}).then(function() {
-					return applyUpdate(site, changes.update);
-				}).then(function() {
-					return applyRelate(site, changes.relate);
+				dbPages.forEach(function(dbPage) {
+					var id = allUrl[dbPage.url];
+					if (id != null && dbPage.id != id) {
+						throw new HttpError.BadRequest("Page url already exists");
+					}
 				});
 			});
 		}).then(function() {
-			// do not return that promise - reply now
-			Promise.all(pages.map(function(child) {
-				return All.href.save({
-					url: child.data.url,
-					domain: site.data.domain,
-					title: child.data.title
-				}).catch(function(err) {
-					console.error(err);
-				});
-			}));
+			return applyUnrelate(site, changes.unrelate).then(function() {
+				return applyRemove(site, changes.remove);
+			}).then(function() {
+				return applyAdd(site, changes.add);
+			}).then(function() {
+				return applyUpdate(site, changes.update);
+			}).then(function() {
+				return applyRelate(site, changes.relate);
+			});
 		});
+	}).then(function() {
+		// do not return that promise - reply now
+		Promise.all(pages.map(function(child) {
+			return All.href.save({
+				url: child.data.url,
+				domain: site.data.domain,
+				title: child.data.title
+			}).catch(function(err) {
+				console.error(err);
+			});
+		}));
 	});
 };
 exports.save.schema = {
@@ -443,16 +440,14 @@ function applyRelate(site, obj) {
 
 exports.add = function(data) {
 	var emptyPage = {};
-	return All.api.DomainBlock(data.domain).then(function(DomainBlock) {
-		return DomainBlock.prototype.$beforeInsert.call(emptyPage).then(function() {
-			return exports.save({
-				domain: data.domain,
-				add: [{
-					id: emptyPage.id,
-					type: 'page',
-					data: data.data
-				}]
-			});
+	return All.domain(data.domain).Block.prototype.$beforeInsert.call(emptyPage).then(function() {
+		return exports.save({
+			domain: data.domain,
+			add: [{
+				id: emptyPage.id,
+				type: 'page',
+				data: data.data
+			}]
 		});
 	});
 };
