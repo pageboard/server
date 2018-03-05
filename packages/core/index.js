@@ -79,6 +79,9 @@ exports.init = function(opt) {
 	All.body = reqBody.bind(All);
 	All.install = install.bind(All);
 	All.domains = new Domains(All);
+	All.domain = function(domain) {
+		return All.domains.get(domain);
+	};
 
 	if (opt.global) global.All = All;
 
@@ -435,15 +438,16 @@ function createApp(opt) {
 		res.setHeader('X-Frame-Options', 'SAMEORIGIN');
 		res.setHeader('X-Content-Type-Options', 'nosniff');
 		res.setHeader('Content-Security-Policy', cspHeader);
-		All.domains.host(req);
-		All.api.DomainBlock(req.hostname).then(function(DomainBlock) {
-			if (req.get('X-Redirect-Secure') && req.protocol == "http" && req.url != "/.api") {
+		All.domains.init(req).then(function() {
+			if (req.url == "/.well-known/pageboard") {
+				res.type('text').sendStatus(200);
+			} else if (req.get('X-Redirect-Secure') && req.protocol == "http") {
 				res.redirect(301, "https://" + req.get('Host') + req.url);
 			} else {
 				next();
 			}
 		}).catch(function(err) {
-			next(err);
+			servicesError(err, req, res, next);
 		});
 	});
 	return app;
@@ -528,46 +532,55 @@ Domains.prototype.set = function(domain, obj) {
 	return prev;
 };
 
-Domains.prototype.host = function(req) {
-	var domain;
-	if (typeof req == "string") {
-		domain = req;
-		req = null;
-	} else {
-		domain = req.hostname;
-	}
+Domains.prototype.init = function(req) {
+	var domain = req.hostname;
 	var obj = this.get(domain) || this.set(domain, {});
-	if (!obj.host) {
-		if (req) {
-			obj.host = (req.get('X-Redirect-Secure') ? 'https' : req.protocol) + '://' + req.get('Host');
-			obj.ip = req.get('X-Forwarded-By') || req.socket.address().address;
-		} else {
-			throw new Error(`Unknown domain ${domain}`);
+	obj.host = (req.get('X-Redirect-Secure') ? 'https' : req.protocol) + '://' + req.get('Host');
+	var fam = 4;
+	var ip = req.get('X-Forwarded-By');
+	if (ip) {
+		if (isIPv6(ip)) fam = 6;
+	} else {
+		var address = req.socket.address();
+		ip = address.address;
+		fam = address.family == 'IPv6' ? 6 : 4;
+	}
+	obj['ip' + fam] = ip;
+	var prefix = '::ffff:';
+	if (fam == 6) {
+		if (ip.startsWith(prefix)) {
+			ip = ip.substring(prefix.length);
+			if (!isIPv6(ip)) obj.ip4 = ip;
+		} else if (ip == "::1") {
+			obj.ip4 = "127.0.0.1";
 		}
 	}
-	return obj.host;
-};
-
-Domains.prototype.resolvable = function(domain) {
-	var obj = this.get(domain);
-	if (!obj || !obj.ip) return Promise.reject(new HttpError.NotFound(`Unknown domain`));
-	if (obj.resolvable) return Promise.resolve();
-	return new Promise(function(resolve, reject) {
+	if (obj.resolvable) return obj.resolvable;
+	obj.resolvable = new Promise(function(resolve, reject) {
 		require('dns').lookup(domain, {
 			all: false,
-			family: 4
 		}, function(err, address, family) {
 			if (err) return reject(err);
-			if (address == obj.ip) {
-				obj.resolvable = true;
+			console.log(obj);
+			var expected = obj['ip' + family];
+			if (address == expected) {
 				return resolve(true);
 			} else {
-				obj.resolvable = false;
-				reject(new HttpError.NotFound(`Wrong ip for domain: ${address}, expected ${obj.ip}`));
+				reject(new HttpError.NotFound(`Wrong ip for domain: ${address}, expected ${expected}`));
 			}
 		});
 	});
+	return obj.resolvable.then(function() {
+		// and initialize Block
+		return All.api.initDomainBlock(domain).then(function(apiObj) {
+			Object.assign(obj, apiObj);
+		});
+	});
 };
+
+function isIPv6(ip) {
+	return ip.indexOf(':') >= 0;
+}
 
 function initDumps(All) {
 	var opt = All.opt.database.dump;
