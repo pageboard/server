@@ -83,11 +83,14 @@ exports.submit = function(data) {
 			delete params.id;
 			var parent = params.parent;
 			delete params.parent;
+			data = params;
 			params = {
 				id: id,
-				type: fd.type,
-				data: params
+				type: fd.type
 			};
+			if (Object.keys(data).length > 0) {
+				params.data = data;
+			}
 			if (parent) params.parent = parent;
 		}
 		// overwriting values
