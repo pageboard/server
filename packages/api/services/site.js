@@ -125,6 +125,7 @@ exports.save = function(data) {
 		var sameVersion = (data.data && data.data.version || null) == (site.data && site.data.version || null);
 		// ensure we don't just empty site.data by mistake
 		data.data = Object.assign({}, site.data, data.data);
+		data.type = site.type; // or else schema validation does not happen
 		return All.api.Block.query().where('id', site.id).patch(data).then(function(result) {
 			if (sameDomain) return result;
 			return All.href.migrate({
