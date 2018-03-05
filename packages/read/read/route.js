@@ -36,7 +36,7 @@ Page.route(function(state) {
 			return Promise.all(Pageboard.view.elements.map(function(el) {
 				if (el.install) return el.install.call(el, doc, Pageboard);
 			})).then(function() {
-				return Page.importDocument(doc);
+				state.document = doc;
 			});
 		});
 	});
