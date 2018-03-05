@@ -60,6 +60,8 @@ function init(All) {
 			scope.logout(res);
 			res.redirect('back');
 		});
+
+		All.app.use(All.auth.restrict('*'));
 	});
 }
 
