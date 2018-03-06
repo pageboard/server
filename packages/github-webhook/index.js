@@ -21,8 +21,9 @@ function init(All) {
 		if (event != "push") {
 			return next(new HttpError.BadRequest("Unsupported event"));
 		}
-		var domain = req.hostname;
 
+		var save = false;
+		// TODO queue installations, and do db transaction
 		All.site.get({domain: req.hostname}).then(function(site) {
 			if (!site) throw new HttpError.NotFound("Site not found");
 			var sign = req.get('X-Github-Signature');
@@ -32,20 +33,19 @@ function init(All) {
 			}
 			var payload = JSON.parse(req.body);
 			var fullName = payload.repository.full_name;
-			var save = false;
 			var module = site.data.module;
-			if (module.startsWith(fullName) &&
+			if (module && module.startsWith(fullName) &&
 				(module.length == fullName.length || module[fullName.length] == "#")
 			) {
 					site.data.module = fullName + '#' + payload.after;
 					save = true;
 			}
-			if (save) return All.site.save(site).then(function(result) {
-				console.info(result);
-				res.sendStatus(200);
+			res.sendStatus(200);
+		}).catch(next).then(function() {
+			if (save) return All.site.save(site).catch(function(err) {
+				console.error("site.save failure", site.data, err);
 			});
-			else res.sendStatus(200);
-		}).catch(next);
+		});
 	});
 }
 
