@@ -22,6 +22,7 @@ Domains.prototype.init = function(req) {
 	var api = this.All.api;
 	var domain = req.hostname;
 	var obj = this.get(domain) || this.set(domain, {});
+	if (obj.resolvable) return obj.resolvable;
 	obj.host = (req.get('X-Redirect-Secure') ? 'https' : req.protocol) + '://' + req.get('Host');
 	var fam = 4;
 	var ip = req.get('X-Forwarded-By');
@@ -32,22 +33,23 @@ Domains.prototype.init = function(req) {
 		ip = address.address;
 		fam = address.family == 'IPv6' ? 6 : 4;
 	}
+	obj['ip' + fam] = ip;
 	var localhost4 = "127.0.0.1";
 	var localhost6 = "::1";
-	obj['ip' + fam] = ip;
 	var prefix = '::ffff:';
 	if (fam == 6) {
 		if (ip.startsWith(prefix)) {
-			ip = ip.substring(prefix.length);
-			if (!isIPv6(ip)) obj.ip4 = ip;
-		} else if (ip == localhost6) {
-			obj.ip4 = localhost4;
-			obj.local = true;
+			var tryFour = ip.substring(prefix.length);
+			if (!isIPv6(tryFour)) obj.ip4 = tryFour;
 		}
-	} else if (ip == localhost4) {
-		obj.local = true;
 	}
-	if (obj.resolvable) return obj.resolvable;
+	if (obj.ip4 == localhost4) {
+		obj.local = true;
+		if (!obj.ip6) obj.ip6 = localhost6;
+	} else if (obj.ip6 == localhost6) {
+		obj.local = true;
+		if (!obj.ip4) obj.ip4 = localhost4;
+	}
 	obj.resolvable = new Promise(function(resolve, reject) {
 		DNS.lookup(domain, {
 			all: false,
