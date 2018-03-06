@@ -70,6 +70,11 @@ Pageboard.elements.page = {
 		return (new Promise(function(resolve) {
 			setTimeout(resolve);
 		})).then(function() {
+			view.elements.forEach(function(el) {
+				if (el.name == this.name) return;
+				if (el.scripts) Array.prototype.push.apply(this.scripts, el.scripts);
+				if (el.stylesheets) Array.prototype.push.apply(this.stylesheets, el.stylesheets);
+			}, this);
 			doc.head.insertAdjacentHTML('beforeEnd', "\n" +
 				this.stylesheets.map(function(href) {
 					return `<link rel="stylesheet" href="${href}" />`;
