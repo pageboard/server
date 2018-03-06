@@ -440,7 +440,7 @@ function createApp(opt) {
 		All.domains.init(req).then(function() {
 			if (req.url == "/.well-known/pageboard") {
 				res.type('text').sendStatus(200);
-			} else if (req.get('X-Redirect-Secure') && req.protocol == "http") {
+			} else if (req.get('Upgrade-Insecure-Requests') && req.protocol == "http" && !All.domain(req.hostname).local) {
 				res.redirect(301, "https://" + req.get('Host') + req.url);
 			} else {
 				next();

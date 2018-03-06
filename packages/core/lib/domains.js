@@ -32,15 +32,20 @@ Domains.prototype.init = function(req) {
 		ip = address.address;
 		fam = address.family == 'IPv6' ? 6 : 4;
 	}
+	var localhost4 = "127.0.0.1";
+	var localhost6 = "::1";
 	obj['ip' + fam] = ip;
 	var prefix = '::ffff:';
 	if (fam == 6) {
 		if (ip.startsWith(prefix)) {
 			ip = ip.substring(prefix.length);
 			if (!isIPv6(ip)) obj.ip4 = ip;
-		} else if (ip == "::1") {
-			obj.ip4 = "127.0.0.1";
+		} else if (ip == localhost6) {
+			obj.ip4 = localhost4;
+			obj.local = true;
 		}
+	} else if (ip == localhost4) {
+		obj.local = true;
 	}
 	if (obj.resolvable) return obj.resolvable;
 	obj.resolvable = new Promise(function(resolve, reject) {
