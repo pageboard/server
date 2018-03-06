@@ -34,7 +34,7 @@ Page.route(function(state) {
 			}
 
 			return Promise.all(Pageboard.view.elements.map(function(el) {
-				if (el.install) return el.install.call(el, doc, Pageboard);
+				if (el.install) return el.install.call(el, doc, page, Pageboard.view);
 			})).then(function() {
 				state.document = doc;
 			});
