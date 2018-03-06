@@ -35,6 +35,21 @@ function init(All) {
 			res.send(page);
 		}).catch(next);
 	});
+
+	All.app.get('/robots.txt', All.cache.tag('api'), function(req, res, next) {
+		All.run('page.robots', {domain: req.hostname}).then(function(txt) {
+			res.type('text/plain');
+			res.send(txt);
+		});
+	});
+
+	All.app.get('/.api/sitemap.txt', function(req, res, next) {
+		All.run('page.list', {domain: req.hostname}).then(function(pages) {
+			var host = All.domain(req.hostname).host;
+			res.type('text/plain');
+			res.send(pages.map(page => host + page.data.url).join('\n'));
+		});
+	});
 }
 
 function QueryPage(DomainBlock) {
@@ -476,5 +491,17 @@ exports.del = function(data) {
 	// - moving a page to that zone removes the url of the page (when saving,
 	// and when possible)
 	throw new HttpError.NotImplemented("TODO use save to delete page blocks");
+};
+
+exports.robots = function(data) {
+	var domain = All.domain(data.domain);
+	var site = domain.site;
+	var lines = ["User-agent: *"];
+	if (site.data.production) {
+		lines.push(`Sitemap: ${domain.host}/.api/sitemap.txt`);
+	} else {
+		lines.push("Disallow: /");
+	}
+	return Promise.resolve(lines.join('\n'));
 };
 
