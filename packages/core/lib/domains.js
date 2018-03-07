@@ -23,7 +23,7 @@ Domains.prototype.init = function(req) {
 	var domain = req.hostname;
 	var obj = this.get(domain) || this.set(domain, {});
 	if (obj.resolvable) return obj.resolvable;
-	obj.host = (req.get('X-Redirect-Secure') ? 'https' : req.protocol) + '://' + req.get('Host');
+	obj.host = (req.get('Upgrade-Insecure-Requests') ? 'https' : req.protocol) + '://' + req.get('Host');
 	var fam = 4;
 	var ip = req.get('X-Forwarded-By');
 	if (ip) {
