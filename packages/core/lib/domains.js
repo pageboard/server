@@ -23,7 +23,6 @@ Domains.prototype.init = function(req) {
 	var domain = req.hostname;
 	var obj = this.get(domain) || this.set(domain, {});
 	if (obj.resolvable) return obj.resolvable;
-	obj.host = (req.get('Upgrade-Insecure-Requests') ? 'https' : req.protocol) + '://' + req.get('Host');
 	var fam = 4;
 	var ip = req.get('X-Forwarded-By');
 	if (ip) {
@@ -43,13 +42,17 @@ Domains.prototype.init = function(req) {
 			if (!isIPv6(tryFour)) obj.ip4 = tryFour;
 		}
 	}
+	var local = false;
 	if (obj.ip4 == localhost4) {
-		obj.local = true;
+		local = true;
 		if (!obj.ip6) obj.ip6 = localhost6;
 	} else if (obj.ip6 == localhost6) {
-		obj.local = true;
+		local = true;
 		if (!obj.ip4) obj.ip4 = localhost4;
 	}
+	obj.upgradable = req.get('Upgrade-Insecure-Requests') && !local;
+
+	obj.host = (obj.upgradable ? 'https' : req.protocol) + '://' + req.get('Host');
 	obj.resolvable = new Promise(function(resolve, reject) {
 		DNS.lookup(domain, {
 			all: false,
