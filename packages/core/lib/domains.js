@@ -22,7 +22,12 @@ Domains.prototype.init = function(req) {
 	var api = this.All.api;
 	var domain = req.hostname;
 	var obj = this.get(domain) || this.set(domain, {});
-	if (obj.resolvable) return obj.resolvable;
+	if (obj.error) {
+		return Promise.reject(obj.error);
+	}
+	if (obj.resolvable) {
+		return obj.resolvable;
+	}
 	var fam = 4;
 	var ip = req.get('X-Forwarded-By');
 	if (ip) {
@@ -57,6 +62,7 @@ Domains.prototype.init = function(req) {
 		DNS.lookup(domain, {
 			all: false,
 		}, function(err, address, family) {
+			if (address == domain) return reject(new Error("domain is an ip " + domain));
 			if (err) return reject(err);
 			var expected = obj['ip' + family];
 			if (address == expected) {
@@ -69,6 +75,9 @@ Domains.prototype.init = function(req) {
 	return obj.resolvable.then(function() {
 		// and initialize Block
 		return api.initDomainBlock(domain, obj);
+	}).catch(function(err) {
+		obj.error = err;
+		throw err;
 	});
 };
 
