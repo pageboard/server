@@ -41,7 +41,8 @@ function init(All) {
 					save = true;
 			}
 			res.sendStatus(200);
-		}).catch(next).then(function() {
+			return site;
+		}).catch(next).then(function(site) {
 			if (save) return All.site.save(site).catch(function(err) {
 				console.error("site.save failure", site.data, err);
 			});
