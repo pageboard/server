@@ -22,7 +22,7 @@
     "dom-template-strings": "^2.4.2",
     "pagecut": "1.0.0-beta.61",
     "postinstall-links": "^0.3.99",
-    "window-page": "^2.0.0-beta.4"
+    "window-page": "^2.0.0-beta.5"
   },
   "links": {
     "pagecut/dist": "pagecut",
