@@ -22,7 +22,7 @@ Pageboard.elements.page = {
 		},
 		redirect: {
 			title: 'Redirect',
-			oneOf: [{
+			anyOf: [{
 				type: "null"
 			}, {
 				type: "string",
@@ -110,7 +110,7 @@ Pageboard.elements.paragraph = {
 		align: {
 			title: 'Align',
 			default: "left",
-			oneOf: [{
+			anyOf: [{
 				const: "left",
 				title: "left",
 				icon: '<i class="icon align left"></i>'
@@ -133,7 +133,7 @@ Pageboard.elements.paragraph = {
 		var align = "left";
 		var prop = Pageboard.elements.paragraph.properties.align;
 		if (dom.classList.contains("aligned")) {
-			align = prop.oneOf.find(function(item) {
+			align = prop.anyOf.find(function(item) {
 				return dom.classList.contains(item.const);
 			});
 			if (!align) align = prop.default;

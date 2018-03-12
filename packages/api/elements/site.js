@@ -24,7 +24,7 @@ Pageboard.elements.site = {
 		},
 		favicon: {
 			title: 'Favicon',
-			oneOf: [{
+			anyOf: [{
 				type: "null"
 			}, {
 				type: "string",
