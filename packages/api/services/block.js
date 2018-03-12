@@ -191,12 +191,11 @@ exports.add.schema = {
 };
 
 exports.save = function(data) {
-	var domain = data.domain;
-	delete data.domain;
-	return All.domain(domain).Block.query().whereJsonText('block.data:domain', domain)
-	.first().throwIfNotFound().then(function(site) {
-		return site.$relatedQuery('children').patch(data)
-		.where('block.id', data.id).skipUndefined().then(function(count) {
+	return exports.get(data).then(function(block) {
+		var domain = data.domain;
+		delete data.domain;
+		return All.domain(domain).Block.query()
+		.patch(data).skipUndefined().where('block.id', block.id).then(function(count) {
 			if (count == 0) throw new Error(`Block not found for update ${data.id}`);
 		});
 	});
