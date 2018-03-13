@@ -158,7 +158,7 @@ function listPages(Block, data) {
 }
 
 exports.search = function(data) {
-	var text = data.text.split(' ')
+	var text = data.text.split(/\W+/)
 	.filter(x => !!x)
 	.map(x => x + ':*')
 	.join(' <-> ');

@@ -55,7 +55,7 @@ exports.search = function(data) {
 		}
 	}
 	if (data.text != null) {
-		var text = data.text.split(' ').filter(x => !!x).map(x => x + ':*').join(' <-> ');
+		var text = data.text.split(/\W+/).filter(x => !!x).map(x => x + ':*').join(' <-> ');
 		q.from(Block.raw([
 			Block.raw("to_tsquery('unaccent', ?) AS query", [text]),
 			'block'
