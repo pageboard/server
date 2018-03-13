@@ -79,9 +79,11 @@ modules
 * elements-semantic-ui  
   The main set of elements.
   
-* elements-gallery
+* elements-gallery  
   portfolio/carousel combos.
   
-* elements-google
+* elements-google  
   Widgets installation (translate).
 
+* site-semantic-ui  
+  the default module for new domains, can be replaced by a custom npm-installable module.
