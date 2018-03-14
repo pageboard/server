@@ -20,6 +20,7 @@ modules
   Manipulate hrefs:
   - href.get/search/save/add/del
   and the matching HTTP REST api
+  Each href stores metadata about it (using inspector or direct data about pages).
   
   Userland api for query/form elements, allows calling internal api (granted
   permissions).
@@ -46,11 +47,11 @@ modules
   /.api/upload (POST, no internal api)
 
 * inspector  
-  Inspects any URL to get metadata about it, used by href api.
+  Inspects any URL to get metadata about it.
   - inspector.get (internal api)
 
 * mail  
-  renders a url to mail it:
+  renders a url to mail it to given recipient(s):
   - mail.send (internal api)
 
 * read  
@@ -64,7 +65,11 @@ modules
   The core editor module, uses `prosemirror` to drive HTML wysiwyg editing.
 
 * prerender  
-  the express-dom prerendering module, also used by mail module.
+  serves prerendered web pages, also used by mail and pdf modules.
+  Uses `express-dom`.
+
+* pdf  
+  renders a web page to pdf using prerender module.
 
 * server  
   the nginx/upcache/memcached system for highly-efficient userland caching
