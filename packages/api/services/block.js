@@ -44,6 +44,11 @@ exports.search = function(data) {
 	if (data.parent) {
 		q.joinRelation('parents as parent').where('parent.id', data.parent);
 	}
+	if (data.children) q.eager('[children(childrenFilter)]', {
+		childrenFilter: function(query) {
+			return query.select(Block.tableColumns);
+		}
+	});
 	if (data.id) {
 		q.where('block.id', data.id);
 	}
@@ -120,6 +125,10 @@ exports.search.schema = {
 			type: 'integer',
 			minimum: 0,
 			default: 0
+		},
+		children: {
+			type: 'boolean',
+			default: false
 		}
 	},
 	additionalProperties: false
