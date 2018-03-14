@@ -165,6 +165,10 @@ exports.find.schema = {
 		},
 		domain: {
 			type: 'string'
+		},
+		children: {
+			type: 'boolean',
+			default: false
 		}
 	},
 	additionalProperties: false
