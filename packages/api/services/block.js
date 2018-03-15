@@ -44,9 +44,9 @@ exports.search = function(data) {
 	if (data.parent) {
 		q.joinRelation('parents as parent').where('parent.id', data.parent);
 	}
-	if (data.children) q.eager('[children(childrenFilter)]', {
+	if (data.childrenType) q.eager('[children(childrenFilter)]', {
 		childrenFilter: function(query) {
-			return query.select(Block.tableColumns);
+			return query.select(Block.tableColumns).whereIn('block.type', data.childrenType);
 		}
 	});
 	if (data.id) {
@@ -77,7 +77,7 @@ exports.search = function(data) {
 			limit: data.limit
 		};
 		obj.schemas = {};
-		data.type.forEach(function(type) {
+		data.type.concat(data.childrenType || []).forEach(function(type) {
 			var sch = Block.schemaByType(type);
 			if (sch) obj.schemas[type] = sch;
 		});
@@ -112,6 +112,19 @@ exports.search.schema = {
 				}
 			}
 		},
+		childrenType: {
+			type: 'array',
+			items: {
+				type: 'string',
+				not: { // TODO permissions should be managed dynamically
+					oneOf: [{
+						const: "user"
+					}, {
+						const: "site"
+					}]
+				}
+			}
+		},
 		domain: {
 			type: 'string'
 		},
@@ -125,10 +138,6 @@ exports.search.schema = {
 			type: 'integer',
 			minimum: 0,
 			default: 0
-		},
-		children: {
-			type: 'boolean',
-			default: false
 		}
 	},
 	additionalProperties: false
@@ -163,12 +172,21 @@ exports.find.schema = {
 				}
 			}
 		},
+		childrenType: {
+			type: 'array',
+			items: {
+				type: 'string',
+				not: { // TODO permissions should be managed dynamically
+					oneOf: [{
+						const: "user"
+					}, {
+						const: "site"
+					}]
+				}
+			}
+		},
 		domain: {
 			type: 'string'
-		},
-		children: {
-			type: 'boolean',
-			default: false
 		}
 	},
 	additionalProperties: false
