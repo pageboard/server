@@ -471,7 +471,8 @@ function filesError(err, req, res, next) {
 		code = 500;
 	}
 	if (code >= 400) All.log(req, res, function() {
-		res.sendStatus(code);
+		if (err.message) res.status(code).send(err.message);
+		else res.sendStatus(code);
 	});
 	else res.sendStatus(code);
 }
