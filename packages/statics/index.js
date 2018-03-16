@@ -38,8 +38,6 @@ function init(All) {
 	return mkdirp(statics.runtime).then(function() {
 		console.info(`Static directories are served from symlinks in ${statics.runtime}`);
 
-		app.use(serveFavicon(Path.join(__dirname, 'logo', 'pageboard.ico')));
-
 		app.get(
 			"/:dir(.pageboard|.files|.uploads)/*",
 			function(req, res, next) {
@@ -75,6 +73,21 @@ function init(All) {
 				}
 			}
 		);
+
+		All.app.get('/favicon.ico', function(req, res, next) {
+			var obj = All.domain(req.hostname);
+			var site = obj.site;
+			if (!site || !site.data.favicon) {
+				throw new HttpError.NotFound("No favicon");
+			} else {
+				var path = All.statics.resolve(req.hostname, site.data.favicon);
+				if (!path) throw new HttpError.NotFound("No valid favicon path");
+				return All.image.favicon(path).then(function(blob) {
+					res.type('image/x-icon');
+					res.send(blob);
+				});
+			}
+		});
 	});
 }
 
@@ -101,6 +114,10 @@ function urlToPath(opts, domain, url) {
 	if (list[0] != "pageboard") list.splice(1, 0, domain);
 	return Path.join(opts.runtime, list.join('/'));
 }
+
+exports.resolve = function(domain, url) {
+	return urlToPath(All.opt.statics, domain, url);
+};
 
 exports.install = function(domain, {directories}, All) {
 	return rimraf(Path.join(All.opt.statics.runtime, domain || 'pageboard')).then(function() {
