@@ -1,5 +1,4 @@
 var serveStatic = require('serve-static');
-var serveFavicon = require('serve-favicon');
 var ConcatMap = require('fast-sourcemap-concat');
 var URL = require('url');
 var Path = require('path');
