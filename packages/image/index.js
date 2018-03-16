@@ -62,7 +62,7 @@ function initFile(All) {
 
 function initService(All) {
 	console.info(`Images resizable by proxy at /.api/image`);
-	All.app.get(`/.api/image`, sharpie(All.opt.image));
+	All.app.get('/.api/image', sharpie(All.opt.image));
 }
 
 exports.favicon = function(path) {
