@@ -11,7 +11,6 @@ var mkdirp = pify(require('mkdirp'));
 var xdg = require('xdg-basedir');
 var pkgup = require('pkg-up');
 var debug = require('debug')('pageboard:core');
-var which = pify(require('which'));
 var csp = require('content-security-policy-builder');
 var http = require('http');
 var Domains = require('./lib/domains');
@@ -24,8 +23,6 @@ var fs = {
 	unlink: pify(require('fs').unlink),
 	symlink: pify(require('fs').symlink)
 };
-
-var spawn = require('spawn-please');
 
 // exceptional but so natural
 global.HttpError = require('http-errors');
@@ -73,8 +70,11 @@ exports.init = function(opt) {
 
 	var All = {
 		app: app,
-		opt: opt
+		opt: opt,
+		utils: {}
 	};
+	All.utils.spawn = require('spawn-please');
+	All.utils.which = pify(require('which'));
 	All.run = run.bind(All);
 	All.query = reqQuery.bind(All);
 	All.body = reqBody.bind(All);
@@ -109,7 +109,7 @@ exports.init = function(opt) {
 
 	All.log = initLog(opt);
 
-	return which(opt.core.installer).then(function(path) {
+	return All.utils.which(opt.core.installer).then(function(path) {
 		console.info("using core installer", path);
 		opt.installerPath = path;
 	}).then(function() {
@@ -298,7 +298,7 @@ function installModules(opt, domainDir, siteModule) {
 			baseEnv.SSH_AUTH_SOCK = process.env.SSH_AUTH_SOCK;
 		}
 		if (opt.core.installer == "yarn") {
-			return spawn(opt.installerPath, [
+			return All.utils.spawn(opt.installerPath, [
 				"--non-interactive",
 				"--ignore-optional",
 				"--prefer-offline",
@@ -312,7 +312,7 @@ function installModules(opt, domainDir, siteModule) {
 				env: baseEnv
 			});
 		} else {
-			return spawn(opt.installerPath, [
+			return All.utils.spawn(opt.installerPath, [
 				"install",
 				"--save", siteModule
 			], {
