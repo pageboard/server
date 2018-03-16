@@ -1,4 +1,6 @@
 var sharpie = require('sharpie');
+sharpie.sharp.simd(true);
+
 var BufferList = require('bl');
 var DataUri = require('datauri');
 
