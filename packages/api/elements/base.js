@@ -42,12 +42,6 @@ Pageboard.elements.page = {
 			type: "integer",
 			default: 0,
 			minimum: 0
-		},
-		async: {
-			title: 'Asynchronous Page Loading',
-			description: 'Required to enable page transitions',
-			type: 'boolean',
-			default: false
 		}
 	},
 	contents: {
@@ -70,9 +64,6 @@ Pageboard.elements.page = {
 		}
 		if (block.site && block.site.favicon) {
 			doc.head.appendChild(doc.dom`<link rel="icon" href="${block.site.favicon}">`);
-		}
-		if (block.data.async) {
-			doc.body.dataset.async = "true";
 		}
 		title.textContent = block.data.title || '';
 		return doc.body;
