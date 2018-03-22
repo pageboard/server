@@ -10,18 +10,18 @@ exports = module.exports = function(opt) {
 };
 
 function init(All) {
-	All.app.get("/.api/hrefs", All.auth.restrict('webmaster'), All.query, function(req, res, next) {
-		All.run('href.search', req.query).then(function(href) {
+	All.app.get("/.api/hrefs", All.auth.restrict('webmaster'), function(req, res, next) {
+		All.run('href.search', req.site, req.query).then(function(href) {
 			res.send(href);
 		}).catch(next);
 	});
-	All.app.post("/.api/href", All.auth.restrict('webmaster'), All.body, function(req, res, next) {
-		All.run('href.add', req.body).then(function(href) {
+	All.app.post("/.api/href", All.auth.restrict('webmaster'), function(req, res, next) {
+		All.run('href.add', req.site, req.body).then(function(href) {
 			res.send(href);
 		}).catch(next);
 	});
-	All.app.delete("/.api/href", All.auth.restrict('webmaster'), All.query, function(req, res, next) {
-		All.run('href.del', req.query).then(function(href) {
+	All.app.delete("/.api/href", All.auth.restrict('webmaster'), function(req, res, next) {
+		All.run('href.del', req.site, req.query).then(function(href) {
 			res.send(href);
 		}).catch(next);
 	});
@@ -54,18 +54,15 @@ function embedThumbnail(obj) {
 	});
 }
 
-exports.get = function(data) {
+exports.get = function(site, data) {
 	return All.api.Href.query().select('href._id')
-		.whereParentDomain(data.domain)
+		.whereSite(site.id)
 		.where('href.url', data.url).first();
 };
 
 exports.get.schema = {
-	required: ['domain', 'url'],
+	required: ['url'],
 	properties: {
-		domain: {
-			type: 'string'
-		},
 		url: {
 			type: 'string'
 		}
@@ -73,9 +70,9 @@ exports.get.schema = {
 	additionalProperties: false
 };
 
-exports.search = function(data) {
+exports.search = function(site, data) {
 	var Href = All.api.Href;
-	var q = Href.query().select(Href.tableColumns).whereParentDomain(data.domain);
+	var q = Href.query().select(Href.tableColumns).whereSite(site.id);
 
 	if (data.type && data.type.length > 1) {
 		q.whereIn('href.type', data.type);
@@ -117,11 +114,7 @@ exports.search = function(data) {
 };
 
 exports.search.schema = {
-	required: ['domain'],
 	properties: {
-		domain: {
-			type: 'string'
-		},
 		type: {
 			type: 'array',
 			items: {
@@ -161,7 +154,7 @@ exports.search.schema = {
 	additionalProperties: false
 };
 
-exports.add = function(data) {
+exports.add = function(site, data) {
 	var ref = All.api.ref;
 	var Href = All.api.Href;
 	var Block = All.api.Block;
@@ -169,12 +162,12 @@ exports.add = function(data) {
 	var url = data.url;
 	var objUrl = URL.parse(url);
 	var isLocal = false;
-	if (objUrl.hostname == data.domain) {
+	if (site.data.domain == objUrl.hostname) {
 		url = data.url;
 		data.url = objUrl.path;
 		isLocal = true;
 	} else if (!objUrl.hostname) {
-		url = All.domain(data.domain).host + url;
+		url = site.href + url;
 		isLocal = true;
 	}
 
@@ -182,15 +175,14 @@ exports.add = function(data) {
 
 	if (isLocal && !data.url.startsWith('/.')) {
 		// consider it's a page
-		p = All.page.get({
-			url: data.url,
-			domain: data.domain
+		p = All.page.get(site, {
+			url: data.url
 		}).then(function(pageBlock) {
 			return {
 				mime: 'text/html; charset=utf-8',
 				type: 'link',
 				title: pageBlock.data.title,
-				site: data.domain,
+				site: null,
 				ext: 'html',
 				pathname: objUrl.pathname
 			};
@@ -204,10 +196,10 @@ exports.add = function(data) {
 	}
 	return p.then(function(result) {
 		if (isLocal) result.url = data.url;
-		return exports.get(data).then(function(href) {
+		return exports.get(site, data).then(function(href) {
 			if (!href) {
 				return Href.query().insert(Object.assign({
-					_parent_id: All.site.get({domain: data.domain}).clearSelect().select('site._id')
+					_parent_id: site._id
 				}, result)).returning(Href.tableColumns);
 			} else {
 				return Href.query().patch(result).where('_id', href._id)
@@ -218,11 +210,8 @@ exports.add = function(data) {
 };
 
 exports.add.schema = {
-	required: ['domain', 'url'],
+	required: ['url'],
 	properties: {
-		domain: {
-			type: 'string'
-		},
 		url: {
 			type: 'string'
 		}
@@ -230,11 +219,11 @@ exports.add.schema = {
 	additionalProperties: false
 };
 
-exports.save = function(data) {
+exports.save = function(site, data) {
 	var Href = All.api.Href;
-	return exports.get(data).then(function(href) {
+	return exports.get(site, data).then(function(href) {
 		if (!href) {
-			return exports.add(data);
+			return exports.add(site, data);
 		} else {
 			return Href.query().patch({title: data.title}).skipUndefined().where('_id', href._id);
 		}
@@ -242,11 +231,8 @@ exports.save = function(data) {
 };
 
 exports.save.schema = {
-	required: ['domain', 'url', 'title'],
+	required: ['url', 'title'],
 	properties: {
-		domain: {
-			type: 'string'
-		},
 		url: {
 			type: 'string'
 		},
@@ -257,8 +243,8 @@ exports.save.schema = {
 	additionalProperties: false
 };
 
-exports.del = function(data) {
-	return exports.get(data).throwIfNotFound().then(function(href) {
+exports.del = function(site, data) {
+	return exports.get(site, data).throwIfNotFound().then(function(href) {
 		return All.api.Href.query().patch({
 			visible: false
 		}).where('_id', href._id).then(function() {
@@ -269,11 +255,8 @@ exports.del = function(data) {
 };
 
 exports.del.schema = {
-	required: ['domain', 'url'],
+	required: ['url'],
 	properties: {
-		domain: {
-			type: 'string'
-		},
 		url: {
 			type: 'string'
 		}
@@ -281,40 +264,22 @@ exports.del.schema = {
 	additionalProperties: false
 };
 
-exports.migrate = function(data) {
-	return All.api.Href.query().where('site', data.domain).patch({
-		site: data.data.domain
-	}).skipUndefined();
-};
-
-exports.migrate.schema = {
-	required: ['domain', 'data'],
-	properties: {
-		domain: {
-			type: 'string'
-		},
-		data: {
-			type: 'object',
-			required: ['domain'],
-			properties: {
-				domain: {
-					type: 'string'
-				}
-			}
-		}
-	}
-};
-
 exports.gc = function(days) {
+	// TODO use sites schemas to known which paths to check:
+	// for example, data.url comes from elements.image.properties.url.input.name == "href"
+
+	// TODO href.site IS NULL used to be p.data->>'domain' = href.site
+	// BOTH are wrong since they won't touch external links...
+	// TODO the outer join on url is also a bit wrong since it does not use href._parent !!!
 	return All.api.Href.raw(`DELETE FROM href USING (
 		SELECT count(block.*) AS count, href._id FROM href
 		LEFT OUTER JOIN block ON (block.data->>'url' = href.url)
 		LEFT JOIN relation AS r ON (r.child_id = block._id)
-		LEFT JOIN block AS p ON (p._id = r.parent_id AND p.type='site' AND p.data->>'domain' = href.site)
+		LEFT JOIN block AS p ON (p._id = r.parent_id AND p.type='site' AND href.site IS NULL)
 		WHERE extract('day' from now() - href.updated_at) >= ?
 		GROUP BY href._id
 	) AS usage WHERE usage.count = 0 AND href._id = usage._id
-	RETURNING href.type, href.pathname, href.site AS hostname`, [
+	RETURNING href.type, href.pathname, p.id AS site`, [
 		days
 	]).then(function(result) {
 		return result.rows;

@@ -113,9 +113,13 @@ Href.relationMappings = {
 	}
 };
 
-QueryBuilder.prototype.whereParentDomain = function(domain) {
+class HrefQueryBuilder extends QueryBuilder {}
+
+HrefQueryBuilder.prototype.whereSite = function(id) {
 	return this.joinRelation('parent')
 		.where('parent.type', 'site')
-		.whereJsonText('parent.data:domain', domain);
+		.where('parent.id', id);
 };
+
+Href.QueryBuilder = HrefQueryBuilder;
 

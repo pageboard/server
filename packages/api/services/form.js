@@ -8,14 +8,14 @@ exports = module.exports = function(opt) {
 };
 
 function init(All) {
-	All.app.get("/.api/form", All.query, function(req, res, next) {
-		All.run('form.query', req.query).then(function(data) {
+	All.app.get("/.api/form", function(req, res, next) {
+		All.run('form.query', req.site, req.query).then(function(data) {
 			res.json(data);
 		}).catch(next);
 	});
-	All.app.post("/.api/form", All.body, function(req, res, next) {
+	All.app.post("/.api/form", function(req, res, next) {
 		req.body._referer = req.headers.referer;
-		All.run('form.submit', req.body).then(function(data) {
+		All.run('form.submit', req.site, req.body).then(function(data) {
 			if (data.redirect && req.accepts('html') && !req.xhr) {
 				res.location(data.redirect);
 			}	else {
@@ -25,44 +25,36 @@ function init(All) {
 	});
 }
 
-exports.query = function(data) {
-	return All.run('block.get', {
-		id: data._id,
-		domain: data.domain
+exports.query = function(site, data) {
+	return All.run('block.get', site, {
+		id: data._id
 	}).then(function(form) {
 		var fd = form.data.action || {};
 		if (!fd.type) throw new HttpError.BadRequest("Missing form action.type");
 		var id = fd.vars && fd.vars.id && data[fd.vars.id] || data.id;
-		return All.run('block.get', {
+		return All.run('block.get', site, {
 			id: id,
-			type: fd.type,
-			domain: data.domain
+			type: fd.type
 		});
 	});
 };
 exports.query.schema = {
-	required: ["_id", "domain"],
+	required: ["_id"],
 	properties: {
 		_id: {
-			type: 'string'
-		},
-		domain: {
 			type: 'string'
 		}
 	}
 };
 
-exports.submit = function(data) {
+exports.submit = function(site, data) {
 	var referer = URL.parse(data._referer, true);
 	delete data._referer;
-	return All.run('block.get', {
-		id: data._id,
-		domain: data.domain
+	return All.run('block.get', site, {
+		id: data._id
 	}).then(function(form) {
 		var fd = form.data.action || {};
 		if (fd.method != "post") throw new HttpError.MethodNotAllowed("Only post allowed");
-		var domain = data.domain;
-		delete data.domain;
 		delete data._id;
 
 		var setVar = All.search.setVar;
@@ -97,8 +89,7 @@ exports.submit = function(data) {
 		if (fd.consts) Object.keys(fd.consts).forEach(function(key) {
 			setVar(params, key, fd.consts[key]);
 		});
-		params.domain = domain;
-		return All.run(fd.call, params).then(function(response) {
+		return All.run(fd.call, site, params).then(function(response) {
 			if (typeof response != "obj") response = {};
 			var fd = form.data.redirection;
 			if (fd.url) {
@@ -121,12 +112,9 @@ exports.submit = function(data) {
 	});
 };
 exports.submit.schema = {
-	required: ["_id", "domain"],
+	required: ["_id"],
 	properties: {
 		_id: {
-			type: 'string'
-		},
-		domain: {
 			type: 'string'
 		}
 	}

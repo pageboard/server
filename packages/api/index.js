@@ -1,5 +1,6 @@
 var objection = require('objection');
 var AjvKeywords = require('ajv-keywords');
+var bodyParserJson = require('body-parser').json();
 var ajvApi = require('ajv')({
 	$data: true,
 	allErrors: true,
@@ -92,12 +93,12 @@ function init(All) {
 		All.cache.tag('share', 'file').for('5s'),
 		function(req, res, next) {
 			res.type('text/javascript');
-			var source = All.domain(req.hostname).Block.source;
+			var source = req.site.Block.source;
 			res.send('if (!window.Pageboard) Pageboard = {};\nPageboard.elements = ' + source);
 		}
 	);
 
-	All.app.use('/.api/*', All.cache.tag('api'));
+	All.app.use('/.api/*', All.cache.tag('api'), bodyParserJson);
 }
 
 exports.check = function(fun, data) {
@@ -117,38 +118,27 @@ exports.check = function(fun, data) {
 	}
 };
 
-exports.install = function(domain, {elements, directories}, All) {
-	debug("installing", domain, elements, directories);
+exports.install = function(site, {elements, directories}, All) {
+	debug("installing", id, elements, directories);
 	// TODO chicken and egg problem, we want to sort using the element priority
 	// but we can't load it if it's not in the right order
 	// besides that, mind that elements are already ordered in their directory by core initConfig
 	var eltsMap = {};
-	var allDirs = domain ? All.opt.directories.concat(directories) : directories;
-	var allElts = domain ? All.opt.elements.concat(elements) : elements;
+	var id = site ? site.id : null;
+	var allDirs = id ? All.opt.directories.concat(directories) : directories;
+	var allElts = id ? All.opt.elements.concat(elements) : elements;
 	return Promise.all(allElts.map(function(path) {
-		return importElements(path, eltsMap, domain, allDirs);
+		return importElements(path, eltsMap, id, allDirs);
 	})).then(function() {
-		var Block = exports.models.Block.extendSchema(domain, eltsMap);
-		if (domain) {
-			var site = (All.domain(domain) || {}).site;
-			if (!site) return Block; // happens when using from cli
-			return preparePage(All.domain(domain).site, eltsMap).then(function() {
+		var Block = exports.models.Block.extendSchema(id, eltsMap);
+		if (id) {
+			return preparePage(site, eltsMap).then(function() {
 				Block.source = toSource(eltsMap);
-				Block.domain = domain;
-				return Block;
+				site.Block = Block;
 			});
 		} else {
 			exports.Block = All.api.Block = Block;
 		}
-	});
-};
-
-exports.initDomainBlock = function(domain, obj) {
-	return All.site.get({domain: domain}).then(function(site) {
-		obj.site = site;
-		return All.install(site.data).then(function(Block) {
-			obj.Block = Block;
-		});
 	});
 };
 
@@ -176,8 +166,8 @@ function preparePage(site, elts) {
 		else version = '0';
 	}
 	return Promise.all([
-		All.statics.bundle(site.data.domain, scripts, `scripts-${version}.js`),
-		All.statics.bundle(site.data.domain, styles, `styles-${version}.css`)
+		All.statics.bundle(site, scripts, `scripts-${version}.js`),
+		All.statics.bundle(site, styles, `styles-${version}.css`)
 	]).then(function(both) {
 		elts.page.scripts = [both[0]];
 		elts.page.stylesheets = [both[1]];
@@ -235,7 +225,7 @@ function removeEmptyPath(what, name, path) {
 	}
 }
 
-function rewriteElementPaths(name, path, elt, domain, directories) {
+function rewriteElementPaths(name, path, elt, id, directories) {
 	var mount = directories.find(function(mount) {
 		return path.startsWith(mount.from);
 	});
@@ -243,7 +233,7 @@ function rewriteElementPaths(name, path, elt, domain, directories) {
 		console.warn(`Warning: element ${path} cannot be mounted`);
 		return;
 	}
-	var basePath = domain ? mount.to.replace(domain + "/", "") : mount.to;
+	var basePath = id ? mount.to.replace(id + "/", "") : mount.to;
 	var eltPathname = Path.join(basePath, path.substring(mount.from.length));
 	var eltDirPath = Path.dirname(eltPathname);
 	var promotePathFn = promotePath.bind(null, eltDirPath);
@@ -258,7 +248,7 @@ function rewriteElementPaths(name, path, elt, domain, directories) {
 	});
 }
 
-function importElements(path, eltsMap, domain, directories) {
+function importElements(path, eltsMap, id, directories) {
 	return fs.readFile(path).then(function(buf) {
 		var script = new vm.Script(buf, {filename: path});
 		var copyMap = Object.assign({}, eltsMap);
@@ -279,7 +269,7 @@ function importElements(path, eltsMap, domain, directories) {
 					continue;
 				}
 			}
-			rewriteElementPaths(name, path, elt, domain, directories);
+			rewriteElementPaths(name, path, elt, id, directories);
 			eltsMap[name] = elt;
 		}
 	}).catch(function(err) {
@@ -378,8 +368,8 @@ exports.gc = function(All) {
 		}
 		return Promise.all(hrefResult.map(function(obj) {
 			if (obj.type == "link") return Promise.resolve();
-			return All.upload.gc(obj.hostname, obj.pathname).catch(function(ex) {
-				console.error("gc error", obj.domain, obj.url, ex);
+			return All.upload.gc(obj.site, obj.pathname).catch(function(ex) {
+				console.error("gc error", obj.id, obj.url, ex);
 			});
 		}));
 	});

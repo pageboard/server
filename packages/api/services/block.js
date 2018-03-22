@@ -10,22 +10,19 @@ exports = module.exports = function(opt) {
 function init(All) {
 }
 
-exports.get = function(data) {
-	var Block = All.domain(data.domain).Block;
+exports.get = function(site, data) {
+	var Block = site.Block;
 	var q = Block.query()
 		.select(Block.tableColumns)
-		.whereDomain(Block.domain)
+		.whereSite(site.id)
 		.where('block.id', data.id);
 	if (data.type) q.where('block.type', data.type);
 	return q.first().throwIfNotFound();
 };
 exports.get.schema = {
-	required: ['id', 'domain'],
+	required: ['id'],
 	properties: {
 		id: {
-			type: 'string'
-		},
-		domain: {
 			type: 'string'
 		},
 		type: {
@@ -35,11 +32,11 @@ exports.get.schema = {
 	additionalProperties: false
 };
 
-exports.search = function(data) {
-	var Block = All.domain(data.domain).Block;
+exports.search = function(site, data) {
+	var Block = site.Block;
 	var q = Block.query()
 		.select(Block.tableColumns)
-		.whereDomain(Block.domain)
+		.whereSite(site.id)
 		.whereIn('block.type', data.type);
 	if (data.parent) {
 		q.joinRelation('parents as parent').where('parent.id', data.parent);
@@ -85,7 +82,7 @@ exports.search = function(data) {
 	});
 };
 exports.search.schema = {
-	required: ['domain', 'type'],
+	required: ['type'],
 	properties: {
 		text: {
 			type: 'string'
@@ -125,9 +122,6 @@ exports.search.schema = {
 				}
 			}
 		},
-		domain: {
-			type: 'string'
-		},
 		limit: {
 			type: 'integer',
 			minimum: 0,
@@ -143,10 +137,10 @@ exports.search.schema = {
 	additionalProperties: false
 };
 
-exports.find = function(data) {
+exports.find = function(site, data) {
 	data.limit = 1;
 	data.offset = 0;
-	return exports.search(data).then(function(obj) {
+	return exports.search(site, data).then(function(obj) {
 		return {
 			data: obj.data.length == 1 ? obj.data[0] : null,
 			schemas: obj.schemas
@@ -154,7 +148,7 @@ exports.find = function(data) {
 	});
 };
 exports.find.schema = {
-	required: ['domain', 'id', 'type'],
+	required: ['id', 'type'],
 	properties: {
 		id: {
 			type: 'string'
@@ -184,20 +178,15 @@ exports.find.schema = {
 					}]
 				}
 			}
-		},
-		domain: {
-			type: 'string'
 		}
 	},
 	additionalProperties: false
 };
 
-exports.add = function(data) {
-	var domain = data.domain;
-	delete data.domain;
+exports.add = function(site, data) {
 	var id = data.parent;
 	delete data.parent;
-	return All.domain(domain).Block.query().whereJsonText('block.data:domain', domain)
+	return site.Block.query().where('block.id', site.id)
 	.first().throwIfNotFound().then(function(site) {
 		return site.$relatedQuery('children').insert(data).then(function(child) {
 			if (!id) return child;
@@ -209,11 +198,7 @@ exports.add = function(data) {
 	});
 };
 exports.add.schema = {
-	required: ['domain'],
 	properties: {
-		domain: {
-			type: 'string'
-		},
 		parent: {
 			type: 'string'
 		}
@@ -221,22 +206,17 @@ exports.add.schema = {
 	additionalProperties: true
 };
 
-exports.save = function(data) {
+exports.save = function(site, data) {
 	return exports.get(data).then(function(block) {
-		var domain = data.domain;
-		delete data.domain;
-		return All.domain(domain).Block.query()
+		return site.Block.query()
 		.patch(data).skipUndefined().where('block.id', block.id).then(function(count) {
 			if (count == 0) throw new Error(`Block not found for update ${data.id}`);
 		});
 	});
 };
 exports.save.schema = {
-	required: ['domain', 'id', 'type'],
+	required: ['id', 'type'],
 	properties: {
-		domain: {
-			type: 'string'
-		},
 		id: {
 			type: 'string'
 		},
@@ -247,18 +227,15 @@ exports.save.schema = {
 	additionalProperties: true
 };
 
-exports.del = function(data) {
-	var Block = All.domain(data.domain).Block;
+exports.del = function(site, data) {
+	var Block = site.Block;
 	return Block.query().where('id',
-		Block.query().select('block.id').where('block.id', data.id).whereDomain(data.domain)
+		Block.query().select('block.id').where('block.id', data.id).whereSite(site.id)
 	).delete();
 };
 exports.del.schema = {
-	required: ['domain', 'id', 'type'],
+	required: ['id', 'type'],
 	properties: {
-		domain: {
-			type: 'string'
-		},
 		id: {
 			type: 'string'
 		},

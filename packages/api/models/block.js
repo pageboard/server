@@ -195,15 +195,19 @@ Block.genId = function(length) {
 	});
 };
 
-QueryBuilder.prototype.whereDomain = function(domain) {
+class BlockQueryBuilder extends QueryBuilder {}
+
+BlockQueryBuilder.prototype.whereSite = function(siteId) {
 	return this.joinRelation('parents')
 		.where('parents.type', 'site')
-		.whereJsonText('parents.data:domain', domain);
+		.where('parents.id', siteId);
 };
 
-QueryBuilder.prototype.whereJsonText = function(a) {
+BlockQueryBuilder.prototype.whereJsonText = function(a) {
 	var args = Array.from(arguments).slice(1);
 	args.unshift(ref(a).castText());
 	return this.where.apply(this, args);
 };
+
+Block.QueryBuilder = BlockQueryBuilder;
 

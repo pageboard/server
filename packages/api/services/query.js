@@ -15,8 +15,8 @@ exports = module.exports = function(opt) {
 */
 
 function init(All) {
-	All.app.get("/.api/query", All.query, function(req, res, next) {
-		All.run('search.query', req.query).then(function(data) {
+	All.app.get("/.api/query", function(req, res, next) {
+		All.run('search.query', req.site, req.query).then(function(data) {
 			res.json(data);
 		}).catch(next);
 	});
@@ -25,15 +25,12 @@ function init(All) {
 	});
 }
 
-exports.query = function(data) {
-	return All.run('block.get', {
-		id: data._id,
-		domain: data.domain
+exports.query = function(site, data) {
+	return All.run('block.get', site, {
+		id: data._id
 	}).then(function(parent) {
 		var fd = parent.data.query || {};
 		if (!fd.call) throw new HttpError.BadRequest("Missing query.call");
-		var domain = data.domain;
-		delete data.domain;
 		delete data._id;
 		var params = {};
 		// consts: destPath: val
@@ -56,8 +53,7 @@ exports.query = function(data) {
 			setVar(params, key, fd.consts[key]);
 		});
 
-		params.domain = domain;
-		return All.run(fd.call, params);
+		return All.run(fd.call, site, params);
 	});
 };
 

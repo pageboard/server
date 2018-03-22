@@ -1,5 +1,4 @@
 Pageboard.elements.site = {
-	required: ['domain'],
 	properties : {
 		title: {
 			title: 'Site title',
@@ -7,7 +6,8 @@ Pageboard.elements.site = {
 		},
 		domain: {
 			title: 'Domain name',
-			type: 'string'
+			type: 'string',
+			format: 'hostname'
 		},
 		module: {
 			title: 'Module name',

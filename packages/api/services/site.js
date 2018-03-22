@@ -9,12 +9,11 @@ function init(All) {
 }
 
 function QuerySite(data) {
-	var q = All.api.Block.query().alias('site').first().throwIfNotFound();
-	if (data.id) {
-		q.where('site.id', data.id);
-	} else {
-		q.whereJsonText('site.data:domain', data.domain).where('site.type', 'site');
-	}
+	var q = All.api.Block.query().alias('site')
+	.first().throwIfNotFound()
+	.where('site.type', 'site');
+	if (data.id) q.where('site.id', data.id);
+	else if (data.domain) q.whereJsonText('site.data:domain', data.domain);
 	return q;
 }
 
@@ -23,19 +22,21 @@ exports.get = function(data) {
 };
 
 exports.get.schema = {
-	oneOf: [{
-		required: ['domain']
-	}, {
-		required: ['id']
-	}],
-	properties: {
-		id: {
-			type: 'string'
-		},
-		domain: {
-			type: 'string'
+	anyOf: [{
+		required: ['id'],
+		properties: {
+			id: {
+				type: 'string'
+			}
 		}
-	},
+	}, {
+		required: ['domain'],
+		properties: {
+			domain: {
+				type: 'string'
+			}
+		}
+	}],
 	additionalProperties: false
 };
 
@@ -62,7 +63,8 @@ exports.search.schema = {
 	required: ['email'],
 	properties: {
 		email: {
-			type: 'string'
+			type: 'string',
+			format: 'email'
 		},
 		limit: {
 			type: 'integer',
@@ -79,12 +81,16 @@ exports.search.schema = {
 };
 
 exports.add = function(data) {
-	return QuerySite({domain: data.data.domain}).then(function(site) {
-		console.info("Not adding already existing site", data.data.domain);
+	return QuerySite({id: data.id}).then(function(site) {
+		console.info("There is already a site with this id", data.id);
 	}).catch(function(err) {
 		data = Object.assign({
 			type: 'site'
 		}, data);
+		if (data.data.domain) {
+			console.info("Use site.save to change site.data.domain");
+			delete data.data.domain; // setting domain is done and checked elsewhere
+		}
 		return All.user.get({
 			email: data.email
 		}).select('_id').then(function(user) {
@@ -104,8 +110,11 @@ exports.add = function(data) {
 };
 
 exports.add.schema = {
-	required: ['email', 'data'],
+	required: ['id', 'email', 'data'],
 	properties: {
+		id: {
+			type: 'string'
+		},
 		email: {
 			type: 'string',
 			format: 'email'
@@ -117,26 +126,15 @@ exports.add.schema = {
 	additionalProperties: false
 };
 
+// TODO update All.domain(data.domain).site, also use it
 exports.save = function(data) {
 	return exports.get(data).then(function(site) {
-		if (data.domain) delete data.domain;
-		var sameDomain = (data.data && data.data.domain || null) == (site.data && site.data.domain || null);
 		var sameModule = (data.data && data.data.module || null) == (site.data && site.data.module || null);
 		var sameVersion = (data.data && data.data.version || null) == (site.data && site.data.version || null);
 		// ensure we don't just empty site.data by mistake
 		data.data = Object.assign({}, site.data, data.data);
 		data.type = site.type; // or else schema validation does not happen
 		return All.api.Block.query().where('id', site.id).patch(data).then(function(result) {
-			if (sameDomain) return result;
-			return All.href.migrate({
-				domain: site.data.domain,
-				data: {
-					domain: data.data.domain
-				}
-			}).then(function() {
-				return result;
-			});
-		}).then(function(result) {
 			if (sameModule == false || sameVersion == false) {
 				return All.install(data.data).then(() => result);
 			} else {
@@ -146,9 +144,9 @@ exports.save = function(data) {
 	});
 };
 exports.save.schema = {
-	required: ['domain', 'data'],
+	required: ['id', 'data'],
 	properties: {
-		domain: {
+		id: {
 			type: 'string'
 		},
 		data: {
@@ -161,22 +159,28 @@ exports.save.schema = {
 exports.del = function(data) {
 	return QuerySite(data).del();
 };
-exports.del.schema = exports.get.schema;
+exports.del.schema = {
+	required: ['id'],
+	properties: {
+		id: {
+			type: 'string'
+		}
+	},
+	additionalProperties: false
+};
 
 exports.own = function(data) {
-	if (!data.email) throw new HttpError.BadRequest("Missing email");
-	if (!data.domain) throw new HttpError.BadRequest("Missing domain");
 	return QuerySite(data).select('site._id').then(function(site) {
 		return All.user.get({
 			email: data.email
 		}).clearSelect().select('user._id')
 		.eager('[children(ownedSites), parents(owningSites)]', {
 			ownedSites: function(builder) {
-				builder.select('_id').whereJsonText('data:domain', data.domain)
+				builder.select('_id').where('id', data.id)
 				.where('type', 'site');
 			},
 			owningSites: function(builder) {
-				builder.select('_id').whereJsonText('data:domain', data.domain)
+				builder.select('_id').where('id', data.id)
 				.where('type', 'site');
 			}
 		}).then(function(user) {
@@ -197,13 +201,13 @@ exports.own = function(data) {
 	});
 };
 exports.own.schema = {
-	required: ['email', 'domain'],
+	required: ['email', 'id'],
 	properties: {
 		email: {
 			type: 'string',
 			format: 'email'
 		},
-		domain: {
+		id: {
 			type: 'string'
 		}
 	},
