@@ -176,11 +176,11 @@ exports.own = function(data) {
 		}).clearSelect().select('user._id')
 		.eager('[children(ownedSites), parents(owningSites)]', {
 			ownedSites: function(builder) {
-				builder.select('_id').where('id', data.id)
+				builder.alias('site').select('_id').where('site.id', data.id)
 				.where('type', 'site');
 			},
 			owningSites: function(builder) {
-				builder.select('_id').where('id', data.id)
+				builder.alias('site').select('_id').where('site.id', data.id)
 				.where('type', 'site');
 			}
 		}).then(function(user) {
