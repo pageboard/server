@@ -1,33 +1,101 @@
-var DNS = require('dns');
-
+var DNS = {
+	lookup: require('util').promisify(require('dns').lookup),
+	reverse: require('util').promisify(require('dns').reverse)
+};
+var pageboardNames;
 module.exports = Domains;
 
 function Domains(All) {
 	this.All = All;
-	this.map = {};
+	this.sites = {}; // cache sites by id
+	this.hosts = {}; // cache hosts by hostname
 }
 
-Domains.prototype.get = function(domain) {
-	return this.map[domain];
-};
-
-Domains.prototype.set = function(domain, obj) {
-	var prev = this.map[domain];
-	if (!prev) prev = this.map[domain] = {};
-	Object.assign(prev, obj);
-	return prev;
-};
-
+/*
+maintain a cache (hosts) of requested hostnames
+- each hostname is checked to resolve to pageboard current IP (which is resolved and cached,
+so adding an IP to pageboard and pointing a host to that IP needs a restart)
+- then each hostname, if it is a subdomain of pageboard, gives a site.id, or if not, a site.domain
+- site instance is loaded and cached
+- site is installed and init() is holded by a hanging promise
+- site installation calls upcache update url, which resolves the hanging promise
+- init returns for everyone
+*/
 Domains.prototype.init = function(req) {
-	var api = this.All.api;
-	var domain = req.hostname;
-	var obj = this.get(domain) || this.set(domain, {});
-	if (obj.error) {
-		return Promise.reject(obj.error);
+	var All = this.All;
+	var sites = this.sites;
+	var hosts = this.hosts;
+	var hostname = req.hostname;
+	var host = hosts[hostname];
+	if (!host) {
+		hosts[hostname] = host = {
+			name: hostname
+		};
 	}
-	if (obj.resolvable) {
-		return obj.resolvable;
+	if (host._error) {
+		return Promise.reject(host._error);
 	}
+	var p;
+	if (host.resolvable) {
+		if (req.url == "/.well-known/upcache") {
+			host.ready();
+		}
+		p = host.resolvable;
+	} else p = Promise.resolve().then(function() {
+		return this.check(host, req);
+	}.bind(this)).then(function(hostname) {
+		var site = host.id && sites[host.id];
+		if (site) return site;
+		var id;
+		pageboardNames.some(function(hn) {
+			if (hostname.endsWith(hn)) {
+				id = hostname.substring(0, hostname.length - hn.length);
+				return true;
+			}
+		});
+		var data = {};
+		if (id) data.id = id;
+		else data.domain = host.name;
+		return All.site.get(data).select('_id').then(function(site) {
+			sites[site.id] = site;
+			if (site.data.domain && !hosts[site.data.domain]) hosts[site.data.domain] = {
+				id: site.id,
+				name: site.data.domain
+			};
+			// we need href for cache.install(site) right now
+			site.href = host.href;
+			return All.install(site);
+		});
+	}).catch(function(err) {
+		host._error = err;
+		throw err;
+	}).then(function(site) {
+		return new Promise(function(resolve) {
+			host.ready = function() {
+				resolve(site);
+			};
+		});
+	});
+	host.resolvable = p;
+	return p.then(function(site) {
+		host.id = site.id;
+		// let's optimize this
+		if (req.url.startsWith('/.api/')) {
+			site = site.$clone();
+		} else {
+			site = {
+				id: site.id
+			};
+		}
+		if (!site.data) site.data = {};
+		if (!site.data.domain) site.data.domain = host.name;
+		site.href = host.href;
+		req.site = site;
+		req.upgradable = host.upgradable;
+	});
+};
+
+Domains.prototype.check = function(host, req) {
 	var fam = 4;
 	var ip = req.get('X-Forwarded-By');
 	if (ip) {
@@ -37,48 +105,58 @@ Domains.prototype.init = function(req) {
 		ip = address.address;
 		fam = address.family == 'IPv6' ? 6 : 4;
 	}
-	obj['ip' + fam] = ip;
+	var ips = {};
+	ips['ip' + fam] = ip;
 	var localhost4 = "127.0.0.1";
 	var localhost6 = "::1";
 	var prefix = '::ffff:';
 	if (fam == 6) {
 		if (ip.startsWith(prefix)) {
 			var tryFour = ip.substring(prefix.length);
-			if (!isIPv6(tryFour)) obj.ip4 = tryFour;
+			if (!isIPv6(tryFour)) ips.ip4 = tryFour;
 		}
 	}
 	var local = false;
-	if (obj.ip4 == localhost4) {
+	if (ips.ip4 == localhost4) {
 		local = true;
-		if (!obj.ip6) obj.ip6 = localhost6;
-	} else if (obj.ip6 == localhost6) {
+		if (!ips.ip6) ips.ip6 = localhost6;
+	} else if (ips.ip6 == localhost6) {
 		local = true;
-		if (!obj.ip4) obj.ip4 = localhost4;
+		if (!ips.ip4) ips.ip4 = localhost4;
 	}
-	obj.upgradable = req.get('Upgrade-Insecure-Requests') && !local;
 
-	obj.host = (obj.upgradable ? 'https' : req.protocol) + '://' + req.get('Host');
-	obj.resolvable = new Promise(function(resolve, reject) {
-		DNS.lookup(domain, {
-			all: false,
-		}, function(err, address, family) {
-			if (address == domain) return reject(new Error("domain is an ip " + domain));
-			if (err) return reject(err);
-			var expected = obj['ip' + family];
-			if (address == expected) {
-				return resolve(true);
-			} else {
-				reject(new HttpError.NotFound(`Wrong ip for domain: ${address}, expected ${expected}`));
+	host.upgradable = req.get('Upgrade-Insecure-Requests') && !local;
+	host.href = (host.upgradable ? 'https' : req.protocol) + '://' + req.get('Host');
+
+	var hostname = host.name;
+
+	var p = Promise.resolve();
+
+	if (!pageboardNames) {
+		if (local) {
+			pageboardNames = ['.localdomain'];
+		} else {
+			p = DNS.reverse(ip).then(function(hostnames) {
+				pageboardNames = hostnames.map(function(hn) {
+					return '.' + hn;
+				});
+			});
+		}
+	}
+	p = p.then(function() {
+		return DNS.lookup(hostname, {
+			all: false
+		}).then(function(lookup) {
+			if (lookup.address == hostname) throw new Error("hostname is an ip " + hostname);
+			var expected = ips['ip' + lookup.family];
+			if (lookup.address != expected) {
+				throw new HttpError.NotFound(`Wrong ip${lookup.family} for hostname: ${lookup.address}
+				expected ${expected}`);
 			}
+			return hostname;
 		});
 	});
-	return obj.resolvable.then(function() {
-		// and initialize Block
-		return api.initDomainBlock(domain, obj);
-	}).catch(function(err) {
-		obj.error = err;
-		throw err;
-	});
+	return p;
 };
 
 function isIPv6(ip) {

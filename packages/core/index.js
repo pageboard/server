@@ -2,7 +2,6 @@ var pify = require('util').promisify;
 if (!pify) pify = require('util').promisify = require('util-promisify');
 var Path = require('path');
 var express = require('express');
-var bodyParserJson = require('body-parser').json();
 var morgan = require('morgan');
 var pad = require('pad');
 var prettyBytes = require('pretty-bytes');
@@ -76,13 +75,8 @@ exports.init = function(opt) {
 	All.utils.spawn = require('spawn-please');
 	All.utils.which = pify(require('which'));
 	All.run = run.bind(All);
-	All.query = reqQuery.bind(All);
-	All.body = reqBody.bind(All);
 	All.install = install.bind(All);
 	All.domains = new Domains(All);
-	All.domain = function(domain) {
-		return All.domains.get(domain);
-	};
 
 	if (opt.global) global.All = All;
 
@@ -227,53 +221,48 @@ function initLog(opt) {
 	return morgan(opt.core.log);
 }
 
-function install(data) {
-	// actually site.data
-	var domain = data.domain;
-	var module = data.module;
-	if (!domain) throw new Error("Missing domain");
+function install(site) {
+	var module = site.data.module;
 	var All = this;
-	var installedBlock;
 	var dataDir = Path.join(All.opt.dirs.data, 'sites');
-	var domainDir = Path.join(dataDir, domain);
+	var siteDir = Path.join(dataDir, site.id);
 	var config = {
 		directories: [],
 		elements: []
 	};
-	debug("install domain in", domainDir);
-	return installModules(All.opt, domainDir, module).then(function(moduleName) {
-		var siteModuleDir = Path.join(domainDir, 'node_modules', moduleName);
+	debug("install site in", siteDir);
+	return installModules(All.opt, siteDir, module).then(function(moduleName) {
+		var siteModuleDir = Path.join(siteDir, 'node_modules', moduleName);
 		return fs.readFile(Path.join(siteModuleDir, "package.json")).then(function(buf) {
 			return JSON.parse(buf.toString());
 		}).then(function(pkg) {
 			return Promise.all(Object.keys(pkg.dependencies || {}).map(function(subModule) {
-				var moduleDir = Path.join(domainDir, 'node_modules', subModule);
-				return initConfig(moduleDir, domain, subModule, config);
+				var moduleDir = Path.join(siteDir, 'node_modules', subModule);
+				return initConfig(moduleDir, site.id, subModule, config);
 			})).then(function() {
-				return initConfig(siteModuleDir, domain, moduleName, config);
+				return initConfig(siteModuleDir, site.id, moduleName, config);
 			});
 		});
 	}).catch(function(err) {
-		if (module) console.error("Could not install", domainDir, module, err);
+		if (module) console.error("Could not install", siteDir, module, err);
 	}).then(function() {
-		return All.statics.install(domain, config, All);
+		return All.statics.install(site, config, All);
 	}).then(function() {
-		return All.api.install(domain, config, All);
-	}).then(function(Block) {
-		installedBlock = Block;
-		return All.cache.install(domain, config, All);
+		return All.api.install(site, config, All);
 	}).then(function() {
-		return installedBlock;
+		return All.cache.install(site);
+	}).then(function() {
+		return site;
 	}).catch(function(err) {
 		console.error(err);
 	});
 };
 
-function installModules(opt, domainDir, siteModule) {
-	if (!siteModule) return Promise.reject(new Error("no domain module to install"));
-	debug("Installing site module", domainDir, siteModule);
-	var pkgPath = Path.join(domainDir, 'package.json');
-	return mkdirp(domainDir).then(function() {
+function installModules(opt, siteDir, siteModule) {
+	if (!siteModule) return Promise.reject(new Error("no site module to install"));
+	debug("Installing site module", siteDir, siteModule);
+	var pkgPath = Path.join(siteDir, 'package.json');
+	return mkdirp(siteDir).then(function() {
 		return fs.readFile(pkgPath).then(function(buf) {
 			var pkg = JSON.parse(buf.toString());
 			return pkg.keep;
@@ -307,7 +296,7 @@ function installModules(opt, domainDir, siteModule) {
 				"--silent",
 				"add", siteModule
 			], {
-				cwd: domainDir,
+				cwd: siteDir,
 				timeout: 60 * 1000,
 				env: baseEnv
 			});
@@ -316,7 +305,7 @@ function installModules(opt, domainDir, siteModule) {
 				"install",
 				"--save", siteModule
 			], {
-				cwd: domainDir,
+				cwd: siteDir,
 				timeout: 60 * 1000,
 				env: Object.assign(baseEnv, {
 					npm_config_userconfig: '', // attempt to disable user config
@@ -340,17 +329,17 @@ function installModules(opt, domainDir, siteModule) {
 	});
 }
 
-function initConfig(moduleDir, domain, module, config) {
+function initConfig(moduleDir, id, module, config) {
 	debug("Module directory", module, moduleDir);
 	return fs.readFile(Path.join(moduleDir, 'package.json')).catch(function(err) {
 		// it's ok to not have a package.json here
 		return false;
 	}).then(function(buf) {
 		if (buf === false) {
-			console.info(`${domain} > ${module} has no package.json, mounting the module directory`);
+			console.info(`${id} > ${module} has no package.json, mounting the module directory`);
 			config.directories.push({
 				from: Path.resolve(moduleDir),
-				to: domain ? Path.join('/', '.files', domain, module) : '/.pageboard'
+				to: id ? Path.join('/', '.files', id, module) : '/.pageboard'
 			});
 			return;
 		}
@@ -368,13 +357,13 @@ function initConfig(moduleDir, domain, module, config) {
 			};
 			var from = Path.resolve(moduleDir, mount.from);
 			if (from.startsWith(moduleDir) == false) {
-				console.warn(`Warning: ${domain} dependency ${module} bad mount from: ${from}`);
+				console.warn(`Warning: ${id} dependency ${module} bad mount from: ${from}`);
 				return;
 			}
-			var rootTo = domain ? Path.join('/', '.files', domain, module) : '/.pageboard';
+			var rootTo = id ? Path.join('/', '.files', id, module) : '/.pageboard';
 			var to = Path.resolve(rootTo, mount.to);
 			if (to.startsWith(rootTo) == false) {
-				console.warn(`Warning: ${domain} dependency ${module} bad mount to: ${to}`);
+				console.warn(`Warning: ${id} dependency ${module} bad mount to: ${to}`);
 				return;
 			}
 			config.directories.push({
@@ -412,7 +401,7 @@ function initConfig(moduleDir, domain, module, config) {
 			});
 		}));
 	}).catch(function(err) {
-		console.error(`Error: ${domain} dependency ${module} cannot be extracted`, err);
+		console.error(`Error: ${id} dependency ${module} cannot be extracted`, err);
 	});
 }
 
@@ -437,14 +426,16 @@ function createApp(opt) {
 		res.setHeader('X-Frame-Options', 'SAMEORIGIN');
 		res.setHeader('X-Content-Type-Options', 'nosniff');
 		res.setHeader('Content-Security-Policy', cspHeader);
-		All.domains.init(req).then(function() {
-			if (req.url == "/.well-known/pageboard") {
-				res.type('text').sendStatus(200);
-			} else if (req.protocol == "http" && All.domain(req.hostname).upgradable) {
-				res.redirect(301, "https://" + req.get('Host') + req.url);
-			} else {
-				next();
-			}
+		Promise.resolve().then(function() {
+			return All.domains.init(req).then(function() {
+				if (req.url == "/.well-known/pageboard") {
+					res.type('text').sendStatus(200);
+				} else if (req.protocol == "http" && req.upgradable) {
+					res.redirect(301, "https://" + req.get('Host') + req.url);
+				} else {
+					next();
+				}
+			});
 		}).catch(function(err) {
 			servicesError(err, req, res, next);
 		});
@@ -484,26 +475,11 @@ function viewsError(err, req, res, next) {
 	}
 	if (All.opt.env == "development" || code >= 500) console.error(err);
 	res.sendStatus(code);
+//	res.redirect(req.app.settings.errorLocation + '?code=' + code);
 }
 
-function reqBody(req, res, next) {
-	var opt = this.opt;
-	bodyParserJson(req, res, function() {
-		var obj = req.body;
-		// all payloads must contain domain
-		obj.domain = req.hostname;
-		next();
-	});
-}
-
-function reqQuery(req, res, next) {
-	var obj = req.query;
-	// all payloads must contain domain
-	obj.domain = req.hostname;
-	next();
-}
-
-function run(apiStr, data) {
+function run(apiStr) {
+	var args = Array.prototype.slice.call(arguments, 1);
 	return Promise.resolve().then(function() {
 		var api = apiStr.split('.');
 		var modName = api[0];
@@ -512,7 +488,13 @@ function run(apiStr, data) {
 		if (!mod) throw new HttpError.BadRequest(`Unknown api module ${modName}`);
 		var fun = mod[funName];
 		if (!fun) throw new HttpError.BadRequest(`Unknown api method ${funName}`);
-		return fun.call(mod, this.api.check(fun, data || {}));
+		try {
+			args[args.length - 1] = this.api.check(fun, args[args.length - 1] || {});
+		} catch(err) {
+			console.error(`run ${apiStr}`);
+			throw err;
+		}
+		return fun.apply(mod, args);
 	}.bind(this));
 }
 

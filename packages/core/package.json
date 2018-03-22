@@ -18,7 +18,6 @@
   },
   "homepage": "https://github.com/pageboard/core",
   "dependencies": {
-    "body-parser": "^1.18.2",
     "clarify": "^2.0.0",
     "content-security-policy-builder": "^1.1.0",
     "cron": "^1.3.0",
