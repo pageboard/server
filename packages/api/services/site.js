@@ -126,17 +126,16 @@ exports.add.schema = {
 	additionalProperties: false
 };
 
-// TODO update All.domain(data.domain).site, also use it
+// TODO update cached All.domains.sites[site.id]
+
 exports.save = function(data) {
-	return exports.get(data).then(function(site) {
+	return exports.get(data).select('_id').then(function(site) {
 		var sameModule = (data.data && data.data.module || null) == (site.data && site.data.module || null);
 		var sameVersion = (data.data && data.data.version || null) == (site.data && site.data.version || null);
-		// ensure we don't just empty site.data by mistake
-		data.data = Object.assign({}, site.data, data.data);
-		data.type = site.type; // or else schema validation does not happen
-		return All.api.Block.query().where('id', site.id).patch(data).then(function(result) {
+		Object.assign(site.data, data.data);
+		return site.$query().patch(data).then(function(result) {
 			if (sameModule == false || sameVersion == false) {
-				return All.install(data.data).then(() => result);
+				return All.install(site).then(() => result);
 			} else {
 				return result;
 			}
@@ -150,7 +149,8 @@ exports.save.schema = {
 			type: 'string'
 		},
 		data: {
-			type: 'object'
+			type: 'object',
+			default: {}
 		}
 	},
 	additionalProperties: false
