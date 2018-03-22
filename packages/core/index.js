@@ -437,7 +437,11 @@ function createApp(opt) {
 				}
 			});
 		}).catch(function(err) {
-			servicesError(err, req, res, next);
+			var handler;
+			if (req.url.startsWith('/.api/')) handler = servicesError;
+			else if (req.url.startsWith('/.')) handler = filesError;
+			else handler = viewsError;
+			handler(err, req, res, next);
 		});
 	});
 	return app;
