@@ -64,18 +64,13 @@ CacheState.prototype.open = function() {
 		console.info(`Unparsable ${me.path}, continuing anyway`);
 	}).then(function(data) {
 		me.data = data || {};
-		if (!me.data.domains) me.data.domains = {};
+		if (!me.data.sites) me.data.sites = {};
 	});
 };
 
-CacheState.prototype.install = function(domain, opt, All) {
-	if (!domain) return;
-	// avoid hanging loop: DomainBlock -> install -> .well-known/upcache -> (mem)DomainBlock
+CacheState.prototype.install = function(site) {
 	setTimeout(function() {
-		var host = All.domain(domain).host;
-		if (!host) throw new Error(`Domain ${domain} not requested before install`);
-		got.post(`${host}/.well-known/upcache`).catch(function(err) {
-			// we don't want to crash in case of error
+		got.post(`${site.href}/.well-known/upcache`).catch(function(err) {
 			console.error(err);
 		});
 	});
@@ -85,10 +80,10 @@ CacheState.prototype.mw = function(req, res, next) {
 	var me = this;
 	var tags = [];
 	var doSave = false;
-	var domain = req.hostname;
-	var dobj = this.data.domains[domain];
-	if (!dobj) dobj = this.data.domains[domain] = {};
-	console.info("Check cache for", domain);
+	var id = req.site.id;
+	var dobj = this.data.sites[id];
+	if (!dobj) dobj = this.data.sites[id] = {};
+	console.info("Check cache for", id);
 
 	if (!this.digest) {
 		var hash = crypto.createHash('sha256');
@@ -112,7 +107,7 @@ CacheState.prototype.mw = function(req, res, next) {
 			dobj.share = mtime;
 			tags.push('shared');
 		}
-		return me.refreshMtime(domain);
+		return me.refreshMtime(id);
 	}).then(function(mtime) {
 		if (dobj.file === undefined) {
 			doSave = true;
@@ -135,10 +130,10 @@ CacheState.prototype.mw = function(req, res, next) {
 	});
 }
 
-CacheState.prototype.refreshMtime = function(domain) {
-	var dir = Path.join(this.opt.statics.runtime, domain ? 'files/' + domain : 'pageboard');
+CacheState.prototype.refreshMtime = function(id) {
+	var dir = Path.join(this.opt.statics.runtime, id ? 'files/' + id : 'pageboard');
 	var mtime;
-	if (!domain) {
+	if (!id) {
 		// do not actually refresh every time
 		mtime = this.mtimes.pageboard;
 		if (mtime) return Promise.resolve(mtime);
@@ -158,7 +153,7 @@ CacheState.prototype.refreshMtime = function(domain) {
 			if (ftime > mtime) mtime = ftime;
 		})
 		g.on('end', function() {
-			me.mtimes[domain || 'pageboard'] = mtime;
+			me.mtimes[id || 'pageboard'] = mtime;
 			resolve(mtime);
 		});
 		// not sure if end always happen, nor if error happens once
