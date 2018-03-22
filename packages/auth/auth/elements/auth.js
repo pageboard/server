@@ -25,7 +25,22 @@ Pageboard.elements.login = {
 		if (!block.data.href) doc.head.appendChild(
 			doc.dom`<meta http-equiv="Status" content="403 Forbidden">`
 		);
-		return doc.dom`<a class="ui auth button" href="${loc.protocol}//${loc.host}${block.data.href}" block-content="text">login</a>`;
+		var href = `${loc.protocol}//${loc.host}${block.data.href}`;
+		var anchor = doc.dom`<a class="ui auth button" href="${href}" block-content="text">login</a>`;
+		var action = doc.getElementById('loginAction');
+		if (action) action.remove();
+		var ld = {
+			"@context": "http://schema.org",
+			"@type": "EmailMessage",
+			"potentialAction": {
+				"@type": "ViewAction",
+				"target": href,
+				"name": "Login"
+			},
+			"description": anchor.innerText
+		};
+		doc.head.insertAdjacentHTML('beforeEnd', `<script type="application/ld+json" id="loginAction">${JSON.stringify(ld)}</script>`);
+		return anchor;
 	},
 	stylesheets: [
 		'../ui/auth.css'
