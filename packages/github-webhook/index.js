@@ -14,18 +14,18 @@ function init(All) {
 	All.app.post('/.api/github', bodyParser.raw({
 		type: "json"
 	}), function(req, res, next) {
-		var event = req.get('X-Github-Event');
-		if (event == "ping") {
-			return res.sendStatus(200);
-		}
-		if (event != "push") {
-			return next(new HttpError.BadRequest("Unsupported event"));
-		}
-
+		var site = req.site;
 		var save = false;
-		// TODO queue installations, and do db transaction
-		All.site.get({domain: req.hostname}).then(function(site) {
-			if (!site) throw new HttpError.NotFound("Site not found");
+		Promise.resolve().then(function() {
+			var event = req.get('X-Github-Event');
+			if (event == "ping") {
+				return res.sendStatus(200);
+			}
+			if (event != "push") {
+				return next(new HttpError.BadRequest("Unsupported event"));
+			}
+
+			// TODO queue installations, and do db transaction
 			var sign = req.get('X-Github-Signature');
 			var delivery = req.get('X-Github-Delivery');
 			if (sign && sign != signBlob(site.data['github-webhook-secret'] || '', req.body)) {
@@ -41,8 +41,7 @@ function init(All) {
 					save = true;
 			}
 			res.sendStatus(200);
-			return site;
-		}).catch(next).then(function(site) {
+		}).catch(next).then(function() {
 			if (save) return All.site.save(site).catch(function(err) {
 				console.error("site.save failure", site.data, err);
 			});
