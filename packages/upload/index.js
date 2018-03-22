@@ -41,7 +41,7 @@ function init(All) {
 		var storage = multer.diskStorage({
 			destination: function(req, file, cb) {
 				var date = (new Date()).toISOString().split('T').shift().substring(0, 7);
-				var curDest = Path.join(dest, req.hostname, date);
+				var curDest = Path.join(dest, req.site.id, date);
 
 				mkdirp(curDest, function(err) {
 					if (err) return cb(err);
@@ -74,20 +74,20 @@ function init(All) {
 		if (bps) console.info("Upload bandwidth limited to", Math.round(bps / 1000) + 'KB/s');
 
 		All.app.post('/.api/upload', throttle(bps), mw.array('files'), function(req, res, next) {
-			var curDest = Path.join(dest, req.hostname);
+			var curDest = Path.join(dest, req.site.id);
 			res.send(req.files.map(function(file) {
-				return All.domain(req.hostname).host + '/.' + Path.join(upload.dir, Path.relative(curDest, file.destination), file.filename);
+				return req.site.href + '/.' + Path.join(upload.dir, Path.relative(curDest, file.destination), file.filename);
 			}));
 		});
 	});
 }
 
-exports.gc = function(hostname, pathname) {
+exports.gc = function(id, pathname) {
 	var uploadDir = All.opt.upload.dir;
-	if (!hostname || !pathname.startsWith('/.' + uploadDir)) {
+	if (!id || !pathname.startsWith('/.' + uploadDir)) {
 		return Promise.resolve();
 	}
-	var file = Path.join(uploadDir, hostname, pathname);
+	var file = Path.join(uploadDir, id, pathname);
 	return fs.unlink(file).catch(function() {
 		// ignore error
 	}).then(function() {
