@@ -22,7 +22,9 @@ exports = module.exports = function(opt) {
 		statics.runtime = Path.resolve(statics.runtime);
 	}
 
+	// TODO much longer for uploads, there are not going to change anyway
 	if (!statics.maxAge) statics.maxAge = 3600;
+	// TODO this value depends on the site.data.production, not on opt.env
 	if (opt.env == 'development') statics.maxAge = 0;
 
 	return {
@@ -48,11 +50,11 @@ function init(All) {
 						All.cache.tag('shared')(req, res, next);
 						break;
 					case ".uploads":
-						req.url = "/uploads/" + req.hostname + url.substring(9);
+						req.url = "/uploads/" + req.site.id + url.substring(9);
 						All.cache.tag('upload')(req, res, next);
 						break;
 					case ".files":
-						req.url = "/files/" + req.hostname + url.substring(7);
+						req.url = "/files/" + req.site.id + url.substring(7);
 						All.cache.tag('file')(req, res, next);
 						break;
 				}
@@ -75,12 +77,11 @@ function init(All) {
 		);
 
 		All.app.get('/favicon.ico', function(req, res, next) {
-			var obj = All.domain(req.hostname);
-			var site = obj.site;
+			var site = req.site;
 			if (!site || !site.data.favicon) {
 				throw new HttpError.NotFound("No favicon");
 			} else {
-				var path = All.statics.resolve(req.hostname, site.data.favicon);
+				var path = All.statics.resolve(site.id, site.data.favicon);
 				if (!path) throw new HttpError.NotFound("No valid favicon path");
 				return All.image.favicon(path).then(function(blob) {
 					res.type('image/x-icon');
@@ -91,14 +92,14 @@ function init(All) {
 	});
 }
 
-exports.bundle = function(domain, list, filename) {
+exports.bundle = function(site, list, filename) {
 	var opts = All.opt.statics;
 	var outUrl = '/.files/' + filename;
 	var bundle = new ConcatMap({
-		outputFile: urlToPath(opts, domain, '/.files/' + filename)
+		outputFile: urlToPath(opts, site.id, '/.files/' + filename)
 	});
 	list.forEach(function(url) {
-		bundle.addFile(urlToPath(opts, domain, url));
+		bundle.addFile(urlToPath(opts, site.id, url));
 		bundle.addSpace('\n');
 	});
 	return bundle.end().then(function() {
@@ -106,21 +107,22 @@ exports.bundle = function(domain, list, filename) {
 	});
 };
 
-function urlToPath(opts, domain, url) {
+function urlToPath(opts, id, url) {
 	var obj = URL.parse(url);
 	var list = obj.pathname.substring(1).split('/');
-	if (list[0].startsWith('.') == false) throw new Error(`Bad ${domain} url: ${url}`);
+	if (list[0].startsWith('.') == false) throw new Error(`Bad ${id} url: ${url}`);
 	list[0] = list[0].substring(1);
-	if (list[0] != "pageboard") list.splice(1, 0, domain);
+	if (list[0] != "pageboard") list.splice(1, 0, id);
 	return Path.join(opts.runtime, list.join('/'));
 }
 
-exports.resolve = function(domain, url) {
-	return urlToPath(All.opt.statics, domain, url);
+exports.resolve = function(id, url) {
+	return urlToPath(All.opt.statics, id, url);
 };
 
-exports.install = function(domain, {directories}, All) {
-	return rimraf(Path.join(All.opt.statics.runtime, domain || 'pageboard')).then(function() {
+exports.install = function(site, {directories}, All) {
+	var id = site ? site.id : null;
+	return rimraf(Path.join(All.opt.statics.runtime, id || 'pageboard')).then(function() {
 		var p = Promise.resolve();
 		directories.forEach(function(mount) {
 			p.then(function() {
