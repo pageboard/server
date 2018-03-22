@@ -33,17 +33,17 @@ function init(All) {
 
 		All.app.use('/.api/auth/*', All.cache.disable());
 
-		All.app.get('/.api/auth/login', All.auth.restrict("auth.login"), All.query, function(req, res, next) {
+		All.app.get('/.api/auth/login', All.auth.restrict("auth.login"), function(req, res, next) {
 			exports.login(req.query).then(function(linkObj) {
 				res.send(linkObj);
 			}).catch(next);
 		});
 
-		All.app.get('/.api/auth/validate', All.query, function(req, res, next) {
+		All.app.get('/.api/auth/validate', function(req, res, next) {
 			exports.validate(req.query).then(function(user) {
 				// check if user owns this site
 				var owner = user.sites.some(function(site) {
-					return site.data.domain == req.query.domain;
+					return site.id == req.site.id;
 				});
 				// upcache sets jwt.issuer to req.hostname so we should be fine
 				var keys = user.keys || {};
