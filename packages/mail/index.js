@@ -65,9 +65,8 @@ function filterUser(email, builder) {
 		.first().throwIfNotFound();
 }
 
-exports.send = function(data) {
-	var domain = All.domain(data.domain);
-	var Block = domain.Block;
+exports.send = function(site, data) {
+	var Block = site.Block;
 	var what = [
 		'parents(owner) as owner',
 		'children(to) as to',
@@ -92,14 +91,12 @@ exports.send = function(data) {
 		filters.from = filterUser.bind(Block, data.from);
 	}
 
-	return Block.query().select(Block.tableColumns)
-	.whereJsonText('block.data:domain', data.domain)
+	return site.$query()
 	.eager(`[${what.join(',')}]`, filters)
-	.where('block.type', 'site').first().throwIfNotFound()
-	.then(function(site) {
-		if (!site.from) site.from = site.owner;
-		var emailUrl = domain.host + site.page[0].data.url;
-		var authCookie = All.auth.cookie({hostname: data.domain}, {
+	.then(function(row) {
+		if (!row.from) row.from = row.owner;
+		var emailUrl = site.href + row.page[0].data.url;
+		var authCookie = All.auth.cookie({hostname: site.data.domain}, {
 			scopes: {
 				"auth.login": true
 			}
@@ -108,8 +105,8 @@ exports.send = function(data) {
 		return got(emailUrl, {
 			json: true,
 			query: {
-				from: site.from[0].id,
-				to: site.to[0].id,
+				from: row.from[0].id,
+				to: row.to[0].id,
 				email: true
 			},
 			headers: {
@@ -121,13 +118,13 @@ exports.send = function(data) {
 			var mail = {
 				from: sender,
 				to: {
-					name: site.to[0].data.name,
-					address: site.to[0].data.email
+					name: row.to[0].data.name,
+					address: row.to[0].data.email
 				},
 				subject: obj.title,
 				replyTo: {
-					name: site.from[0].data.name,
-					address: site.from[0].data.email
+					name: row.from[0].data.name,
+					address: row.from[0].data.email
 				},
 				html: obj.html,
 				text: obj.text,
@@ -147,11 +144,8 @@ exports.send = function(data) {
 	});
 };
 exports.send.schema = {
-	required: ['domain', 'url', 'to'],
+	required: ['url', 'to'],
 	properties: {
-		domain: {
-			type: 'string'
-		},
 		url: {
 			type: 'string'
 		},
