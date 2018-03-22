@@ -1,6 +1,8 @@
 var objection = require('objection');
 var AjvKeywords = require('ajv-keywords');
 var bodyParserJson = require('body-parser').json();
+var schedule = require('node-schedule');
+
 var ajvApi = require('ajv')({
 	$data: true,
 	allErrors: true,
@@ -340,7 +342,7 @@ function knexConfig(config) {
 	return obj;
 }
 
-var gcTimeout;
+var gcJob;
 exports.gc = function(All) {
 	var opts = All.opt.gc;
 	if (!opts) opts = All.opt.gc = {};
@@ -352,8 +354,8 @@ exports.gc = function(All) {
 	opts.href = hrefDays;
 
 	var interval = Math.max(Math.min(blockDays, hrefDays), 1) * 24 * 60 * 60 * 1000;
-	var jump = gcTimeout == null;
-	gcTimeout = setTimeout(exports.gc.bind(null, All), interval);
+	var jump = gcJob == null;
+	gcJob = schedule.scheduleJob(new Date(Date.now() + interval), exports.gc.bind(null, All));
 	if (jump) return;
 
 	return Promise.all([
