@@ -411,7 +411,7 @@ function createApp(opt) {
 	// for csp headers, see prerender and write
 	app.set("env", opt.env);
 	app.disable('x-powered-by');
-	app.enable('trust-proxy');
+	app.enable('trust proxy');
 	var cspDefault = ["'self'", 'https:'];
 	var cspHeader = csp({
 		directives: {
