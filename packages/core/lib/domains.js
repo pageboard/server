@@ -17,6 +17,7 @@ maintain a cache (hosts) of requested hostnames
 so adding an IP to pageboard and pointing a host to that IP needs a restart)
 - then each hostname, if it is a subdomain of pageboard, gives a site.id, or if not, a site.domain
 - site instance is loaded and cached
+- /.well-known/pageboard returns here
 - site is installed and init() is holded by a hanging promise
 - site installation calls upcache update url, which resolves the hanging promise
 - init returns for everyone
@@ -35,15 +36,8 @@ Domains.prototype.init = function(req) {
 	if (host._error) {
 		return Promise.reject(host._error);
 	}
-	if (host.ready && req.url == "/.well-known/upcache") {
-		host.ready();
-		delete host.ready;
-	}
-	var p;
-	if (host.resolvable) {
-		p = host.resolvable;
-	} else {
-		p = Promise.resolve().then(function() {
+	if (!host.searching) {
+		host.searching = Promise.resolve().then(function() {
 			return this.check(host, req);
 		}.bind(this)).then(function(hostname) {
 			var site = host.id && sites[host.id];
@@ -55,45 +49,56 @@ Domains.prototype.init = function(req) {
 					return true;
 				}
 			});
-			var data = {};
-			if (id) data.id = id;
-			else data.domain = host.name;
-			return All.site.get(data).select('_id').then(function(site) {
-				if (site.id == "pageboard") throw new HttpError.NotFound("site cannot have id='pageboard'");
-				sites[site.id] = site;
-				if (site.data.domain && !hosts[site.data.domain]) hosts[site.data.domain] = {
-					id: site.id,
-					name: site.data.domain,
-					href: host.href
-				};
-				site.href = host.href;
-				return All.install(site);
-			});
+			var data = {
+				domain: host.name
+			};
+			if (id) data.id = id; // search by domain and id
+			return All.site.get(data).select('_id');
+		}).then(function(site) {
+			if (site.id == "pageboard") throw new HttpError.NotFound("site cannot have id='pageboard'");
+			host.id = site.id;
+			sites[site.id] = site;
+			if (site.data.domain && !hosts[site.data.domain]) {
+				// TODO migrate host to new site.data.domain
+				throw new HttpError.NotFound(`site ${site.id} cannot change domain
+				${hostname} => ${site.data.domain}`);
+			}
+			return site;
 		}).catch(function(err) {
 			host._error = err;
 			throw err;
 		});
-
-		var subpending = new Promise(function(resolve) {
-			host.ready = resolve;
+	}
+	if (!host.installing) {
+		host.installing = host.searching.then(function(site) {
+			site.href = host.href;
+			return All.install(site);
 		});
-
-		var pending = p.then(function(site) {
+	}
+	if (!host.waiting) {
+		var subpending = new Promise(function(resolve) {
+			host.finalize = resolve;
+		});
+		host.waiting = host.installing.then(function(site) {
 			return subpending.then(function() {
 				return site;
 			});
 		});
-		if (req.url.startsWith('/.well-known/')) {
-			// don't hold for cache
-		} else {
-			p = pending;
-		}
-
-		host.resolvable = pending;
 	}
 
+
+	if (req.url == "/.well-known/upcache") {
+		if (host.finalize) {
+			host.finalize();
+			delete host.finalize;
+		}
+		p = host.installing;
+	} else if (req.url == "/.well-known/pageboard") {
+		p = host.searching;
+	} else {
+		p = host.waiting;
+	}
 	return p.then(function(site) {
-		host.id = site.id;
 		// let's optimize this
 		if (req.url.startsWith('/.api/')) {
 			site = site.$clone();
