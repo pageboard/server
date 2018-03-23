@@ -115,6 +115,14 @@ Block.relationMappings = {
 			},
 			to: 'block._id'
 		}
+	},
+	hrefs: {
+		relation: Model.HasManyRelation,
+		modelClass: __dirname + '/href',
+		join: {
+			from: 'block._id',
+			to: 'href._parent_id'
+		}
 	}
 };
 
