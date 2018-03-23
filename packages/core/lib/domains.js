@@ -63,9 +63,9 @@ Domains.prototype.init = function(req) {
 				if (site.data.domain && !hosts[site.data.domain]) hosts[site.data.domain] = {
 					id: site.id,
 					name: site.data.domain,
-					href: href
+					href: host.href
 				};
-				site.href = href;
+				site.href = host.href;
 				return All.install(site);
 			});
 		}).catch(function(err) {
