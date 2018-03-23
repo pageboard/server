@@ -198,11 +198,9 @@ exports.add = function(site, data) {
 		if (isLocal) result.url = data.url;
 		return exports.get(site, data).then(function(href) {
 			if (!href) {
-				return Href.query().insert(Object.assign({
-					_parent_id: site._id
-				}, result)).returning(Href.tableColumns);
+				return site.$relatedQuery('hrefs').insert(result).returning(Href.tableColumns);
 			} else {
-				return Href.query().patch(result).where('_id', href._id)
+				return site.$relatedQuery('hrefs').patch(result).where('_id', href._id)
 					.first().returning(Href.tableColumns);
 			}
 		});
