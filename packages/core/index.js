@@ -493,10 +493,14 @@ function run(apiStr) {
 		if (!mod) throw new HttpError.BadRequest(`Unknown api module ${modName}`);
 		var fun = mod[funName];
 		if (!fun) throw new HttpError.BadRequest(`Unknown api method ${funName}`);
+		if (args.length != fun.length) {
+			throw new HttpError.BadRequest(`Api method ${funName} got ${fun.length} over ${args.length} arguments`);
+		}
+		var data = args[args.length - 1] || {};
 		try {
-			args[args.length - 1] = this.api.check(fun, args[args.length - 1] || {});
+			args[args.length - 1] = this.api.check(fun, data);
 		} catch(err) {
-			console.error(`run ${apiStr}`);
+			console.error(`run ${apiStr} ${JSON.stringify(data)}`);
 			throw err;
 		}
 		return fun.apply(mod, args);
