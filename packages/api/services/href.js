@@ -243,7 +243,7 @@ exports.save.schema = {
 
 exports.del = function(site, data) {
 	return exports.get(site, data).throwIfNotFound().then(function(href) {
-		return All.api.Href.query().patch({
+		return site.$relatedQuery('hrefs').patch({
 			visible: false
 		}).where('_id', href._id).then(function() {
 			href.visible = false;
