@@ -59,6 +59,7 @@ Domains.prototype.init = function(req) {
 			if (id) data.id = id;
 			else data.domain = host.name;
 			return All.site.get(data).select('_id').then(function(site) {
+				if (site.id == "pageboard") throw new HttpError.NotFound("site cannot have id='pageboard'");
 				sites[site.id] = site;
 				if (site.data.domain && !hosts[site.data.domain]) hosts[site.data.domain] = {
 					id: site.id,
