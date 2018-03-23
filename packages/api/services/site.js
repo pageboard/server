@@ -129,11 +129,14 @@ exports.add.schema = {
 // TODO update cached All.domains.sites[site.id]
 
 exports.save = function(data) {
+	var href = data.href;
+	if (href !== undefined) delete data.href;
 	return exports.get(data).select('_id').then(function(site) {
 		var sameModule = (data.data && data.data.module || null) == (site.data && site.data.module || null);
 		var sameVersion = (data.data && data.data.version || null) == (site.data && site.data.version || null);
 		Object.assign(site.data, data.data);
 		return site.$query().patch(data).then(function(result) {
+			if (href) site.href = href;
 			if (sameModule == false || sameVersion == false) {
 				return All.install(site).then(() => result);
 			} else {
