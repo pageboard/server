@@ -35,48 +35,62 @@ Domains.prototype.init = function(req) {
 	if (host._error) {
 		return Promise.reject(host._error);
 	}
+	if (host.ready && req.url == "/.well-known/upcache") {
+		host.ready();
+		delete host.ready;
+	}
 	var p;
 	if (host.resolvable) {
-		if (req.url == "/.well-known/upcache") {
-			host.ready();
-		}
 		p = host.resolvable;
-	} else p = Promise.resolve().then(function() {
-		return this.check(host, req);
-	}.bind(this)).then(function(hostname) {
-		var site = host.id && sites[host.id];
-		if (site) return site;
-		var id;
-		pageboardNames.some(function(hn) {
-			if (hostname.endsWith(hn)) {
-				id = hostname.substring(0, hostname.length - hn.length);
-				return true;
-			}
+	} else {
+		p = Promise.resolve().then(function() {
+			return this.check(host, req);
+		}.bind(this)).then(function(hostname) {
+			var site = host.id && sites[host.id];
+			if (site) return site;
+			var id;
+			pageboardNames.some(function(hn) {
+				if (hostname.endsWith(hn)) {
+					id = hostname.substring(0, hostname.length - hn.length);
+					return true;
+				}
+			});
+			var data = {};
+			if (id) data.id = id;
+			else data.domain = host.name;
+			return All.site.get(data).select('_id').then(function(site) {
+				sites[site.id] = site;
+				if (site.data.domain && !hosts[site.data.domain]) hosts[site.data.domain] = {
+					id: site.id,
+					name: site.data.domain
+				};
+				// we need href for cache.install(site) right now
+				site.href = host.href;
+				return All.install(site);
+			});
+		}).catch(function(err) {
+			host._error = err;
+			throw err;
 		});
-		var data = {};
-		if (id) data.id = id;
-		else data.domain = host.name;
-		return All.site.get(data).select('_id').then(function(site) {
-			sites[site.id] = site;
-			if (site.data.domain && !hosts[site.data.domain]) hosts[site.data.domain] = {
-				id: site.id,
-				name: site.data.domain
-			};
-			// we need href for cache.install(site) right now
-			site.href = host.href;
-			return All.install(site);
+
+		var subpending = new Promise(function(resolve) {
+			host.ready = resolve;
 		});
-	}).catch(function(err) {
-		host._error = err;
-		throw err;
-	}).then(function(site) {
-		return new Promise(function(resolve) {
-			host.ready = function() {
-				resolve(site);
-			};
+
+		var pending = p.then(function(site) {
+			return subpending.then(function() {
+				return site;
+			});
 		});
-	});
-	host.resolvable = p;
+		if (req.url.startsWith('/.well-known/')) {
+			// don't hold for cache
+		} else {
+			p = pending;
+		}
+
+		host.resolvable = pending;
+	}
+
 	return p.then(function(site) {
 		host.id = site.id;
 		// let's optimize this
