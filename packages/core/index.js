@@ -438,7 +438,7 @@ function createApp(opt) {
 			});
 		}).catch(function(err) {
 			var handler;
-			if (req.url.startsWith('/.api/')) handler = servicesError;
+			if (req.url.startsWith('/.api/') || req.url.startsWith('/.well-known/')) handler = servicesError;
 			else if (req.url.startsWith('/.')) handler = filesError;
 			else handler = viewsError;
 			handler(err, req, res, next);
