@@ -65,7 +65,12 @@ Domains.prototype.init = function(req) {
 					name: site.data.domain
 				};
 				// we need href for cache.install(site) right now
-				site.href = host.href;
+				Object.defineProperty(site, 'href', {
+					enumerable: false,
+					configurable: true,
+					writable: false,
+					value: host.href
+				});
 				return All.install(site);
 			});
 		}).catch(function(err) {
@@ -103,7 +108,12 @@ Domains.prototype.init = function(req) {
 		}
 		if (!site.data) site.data = {};
 		if (!site.data.domain) site.data.domain = host.name;
-		site.href = host.href;
+		Object.defineProperty(site, 'href', {
+			enumerable: false,
+			configurable: true,
+			writable: false,
+			value: host.href
+		});
 		req.site = site;
 		req.upgradable = host.upgradable;
 	});
