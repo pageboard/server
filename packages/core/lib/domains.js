@@ -62,15 +62,10 @@ Domains.prototype.init = function(req) {
 				sites[site.id] = site;
 				if (site.data.domain && !hosts[site.data.domain]) hosts[site.data.domain] = {
 					id: site.id,
-					name: site.data.domain
+					name: site.data.domain,
+					href: href
 				};
-				// we need href for cache.install(site) right now
-				Object.defineProperty(site, 'href', {
-					enumerable: false,
-					configurable: true,
-					writable: false,
-					value: host.href
-				});
+				site.href = href;
 				return All.install(site);
 			});
 		}).catch(function(err) {
