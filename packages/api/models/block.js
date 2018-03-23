@@ -21,7 +21,8 @@ Block.jsonSchema = {
 	$id: '/api/blocks',
 	properties: {
 		id: {
-			type: 'string'
+			type: 'string',
+			pattern: '^[\\w-]+$'
 		},
 		type: {
 			type: 'string'
