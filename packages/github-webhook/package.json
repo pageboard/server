@@ -15,8 +15,5 @@
   "bugs": {
     "url": "https://github.com/kapouer/github-webhook/issues"
   },
-  "homepage": "https://github.com/kapouer/github-webhook#readme",
-  "dependencies": {
-    "body-parser": "^1.17.2"
-  }
+  "homepage": "https://github.com/kapouer/github-webhook#readme"
 }
