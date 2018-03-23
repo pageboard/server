@@ -9,11 +9,13 @@ function init(All) {
 }
 
 function QuerySite(data) {
-	var q = All.api.Block.query().alias('site')
+	var Block = All.api.Block;
+	var q = Block.query().alias('site')
 	.first().throwIfNotFound()
-	.where('site.type', 'site');
-	if (data.id) q.where('site.id', data.id);
-	else if (data.domain) q.whereJsonText('site.data:domain', data.domain);
+	.where('site.type', 'site').where(function(q) {
+		if (data.id) q.orWhere('site.id', data.id);
+		if (data.domain) q.orWhere(All.api.ref('site.data:domain').castText(), data.domain);
+	});
 	return q;
 }
 
@@ -22,22 +24,20 @@ exports.get = function(data) {
 };
 
 exports.get.schema = {
+	properties: {
+		id: {
+			type: 'string'
+		},
+		domain: {
+			type: 'string'
+		}
+	},
+	additionalProperties: false,
 	anyOf: [{
-		required: ['id'],
-		properties: {
-			id: {
-				type: 'string'
-			}
-		}
+		required: ['id']
 	}, {
-		required: ['domain'],
-		properties: {
-			domain: {
-				type: 'string'
-			}
-		}
-	}],
-	additionalProperties: false
+		required: ['domain']
+	}]
 };
 
 exports.search = function(data) {
