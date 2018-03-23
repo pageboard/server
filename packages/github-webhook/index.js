@@ -1,4 +1,3 @@
-var bodyParser = require('body-parser');
 var crypto = require('crypto');
 
 exports = module.exports = function(opt) {
@@ -11,9 +10,7 @@ exports = module.exports = function(opt) {
 function init(All) {
 	var opt = All.opt;
 	console.info("Setting up /.api/github webhook");
-	All.app.post('/.api/github', bodyParser.raw({
-		type: "json"
-	}), function(req, res, next) {
+	All.app.post('/.api/github', function(req, res, next) {
 		var site = req.site;
 		var save = false;
 		Promise.resolve().then(function() {
@@ -31,7 +28,7 @@ function init(All) {
 			if (sign && sign != signBlob(site.data['github-webhook-secret'] || '', req.body)) {
 				throw new HttpError.Forbidden("Invalid Signature");
 			}
-			var payload = JSON.parse(req.body);
+			var payload = req.body;
 			var fullName = payload.repository.full_name;
 			var module = site.data.module;
 			if (module && module.startsWith(fullName) &&
