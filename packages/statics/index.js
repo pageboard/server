@@ -22,10 +22,8 @@ exports = module.exports = function(opt) {
 		statics.runtime = Path.resolve(statics.runtime);
 	}
 
-	// TODO much longer for uploads, there are not going to change anyway
-	if (!statics.maxAge) statics.maxAge = 3600;
-	// TODO this value depends on the site.data.production, not on opt.env
-	if (opt.env == 'development') statics.maxAge = 0;
+	statics.nocache = opt.env == "development";
+	if (statics.nocache) console.info("Statics cache disabled for development");
 
 	return {
 		name: 'statics',
@@ -47,15 +45,15 @@ function init(All) {
 				switch(req.params.dir) {
 					case ".pageboard":
 						req.url = "/" + url.substring(2);
-						All.cache.tag('shared')(req, res, next);
+						All.cache.tag('shared').for(statics.nocache ? null : '1 hour')(req, res, next);
 						break;
 					case ".uploads":
 						req.url = "/uploads/" + req.site.id + url.substring(9);
-						All.cache.tag('upload')(req, res, next);
+						All.cache.tag('upload').for(statics.nocache ? null : '1 year')(req, res, next);
 						break;
 					case ".files":
 						req.url = "/files/" + req.site.id + url.substring(7);
-						All.cache.tag('file')(req, res, next);
+						All.cache.tag('file').for(statics.nocache ? null : '1 year')(req, res, next);
 						break;
 				}
 				debug("Static url", url, "rewritten to", req.url);
@@ -63,7 +61,6 @@ function init(All) {
 			serveStatic(statics.runtime, {
 				index: false,
 				redirect: false,
-				maxAge: statics.maxAge * 1000,
 				dotfiles: 'ignore',
 				fallthrough: true
 			}),
