@@ -126,22 +126,32 @@ exports.add.schema = {
 	additionalProperties: false
 };
 
-// TODO update cached All.domains.sites[site.id]
-
 exports.save = function(data) {
-	var href = data.href;
-	if (href !== undefined) delete data.href;
 	return exports.get(data).select('_id').then(function(site) {
-		var sameModule = (data.data && data.data.module || null) == (site.data && site.data.module || null);
-		var sameVersion = (data.data && data.data.version || null) == (site.data && site.data.version || null);
-		Object.assign(site.data, data.data);
-		return site.$query().patch(data).then(function(result) {
-			if (href) site.href = href;
-			if (sameModule == false || sameVersion == false) {
-				return All.install(site).then(() => result);
-			} else {
-				return result;
-			}
+		var dataOld = site.data || {};
+		var dataNew = data.data || {};
+		var sameModule = dataOld.module == dataNew.module;
+		var sameVersion = dataOld.version == dataNew.version;
+		var oldDomain = dataOld.domain;
+		var sameDomain = oldDomain == dataNew.domain;
+
+		// PROBABLY A MISTAKE - patch do the job better
+//		Object.assign(site.data, data.data);
+
+		var p = Promise.resolve();
+		if (!sameModule || !sameVersion) {
+			p = p.then(function() {
+				return All.install(site);
+			});
+		}
+		return p.then(function() {
+			return site.$query().patch(data).then(function() {
+				if (!sameDomain) {
+					All.domains.hosts[dataNew.domain] = All.domains.hosts[oldDomain];
+					delete All.domains.hosts[oldDomain];
+				}
+				All.domains.sites[site.id] = site;
+			});
 		});
 	});
 };
