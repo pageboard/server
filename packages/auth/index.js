@@ -66,9 +66,9 @@ function init(All) {
 }
 
 exports.login = function(data) {
-	return All.user.get(data).then(function(user) {
+	return All.user.get(data).select('_id').then(function(user) {
 		return All.api.Block.genId(16).then(function(hash) {
-			return user.$query().where('id', user.id).skipUndefined().patch({
+			return user.$query().skipUndefined().patch({
 				'data:session': {
 					hash: hash,
 					done: false,
