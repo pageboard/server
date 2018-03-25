@@ -13,6 +13,7 @@ var debug = require('debug')('pageboard:core');
 var csp = require('content-security-policy-builder');
 var http = require('http');
 var Domains = require('./lib/domains');
+var Install = require('./lib/install');
 
 var fs = {
 	writeFile: pify(require('fs').writeFile),
@@ -109,7 +110,7 @@ exports.init = function(opt) {
 	}).then(function() {
 		return Promise.all(Object.keys(opt.dependencies).map(function(module) {
 			return pkgup(require.resolve(module)).then(function(pkgPath) {
-				return initConfig(Path.dirname(pkgPath), null, module, All.opt);
+				return Install.config(Path.dirname(pkgPath), null, module, All.opt);
 			});
 		}));
 	}).then(function() {
@@ -141,6 +142,44 @@ exports.init = function(opt) {
 		return All;
 	});
 };
+
+function install(site) {
+	var module = site.data.module;
+	var id = site.id;
+	var All = this;
+	var dataDir = Path.join(All.opt.dirs.data, 'sites');
+	var siteDir = Path.join(dataDir, id);
+	var config = {
+		directories: [],
+		elements: []
+	};
+	debug("install site in", siteDir);
+	return Install.install(All.opt, siteDir, module).then(function(moduleName) {
+		var siteModuleDir = Path.join(siteDir, 'node_modules', moduleName);
+		return fs.readFile(Path.join(siteModuleDir, "package.json")).then(function(buf) {
+			return JSON.parse(buf.toString());
+		}).then(function(pkg) {
+			return Promise.all(Object.keys(pkg.dependencies || {}).map(function(subModule) {
+				var moduleDir = Path.join(siteDir, 'node_modules', subModule);
+				return Install.config(moduleDir, id, subModule, config);
+			})).then(function() {
+				return Install.config(siteModuleDir, id, moduleName, config);
+			});
+		});
+	}).catch(function(err) {
+		if (module) console.error("Could not install", siteDir, module, err);
+	}).then(function() {
+		return All.statics.install(site, config, All);
+	}).then(function() {
+		return All.api.install(site, config, All);
+	}).then(function() {
+		return All.cache.install(site);
+	}).then(function() {
+		return site;
+	}).catch(function(err) {
+		console.error(err);
+	});
+}
 
 exports.start = function(All) {
 	var server = http.createServer(All.app);
@@ -219,190 +258,6 @@ function initLog(opt) {
 	});
 
 	return morgan(opt.core.log);
-}
-
-function install(site) {
-	var module = site.data.module;
-	var All = this;
-	var dataDir = Path.join(All.opt.dirs.data, 'sites');
-	var siteDir = Path.join(dataDir, site.id);
-	var config = {
-		directories: [],
-		elements: []
-	};
-	debug("install site in", siteDir);
-	return installModules(All.opt, siteDir, module).then(function(moduleName) {
-		var siteModuleDir = Path.join(siteDir, 'node_modules', moduleName);
-		return fs.readFile(Path.join(siteModuleDir, "package.json")).then(function(buf) {
-			return JSON.parse(buf.toString());
-		}).then(function(pkg) {
-			return Promise.all(Object.keys(pkg.dependencies || {}).map(function(subModule) {
-				var moduleDir = Path.join(siteDir, 'node_modules', subModule);
-				return initConfig(moduleDir, site.id, subModule, config);
-			})).then(function() {
-				return initConfig(siteModuleDir, site.id, moduleName, config);
-			});
-		});
-	}).catch(function(err) {
-		if (module) console.error("Could not install", siteDir, module, err);
-	}).then(function() {
-		return All.statics.install(site, config, All);
-	}).then(function() {
-		return All.api.install(site, config, All);
-	}).then(function() {
-		return All.cache.install(site);
-	}).then(function() {
-		return site;
-	}).catch(function(err) {
-		console.error(err);
-	});
-};
-
-function installModules(opt, siteDir, siteModule) {
-	if (!siteModule) return Promise.reject(new Error("no site module to install"));
-	debug("Installing site module", siteDir, siteModule);
-	var pkgPath = Path.join(siteDir, 'package.json');
-	return mkdirp(siteDir).then(function() {
-		return fs.readFile(pkgPath).then(function(buf) {
-			var pkg = JSON.parse(buf.toString());
-			return pkg.keep;
-		}).catch(function(err) {
-			return false;
-		}).then(function(keep) {
-			if (keep) return false;
-			return fs.writeFile(pkgPath, JSON.stringify({
-				dependencies: {} // npm will populate it for us
-			})).then(function() {
-				return true;
-			});
-		});
-	}).then(function(install) {
-		if (!install) return;
-		var baseEnv = {
-			HOME: process.env.HOME,
-			PATH: process.env.PATH
-		};
-		if (opt.env == "development" && process.env.SSH_AUTH_SOCK) {
-			// some local setup require to pass this to be able to use ssh keys
-			baseEnv.SSH_AUTH_SOCK = process.env.SSH_AUTH_SOCK;
-		}
-		if (opt.core.installer == "yarn") {
-			return All.utils.spawn(opt.installerPath, [
-				"--non-interactive",
-				"--ignore-optional",
-				"--prefer-offline",
-				"--production",
-				"--no-lockfile",
-				"--silent",
-				"add", siteModule
-			], {
-				cwd: siteDir,
-				timeout: 60 * 1000,
-				env: baseEnv
-			});
-		} else {
-			return All.utils.spawn(opt.installerPath, [
-				"install",
-				"--save", siteModule
-			], {
-				cwd: siteDir,
-				timeout: 60 * 1000,
-				env: Object.assign(baseEnv, {
-					npm_config_userconfig: '', // attempt to disable user config
-					npm_config_ignore_scripts: 'false',
-					npm_config_loglevel: 'error',
-					npm_config_progress: 'false',
-					npm_config_package_lock: 'false',
-					npm_config_only: 'prod',
-					npm_config_prefer_offline: 'true'
-				})
-			});
-		}
-	}).then(function(out) {
-		if (out) debug(out);
-		return fs.readFile(pkgPath).then(function(buf) {
-			var pkg = JSON.parse(buf.toString());
-			var deps = Object.keys(pkg.dependencies);
-			if (!deps.length) throw new Error("Could not install " + siteModule);
-			return deps[0];
-		});
-	});
-}
-
-function initConfig(moduleDir, id, module, config) {
-	debug("Module directory", module, moduleDir);
-	return fs.readFile(Path.join(moduleDir, 'package.json')).catch(function(err) {
-		// it's ok to not have a package.json here
-		return false;
-	}).then(function(buf) {
-		if (buf === false) {
-			console.info(`${id} > ${module} has no package.json, mounting the module directory`);
-			config.directories.push({
-				from: Path.resolve(moduleDir),
-				to: id ? Path.join('/', '.files', id, module) : '/.pageboard'
-			});
-			return;
-		}
-		var meta = JSON.parse(buf);
-		if (!meta.pageboard) {
-			return; // nothing to do
-		}
-		var directories = meta.pageboard.directories || [];
-		if (!Array.isArray(directories)) directories = [directories];
-		debug("processing directories from", moduleDir, directories);
-		directories.forEach(function(mount) {
-			if (typeof mount == "string") mount = {
-				from: mount,
-				to: mount
-			};
-			var from = Path.resolve(moduleDir, mount.from);
-			if (from.startsWith(moduleDir) == false) {
-				console.warn(`Warning: ${id} dependency ${module} bad mount from: ${from}`);
-				return;
-			}
-			var rootTo = id ? Path.join('/', '.files', id, module) : '/.pageboard';
-			var to = Path.resolve(rootTo, mount.to);
-			if (to.startsWith(rootTo) == false) {
-				console.warn(`Warning: ${id} dependency ${module} bad mount to: ${to}`);
-				return;
-			}
-			config.directories.push({
-				from: from,
-				to: to
-			});
-		});
-
-		var elements = meta.pageboard.elements || [];
-		if (!Array.isArray(elements)) elements = [elements];
-		debug("processing elements from", moduleDir, elements);
-		return Promise.all(elements.map(function(path) {
-			var absPath = Path.resolve(moduleDir, path);
-			return fs.stat(absPath).then(function(stat) {
-				if (stat.isDirectory()) return fs.readdir(absPath).then(function(paths) {
-					// make sure files are ordered by basename
-					paths.sort(function(a, b) {
-						a = Path.basename(a);
-						b = Path.basename(b);
-						if (a == b) return 0;
-						else if (a > b) return 1;
-						else if (a < b) return -1;
-					});
-					return paths.map(function(path) {
-						return Path.join(absPath, path);
-					});
-				});
-				else return [absPath];
-			}).then(function(paths) {
-				paths.forEach(function(path) {
-					if (path.endsWith('.js')) {
-						config.elements.push(path);
-					}
-				});
-			});
-		}));
-	}).catch(function(err) {
-		console.error(`Error: ${id} dependency ${module} cannot be extracted`, err);
-	});
 }
 
 function createApp(opt) {
