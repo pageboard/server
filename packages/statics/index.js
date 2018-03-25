@@ -91,9 +91,15 @@ function init(All) {
 
 exports.bundle = function(site, list, filename) {
 	var opts = All.opt.statics;
-	var outUrl = '/.files/' + filename;
+	var id = site.id;
+	var outUrl = '/.files';
+	if (site.data.version != null) {
+		id += '/' + site.data.version;
+		outUrl += '/' + site.data.version;
+	}
+	outUrl += `/${filename}`;
 	var bundle = new ConcatMap({
-		outputFile: urlToPath(opts, site.id, '/.files/' + filename)
+		outputFile: urlToPath(opts, id, outUrl)
 	});
 	list.forEach(function(url) {
 		bundle.addFile(urlToPath(opts, site.id, url));
