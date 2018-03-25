@@ -110,7 +110,7 @@ exports.init = function(opt) {
 	}).then(function() {
 		return Promise.all(Object.keys(opt.dependencies).map(function(module) {
 			return pkgup(require.resolve(module)).then(function(pkgPath) {
-				return Install.config(Path.dirname(pkgPath), null, module, All.opt);
+				return Install.config(Path.dirname(pkgPath), All.opt.name, module, All.opt);
 			});
 		}));
 	}).then(function() {
@@ -154,20 +154,33 @@ function install(site) {
 		elements: []
 	};
 	debug("install site in", siteDir);
-	return Install.install(All.opt, siteDir, module).then(function(moduleName) {
-		var siteModuleDir = Path.join(siteDir, 'node_modules', moduleName);
+	// this calls `npm install <module>` in a sites/<id> directory that contains an empty package.json
+	// <module> can be any npm-installable string
+	return Install.install(All.opt, siteDir, module).then(function(moduleInfo) {
+		// <moduleInfo.name> is the real package.json name
+		// <moduleInfo.version> is the real installed version
+		// let's read the package.json of the installed module
+		if (moduleInfo.version) {
+			site.data.version = moduleInfo.version;
+			id += '/' + moduleInfo.version;
+		}
+		var siteModuleDir = Path.join(siteDir, 'node_modules', moduleInfo.name);
 		return fs.readFile(Path.join(siteModuleDir, "package.json")).then(function(buf) {
 			return JSON.parse(buf.toString());
 		}).then(function(pkg) {
+			// configure directories/elements for each dependency
 			return Promise.all(Object.keys(pkg.dependencies || {}).map(function(subModule) {
 				var moduleDir = Path.join(siteDir, 'node_modules', subModule);
 				return Install.config(moduleDir, id, subModule, config);
 			})).then(function() {
-				return Install.config(siteModuleDir, id, moduleName, config);
+				// configure directories/elements for the module itself (so it can
+				// overrides what the dependencies have installed
+				return Install.config(siteModuleDir, id, moduleInfo.name, config);
 			});
 		});
 	}).catch(function(err) {
 		if (module) console.error("Could not install", siteDir, module, err);
+		else console.error(siteDir, err);
 	}).then(function() {
 		return All.statics.install(site, config, All);
 	}).then(function() {

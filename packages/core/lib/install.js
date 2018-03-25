@@ -78,7 +78,16 @@ exports.install = function(opt, siteDir, siteModule) {
 			var pkg = JSON.parse(buf.toString());
 			var deps = Object.keys(pkg.dependencies);
 			if (!deps.length) throw new Error("Could not install " + siteModule);
-			return deps[0];
+			// if siteModule is a github url, version will be <siteModule>#hash
+			// if siteModule is a real package, version is a real version
+			var name = deps[0];
+			var version = pkg.dependencies[name];
+			if (version.indexOf('#') > 0) version = version.split('#').pop();
+			if (!version || version.indexOf('/') >= 0) version = null;
+			return {
+				name: name,
+				version: version
+			};
 		});
 	});
 };
@@ -89,11 +98,12 @@ exports.config = function(moduleDir, id, module, config) {
 		// it's ok to not have a package.json here
 		return false;
 	}).then(function(buf) {
+		var dstDir = id != 'pageboard' ? Path.join('/', '.files', id, module) : '/.' + id;
 		if (buf === false) {
 			console.info(`${id} > ${module} has no package.json, mounting the module directory`);
 			config.directories.push({
 				from: Path.resolve(moduleDir),
-				to: id ? Path.join('/', '.files', id, module) : '/.pageboard'
+				to: dstDir
 			});
 			return;
 		}
@@ -114,9 +124,8 @@ exports.config = function(moduleDir, id, module, config) {
 				console.warn(`Warning: ${id} dependency ${module} bad mount from: ${from}`);
 				return;
 			}
-			var rootTo = id ? Path.join('/', '.files', id, module) : '/.pageboard';
-			var to = Path.resolve(rootTo, mount.to);
-			if (to.startsWith(rootTo) == false) {
+			var to = Path.resolve(dstDir, mount.to);
+			if (to.startsWith(dstDir) == false) {
 				console.warn(`Warning: ${id} dependency ${module} bad mount to: ${to}`);
 				return;
 			}
