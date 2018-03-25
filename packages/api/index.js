@@ -161,15 +161,9 @@ function preparePage(site, elts) {
 		elts.page.stylesheets = styles;
 		return Promise.resolve();
 	}
-	var version = site.data.version;
-	if (version == null) {
-		version = site.data.module.split('#');
-		if (version.length == 2) version = version.pop();
-		else version = '0';
-	}
 	return Promise.all([
-		All.statics.bundle(site, scripts, `scripts-${version}.js`),
-		All.statics.bundle(site, styles, `styles-${version}.css`)
+		All.statics.bundle(site, scripts, `scripts.js`),
+		All.statics.bundle(site, styles, `styles.css`)
 	]).then(function(both) {
 		elts.page.scripts = [both[0]];
 		elts.page.stylesheets = [both[1]];
