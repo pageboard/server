@@ -178,7 +178,7 @@ exports.search = function(site, data) {
 				page.data->>'title' AS title,
 				page.data->>'url' AS url,
 				page.updated_at,
-				(SELECT DISTINCT trim(value) FROM jsonb_each_text(ts_headline('unaccent', block.content, search.query)) WHERE length(trim(value)) > 0) AS headlines,
+				(SELECT string_agg(heads.value, '<br>') FROM (SELECT DISTINCT trim(value) AS value FROM jsonb_each_text(ts_headline('unaccent', block.content, search.query)) WHERE length(trim(value)) > 0) AS heads) AS headlines,
 				ts_rank(block.tsv, search.query) AS qrank
 			FROM
 				block AS site,
