@@ -5,7 +5,7 @@
   "main": "index.js",
   "scripts": {
     "test": "echo \"Error: no test specified\" && exit 1",
-    "postinstall": "postinstall-links"
+    "postinstall": "postinstall"
   },
   "repository": {
     "type": "git",
@@ -21,14 +21,14 @@
     "document-register-element": "^1.7.2",
     "dom-template-strings": "^2.4.2",
     "pagecut": "1.0.0-beta.64",
-    "postinstall-links": "^0.3.99",
+    "postinstall": "^0.1.0",
     "window-page": "^2.0.0-beta.6"
   },
-  "links": {
-    "pagecut/dist": "pagecut",
-    "document-register-element/build/document-register-element.js": "read/custom-elements.min.js",
-    "window-page/window-page.js": "read/",
-    "dom-template-strings/dist/dom-template-strings.js": "read/"
+  "postinstall": {
+    "pagecut/dist": "link pagecut",
+    "document-register-element/build/document-register-element.js": "link read/custom-elements.min.js",
+    "window-page/window-page.js": "link read/",
+    "dom-template-strings/dist/dom-template-strings.js": "link read/"
   },
   "pageboard": {
     "directories": [
