@@ -88,7 +88,7 @@ exports.login = function(data) {
 };
 
 exports.validate = function(data) {
-	return All.user.get(data).eager('children(sites) as sites', {
+	return All.user.get(data).select('_id').eager('children(sites) as sites', {
 		sites: function(builder) {builder.where('type', 'site');}
 	}).then(function(user) {
 		var hash = user.data.session && user.data.session.hash;
