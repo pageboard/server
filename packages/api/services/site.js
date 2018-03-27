@@ -135,8 +135,7 @@ exports.save = function(data) {
 		var oldDomain = dataOld.domain;
 		var sameDomain = oldDomain == dataNew.domain;
 
-		// PROBABLY A MISTAKE - patch do the job better
-//		Object.assign(site.data, data.data);
+		Object.assign(site.data, data.data);
 
 		var p = Promise.resolve();
 		if (!sameModule || !sameVersion) {
@@ -145,7 +144,7 @@ exports.save = function(data) {
 			});
 		}
 		return p.then(function() {
-			return site.$query().patch(data).then(function() {
+			return site.$query().patch(site).then(function() {
 				if (!sameDomain) {
 					All.domains.hosts[dataNew.domain] = All.domains.hosts[oldDomain];
 					delete All.domains.hosts[oldDomain];
