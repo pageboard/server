@@ -34,7 +34,8 @@ function init(All) {
 			if (module && module.startsWith(fullName) &&
 				(module.length == fullName.length || module[fullName.length] == "#")
 			) {
-					site.data.module = fullName + '#' + payload.after;
+					site.data.module = fullName;
+					site.data.version = payload.after;
 					save = true;
 			}
 			res.sendStatus(200);
