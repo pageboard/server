@@ -18,8 +18,9 @@
   "homepage": "https://github.com/pageboard/statics#readme",
   "dependencies": {
     "debug": "^2.3.2",
-    "fast-sourcemap-concat": "^1.2.4",
     "mkdirp": "^0.5.1",
+    "postinstall-css": "^0.1.0",
+    "postinstall-js": "^0.2.0",
     "rimraf": "^2.6.2",
     "serve-static": "^1.12.1"
   }

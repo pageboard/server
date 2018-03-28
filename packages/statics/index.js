@@ -1,5 +1,4 @@
 var serveStatic = require('serve-static');
-var ConcatMap = require('fast-sourcemap-concat');
 var URL = require('url');
 var Path = require('path');
 var pify = require('util').promisify;
@@ -10,6 +9,9 @@ var fs = {
 
 var mkdirp = pify(require('mkdirp'));
 var rimraf = pify(require('rimraf'));
+
+var postinstallJs = require('postinstall-js');
+var postinstallCss = require('postinstall-css');
 
 var debug = require('debug')('pageboard:statics');
 
@@ -98,14 +100,17 @@ exports.bundle = function(site, list, filename) {
 		outUrl += '/' + site.data.version;
 	}
 	outUrl += `/${filename}`;
-	var bundle = new ConcatMap({
-		outputFile: urlToPath(opts, id, outUrl)
+	var inputs = list.map(function(url) {
+		return urlToPath(opts, site.id, url);
 	});
-	list.forEach(function(url) {
-		bundle.addFile(urlToPath(opts, site.id, url));
-		bundle.addSpace('\n');
-	});
-	return bundle.end().then(function() {
+	var output = urlToPath(opts, site.id, outUrl);
+
+	var pi = filename.endsWith('.js') ? postinstallJs : postinstallCss;
+	return pi(inputs, output, {
+		minify: false,
+		modules: false,
+		builtinClasses: true
+	}).then(function() {
 		return outUrl;
 	});
 };
