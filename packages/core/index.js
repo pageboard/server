@@ -1,5 +1,6 @@
 var pify = require('util').promisify;
 if (!pify) pify = require('util').promisify = require('util-promisify');
+if (!Promise.prototype.finally) require('promise.prototype.finally').shim();
 var Path = require('path');
 var express = require('express');
 var morgan = require('morgan');

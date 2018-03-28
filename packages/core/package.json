@@ -32,6 +32,7 @@
     "pad": "^1.1.0",
     "pkg-up": "^2.0.0",
     "pretty-bytes": "^4.0.2",
+    "promise.prototype.finally": "^3.1.0",
     "rc": "^1.2.1",
     "serve-favicon": "^2.4.3",
     "spawn-please": "^0.3.0",
