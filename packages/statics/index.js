@@ -133,7 +133,7 @@ exports.install = function(site, {directories}, All) {
 	return rimraf(Path.join(All.opt.statics.runtime, id || 'pageboard')).then(function() {
 		var p = Promise.resolve();
 		directories.forEach(function(mount) {
-			p.then(function() {
+			p = p.then(function() {
 				return mountPath(mount.from, mount.to).catch(function(err) {
 					console.error("Cannot mount", mount.from, mount.to, err);
 					console.error("directories", directories);
