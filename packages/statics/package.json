@@ -19,7 +19,7 @@
   "dependencies": {
     "debug": "^2.3.2",
     "mkdirp": "^0.5.1",
-    "postinstall-css": "^0.1.1",
+    "postinstall-css": "^0.2.0",
     "postinstall-js": "^0.2.0",
     "rimraf": "^2.6.2",
     "serve-static": "^1.12.1"
