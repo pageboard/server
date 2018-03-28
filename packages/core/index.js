@@ -156,7 +156,13 @@ function install(site) {
 	debug("install site in", siteDir);
 	// this calls `npm install <module>` in a sites/<id> directory that contains an empty package.json
 	// <module> can be any npm-installable string
-	return Install.install(All.opt, siteDir, module).then(function(moduleInfo) {
+	var siteModule = module;
+	if (site.data.version) {
+		if (module.indexOf('/') > 0 && !module.startsWith('@')) siteModule += "#";
+		else siteModule += "@";
+		siteModule += site.data.version;
+	}
+	return Install.install(All.opt, siteDir, siteModule).then(function(moduleInfo) {
 		// <moduleInfo.name> is the real package.json name
 		// <moduleInfo.version> is the real installed version
 		// let's read the package.json of the installed module
