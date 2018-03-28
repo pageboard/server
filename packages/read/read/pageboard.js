@@ -1,9 +1,13 @@
 if (!window.Pageboard) window.Pageboard = {};
 
-// https://github.com/WebReflection/document-register-element#skipping-the-caveat-through-extends
+// this works in babel 6, see postinstall-js
 class HTMLCustomElement extends HTMLElement {
-	constructor(_) { return (_ = super(_)).init(), _; }
-	init() { /* override as you like */ }
+	constructor(me) {
+		me = super(me);
+		me.init();
+		return me;
+	}
+	init() {}
 }
 HTMLCustomElement.define = function(name, cla) {
 	if (!window.customElements.get(name)) window.customElements.define(name, cla);
