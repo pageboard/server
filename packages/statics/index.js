@@ -107,7 +107,7 @@ exports.bundle = function(site, list, filename) {
 
 	var pi = filename.endsWith('.js') ? postinstallJs : postinstallCss;
 	return pi(inputs, output, {
-		minify: false,
+		minify: true,
 		modules: false,
 		builtinClasses: true
 	}).then(function() {
