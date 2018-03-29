@@ -122,9 +122,6 @@ exports.check = function(fun, data) {
 
 exports.install = function(site, {elements, directories}, All) {
 	debug("installing", id, elements, directories);
-	// TODO chicken and egg problem, we want to sort using the element priority
-	// but we can't load it if it's not in the right order
-	// besides that, mind that elements are already ordered in their directory by core initConfig
 	var eltsMap = {};
 	var id = site ? site.id : null;
 	var allDirs = id ? All.opt.directories.concat(directories) : directories;
