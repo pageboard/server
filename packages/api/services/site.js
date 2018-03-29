@@ -149,7 +149,7 @@ exports.save = function(data) {
 					All.domains.hosts[dataNew.domain] = All.domains.hosts[oldDomain];
 					delete All.domains.hosts[oldDomain];
 				}
-				All.domains.sites[site.id] = site;
+				All.domains.update(site);
 			});
 		});
 	});
