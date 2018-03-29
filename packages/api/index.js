@@ -162,8 +162,8 @@ function preparePage(site, elts) {
 		All.statics.bundle(site, scripts, `scripts.js`),
 		All.statics.bundle(site, styles, `styles.css`)
 	]).then(function(both) {
-		elts.page.scripts = [both[0]];
-		elts.page.stylesheets = [both[1]];
+		elts.page.scripts = both[0];
+		elts.page.stylesheets = both[1];
 	});
 }
 
