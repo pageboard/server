@@ -13,8 +13,10 @@ var fs = {
 };
 
 exports.install = function(opt, siteDir, siteModule) {
-	if (!siteModule) return Promise.reject(new Error("no site module to install"));
 	debug("Installing site module", siteDir, siteModule);
+	if (!siteModule) {
+		return Promise.resolve();
+	}
 	var pkgPath = Path.join(siteDir, 'package.json');
 	return mkdirp(siteDir).then(function() {
 		return fs.readFile(pkgPath).then(function(buf) {

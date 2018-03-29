@@ -169,6 +169,7 @@ function install(site) {
 		siteModule += site.data.version;
 	}
 	return Install.install(All.opt, siteDir, siteModule).then(function(moduleInfo) {
+		if (!moduleInfo) return;
 		// <moduleInfo.name> is the real package.json name
 		// <moduleInfo.version> is the real installed version
 		// let's read the package.json of the installed module
@@ -195,13 +196,10 @@ function install(site) {
 	}).then(function() {
 		return All.api.install(site, config, All);
 	}).catch(function(err) {
-		if (module) console.error("Could not install", siteDir, module, err);
-		else console.error(siteDir, err);
 		site.errors.push(err);
 	}).then(function() {
 		return All.cache.install(site);
 	}).catch(function(err) {
-		console.error(err);
 		site.errors.push(err);
 	}).then(function() {
 		return site;
