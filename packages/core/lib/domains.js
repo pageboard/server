@@ -117,11 +117,11 @@ Domains.prototype.init = function(req, res, next) {
 		p = host.waiting;
 	}
 	return p.then(function(site) {
-		// let's optimize this
-		var errors = site.errors;
 		if (req.url.startsWith('/.api/')) {
+			// api needs a real site instance
 			site = site.$clone();
 		} else {
+			// others don't
 			site = {
 				id: site.id
 			};
