@@ -110,6 +110,9 @@ exports.bundle = function(site, list, filename) {
 		minify: true,
 		modules: false,
 		builtinClasses: true
+	}).catch(function(err) {
+		if (err && err.input) delete err.input;
+		throw err;
 	}).then(function() {
 		return outUrl;
 	});
