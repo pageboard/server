@@ -92,7 +92,7 @@ function init(All) {
 }
 
 exports.bundle = function(site, list, filename) {
-	if (list.length == 0) return;
+	if (list.length == 0) return [];
 	var opts = All.opt.statics;
 	var id = site.id;
 	var outUrl = '/.files';
@@ -115,7 +115,7 @@ exports.bundle = function(site, list, filename) {
 		if (err && err.input) delete err.input;
 		throw err;
 	}).then(function() {
-		return outUrl;
+		return [outUrl];
 	});
 };
 
