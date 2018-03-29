@@ -23,6 +23,7 @@ pre {
 	position: absolute;
 	top:0;
 	left:0;
+	font-size:0;
 }
 .preloader-chasing-squares {
 	width: 50px;
@@ -33,7 +34,9 @@ pre {
 	display: inline-block;
 	width: 40%;
 	height: 40%;
-	opacity: 1;
+	margin:5%;
+	border-radius:100%;
+	opacity: 0;
 	background: #666;
 }
 
@@ -41,7 +44,9 @@ pre {
 	animation: focusfade 2.8s infinite;
 }
 
-.preloader-chasing-squares .square:nth-child(1) {}
+.preloader-chasing-squares .square:nth-child(1) {
+	animation-delay: 0s;
+}
 
 .preloader-chasing-squares .square:nth-child(2) {
 	animation-delay: .7s;
@@ -57,27 +62,22 @@ pre {
 
 @keyframes focusfade {
 	0% {
-		opacity: 0.5;
-		background: #000;
+		opacity:0;
 	}
-	30% {
-		opacity: 0.5;
-		background: #666;
-	}
-	60% {
-		opacity: 0;
-	}
-	75% {
-		opacity: 0;
+	15% {
+		opacity: 1;
 	}
 	100% {
-		opacity: 0.5;
-		background: #000;
+		opacity: 0;
 	}
 }
 </style>
 <script>
 window.statusCheck = function() {
+	if (document.location.protocol == "file:") {
+		console.warn("file protocol, doing nothing");
+		return;
+	}
 	var titleNode = document.getElementById('title');
 	var contentNode = document.getElementById('content');
 	var xhr = new XMLHttpRequest();
