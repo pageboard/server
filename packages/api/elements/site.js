@@ -17,10 +17,19 @@ Pageboard.elements.site = {
 			title: 'Module version',
 			type: 'string'
 		},
-		production: {
-			title: 'Production',
-			type: 'boolean',
-			default: false
+		env: {
+			title: 'Environment',
+			anyOf: [{
+				const: 'dev',
+				title: 'Development'
+			}, {
+				const: 'staging',
+				title: 'Staging'
+			}, {
+				const: 'production',
+				title: 'Production'
+			}],
+			default: 'dev'
 		},
 		favicon: {
 			title: 'Favicon',

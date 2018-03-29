@@ -467,7 +467,7 @@ exports.del = function(site, data) {
 
 exports.robots = function(site) {
 	var lines = ["User-agent: *"];
-	if (site.data.production) {
+	if (site.data.env == "production") {
 		lines.push(`Sitemap: ${site.href}/.api/sitemap.txt`);
 	} else {
 		lines.push("Disallow: /");

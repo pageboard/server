@@ -145,7 +145,7 @@ exports.install = function(site, {elements, directories}, All) {
 };
 
 function preparePage(site, elts) {
-	var prod = site.data.production;
+	var env = site.data.env;
 	var list = Object.keys(elts).map(function(key) {
 		var el = elts[key];
 		if (!el.name) el.name = key;
@@ -156,7 +156,7 @@ function preparePage(site, elts) {
 	elts.page = Object.assign({}, elts.page);
 	var scripts = filter(list, 'scripts');
 	var styles = filter(list, 'stylesheets');
-	if (!prod) {
+	if (env == "dev") {
 		elts.page.scripts = scripts;
 		elts.page.stylesheets = styles;
 		return Promise.resolve();
