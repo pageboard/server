@@ -138,18 +138,21 @@ Domains.prototype.init = function(req, res, next) {
 
 Domains.prototype.check = function(host, req) {
 	var fam = 4;
+	var localhost4 = "127.0.0.1";
+	var localhost6 = "::1";
 	var ip = req.get('X-Forwarded-By');
 	if (ip) {
 		if (isIPv6(ip)) fam = 6;
 	} else {
 		var address = req.socket.address();
 		ip = address.address;
+		if (!ip) {
+			ip = localhost4;
+		}
 		fam = address.family == 'IPv6' ? 6 : 4;
 	}
 	var ips = {};
 	ips['ip' + fam] = ip;
-	var localhost4 = "127.0.0.1";
-	var localhost6 = "::1";
 	var prefix = '::ffff:';
 	if (fam == 6) {
 		if (ip.startsWith(prefix)) {
@@ -166,25 +169,29 @@ Domains.prototype.check = function(host, req) {
 		if (!ips.ip4) ips.ip4 = localhost4;
 	}
 
+	host.local = local;
 	host.upgradable = req.get('Upgrade-Insecure-Requests') && !local;
 	host.href = (host.upgradable ? 'https' : req.protocol) + '://' + req.get('Host');
 
 	var hostname = host.name;
 
-	var p = Promise.resolve();
-
-	if (!pageboardNames) {
-		if (local) {
-			pageboardNames = ['.localdomain'];
-		} else {
-			p = DNS.reverse(ip).then(function(hostnames) {
-				pageboardNames = hostnames.map(function(hn) {
-					return '.' + hn;
+	return Promise.resolve().then(function() {
+		if (!pageboardNames) {
+			if (local) {
+				if (hostname == "localhost") hostname += ".localdomain";
+				var parts = hostname.split('.');
+				parts[0] = "";
+				pageboardNames = [parts.join('.')];
+			} else {
+				return DNS.reverse(ip).then(function(hostnames) {
+					pageboardNames = hostnames.map(function(hn) {
+						return '.' + hn;
+					});
 				});
-			});
+			}
 		}
-	}
-	p = p.then(function() {
+	}).then(function() {
+		if (host.local) return hostname;
 		return DNS.lookup(hostname, {
 			all: false
 		}).then(function(lookup) {
@@ -197,7 +204,6 @@ Domains.prototype.check = function(host, req) {
 			return hostname;
 		});
 	});
-	return p;
 };
 
 Domains.prototype.update = function(site) {
