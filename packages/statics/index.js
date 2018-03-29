@@ -92,6 +92,7 @@ function init(All) {
 }
 
 exports.bundle = function(site, list, filename) {
+	if (list.length == 0) return;
 	var opts = All.opt.statics;
 	var id = site.id;
 	var outUrl = '/.files';
@@ -132,9 +133,12 @@ exports.resolve = function(id, url) {
 };
 
 exports.install = function(site, {directories}, All) {
-	var id = site ? site.id : null;
-	return rimraf(Path.join(All.opt.statics.runtime, id || 'pageboard')).then(function() {
-		var p = Promise.resolve();
+	var dir = site ? site.id : null;
+	if (dir) dir = Path.join("files", dir);
+	else dir = "pageboard";
+	var runSiteDir = Path.join(All.opt.statics.runtime, dir);
+	return rimraf(runSiteDir).then(function() {
+		var p = mkdirp(runSiteDir);
 		directories.forEach(function(mount) {
 			p = p.then(function() {
 				return mountPath(mount.from, mount.to).catch(function(err) {
