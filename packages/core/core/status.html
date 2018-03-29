@@ -83,6 +83,7 @@ window.statusCheck = function() {
 	var xhr = new XMLHttpRequest();
 	xhr.open("GET", "/.well-known/status.json", true);
 	xhr.onreadystatechange = function() {
+		if (this.readyState != 4) return;
 		if (this.status == 200) {
 			var res;
 			try {
