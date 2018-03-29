@@ -127,7 +127,7 @@ Domains.prototype.init = function(req, res, next) {
 			};
 		}
 		if (!site.data) site.data = {};
-		if (!site.data.domain) site.data.domain = host.name;
+//		if (!site.data.domain) site.data.domain = host.name;
 
 		site.href = host.href;
 		req.site = site;
