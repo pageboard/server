@@ -22,21 +22,29 @@ function init(All) {
 				return next(new HttpError.BadRequest("Unsupported event"));
 			}
 
-			// TODO queue installations, and do db transaction
-			var sign = req.get('X-Github-Signature');
-			var delivery = req.get('X-Github-Delivery');
-			if (sign && sign != signBlob(site.data['github-webhook-secret'] || '', req.body)) {
-				throw new HttpError.Forbidden("Invalid Signature");
+			var secret = site.data['github-webhook-secret'];
+			if (secret) {
+				var sign = req.get('X-Github-Signature');
+				var delivery = req.get('X-Github-Delivery');
+				if (sign && sign != signBlob(secret, req._body)) {
+					throw new HttpError.Forbidden("Invalid Signature");
+				}
 			}
+
 			var payload = req.body;
-			var fullName = payload.repository.full_name;
 			var module = site.data.module;
-			if (module && module.startsWith(fullName) &&
-				(module.length == fullName.length || module[fullName.length] == "#")
-			) {
-					site.data.module = fullName;
-					site.data.version = payload.after;
+			if (module && module == payload.repository.full_name) {
+				var ref = payload.ref;
+				var version;
+				if (ref && ref.startsWith('refs/tags/')) {
+					version = ref.substring('refs/tags/'.length);
+				} else if (site.data.env != "production") {
+					version = payload.after;
+				}
+				if (version) {
+					site.data.version = version;
 					save = true;
+				}
 			}
 			res.sendStatus(200);
 		}).catch(next).then(function() {
