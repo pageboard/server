@@ -13,6 +13,7 @@ var pkgup = require('pkg-up');
 var debug = require('debug')('pageboard:core');
 var csp = require('content-security-policy-builder');
 var http = require('http');
+
 var Domains = require('./lib/domains');
 var Install = require('./lib/install');
 
@@ -67,10 +68,7 @@ function symlinkDir(opt, name) {
 }
 
 exports.init = function(opt) {
-	var app = createApp(opt);
-
 	var All = {
-		app: app,
 		opt: opt,
 		utils: {}
 	};
@@ -79,6 +77,8 @@ exports.init = function(opt) {
 	All.run = run.bind(All);
 	All.install = install.bind(All);
 	All.domains = new Domains(All);
+
+	All.app = createApp(All);
 
 	if (opt.global) global.All = All;
 
@@ -121,23 +121,26 @@ exports.init = function(opt) {
 	}).then(function() {
 		return initPlugins.call(All, pluginList, 'file');
 	}).then(function() {
-		app.use(filesError);
-		app.use(All.log);
+		All.app.use(filesError);
+		All.app.use(All.log);
 		return initPlugins.call(All, pluginList, 'service');
 	}).then(function() {
-		app.use('/.api/*', function(req, res, next) {
+		All.app.use('/.api/*', function(req, res, next) {
 			next(new HttpError.NotFound(`Cannot ${req.method} ${req.originalUrl}`));
 		});
-		app.use(servicesError);
+		All.app.use(servicesError);
 		return initPlugins.call(All, pluginList, 'view');
 	}).then(function() {
-		app.use(viewsError);
+		All.app.use(viewsError);
 	}).then(function() {
 		return All.statics.install(null, All.opt, All);
 	}).then(function() {
 		return All.api.install(null, All.opt, All);
 	}).then(function() {
 //		return All.cache.install(null, All.opt, All);
+		return fs.readFile(Path.join(__dirname, 'core/status.html')).then(function(buf) {
+			statusPage = buf;
+		});
 	}).then(function() {
 		initDumps(All);
 		return All;
@@ -145,6 +148,7 @@ exports.init = function(opt) {
 };
 
 function install(site) {
+	site.errors = [];
 	var module = site.data.module;
 	var id = site.id;
 	var All = this;
@@ -185,19 +189,21 @@ function install(site) {
 				return Install.config(siteModuleDir, id, moduleInfo.name, config);
 			});
 		});
-	}).catch(function(err) {
-		if (module) console.error("Could not install", siteDir, module, err);
-		else console.error(siteDir, err);
 	}).then(function() {
 		return All.statics.install(site, config, All);
 	}).then(function() {
 		return All.api.install(site, config, All);
+	}).catch(function(err) {
+		if (module) console.error("Could not install", siteDir, module, err);
+		else console.error(siteDir, err);
+		site.errors.push(err);
 	}).then(function() {
 		return All.cache.install(site);
-	}).then(function() {
-		return site;
 	}).catch(function(err) {
 		console.error(err);
+		site.errors.push(err);
+	}).then(function() {
+		return site;
 	});
 }
 
@@ -280,8 +286,9 @@ function initLog(opt) {
 	return morgan(opt.core.log);
 }
 
-function createApp(opt) {
+function createApp(All) {
 	var app = express();
+	var opt = All.opt;
 	// https://www.smashingmagazine.com/2017/04/secure-web-app-http-headers/
 	// for csp headers, see prerender and write
 	app.set("env", opt.env);
@@ -297,28 +304,30 @@ function createApp(opt) {
 			imgSrc: cspDefault.concat(["data:"])
 		}
 	});
+	app.use(All.domains.init);
 	app.use(function(req, res, next) {
-		res.setHeader('X-XSS-Protection','1;mode=block');
-		res.setHeader('X-Frame-Options', 'SAMEORIGIN');
-		res.setHeader('X-Content-Type-Options', 'nosniff');
-		res.setHeader('Content-Security-Policy', cspHeader);
-		Promise.resolve().then(function() {
-			return All.domains.init(req).then(function() {
-				if (req.url == "/.well-known/pageboard") {
-					res.type('text').sendStatus(200);
-				} else if (req.protocol == "http" && req.upgradable) {
-					res.redirect(301, "https://" + req.get('Host') + req.url);
-				} else {
-					next();
-				}
-			});
-		}).catch(function(err) {
-			var handler;
-			if (req.url.startsWith('/.api/') || req.url.startsWith('/.well-known/')) handler = servicesError;
-			else if (req.url.startsWith('/.')) handler = filesError;
-			else handler = viewsError;
-			handler(err, req, res, next);
-		});
+		if (req.url == "/.well-known/status.json") {
+			res.type("json").send({errors: req.site.errors});
+		} else if (req.path == "/.well-known/status.html") {
+			res.type("html").send(statusPage);
+		} else if (req.url == "/.well-known/pageboard") {
+			res.type('text').sendStatus(200);
+		} else if (req.protocol == "http" && req.upgradable) {
+			res.redirect(301, "https://" + req.get('Host') + req.url);
+		} else {
+			res.setHeader('X-XSS-Protection','1;mode=block');
+			res.setHeader('X-Frame-Options', 'SAMEORIGIN');
+			res.setHeader('X-Content-Type-Options', 'nosniff');
+			res.setHeader('Content-Security-Policy', cspHeader);
+			next();
+		}
+	});
+	app.use(function(err, req, res, next) {
+		var handler;
+		if (req.url.startsWith('/.api/') || req.url.startsWith('/.well-known/')) handler = servicesError;
+		else if (req.url.startsWith('/.')) handler = filesError;
+		else handler = viewsError;
+		handler(err, req, res, next);
 	});
 	return app;
 }

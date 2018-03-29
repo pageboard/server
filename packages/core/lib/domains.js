@@ -9,6 +9,7 @@ function Domains(All) {
 	this.All = All;
 	this.sites = {}; // cache sites by id
 	this.hosts = {}; // cache hosts by hostname
+	this.init = this.init.bind(this);
 }
 
 /*
@@ -22,7 +23,7 @@ so adding an IP to pageboard and pointing a host to that IP needs a restart)
 - site installation calls upcache update url, which resolves the hanging promise
 - init returns for everyone
 */
-Domains.prototype.init = function(req) {
+Domains.prototype.init = function(req, res, next) {
 	var All = this.All;
 	var sites = this.sites;
 	var hosts = this.hosts;
@@ -34,9 +35,10 @@ Domains.prototype.init = function(req) {
 		};
 	}
 	if (host._error) {
-		return Promise.reject(host._error);
+		return next(host._error);
 	}
 	if (!host.searching) {
+		host.isSearching = true;
 		host.searching = Promise.resolve().then(function() {
 			return this.check(host, req);
 		}.bind(this)).then(function(hostname) {
@@ -67,15 +69,21 @@ Domains.prototype.init = function(req) {
 		}).catch(function(err) {
 			host._error = err;
 			throw err;
+		}).finally(function() {
+			host.isSearching = false;
 		});
 	}
 	if (!host.installing) {
+		host.isInstalling = true;
 		host.installing = host.searching.then(function(site) {
 			site.href = host.href;
 			return All.install(site);
+		}).finally(function() {
+			host.isInstalling = false;
 		});
 	}
 	if (!host.waiting) {
+		host.isWaiting = true;
 		var subpending = new Promise(function(resolve) {
 			host.finalize = resolve;
 		});
@@ -83,9 +91,10 @@ Domains.prototype.init = function(req) {
 			return subpending.then(function() {
 				return site;
 			});
+		}).finally(function() {
+			host.isWaiting = false;
 		});
 	}
-
 
 	if (req.url == "/.well-known/upcache") {
 		if (host.finalize) {
@@ -95,11 +104,20 @@ Domains.prototype.init = function(req) {
 		p = host.installing;
 	} else if (req.url == "/.well-known/pageboard") {
 		p = host.searching;
+	} else if (req.url.startsWith('/.files/') || req.url.startsWith('/.api/')) {
+		p = host.waiting;
+	} else if (req.path.startsWith("/.well-known/status.html")) {
+		return next();
+	} else if (req.url.startsWith("/.well-known/status.json")) {
+		p = host.waiting;
+	} else if (host.isWaiting) {
+		return res.redirect("/.well-known/status.html?" + encodeURIComponent(req.url));
 	} else {
 		p = host.waiting;
 	}
 	return p.then(function(site) {
 		// let's optimize this
+		var errors = site.errors;
 		if (req.url.startsWith('/.api/')) {
 			site = site.$clone();
 		} else {
@@ -109,15 +127,23 @@ Domains.prototype.init = function(req) {
 		}
 		if (!site.data) site.data = {};
 		if (!site.data.domain) site.data.domain = host.name;
+
 		Object.defineProperty(site, 'href', {
 			enumerable: false,
 			configurable: true,
 			writable: false,
 			value: host.href
 		});
+		Object.defineProperty(site, 'errors', {
+			enumerable: false,
+			configurable: true,
+			writable: false,
+			value: errors
+		});
 		req.site = site;
 		req.upgradable = host.upgradable;
-	});
+		next();
+	}).catch(next);
 };
 
 Domains.prototype.check = function(host, req) {
@@ -182,6 +208,14 @@ Domains.prototype.check = function(host, req) {
 		});
 	});
 	return p;
+};
+
+Domains.prototype.update = function(site) {
+	var cur = this.sites[site.id];
+	if (!cur) return;
+	site.href = cur.href;
+	site.errors = cur.errors;
+	this.sites[site.id] = site;
 };
 
 function isIPv6(ip) {

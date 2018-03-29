@@ -1,0 +1,58 @@
+<!DOCTYPE html>
+<html>
+<head>
+<script>
+window.statusCheck = function() {
+	var titleNode = document.getElementById('title');
+	var contentNode = document.getElementById('content');
+	var xhr = new XMLHttpRequest();
+	xhr.open("GET", "/.well-known/status.json", true);
+	xhr.onreadystatechange = function() {
+		if (this.readyState != 4) return;
+		if (this.status == 200) {
+			var res;
+			try {
+				res = JSON.parse(this.responseText);
+			} catch(ex) {
+				setTimeout(function() {
+					window.statusCheck();
+				}, 1000);
+				return;
+			}
+			contentNode.innerText = "";
+			if (res.errors && res.errors.length) {
+				titleNode.innerText = 'Error installing website';
+				res.errors.forEach(function(line) {
+					var str = Object.keys(line).map(function(key) {
+						var val = line[key];
+						if (typeof val != "string") val = JSON.stringify(val);
+						return key + ": " + "<pre>" + val + "</pre>";
+					}).join('<br>');
+					contentNode.insertAdjacentHTML('beforeEnd', '<hr><p>' + str + '</p>');
+				});
+			} else {
+				var ref = document.location.search;
+				if (ref.startsWith('?')) ref = ref.substring(1);
+				ref = decodeURIComponent(ref);
+				if (!ref.startsWith('/') || ref.startsWith('//')) ref = '/';
+				titleNode.innerHTML = 'Redirecting to <a href="' + encodeURI(ref) + '">' + ref + '</a>';
+				setTimeout(function() {
+					document.location = ref;
+				}, 500);
+				return;
+			}
+		} else {
+			setTimeout(function() {
+				window.statusCheck();
+			}, 1000);
+		}
+	};
+	xhr.send();
+};
+</script>
+</head>
+<body onload="statusCheck()">
+<h2 id="title">Please wait while this website is getting ready...</h2>
+<div id="content"></div>
+</body>
+</html>
