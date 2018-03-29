@@ -51,7 +51,7 @@ exports.config = function(pkgOpt) {
 		core: {
 			installer: "npm",  // or yarn
 			listen: 3000,
-			log: ':method :status :time :size :type :url'
+			log: ':method :status :time :size :site:url'
 		}
 	});
 	symlinkDir(opt, 'sites');
@@ -280,6 +280,9 @@ function initLog(opt) {
 	morgan.token('size', function(req, res) {
 		var len = parseInt(res.get('Content-Length'));
 		return pad(6, (len && prettyBytes(len) || '0 B').replace(/ /g, ''));
+	});
+	morgan.token('site', function(req, res) {
+		return req.site && req.site.id && req.site.id.substring(0, 8) || "?";
 	});
 
 	return morgan(opt.core.log);
