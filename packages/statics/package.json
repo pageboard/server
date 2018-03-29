@@ -19,8 +19,8 @@
   "dependencies": {
     "debug": "^2.3.2",
     "mkdirp": "^0.5.1",
-    "postinstall-css": "^0.2.1",
-    "postinstall-js": "^0.2.1",
+    "postinstall-css": "^0.2.2",
+    "postinstall-js": "^0.2.2",
     "rimraf": "^2.6.2",
     "serve-static": "^1.12.1"
   }
