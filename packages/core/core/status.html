@@ -29,6 +29,9 @@ pre {
 	height: 50px;
 	font-size:0;
 }
+#message {
+	height:50px;
+}
 
 .preloader-chasing-squares .square {
 	display: inline-block;
@@ -80,6 +83,7 @@ window.statusCheck = function() {
 	}
 	var titleNode = document.getElementById('title');
 	var contentNode = document.getElementById('content');
+	var messageNode = document.getElementById('message');
 	var xhr = new XMLHttpRequest();
 	xhr.open("GET", "/.well-known/status.json", true);
 	xhr.onreadystatechange = function() {
@@ -109,7 +113,7 @@ window.statusCheck = function() {
 				if (ref.startsWith('?')) ref = ref.substring(1);
 				ref = decodeURIComponent(ref);
 				if (!ref.startsWith('/') || ref.startsWith('//')) ref = '/';
-				display('Redirecting to <a href="' + encodeURI(ref) + '">' + ref + '</a>', "");
+				display(null, null, 'Redirecting to<br><a href="' + encodeURI(ref) + '">' + document.location.host + ref + '</a>', "");
 				setTimeout(function() {
 					document.location = ref;
 				}, 500);
@@ -131,9 +135,10 @@ window.statusCheck = function() {
 		display("Network error", "Please contact administrator");
 	}
 
-	function display(title, content) {
-		titleNode.innerHTML = title;
-		contentNode.innerHTML = content;
+	function display(title, content, message) {
+		if (title != null) titleNode.innerHTML = title;
+		if (content != null) contentNode.innerHTML = content;
+		if (message != null) messageNode.innerHTML = message;
 	}
 };
 
@@ -149,7 +154,7 @@ window.statusCheck = function() {
 		<div class='square'></div>
 		<div class='square'></div>
 	</div>
-	<p>please wait</p>
+	<p id="message">please wait</p>
 </div>
 </div>
 </body>
