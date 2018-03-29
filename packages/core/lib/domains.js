@@ -97,19 +97,19 @@ Domains.prototype.init = function(req, res, next) {
 		});
 	}
 
-	if (req.url == "/.well-known/upcache") {
+	if (req.path == "/.well-known/upcache") {
 		if (host.finalize) {
 			host.finalize();
 			delete host.finalize;
 		}
 		p = host.installing;
-	} else if (req.url == "/.well-known/pageboard") {
+	} else if (req.path == "/.well-known/pageboard") {
 		p = host.searching;
-	} else if (req.url.startsWith('/.files/') || req.url.startsWith('/.api/')) {
+	} else if (req.path.startsWith('/.files/') || req.path.startsWith('/.api/')) {
 		p = host.waiting;
-	} else if (req.path.startsWith("/.well-known/status.html")) {
+	} else if (req.path == "/.well-known/status.html") {
 		return next();
-	} else if (req.url.startsWith("/.well-known/status.json")) {
+	} else if (req.path == "/.well-known/status.json") {
 		p = host.waiting;
 	} else if (host.isWaiting) {
 		return res.redirect("/.well-known/status.html?" + encodeURIComponent(req.url));

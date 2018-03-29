@@ -308,11 +308,11 @@ function createApp(All) {
 	});
 	app.use(All.domains.init);
 	app.use(function(req, res, next) {
-		if (req.url == "/.well-known/status.json") {
+		if (req.path == "/.well-known/status.json") {
 			res.type("json").send({errors: req.site.errors});
 		} else if (req.path == "/.well-known/status.html") {
 			res.type("html").send(statusPage);
-		} else if (req.url == "/.well-known/pageboard") {
+		} else if (req.path == "/.well-known/pageboard") {
 			res.type('text').sendStatus(200);
 		} else if (req.protocol == "http" && req.upgradable) {
 			res.redirect(301, "https://" + req.get('Host') + req.url);
