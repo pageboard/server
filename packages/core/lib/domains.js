@@ -25,6 +25,7 @@ so adding an IP to pageboard and pointing a host to that IP needs a restart)
 */
 Domains.prototype.init = function(req, res, next) {
 	var All = this.All;
+	var self = this;
 	var sites = this.sites;
 	var hosts = this.hosts;
 	var hostname = req.hostname;
@@ -128,18 +129,7 @@ Domains.prototype.init = function(req, res, next) {
 		if (!site.data) site.data = {};
 		if (!site.data.domain) site.data.domain = host.name;
 
-		Object.defineProperty(site, 'href', {
-			enumerable: false,
-			configurable: true,
-			writable: false,
-			value: host.href
-		});
-		Object.defineProperty(site, 'errors', {
-			enumerable: false,
-			configurable: true,
-			writable: false,
-			value: errors
-		});
+		site.href = host.href;
 		req.site = site;
 		req.upgradable = host.upgradable;
 		next();
@@ -211,10 +201,21 @@ Domains.prototype.check = function(host, req) {
 };
 
 Domains.prototype.update = function(site) {
-	var cur = this.sites[site.id];
-	if (!cur) return;
-	site.href = cur.href;
-	site.errors = cur.errors;
+	var cur = this.sites[site.id] || {};
+	var href = site.href || cur.href;
+	Object.defineProperty(site, 'href', {
+		enumerable: false,
+		configurable: true,
+		writable: true,
+		value: href
+	});
+	var errors = site.errors || cur.errors;
+	Object.defineProperty(site, 'errors', {
+		enumerable: false,
+		configurable: true,
+		writable: true,
+		value: errors
+	});
 	this.sites[site.id] = site;
 };
 

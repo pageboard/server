@@ -148,10 +148,11 @@ exports.init = function(opt) {
 };
 
 function install(site) {
-	site.errors = [];
 	var module = site.data.module;
 	var id = site.id;
 	var All = this;
+	All.domains.update(site);
+	site.errors = [];
 	var dataDir = Path.join(All.opt.dirs.data, 'sites');
 	var siteDir = Path.join(dataDir, id);
 	var config = {
