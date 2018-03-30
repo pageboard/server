@@ -126,6 +126,7 @@ Domains.prototype.init = function(req, res, next) {
 	return p.then(function() {
 		if (!next) return;
 		var site = self.sites[host.id];
+		var Block = site.Block;
 		var errors = site.errors;
 		if (req.url.startsWith('/.api/')) {
 			// api needs a real site instance and be able to toy with it
@@ -137,6 +138,8 @@ Domains.prototype.init = function(req, res, next) {
 		site.href = host.href;
 		site.hostname = host.name;
 		site.errors = errors;
+		site.Block = Block;
+
 		req.site = site;
 		req.upgradable = host.upgradable;
 		next();
@@ -234,6 +237,13 @@ Domains.prototype.update = function(site) {
 		configurable: true,
 		writable: true,
 		value: []
+	});
+	var Block = site.Block || cur.Block;
+	Object.defineProperty(site, 'Block', {
+		enumerable: false,
+		configurable: true,
+		writable: true,
+		value: Block
 	});
 	this.sites[site.id] = site;
 };
