@@ -8,10 +8,15 @@ body {
 	color:#333;
 	text-align:center;
 }
+#content {
+	padding:1em;
+}
+table {
+	text-align:left;
+}
 pre {
 	max-height:25%;
 	overflow:auto;
-	text-align:left;
 }
 .preloader {
 	display: flex;
@@ -104,9 +109,9 @@ window.statusCheck = function() {
 					var str = Object.keys(line).map(function(key) {
 						var val = line[key];
 						if (typeof val != "string") val = JSON.stringify(val);
-						return key + ": " + "<pre>" + val + "</pre>";
-					}).join('<br>');
-					return '<hr><p>' + str + '</p>';
+						return '<tr><td>' + key + "</td><td><pre>" + val + "</pre></td></tr>";
+					}).join('');
+					return '<table>' + str + '</table>';
 				}).join('\n'));
 			} else {
 				var ref = document.location.search;
