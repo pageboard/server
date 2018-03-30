@@ -92,7 +92,7 @@ function init(All) {
 	exports.dump = dumpDb.bind(null, dbOpt.connection, opt);
 
 	All.app.get('/.api/elements.js',
-		All.cache.tag('share', 'file').for('5s'),
+		All.cache.tag('share', 'file').for('0s'),
 		function(req, res, next) {
 			res.type('text/javascript');
 			var source = req.site.Block.source;
