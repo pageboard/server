@@ -12,20 +12,20 @@ var fs = {
 	symlink: pify(require('fs').symlink)
 };
 
-exports.install = function(opt, siteDir, siteModule) {
-	debug("Installing site module", siteDir, siteModule);
+exports.install = function(opt, siteDir, siteModule, siteVersion) {
 	if (!siteModule) {
 		return Promise.resolve();
 	}
 	var pkgPath = Path.join(siteDir, 'package.json');
 	return mkdirp(siteDir).then(function() {
-		return fs.readFile(pkgPath).then(function(buf) {
-			var pkg = JSON.parse(buf.toString());
-			return pkg.keep;
-		}).catch(function(err) {
-			return false;
-		}).then(function(keep) {
-			if (keep) return false;
+		return getModuleVersion(pkgPath).catch(function() {}).then(function(moduleInfo) {
+			var version = moduleInfo && moduleInfo.version;
+			if (version) {
+				if (version == "@latest" || version == siteVersion) return false;
+			}
+			return true;
+		}).then(function(install) {
+			if (!install) return false;
 			return fs.writeFile(pkgPath, JSON.stringify({
 				dependencies: {} // npm will populate it for us
 			})).then(function() {
@@ -33,7 +33,16 @@ exports.install = function(opt, siteDir, siteModule) {
 			});
 		});
 	}).then(function(install) {
-		if (!install) return;
+		if (siteVersion) {
+			if (siteModule.indexOf('/') > 0 && !siteModule.startsWith('@')) siteModule += "#";
+			else siteModule += "@";
+			siteModule += siteVersion;
+		}
+		if (!install) {
+			console.info("skipped install", siteModule);
+			return;
+		}
+		console.info("install", siteModule);
 		var baseEnv = {
 			HOME: process.env.HOME,
 			PATH: process.env.PATH
@@ -76,21 +85,7 @@ exports.install = function(opt, siteDir, siteModule) {
 		}
 	}).then(function(out) {
 		if (out) debug(out);
-		return fs.readFile(pkgPath).then(function(buf) {
-			var pkg = JSON.parse(buf.toString());
-			var deps = Object.keys(pkg.dependencies);
-			if (!deps.length) throw new Error("Could not install " + siteModule);
-			// if siteModule is a github url, version will be <siteModule>#hash
-			// if siteModule is a real package, version is a real version
-			var name = deps[0];
-			var version = pkg.dependencies[name];
-			if (version.indexOf('#') > 0) version = version.split('#').pop();
-			if (!version || version.indexOf('/') >= 0) version = null;
-			return {
-				name: name,
-				version: version
-			};
-		});
+		return getModuleVersion(pkgPath);
 	});
 };
 
@@ -170,3 +165,21 @@ exports.config = function(moduleDir, id, module, config) {
 	});
 };
 
+
+function getModuleVersion(pkgPath) {
+	return fs.readFile(pkgPath).then(function(buf) {
+		var pkg = JSON.parse(buf.toString());
+		var deps = Object.keys(pkg.dependencies);
+		if (!deps.length) return;
+		// if siteModule is a github url, version will be <siteModule>#hash
+		// if siteModule is a real package, version is a real version
+		var name = deps[0];
+		var version = pkg.dependencies[name];
+		if (version.indexOf('#') > 0) version = version.split('#').pop();
+		if (!version || version.indexOf('/') >= 0) version = null;
+		return {
+			name: name,
+			version: version
+		};
+	});
+}

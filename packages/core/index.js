@@ -149,6 +149,7 @@ exports.init = function(opt) {
 
 function install(site) {
 	var module = site.data.module;
+	var version = site.data.version;
 	var id = site.id;
 	var All = this;
 	All.domains.update(site);
@@ -160,19 +161,13 @@ function install(site) {
 	};
 	// this calls `npm install <module>` in a sites/<id> directory that contains an empty package.json
 	// <module> can be any npm-installable string
-	var siteModule = module;
-	if (site.data.version) {
-		if (module.indexOf('/') > 0 && !module.startsWith('@')) siteModule += "#";
-		else siteModule += "@";
-		siteModule += site.data.version;
-	}
-	debug("install site", siteDir, siteModule);
-	return Install.install(All.opt, siteDir, siteModule).then(function(moduleInfo) {
+	debug("install site", siteDir, module, version);
+	return Install.install(All.opt, siteDir, module, version).then(function(moduleInfo) {
 		if (!moduleInfo) return;
 		// <moduleInfo.name> is the real package.json name
 		// <moduleInfo.version> is the real installed version
 		// let's read the package.json of the installed module
-		var version = moduleInfo.version || site.data.version;
+		var version = moduleInfo.version || version;
 		if (version) {
 			site.data.version = version; // not sure it should upgrade here
 			id += '/' + version;

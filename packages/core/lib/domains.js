@@ -61,6 +61,8 @@ Domains.prototype.init = function(req, res, next) {
 			if (site.id == "pageboard") throw new HttpError.NotFound("site cannot have id='pageboard'");
 			host.id = site.id;
 			sites[site.id] = site;
+			if (!site.data) site.data = {};
+			if (!site.data.domain) site.data.domain = host.name;
 			if (site.data.domain && !hosts[site.data.domain]) {
 				// TODO migrate host to new site.data.domain
 				throw new HttpError.NotFound(`site ${site.id} cannot change domain
@@ -123,8 +125,6 @@ Domains.prototype.init = function(req, res, next) {
 		if (req.url.startsWith('/.api/')) {
 			// api needs a real site instance
 			site = site.$clone();
-			if (!site.data) site.data = {};
-			if (!site.data.domain) site.data.domain = host.name;
 		} else {
 			// others don't
 			site = {
@@ -229,8 +229,12 @@ Domains.prototype.update = function(site) {
 };
 
 Domains.prototype.error = function(site, err) {
+	if (!site.data.domain) console.warn("All.domains.error(site) missing site.data.domain");
 	var host = this.hosts[site.data.domain];
-	if (!host) return;
+	if (!host) {
+		console.error("Error", site.id, err);
+		return;
+	}
 	site.errors.push(err);
 	host.isWaiting = true;
 };
