@@ -1,6 +1,7 @@
 var NodeMailer = require('nodemailer');
 var Mailgun = require('nodemailer-mailgun-transport');
 var got = require('got');
+var URL = require('url');
 // TODO https://nodemailer.com/dkim/
 
 var domemail = require('./express-dom-email');
@@ -96,7 +97,8 @@ exports.send = function(site, data) {
 	.then(function(row) {
 		if (!row.from) row.from = row.owner;
 		var emailUrl = site.href + row.page[0].data.url;
-		var authCookie = All.auth.cookie({hostname: site.data.domain}, {
+		var hostname = URL.parse(site.href).hostname;
+		var authCookie = All.auth.cookie({hostname: hostname}, {
 			scopes: {
 				"auth.login": true
 			}
