@@ -64,9 +64,8 @@ Domains.prototype.init = function(req, res, next) {
 			if (!site.data) site.data = {};
 			if (!site.hostname) site.hostname = host.name;
 			if (site.data.domain && !hosts[site.data.domain]) {
-				// TODO copy host to support both
-				throw new HttpError.NotFound(`site ${site.id} cannot change domain
-				${hostname} => ${site.data.domain}`);
+				// alienate current hostname with official data.domain
+				hosts[site.data.domain] = host;
 			}
 			return site;
 		}).catch(function(err) {
@@ -80,6 +79,7 @@ Domains.prototype.init = function(req, res, next) {
 		host.isInstalling = true;
 		host.installing = host.searching.then(function(site) {
 			site.href = host.href;
+			site.hostname = host.name;
 			return All.install(site);
 		}).finally(function() {
 			host.isInstalling = false;
@@ -135,6 +135,7 @@ Domains.prototype.init = function(req, res, next) {
 		}
 
 		site.href = host.href;
+		site.hostname = host.name;
 		site.errors = errors;
 		req.site = site;
 		req.upgradable = host.upgradable;
@@ -221,11 +222,12 @@ Domains.prototype.update = function(site) {
 		writable: true,
 		value: href
 	});
+	var hostname = site.hostname || cur.hostname || site.data.domain;
 	Object.defineProperty(site, 'hostname', {
 		enumerable: false,
 		configurable: true,
 		writable: true,
-		value: site.hostname || cur.hostname || site.data.domain
+		value: hostname
 	});
 	Object.defineProperty(site, 'errors', {
 		enumerable: false,
