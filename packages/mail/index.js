@@ -96,7 +96,7 @@ exports.send = function(site, data) {
 	.then(function(row) {
 		if (!row.from) row.from = row.owner;
 		var emailUrl = site.href + row.page[0].data.url;
-		var authCookie = All.auth.cookie({hostname: site.data.domain}, {
+		var authCookie = All.auth.cookie({hostname: site.hostname}, {
 			scopes: {
 				"auth.login": true
 			}
