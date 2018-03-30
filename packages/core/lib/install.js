@@ -8,6 +8,7 @@ var fs = {
 	readFile: pify(require('fs').readFile),
 	readdir: pify(require('fs').readdir),
 	stat: pify(require('fs').stat),
+	lstat: pify(require('fs').lstat),
 	unlink: pify(require('fs').unlink),
 	symlink: pify(require('fs').symlink)
 };
@@ -20,10 +21,20 @@ exports.install = function(opt, siteDir, siteModule, siteVersion) {
 	return mkdirp(siteDir).then(function() {
 		return getModuleVersion(pkgPath).catch(function() {}).then(function(moduleInfo) {
 			var version = moduleInfo && moduleInfo.version;
-			if (version) {
-				if (version == "@latest" || version == siteVersion) return false;
+			if (version && version == siteVersion) return false;
+			if (moduleInfo.name) {
+				return fs.lstat(Path.join(siteDir, 'node_modules', moduleInfo.name))
+					.catch(function() {}).then(function(stat) {
+						if (stat && stat.isSymbolicLink()) {
+							console.warn("detected linked module", moduleInfo.name);
+							return false;
+						} else {
+							return true;
+						}
+					});
+			} else {
+				return true;
 			}
-			return true;
 		}).then(function(install) {
 			if (!install) return false;
 			return fs.writeFile(pkgPath, JSON.stringify({
@@ -97,7 +108,7 @@ exports.config = function(moduleDir, id, module, config) {
 	}).then(function(buf) {
 		var dstDir = id != 'pageboard' ? Path.join('/', '.files', id, module) : '/.' + id;
 		if (buf === false) {
-			console.info(`${id} > ${module} has no package.json, mounting the module directory`);
+			console.info(`${moduleDir} has no package.json, mounting the module directory`);
 			config.directories.push({
 				from: Path.resolve(moduleDir),
 				to: dstDir

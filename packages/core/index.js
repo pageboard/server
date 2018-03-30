@@ -166,9 +166,6 @@ function install(site) {
 	debug("install site", siteDir, module, version);
 	return Install.install(All.opt, siteDir, module, version).then(function(moduleInfo) {
 		if (!moduleInfo) return;
-		// <moduleInfo.name> is the real package.json name
-		// <moduleInfo.version> is the real installed version
-		// let's read the package.json of the installed module
 		var version = moduleInfo.version || version;
 		if (version) {
 			site.data.version = version; // not sure it should upgrade here
