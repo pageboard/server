@@ -115,21 +115,28 @@ Domains.prototype.init = function(req, res, next) {
 	} else if (req.path == "/.well-known/status.json") {
 		p = host.waiting;
 	} else if (host.isWaiting) {
-		return res.redirect("/.well-known/status.html?" + encodeURIComponent(req.url));
+		p = new Promise(function(resolve) {
+			setTimeout(resolve, 2000);
+		}).then(function() {
+			if (host.isWaiting) {
+				next = null;
+				res.redirect("/.well-known/status.html?" + encodeURIComponent(req.url));
+			} else {
+				return host.waiting;
+			}
+		});
 	} else {
 		p = host.waiting;
 	}
 	return p.then(function() {
+		if (!next) return;
 		var site = self.sites[host.id];
 		var errors = site.errors;
 		if (req.url.startsWith('/.api/')) {
-			// api needs a real site instance
+			// api needs a real site instance and be able to toy with it
 			site = site.$clone();
 		} else {
 			// others don't
-			site = {
-				id: site.id
-			};
 		}
 
 		site.href = host.href;
