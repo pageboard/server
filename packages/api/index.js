@@ -99,7 +99,7 @@ function init(All) {
 			res.send('if (!window.Pageboard) Pageboard = {};\nPageboard.elements = ' + source);
 		}
 	);
-
+	All.app.get('/.api/*', All.cache.tag('file')); // because api depends on site elements
 	All.app.use('/.api/*', All.cache.tag('api'), bodyParserJson);
 }
 
