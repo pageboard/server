@@ -92,8 +92,9 @@ Domains.prototype.init = function(req, res, next) {
 			return subpending.then(function() {
 				return site;
 			});
-		}).finally(function() {
-			host.isWaiting = false;
+		}).then(function(site) {
+			if (site.errors.length == 0) host.isWaiting = false;
+			return site;
 		});
 	}
 
@@ -117,6 +118,7 @@ Domains.prototype.init = function(req, res, next) {
 		p = host.waiting;
 	}
 	return p.then(function(site) {
+		var errors = site.errors;
 		if (req.url.startsWith('/.api/')) {
 			// api needs a real site instance
 			site = site.$clone();
@@ -130,6 +132,7 @@ Domains.prototype.init = function(req, res, next) {
 //		if (!site.data.domain) site.data.domain = host.name;
 
 		site.href = host.href;
+		site.errors = errors;
 		req.site = site;
 		req.upgradable = host.upgradable;
 		next();
