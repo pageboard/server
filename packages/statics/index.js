@@ -14,7 +14,7 @@ var WorkerNodes = require('worker-nodes');
 var workerOpts = {
 	minWorkers: 1,
 	maxWorkers: 1,
-	taskTimeout: 30 * 1000
+	taskTimeout: 60 * 1000
 };
 var bundlers = {};
 
@@ -45,6 +45,10 @@ function init(All) {
 		js: new WorkerNodes(require.resolve('postinstall-js'), workerOpts),
 		css: new WorkerNodes(require.resolve('postinstall-css'), workerOpts)
 	};
+	process.on('exit', function() {
+		bundlers.js.terminate();
+		bundlers.css.terminate();
+	});
 
 	return mkdirp(statics.runtime).then(function() {
 		console.info(`Static directories are served from symlinks in ${statics.runtime}`);
