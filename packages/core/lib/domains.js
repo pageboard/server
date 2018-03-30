@@ -117,19 +117,20 @@ Domains.prototype.init = function(req, res, next) {
 	} else {
 		p = host.waiting;
 	}
-	return p.then(function(site) {
+	return p.then(function() {
+		var site = self.sites[host.id];
 		var errors = site.errors;
 		if (req.url.startsWith('/.api/')) {
 			// api needs a real site instance
 			site = site.$clone();
+			if (!site.data) site.data = {};
+			if (!site.data.domain) site.data.domain = host.name;
 		} else {
 			// others don't
 			site = {
 				id: site.id
 			};
 		}
-		if (!site.data) site.data = {};
-		if (!site.data.domain) site.data.domain = host.name;
 
 		site.href = host.href;
 		site.errors = errors;
