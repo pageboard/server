@@ -173,9 +173,10 @@ function install(site) {
 		// <moduleInfo.name> is the real package.json name
 		// <moduleInfo.version> is the real installed version
 		// let's read the package.json of the installed module
-		if (moduleInfo.version) {
-			site.data.version = moduleInfo.version;
-			id += '/' + moduleInfo.version;
+		var version = moduleInfo.version || site.data.version;
+		if (version) {
+			site.data.version = version; // not sure it should upgrade here
+			id += '/' + version;
 		}
 		var siteModuleDir = Path.join(siteDir, 'node_modules', moduleInfo.name);
 		return fs.readFile(Path.join(siteModuleDir, "package.json")).then(function(buf) {
