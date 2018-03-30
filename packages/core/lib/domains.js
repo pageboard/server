@@ -218,14 +218,20 @@ Domains.prototype.update = function(site) {
 		writable: true,
 		value: href
 	});
-	var errors = site.errors || cur.errors;
 	Object.defineProperty(site, 'errors', {
 		enumerable: false,
 		configurable: true,
 		writable: true,
-		value: errors
+		value: []
 	});
 	this.sites[site.id] = site;
+};
+
+Domains.prototype.error = function(site, err) {
+	var host = this.hosts[site.data.domain];
+	if (!host) return;
+	site.errors.push(err);
+	host.isWaiting = true;
 };
 
 function isIPv6(ip) {

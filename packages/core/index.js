@@ -152,14 +152,12 @@ function install(site) {
 	var id = site.id;
 	var All = this;
 	All.domains.update(site);
-	site.errors = [];
 	var dataDir = Path.join(All.opt.dirs.data, 'sites');
 	var siteDir = Path.join(dataDir, id);
 	var config = {
 		directories: [],
 		elements: []
 	};
-	debug("install site in", siteDir);
 	// this calls `npm install <module>` in a sites/<id> directory that contains an empty package.json
 	// <module> can be any npm-installable string
 	var siteModule = module;
@@ -168,6 +166,7 @@ function install(site) {
 		else siteModule += "@";
 		siteModule += site.data.version;
 	}
+	debug("install site", siteDir, siteModule);
 	return Install.install(All.opt, siteDir, siteModule).then(function(moduleInfo) {
 		if (!moduleInfo) return;
 		// <moduleInfo.name> is the real package.json name
@@ -197,11 +196,11 @@ function install(site) {
 	}).then(function() {
 		return All.api.install(site, config, All);
 	}).catch(function(err) {
-		site.errors.push(err);
+		All.domains.error(site, err);
 	}).then(function() {
 		return All.cache.install(site);
 	}).catch(function(err) {
-		site.errors.push(err);
+		console.error(err);
 	}).then(function() {
 		return site;
 	});
