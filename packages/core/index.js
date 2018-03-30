@@ -154,6 +154,7 @@ function install(site) {
 	var All = this;
 	All.domains.update(site);
 	if (!site.href) return;
+	All.domains.hold(site);
 	var dataDir = Path.join(All.opt.dirs.data, 'sites');
 	var siteDir = Path.join(dataDir, id);
 	var config = {
@@ -198,6 +199,7 @@ function install(site) {
 	}).catch(function(err) {
 		console.error(err);
 	}).then(function() {
+		All.domains.release(site);
 		return site;
 	});
 }

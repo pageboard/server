@@ -62,9 +62,9 @@ Domains.prototype.init = function(req, res, next) {
 			host.id = site.id;
 			sites[site.id] = site;
 			if (!site.data) site.data = {};
-			if (!site.data.domain) site.data.domain = host.name;
+			if (!site.hostname) site.hostname = host.name;
 			if (site.data.domain && !hosts[site.data.domain]) {
-				// TODO migrate host to new site.data.domain
+				// TODO copy host to support both
 				throw new HttpError.NotFound(`site ${site.id} cannot change domain
 				${hostname} => ${site.data.domain}`);
 			}
@@ -91,12 +91,7 @@ Domains.prototype.init = function(req, res, next) {
 			host.finalize = resolve;
 		});
 		host.waiting = host.installing.then(function(site) {
-			return subpending.then(function() {
-				return site;
-			});
-		}).then(function(site) {
-			if (site.errors.length == 0) host.isWaiting = false;
-			return site;
+			return subpending;
 		});
 	}
 
@@ -226,6 +221,12 @@ Domains.prototype.update = function(site) {
 		writable: true,
 		value: href
 	});
+	Object.defineProperty(site, 'hostname', {
+		enumerable: false,
+		configurable: true,
+		writable: true,
+		value: site.hostname || cur.hostname || site.data.domain
+	});
 	Object.defineProperty(site, 'errors', {
 		enumerable: false,
 		configurable: true,
@@ -235,9 +236,21 @@ Domains.prototype.update = function(site) {
 	this.sites[site.id] = site;
 };
 
+Domains.prototype.hold = function(site) {
+	var host = this.hosts[site.hostname];
+	if (!host) return;
+	host.isWaiting = true;
+};
+
+Domains.prototype.release = function(site) {
+	var host = this.hosts[site.hostname];
+	if (!host) return;
+	if (site.errors.length == 0) host.isWaiting = false;
+};
+
 Domains.prototype.error = function(site, err) {
-	if (!site.data.domain) console.warn("All.domains.error(site) missing site.data.domain");
-	var host = this.hosts[site.data.domain];
+	if (!site.hostname) console.warn("All.domains.error(site) missing site.hostname");
+	var host = this.hosts[site.hostname];
 	if (!host) {
 		console.error("Error", site.id, err);
 		return;
