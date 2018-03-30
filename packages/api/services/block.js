@@ -207,7 +207,7 @@ exports.add.schema = {
 };
 
 exports.save = function(site, data) {
-	return exports.get(data).then(function(block) {
+	return exports.get(site, data).then(function(block) {
 		return site.Block.query()
 		.patch(data).skipUndefined().where('block.id', block.id).then(function(count) {
 			if (count == 0) throw new Error(`Block not found for update ${data.id}`);
