@@ -10,8 +10,13 @@ var fs = {
 var mkdirp = pify(require('mkdirp'));
 var rimraf = pify(require('rimraf'));
 
-var postinstallJs = require('postinstall-js');
-var postinstallCss = require('postinstall-css');
+var WorkerNodes = require('worker-nodes');
+var workerOpts = {
+	minWorkers: 1,
+	maxWorkers: 1,
+	taskTimeout: 30 * 1000
+};
+var bundlers = {};
 
 var debug = require('debug')('pageboard:statics');
 
@@ -36,6 +41,10 @@ exports = module.exports = function(opt) {
 function init(All) {
 	var statics = All.opt.statics;
 	var app = All.app;
+	bundlers = {
+		js: new WorkerNodes(require.resolve('postinstall-js'), workerOpts),
+		css: new WorkerNodes(require.resolve('postinstall-css'), workerOpts)
+	};
 
 	return mkdirp(statics.runtime).then(function() {
 		console.info(`Static directories are served from symlinks in ${statics.runtime}`);
@@ -106,8 +115,9 @@ exports.bundle = function(site, list, filename) {
 	});
 	var output = urlToPath(opts, site.id, outUrl);
 
-	var pi = filename.endsWith('.js') ? postinstallJs : postinstallCss;
-	return pi(inputs, output, {
+	var ext = Path.extname(filename).substring(1);
+	if (ext != "js" && ext != "css") throw new Error("Bundles only .js or .css extensions");
+	return bundlers[ext].call(inputs, output, {
 		minify: true,
 		modules: false,
 		builtinClasses: true
