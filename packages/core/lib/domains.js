@@ -108,7 +108,7 @@ Domains.prototype.init = function(req, res, next) {
 		p = host.installing;
 	} else if (req.path == "/.well-known/pageboard") {
 		p = host.searching;
-	} else if (req.path.startsWith('/.files/') || req.path.startsWith('/.api/')) {
+	} else if (req.path == "/favicon.ico" || req.path.startsWith('/.files/') || req.path.startsWith('/.api/')) {
 		p = host.waiting;
 	} else if (req.path == "/.well-known/status.html") {
 		return next();
