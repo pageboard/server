@@ -162,7 +162,7 @@ exports.add = function(site, data) {
 	var url = data.url;
 	var objUrl = URL.parse(url);
 	var isLocal = false;
-	if (site.data.domain == objUrl.hostname) {
+	if (site.hostname == objUrl.hostname) {
 		url = data.url;
 		data.url = objUrl.path;
 		isLocal = true;

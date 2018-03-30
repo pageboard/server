@@ -275,7 +275,7 @@ exports.save = function(site, changes) {
 		var url = block.data && block.data.url;
 		if (url) {
 			var objUrl = URL.parse(url);
-			if (objUrl.hostname == site.data.domain) {
+			if (objUrl.hostname == site.hostname) {
 				block.data.url = objUrl.path;
 			}
 		}
