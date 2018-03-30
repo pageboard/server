@@ -153,6 +153,7 @@ function install(site) {
 	var id = site.id;
 	var All = this;
 	All.domains.update(site);
+	if (!site.href) return;
 	var dataDir = Path.join(All.opt.dirs.data, 'sites');
 	var siteDir = Path.join(dataDir, id);
 	var config = {
