@@ -103,9 +103,9 @@ window.statusCheck = function() {
 				}, 1000);
 				return;
 			}
-
 			if (res.errors && res.errors.length) {
 				display('Error installing site', res.errors.map(function(line) {
+					if (typeof line == "string") line = {error: line};
 					var str = Object.keys(line).map(function(key) {
 						var val = line[key];
 						if (typeof val != "string") val = JSON.stringify(val);
