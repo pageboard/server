@@ -86,13 +86,7 @@ Domains.prototype.init = function(req, res, next) {
 		});
 	}
 	if (!host.waiting) {
-		host.isWaiting = true;
-		var subpending = new Promise(function(resolve) {
-			host.finalize = resolve;
-		});
-		host.waiting = host.installing.then(function(site) {
-			return subpending;
-		});
+		doWait(host);
 	}
 
 	if (req.path == "/.well-known/upcache") {
@@ -251,7 +245,7 @@ Domains.prototype.update = function(site) {
 Domains.prototype.hold = function(site) {
 	var host = this.hosts[site.hostname];
 	if (!host) return;
-	host.isWaiting = true;
+	doWait(host);
 };
 
 Domains.prototype.release = function(site) {
@@ -274,3 +268,15 @@ Domains.prototype.error = function(site, err) {
 function isIPv6(ip) {
 	return ip.indexOf(':') >= 0;
 }
+
+function doWait(host) {
+	if (host.finalize) return;
+	host.isWaiting = true;
+	var subpending = new Promise(function(resolve) {
+		host.finalize = resolve;
+	});
+	host.waiting = host.installing.then(function() {
+		return subpending;
+	});
+}
+
