@@ -9,6 +9,10 @@ Pageboard.elements.site = {
 			type: 'string',
 			format: 'hostname'
 		},
+		lang: {
+			title: 'Language',
+			type: ["string", "null"]
+		},
 		module: {
 			title: 'Module name',
 			type: 'string'

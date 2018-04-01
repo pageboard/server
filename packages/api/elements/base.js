@@ -62,8 +62,14 @@ Pageboard.elements.page = {
 			title = doc.createElement('title');
 			doc.head.insertBefore(title, doc.head.firstChild);
 		}
-		if (block.site && block.site.favicon) {
-			doc.head.appendChild(doc.dom`<link rel="icon" href="${block.site.favicon}">`);
+		var site = block.site;
+		if (site) {
+			if (site.favicon) {
+				doc.head.appendChild(doc.dom`<link rel="icon" href="${block.site.favicon}">`);
+			}
+			if (site.lang) {
+				doc.documentElement.lang = site.lang;
+			}
 		}
 		title.textContent = block.data.title || '';
 		return doc.body;
