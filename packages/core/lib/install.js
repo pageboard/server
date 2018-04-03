@@ -19,7 +19,7 @@ exports.install = function(opt, siteDir, siteModule, siteVersion) {
 	}
 	var pkgPath = Path.join(siteDir, 'package.json');
 	return mkdirp(siteDir).then(function() {
-		return getModuleVersion(pkgPath).catch(function() { return {}; }).then(function(moduleInfo) {
+		return getModuleVersion(pkgPath).then(function(moduleInfo) {
 			var version = moduleInfo.version;
 			if (version && version == siteVersion) return false;
 			if (moduleInfo.name) {
@@ -192,5 +192,7 @@ function getModuleVersion(pkgPath) {
 			name: name,
 			version: version
 		};
+	}).catch(function() {
+		return {};
 	});
 }

@@ -165,7 +165,7 @@ function install(site) {
 	// <module> can be any npm-installable string
 	debug("install site", siteDir, module, version);
 	return Install.install(All.opt, siteDir, module, version).then(function(moduleInfo) {
-		if (!moduleInfo) return;
+		if (!moduleInfo.name) return;
 		var version = moduleInfo.version || version;
 		if (version) {
 			site.data.version = version; // not sure it should upgrade here
