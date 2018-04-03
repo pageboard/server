@@ -8,6 +8,16 @@ exports = module.exports = function(opt) {
 };
 
 function init(All) {
+	All.app.get("/.api/block", function(req, res, next) {
+		var type = req.query.type;
+		if (!type || ['user', 'site', 'page'].indexOf(type) >= 0) {
+			return next(new HttpError.BadRequest("Cannot request that type"));
+		}
+		console.log(req.query);
+		All.run('block.get', req.site, req.query).then(function(data) {
+			res.json(data);
+		}).catch(next);
+	});
 }
 
 exports.get = function(site, data) {
