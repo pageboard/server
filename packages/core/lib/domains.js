@@ -261,6 +261,16 @@ Domains.prototype.error = function(site, err) {
 		console.error("Error", site.id, err);
 		return;
 	}
+	try {
+		var errObj = JSON.parse(JSON.stringify(err));
+		if (!errObj || typeof errObj == "object" && Object.keys(errObj).length == 0) {
+			console.error(err);
+			err = {name: err.name, message: err.message};
+		}
+	} catch(ex) {
+		console.error(err);
+		console.error(ex);
+	}
 	site.errors.push(err);
 	host.isWaiting = true;
 };
