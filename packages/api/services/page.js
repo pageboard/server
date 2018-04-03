@@ -190,7 +190,7 @@ exports.search = function(site, data) {
 			WHERE
 				site.type = 'site' AND site.id = ?
 				AND rs.parent_id = site._id AND block._id = rs.child_id
-				AND block.type NOT IN ('site', 'user', 'page')
+				AND block.type NOT IN ('site', 'user', 'page', 'query', 'form')
 				AND rp.child_id = block._id AND page._id = rp.parent_id
 				AND page.type = 'page'
 				AND search.query @@ block.tsv
