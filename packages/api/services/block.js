@@ -13,7 +13,6 @@ function init(All) {
 		if (!type || ['user', 'site', 'page'].indexOf(type) >= 0) {
 			return next(new HttpError.BadRequest("Cannot request that type"));
 		}
-		console.log(req.query);
 		All.run('block.get', req.site, req.query).then(function(data) {
 			res.json(data);
 		}).catch(next);
@@ -27,6 +26,11 @@ exports.get = function(site, data) {
 		.whereSite(site.id)
 		.where('block.id', data.id);
 	if (data.type) q.where('block.type', data.type);
+	if (data.standalone) q.eager(`[children(childrenFilter)]`, {
+		childrenFilter: function(query) {
+			return query.select(Block.tableColumns).where('block.standalone', false);
+		}
+	});
 	return q.first().throwIfNotFound();
 };
 exports.get.schema = {
@@ -37,6 +41,10 @@ exports.get.schema = {
 		},
 		type: {
 			type: 'string'
+		},
+		standalone: {
+			type: 'boolean',
+			default: false
 		}
 	},
 	additionalProperties: false
