@@ -120,7 +120,8 @@ window.statusCheck = function() {
 				if (!ref.startsWith('/') || ref.startsWith('//')) ref = '/';
 				display(null, null, 'Redirecting to<br><a href="' + encodeURI(ref) + '">' + document.location.host + ref + '</a>', "");
 				setTimeout(function() {
-					document.location = ref;
+					if (document.location.replace) document.location.replace(ref);
+					else document.location = ref;
 				}, 500);
 				return;
 			}
