@@ -19,8 +19,8 @@ exports.install = function(opt, siteDir, siteModule, siteVersion) {
 	}
 	var pkgPath = Path.join(siteDir, 'package.json');
 	return mkdirp(siteDir).then(function() {
-		return getModuleVersion(pkgPath).catch(function() {}).then(function(moduleInfo) {
-			var version = moduleInfo && moduleInfo.version;
+		return getModuleVersion(pkgPath).catch(function() { return {}; }).then(function(moduleInfo) {
+			var version = moduleInfo.version;
 			if (version && version == siteVersion) return false;
 			if (moduleInfo.name) {
 				return fs.lstat(Path.join(siteDir, 'node_modules', moduleInfo.name))
@@ -181,7 +181,7 @@ function getModuleVersion(pkgPath) {
 	return fs.readFile(pkgPath).then(function(buf) {
 		var pkg = JSON.parse(buf.toString());
 		var deps = Object.keys(pkg.dependencies);
-		if (!deps.length) return;
+		if (!deps.length) return {};
 		// if siteModule is a github url, version will be <siteModule>#hash
 		// if siteModule is a real package, version is a real version
 		var name = deps[0];
