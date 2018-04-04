@@ -81,6 +81,15 @@ pre {
 }
 </style>
 <script>
+(function() {
+
+var ref = document.location.search;
+if (ref.startsWith('?')) ref = ref.substring(1);
+ref = decodeURIComponent(ref);
+if (!ref.startsWith('/') || ref.startsWith('//')) ref = '/';
+if (window.history && window.history.replaceState) {
+	window.history.replaceState(null, null, ref);
+}
 window.statusCheck = function() {
 	if (document.location.protocol == "file:") {
 		console.warn("file protocol, doing nothing");
@@ -114,10 +123,7 @@ window.statusCheck = function() {
 					return '<table>' + str + '</table>';
 				}).join('\n'));
 			} else {
-				var ref = document.location.search;
-				if (ref.startsWith('?')) ref = ref.substring(1);
-				ref = decodeURIComponent(ref);
-				if (!ref.startsWith('/') || ref.startsWith('//')) ref = '/';
+
 				display(null, null, 'Redirecting to<br><a href="' + encodeURI(ref) + '">' + document.location.host + ref + '</a>', "");
 				setTimeout(function() {
 					if (document.location.replace) document.location.replace(ref);
@@ -140,7 +146,6 @@ window.statusCheck = function() {
 	} catch(ex) {
 		display("Network error", "Please contact administrator");
 	}
-
 	function display(title, content, message) {
 		if (title != null) titleNode.innerHTML = title;
 		if (content != null) contentNode.innerHTML = content;
@@ -148,6 +153,7 @@ window.statusCheck = function() {
 	}
 };
 
+})();
 </script>
 </head>
 <body onload="statusCheck()">
