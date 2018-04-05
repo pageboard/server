@@ -1,3 +1,4 @@
+var ref = require('objection').ref;
 var URL = require('url');
 var Path = require('path');
 
@@ -78,13 +79,13 @@ exports.search = function(site, data) {
 		q.whereIn('href.type', data.type);
 	}
 	if (data.maxSize) {
-		q.where(All.api.ref('href.meta:size'), '<=', data.maxSize);
+		q.where(ref('href.meta:size'), '<=', data.maxSize);
 	}
 	if (data.maxWidth) {
-		q.where(All.api.ref('href.meta:width'), '<=', data.maxWidth);
+		q.where(ref('href.meta:width'), '<=', data.maxWidth);
 	}
 	if (data.maxHeight) {
-		q.where(All.api.ref('href.meta:height'), '<=', data.maxHeight);
+		q.where(ref('href.meta:height'), '<=', data.maxHeight);
 	}
 
 	if (data.url) {
@@ -155,7 +156,6 @@ exports.search.schema = {
 };
 
 exports.add = function(site, data) {
-	var ref = All.api.ref;
 	var Href = All.api.Href;
 	var Block = All.api.Block;
 

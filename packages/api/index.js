@@ -80,12 +80,9 @@ function init(All) {
 		models[model.name] = model;
 	});
 
-	exports.objection = objection;
-	exports.transaction = objection.transaction;
-	exports.ref = objection.ref;
-	exports.Model = objection.Model;
 	exports.Href = models.Href;
-	exports.models = models;
+	exports.Block = models.Block;
+	exports.trx = knexInst.transaction.bind(knexInst);
 
 	exports.migrate = migrate.bind(null, knexInst, opt.migrations);
 	exports.seed = seed.bind(null, knexInst, opt.seeds);
@@ -129,7 +126,7 @@ exports.install = function(site, {elements, directories}, All) {
 	return Promise.all(allElts.map(function(path) {
 		return importElements(path, eltsMap, id, allDirs);
 	})).then(function() {
-		var Block = exports.models.Block.extendSchema(id, eltsMap);
+		var Block = exports.Block.extendSchema(id, eltsMap);
 		if (id) {
 			return preparePage(site, eltsMap).then(function() {
 				Block.source = toSource(eltsMap);
