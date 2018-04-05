@@ -31,6 +31,7 @@ function init(All) {
 		return p.then(function(result) {
 			// here are fixed some inspector shortcomings
 			if (result.icon == "data:/,") result.icon = null;
+			if (result.mime == "image/svg") result.mime = "image/svg+xml";
 			return result;
 		});
 	};
