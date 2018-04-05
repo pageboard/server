@@ -204,13 +204,15 @@ exports.find.schema = {
 exports.add = function(site, data) {
 	var id = data.parent;
 	delete data.parent;
-	return site.Block.query().where('block.id', site.id)
-	.first().throwIfNotFound().then(function(site) {
-		return site.$relatedQuery('children').insert(data).then(function(child) {
-			if (!id) return child;
-			return site.$relatedQuery('children').where('block.id', id)
-			.select('_id').first().throwIfNotFound().then(function(parent) {
-				return parent.$relatedQuery('children').relate(child);
+	return All.api.trx(function(trx) {
+		return site.Block.query(trx).where('block.id', site.id)
+		.first().throwIfNotFound().then(function(site) {
+			return site.$relatedQuery('children', trx).insert(data).then(function(child) {
+				if (!id) return child;
+				return site.$relatedQuery('children', trx).where('block.id', id)
+				.select('_id').first().throwIfNotFound().then(function(parent) {
+					return parent.$relatedQuery('children', trx).relate(child);
+				});
 			});
 		});
 	});

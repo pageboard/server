@@ -281,11 +281,12 @@ exports.save = function(site, changes) {
 		}
 		return block.type == "page"; // might be obj.data.url but not sure
 	});
-	return All.api.transaction(site.Block, function(Block) {
+
+	return All.api.trx(function(trx) {
 		// this also effectively prevents removing a page and adding a new page
 		// with the same url as the one removed
 		var allUrl = {};
-		return site.$relatedQuery('children')
+		return site.$relatedQuery('children', trx)
 		.select('block.id', ref('block.data:url').as('url'))
 		.where('block.type', 'page').then(function(dbPages) {
 			pages.forEach(function(page) {
@@ -300,14 +301,14 @@ exports.save = function(site, changes) {
 				}
 			});
 		}).then(function() {
-			return applyUnrelate(site, changes.unrelate).then(function() {
-				return applyRemove(site, changes.remove);
+			return applyUnrelate(site, trx, changes.unrelate).then(function() {
+				return applyRemove(site, trx, changes.remove);
 			}).then(function() {
-				return applyAdd(site, changes.add);
+				return applyAdd(site, trx, changes.add);
 			}).then(function() {
-				return applyUpdate(site, changes.update);
+				return applyUpdate(site, trx, changes.update);
 			}).then(function() {
-				return applyRelate(site, changes.relate);
+				return applyRelate(site, trx, changes.relate);
 			});
 		});
 	}).then(function() {
@@ -351,34 +352,34 @@ exports.save.schema = {
 	}
 };
 
-function applyUnrelate(site, obj) {
+function applyUnrelate(site, trx, obj) {
 	return Promise.all(Object.keys(obj).map(function(parentId) {
-		return site.$relatedQuery('children').where('block.id', parentId)
+		return site.$relatedQuery('children', trx).where('block.id', parentId)
 		.first().throwIfNotFound().then(function(parent) {
-			return parent.$relatedQuery('children').unrelate().whereIn('block.id', obj[parentId]);
+			return parent.$relatedQuery('children', trx).unrelate().whereIn('block.id', obj[parentId]);
 		});
 	}));
 }
 
-function applyRemove(site, list) {
+function applyRemove(site, trx, list) {
 	if (!list.length) return;
-	return site.$relatedQuery('children').delete()
+	return site.$relatedQuery('children', trx).delete()
 	.whereIn('block.id', list).whereNot('standalone', true);
 }
 
-function applyAdd(site, list) {
+function applyAdd(site, trx, list) {
 	if (!list.length) return;
 	// this relates site to inserted children
-	return site.$relatedQuery('children').insert(list);
+	return site.$relatedQuery('children', trx).insert(list);
 }
 
-function applyUpdate(site, list) {
+function applyUpdate(site, trx, list) {
 	return Promise.all(list.map(function(block) {
 		if (block.type == "page") {
-			return updatePage(site, block);
+			return updatePage(site, trx, block);
 		} else {
 			// simpler path
-			return site.$relatedQuery('children')
+			return site.$relatedQuery('children', trx)
 			.where('block.id', block.id).patch(block).skipUndefined().then(function(count) {
 				if (count == 0) throw new Error(`Block not found for update ${block.id}`);
 			});
@@ -386,13 +387,13 @@ function applyUpdate(site, list) {
 	}));
 }
 
-function updatePage(site, page) {
-	return site.$relatedQuery('children').where('block.id', page.id).where('block.type', 'page')
+function updatePage(site, trx, page) {
+	return site.$relatedQuery('children', trx).where('block.id', page.id).where('block.type', 'page')
 	.select(ref('block.data:url').as('url')).first().throwIfNotFound().then(function(dbPage) {
 		var oldUrl = dbPage.url;
 		var newUrl = page.data.url;
 		if (oldUrl == newUrl) return dbPage;
-		return site.$relatedQuery('children').whereNot('block.type', 'page')
+		return site.$relatedQuery('children', trx).whereNot('block.type', 'page')
 		.where(function() {
 			this.where(ref('block.data:url').castText(), 'LIKE', `${oldUrl}/%`)
 			.orWhere(ref('block.data:url').castText(), oldUrl);
@@ -401,7 +402,7 @@ function updatePage(site, page) {
 			'block.data:url': raw(`overlay(block.data->>'url' placing ? from 1 for ${oldUrl.length})`, newUrl)
 		}).skipUndefined().then(function() {
 			var Href = All.api.Href;
-			return Href.query().where('_parent_id', site._id)
+			return Href.query(trx).where('_parent_id', site._id)
 			.where('type', 'link')
 			.where(function() {
 				this.where('url', 'LIKE', `${oldUrl}/%`)
@@ -411,20 +412,20 @@ function updatePage(site, page) {
 			return dbPage;
 		});
 	}).then(function(dbPage) {
-		return site.$relatedQuery('children').where('block.id', page.id).where('block.type', 'page').patch(page).skipUndefined();
+		return site.$relatedQuery('children', trx).where('block.id', page.id).where('block.type', 'page').patch(page).skipUndefined();
 	}).catch(function(err) {
 		console.error("cannot updatePage", err);
 		throw err;
 	});
 }
 
-function applyRelate(site, obj) {
+function applyRelate(site, trx, obj) {
 	return Promise.all(Object.keys(obj).map(function(parentId) {
-		return site.$relatedQuery('children').where('block.id', parentId)
+		return site.$relatedQuery('children', trx).where('block.id', parentId)
 		.select('block._id').first().throwIfNotFound().then(function(parent) {
-			return site.$relatedQuery('children').select('block._id')
+			return site.$relatedQuery('children', trx).select('block._id')
 			.whereIn('block.id', obj[parentId]).then(function(ids) {
-				return parent.$relatedQuery('children').relate(ids);
+				return parent.$relatedQuery('children', trx).relate(ids);
 			});
 		});
 	}));
