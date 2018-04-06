@@ -49,7 +49,7 @@ function init(All) {
 			res.sendStatus(200);
 		}).catch(next).then(function() {
 			if (save) return All.site.save(site).catch(function(err) {
-				console.error("site.save failure", site.data, err);
+				console.error("Could not deploy site", site.data.version, err);
 			});
 		});
 	});
