@@ -148,56 +148,38 @@ exports.init = function(opt) {
 };
 
 function install(site) {
-	var module = site.data.module;
-	var version = site.data.version;
-	var id = site.id;
 	var All = this;
 	All.domains.update(site);
-	if (!site.href) return;
+	if (!site.href) return Promise.resolve();
 	All.domains.hold(site);
-	var dataDir = Path.join(All.opt.dirs.data, 'sites');
-	var siteDir = Path.join(dataDir, id);
+
 	var config = {
 		directories: [],
 		elements: []
 	};
-	// this calls `npm install <module>` in a sites/<id> directory that contains an empty package.json
-	// <module> can be any npm-installable string
-	debug("install site", siteDir, module, version);
-	return Install.install(All.opt, siteDir, module, version).then(function(moduleInfo) {
-		if (!moduleInfo.name) return;
-		var version = moduleInfo.version || version;
-		if (version) {
-			site.data.version = version; // not sure it should upgrade here
-			id += '/' + version;
+	return Install.install(site, All.opt).then(function(pkg) {
+		if (pkg.version) {
+			// TODO save new version (?)
+			site.data.version = pkg.version;
 		}
-		var siteModuleDir = Path.join(siteDir, 'node_modules', moduleInfo.name);
-		return fs.readFile(Path.join(siteModuleDir, "package.json")).then(function(buf) {
-			return JSON.parse(buf.toString());
-		}).then(function(pkg) {
-			// configure directories/elements for each dependency
-			return Promise.all(Object.keys(pkg.dependencies || {}).map(function(subModule) {
-				var moduleDir = Path.join(siteDir, 'node_modules', subModule);
-				return Install.config(moduleDir, id, subModule, config);
-			})).then(function() {
-				// configure directories/elements for the module itself (so it can
-				// overrides what the dependencies have installed
-				return Install.config(siteModuleDir, id, moduleInfo.name, config);
+		return All.api.install(site, pkg, All).then(function() {
+			return All.statics.install(site, pkg, All).then(function() {
+				return All.api.validate(site, pkg);
 			});
+		}).then(function() {
+			return All.cache.install(site);
+		}).then(function() {
+			if (pkg.old && pkg.old != pkg.dir) {
+				console.log("TODO rimraf pkg.old upon successful install");
+			}
+			return pkg;
 		});
-	}).then(function() {
-		return All.statics.install(site, config, All);
-	}).then(function() {
-		return All.api.install(site, config, All);
-	}).catch(function(err) {
-		All.domains.error(site, err);
-	}).then(function() {
-		return All.cache.install(site);
-	}).catch(function(err) {
-		console.error(err);
-	}).then(function() {
+	}).then(function(pkg) {
 		All.domains.release(site);
 		return site;
+	}).catch(function(err) {
+		All.domains.error(site, err);
+		throw err;
 	});
 }
 

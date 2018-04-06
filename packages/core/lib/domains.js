@@ -92,7 +92,6 @@ Domains.prototype.init = function(req, res, next) {
 	if (req.path == "/.well-known/upcache") {
 		if (host.finalize) {
 			host.finalize();
-			delete host.finalize;
 		}
 		p = host.installing;
 	} else if (req.path == "/.well-known/pageboard") {
@@ -105,7 +104,7 @@ Domains.prototype.init = function(req, res, next) {
 		p = host.waiting;
 	} else if (host.isWaiting) {
 		p = new Promise(function(resolve) {
-			setTimeout(resolve, 2000);
+			setTimeout(resolve, host.parked ? 0 : 2000);
 		}).then(function() {
 			if (host.isWaiting) {
 				next = null;
@@ -243,6 +242,7 @@ Domains.prototype.update = function(site) {
 };
 
 Domains.prototype.hold = function(site) {
+	if (site.data.env == "production" && site.Block) return; // do not hold
 	var host = this.hosts[site.hostname];
 	if (!host) return;
 	doWait(host);
@@ -251,7 +251,8 @@ Domains.prototype.hold = function(site) {
 Domains.prototype.release = function(site) {
 	var host = this.hosts[site.hostname];
 	if (!host) return;
-	if (site.errors.length == 0) host.isWaiting = false;
+	host.isWaiting = false;
+	delete host.parked;
 };
 
 Domains.prototype.error = function(site, err) {
@@ -261,19 +262,32 @@ Domains.prototype.error = function(site, err) {
 		console.error("Error", site.id, err);
 		return;
 	}
-	try {
-		var errObj = JSON.parse(JSON.stringify(err));
-		if (!errObj || typeof errObj == "object" && Object.keys(errObj).length == 0) {
-			console.error(err);
-			err = {name: err.name, message: err.message};
-		}
-	} catch(ex) {
-		console.error(err);
-		console.error(ex);
+	site.errors.push(errorObject(site, err));
+	if (site.data.env == "production" && site.Block) {
+		// do nothing
+	} else {
+		host.isWaiting = true;
+		host.parked = true;
 	}
-	site.errors.push(err);
-	host.isWaiting = true;
+	if (host.finalize) host.finalize();
 };
+
+function errorObject(site, err) {
+	var std = err.toString();
+	var stop = false;
+	var stack = err.stack.split('\n').map(function(line) {
+		if (line == std) return;
+		var index = line.indexOf("/pageboard/");
+		if (index >= 0) return line.substring(index);
+		if (/^\s*at\s/.test(line)) return;
+		return line;
+	}).filter(x => !!x).join('\n');
+	return {
+		name: err.name,
+		message: err.message,
+		stack: stack
+	};
+}
 
 function isIPv6(ip) {
 	return ip.indexOf(':') >= 0;
@@ -283,7 +297,10 @@ function doWait(host) {
 	if (host.finalize) return;
 	host.isWaiting = true;
 	var subpending = new Promise(function(resolve) {
-		host.finalize = resolve;
+		host.finalize = function() {
+			delete host.finalize;
+			resolve();
+		};
 	});
 	host.waiting = host.installing.then(function() {
 		return subpending;
