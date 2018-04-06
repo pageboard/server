@@ -117,7 +117,9 @@ exports.check = function(fun, data) {
 	}
 };
 
-exports.install = function(site, {elements, directories}, All) {
+exports.install = function(site, pkg, All) {
+	var elements = pkg.elements;
+	var directories = pkg.directories;
 	debug("installing", id, elements, directories);
 	var eltsMap = {};
 	var id = site ? site.id : null;
@@ -128,41 +130,50 @@ exports.install = function(site, {elements, directories}, All) {
 	})).then(function() {
 		var Block = exports.Block.extendSchema(id, eltsMap);
 		if (id) {
-			return preparePage(site, eltsMap).then(function() {
-				Block.source = toSource(eltsMap);
-				site.Block = Block;
-			});
+			pkg.Block = Block;
+			pkg.eltsMap = eltsMap;
 		} else {
 			exports.Block = All.api.Block = Block;
 		}
 	});
 };
 
-function preparePage(site, elts) {
-	var env = site.data.env;
-	var list = Object.keys(elts).map(function(key) {
-		var el = elts[key];
-		if (!el.name) el.name = key;
-		return el;
-	}).sort(function(a, b) {
-		return (a.priority || 0) - (b.priority || 0);
+exports.validate = function(site, pkg) {
+	return Promise.resolve().then(function() {
+		var eltsMap = pkg.eltsMap;
+		var env = site.data.env;
+		var list = Object.keys(eltsMap).map(function(key) {
+			var el = eltsMap[key];
+			if (!el.name) el.name = key;
+			return el;
+		}).sort(function(a, b) {
+			return (a.priority || 0) - (b.priority || 0);
+		});
+		eltsMap.page = Object.assign({}, eltsMap.page);
+
+		var scripts = filter(list, 'scripts');
+		var styles = filter(list, 'stylesheets');
+
+		if (env == "dev") {
+			eltsMap.page.scripts = scripts;
+			eltsMap.page.stylesheets = styles;
+			return Promise.resolve();
+		}
+
+		return Promise.all([
+			All.statics.bundle(site, scripts, `scripts.js`),
+			All.statics.bundle(site, styles, `styles.css`)
+		]).then(function(both) {
+			eltsMap.page.scripts = both[0];
+			eltsMap.page.stylesheets = both[1];
+		});
+	}).then(function() {
+		site.Block = pkg.Block;
+		site.Block.source = toSource(pkg.eltsMap);
+		delete pkg.eltsMap;
+		delete pkg.Block;
 	});
-	elts.page = Object.assign({}, elts.page);
-	var scripts = filter(list, 'scripts');
-	var styles = filter(list, 'stylesheets');
-	if (env == "dev") {
-		elts.page.scripts = scripts;
-		elts.page.stylesheets = styles;
-		return Promise.resolve();
-	}
-	return Promise.all([
-		All.statics.bundle(site, scripts, `scripts.js`),
-		All.statics.bundle(site, styles, `styles.css`)
-	]).then(function(both) {
-		elts.page.scripts = both[0];
-		elts.page.stylesheets = both[1];
-	});
-}
+};
 
 function filter(elements, prop) {
 	var map = {};
