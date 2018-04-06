@@ -243,12 +243,7 @@ function importElements(path, eltsMap, id, directories) {
 		var script = new vm.Script(buf, {filename: path});
 		var copyMap = Object.assign({}, eltsMap);
 		var sandbox = {Pageboard: {elements: copyMap}};
-		try {
-			script.runInNewContext(sandbox, {filename: path, timeout: 1000});
-		} catch(ex) {
-			console.error(`Error trying to install element ${path}: ${ex}`);
-			return;
-		}
+		script.runInNewContext(sandbox, {filename: path, timeout: 1000});
 		var elts = sandbox.Pageboard.elements;
 		var elt, oelt;
 		for (var name in elts) {
@@ -262,8 +257,6 @@ function importElements(path, eltsMap, id, directories) {
 			rewriteElementPaths(name, path, elt, id, directories);
 			eltsMap[name] = elt;
 		}
-	}).catch(function(err) {
-		console.error(`Error inspecting element path ${path}`, err);
 	});
 }
 
