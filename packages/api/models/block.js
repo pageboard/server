@@ -140,11 +140,16 @@ Block.extendSchema = function extendSchema(name, schemas) {
 	};
 	schema.selectCases = {};
 
+	var hrefs = {};
+
 	types.forEach(function(type) {
 		var element = Object.assign({
 			properties: {},
 			contents: {}
 		}, schemas[type]);
+		var hrefsList = [];
+		findHrefs(element, hrefsList);
+		if (hrefsList.length) hrefs[type] = hrefsList;
 		var standProp = element.standalone ? {
 			standalone: {
 				type: {
@@ -173,6 +178,7 @@ Block.extendSchema = function extendSchema(name, schemas) {
 	DomainBlock.relationMappings.children.modelClass = DomainBlock;
 	DomainBlock.relationMappings.parents.modelClass = DomainBlock;
 	DomainBlock.jsonSchema = schema;
+	DomainBlock.hrefs = hrefs;
 	return DomainBlock;
 }
 
@@ -188,6 +194,19 @@ function stringProperties(obj) {
 		};
 	}
 	return props;
+}
+
+function findHrefs(schema, list, root) {
+	if (!schema.properties) return;
+	Object.keys(schema.properties).forEach(function(key) {
+		var prop = schema.properties[key];
+		if (root) key = `${root}.${key}`;
+		if (prop.input && prop.input.name == "href") {
+			list.push(key);
+		} else {
+			findHrefs(prop, list, key);
+		}
+	});
 }
 
 /**

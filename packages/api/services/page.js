@@ -393,14 +393,22 @@ function updatePage(site, trx, page) {
 		var oldUrl = dbPage.url;
 		var newUrl = page.data.url;
 		if (oldUrl == newUrl) return dbPage;
-		return site.$relatedQuery('children', trx).whereNot('block.type', 'page')
-		.where(function() {
-			this.where(ref('block.data:url').castText(), 'LIKE', `${oldUrl}/%`)
-			.orWhere(ref('block.data:url').castText(), oldUrl);
-		})
-		.patch({
-			'block.data:url': raw(`overlay(block.data->>'url' placing ? from 1 for ${oldUrl.length})`, newUrl)
-		}).skipUndefined().then(function() {
+		var hrefs = site.Block.hrefs;
+		return Promise.all(Object.keys(hrefs).map(function(type) {
+			return Promise.all(hrefs[type].map(function(key) {
+				key = 'block.data:' + key;
+				var field = ref(key).castText();
+				var args = field.toRawArgs();
+				return site.$relatedQuery('children', trx).where('block.type', type)
+				.where(function() {
+					this.where(field, 'LIKE', `${oldUrl}/%`)
+					.orWhere(field, oldUrl);
+				})
+				.patch({
+					[key]: raw(`overlay(${args[0]} placing ? from 1 for ${oldUrl.length})`, args[1], newUrl)
+				}).skipUndefined();
+			}));
+		})).then(function() {
 			var Href = All.api.Href;
 			return Href.query(trx).where('_parent_id', site._id)
 			.where('type', 'link')
