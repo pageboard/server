@@ -2,6 +2,7 @@ var Path = require('path');
 var pify = require('util').promisify;
 var mkdirp = pify(require('mkdirp'));
 var semverRegex = require('semver-regex');
+var rimraf = pify(require('rimraf'));
 var debug = require('debug')('pageboard:core');
 
 var fs = {
@@ -105,6 +106,20 @@ exports.config = function(moduleDir, id, module, config) {
 		}));
 	}).catch(function(err) {
 		console.error(`Error: ${id} dependency ${module} cannot be extracted`, err);
+	});
+};
+
+exports.clean = function(site, pkg, opt) {
+	var rootSite = Path.join(opt.dirs.data, 'sites', site.id);
+	return fs.readdir(rootSite).then(function(paths) {
+		return Promise.all(paths.map(function(path) {
+			path = Path.join(rootSite, path);
+			if (path != pkg.dir) return rimraf(path);
+		}));
+	}).catch(function(err) {
+		console.error(err);
+	}).then(function() {
+		return pkg;
 	});
 };
 

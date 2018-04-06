@@ -159,7 +159,7 @@ function install(site) {
 	};
 	return Install.install(site, All.opt).then(function(pkg) {
 		if (pkg.version) {
-			// TODO save new version (?)
+			// when install is not called by site.save, new version is not saved
 			site.data.version = pkg.version;
 		}
 		return All.api.install(site, pkg, All).then(function() {
@@ -169,10 +169,7 @@ function install(site) {
 		}).then(function() {
 			return All.cache.install(site);
 		}).then(function() {
-			if (pkg.old && pkg.old != pkg.dir) {
-				console.log("TODO rimraf pkg.old upon successful install");
-			}
-			return pkg;
+			return Install.clean(site, pkg, All.opt);
 		});
 	}).then(function(pkg) {
 		All.domains.release(site);

@@ -34,6 +34,7 @@
     "pretty-bytes": "^4.0.2",
     "promise.prototype.finally": "^3.1.0",
     "rc": "^1.2.1",
+    "rimraf": "^2.6.2",
     "semver-regex": "^2.0.0",
     "serve-favicon": "^2.4.3",
     "spawn-please": "^0.3.0",
