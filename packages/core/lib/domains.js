@@ -80,7 +80,7 @@ Domains.prototype.init = function(req, res, next) {
 		host.installing = host.searching.then(function(site) {
 			site.href = host.href;
 			site.hostname = host.name;
-			return All.install(site);
+			return All.install(site).catch(function() {}); // already dealt with
 		}).finally(function() {
 			host.isInstalling = false;
 		});
