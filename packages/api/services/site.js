@@ -132,20 +132,12 @@ exports.save = function(data) {
 	return exports.get(data).select('_id').then(function(site) {
 		var dataOld = site.data || {};
 		var dataNew = data.data || {};
-		var sameModule = dataOld.module == dataNew.module;
-		var sameVersion = dataOld.version == dataNew.version;
 		var oldDomain = dataOld.domain;
 		var sameDomain = oldDomain == dataNew.domain;
 
 		Object.assign(site.data, data.data);
 
-		var p = Promise.resolve();
-		if (!sameModule || !sameVersion) {
-			p = p.then(function() {
-				return All.install(site);
-			});
-		}
-		return p.then(function() {
+		return All.install(site).then(function() {
 			return site.$query().patch(site).then(function() {
 				if (!sameDomain) {
 					All.domains.hosts[dataNew.domain] = All.domains.hosts[oldDomain];
