@@ -279,18 +279,19 @@ Domains.prototype.error = function(site, err) {
 function errorObject(site, err) {
 	var std = err.toString();
 	var stop = false;
-	var stack = err.stack.split('\n').map(function(line) {
+	var errObj = {
+		name: err.name,
+		message: err.message
+	};
+	if (err.stack) errObj.stack = err.stack.split('\n').map(function(line) {
 		if (line == std) return;
 		var index = line.indexOf("/pageboard/");
 		if (index >= 0) return line.substring(index);
 		if (/^\s*at\s/.test(line)) return;
 		return line;
 	}).filter(x => !!x).join('\n');
-	return {
-		name: err.name,
-		message: err.message,
-		stack: stack
-	};
+
+	return errObj;
 }
 
 function isIPv6(ip) {
