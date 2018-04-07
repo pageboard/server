@@ -204,6 +204,14 @@ function doInstall(site, pkg, opt) {
 				})
 			});
 		}
+	}).catch(function(err) {
+		if (typeof err == "string") {
+			var installError = new Error(err);
+			installError.name = "InstallationError";
+			err = installError;
+			delete err.stack;
+		}
+		throw err;
 	}).then(function(out) {
 		if (out) debug(out);
 		return getPkg(pkg.dir).then(function(npkg) {
