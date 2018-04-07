@@ -124,9 +124,9 @@ exports.clean = function(site, pkg, opt) {
 };
 
 function decideInstall(dataDir, site) {
-	var version = site.data.version;
-	if (!version) {
-		site.data.version = version = "dev";
+	var version = site.data.version + '';
+	if (version == null) {
+		version = "~";
 	} else if (/\s/.test(version) == true || semverRegex().test(version) == false && /^\w+$/.test(version) == false) {
 		throw new Error("Site has invalid version", site.id, version);
 	}
@@ -217,8 +217,7 @@ function doInstall(site, pkg, opt) {
 }
 
 function populatePkg(site, pkg) {
-	var version = pkg.version || site.data.version;
-	var pair = `${site.id}/${version}`;
+	var pair = `${site.id}/${pkg.version || site.data.version || '~'}`;
 	var siteModuleDir = Path.join(pkg.dir, 'node_modules', pkg.name);
 	return fs.readFile(Path.join(siteModuleDir, "package.json")).then(function(buf) {
 		return JSON.parse(buf.toString());
