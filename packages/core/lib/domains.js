@@ -256,20 +256,24 @@ Domains.prototype.release = function(site) {
 };
 
 Domains.prototype.error = function(site, err) {
-	if (!site.hostname) console.warn("All.domains.error(site) missing site.hostname");
-	var host = this.hosts[site.hostname];
-	if (!host) {
-		console.error("Error", site.id, err);
-		return;
+	try {
+		if (!site.hostname) console.warn("All.domains.error(site) missing site.hostname");
+		var host = this.hosts[site.hostname];
+		if (!host) {
+			console.error("Error", site.id, err);
+			return;
+		}
+		site.errors.push(errorObject(site, err));
+		if (site.data.env == "production" && site.Block) {
+			// do nothing
+		} else {
+			host.isWaiting = true;
+			host.parked = true;
+		}
+		if (host.finalize) host.finalize();
+	} catch(ex) {
+		console.error(ex);
 	}
-	site.errors.push(errorObject(site, err));
-	if (site.data.env == "production" && site.Block) {
-		// do nothing
-	} else {
-		host.isWaiting = true;
-		host.parked = true;
-	}
-	if (host.finalize) host.finalize();
 };
 
 function errorObject(site, err) {
