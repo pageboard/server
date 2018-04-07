@@ -152,7 +152,8 @@ function decideInstall(dataDir, site) {
 function doInstall(site, pkg, opt) {
 	return mkdirp(pkg.dir).then(function() {
 		return fs.writeFile(pkg.path, JSON.stringify({
-			dependencies: {} // npm will populate it for us
+			"private": true,
+			"dependencies": {} // npm will populate it for us
 		}));
 	}).then(function() {
 		var version = site.data.version;
