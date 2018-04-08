@@ -70,8 +70,7 @@ CacheState.prototype.open = function() {
 
 CacheState.prototype.install = function(site) {
 	setTimeout(function() {
-		if (!site.href) return console.error("cache.install missing site.href", site.id);
-		got.post(`${site.href}/.well-known/upcache`).catch(function(err) {
+		if (site.href) got.post(`${site.href}/.well-known/upcache`).catch(function(err) {
 			console.error(err);
 		});
 	});
