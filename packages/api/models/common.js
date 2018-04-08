@@ -11,7 +11,7 @@ exports.CommonQueryBuilder = class CommonQueryBuilder extends QueryBuilder {
 	patchObject(obj) {
 		var refs = asPaths(obj, {}, "", true);
 		this.skipUndefined();
-		this.addOperation(this._patchOperationFactory(this), refs);
+		this.addOperation(this._patchOperationFactory(this), [refs]);
 		return this;
 	}
 	whereObject(obj) {
@@ -28,7 +28,7 @@ function asPaths(obj, ret, pre, first) {
 	Object.keys(obj).forEach(function(key) {
 		var val = obj[key];
 		var cur = `${pre || ""}${key}`;
-		if (Array.isArray(val) || typeof val != "object") {
+		if (Array.isArray(val) || val == null || typeof val != "object") {
 			ret[cur] = val;
 		} else if (typeof val == "object") {
 			asPaths(val, ret, cur + (first ? ':' : '.'));
