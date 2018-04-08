@@ -132,17 +132,17 @@ function decideInstall(dataDir, site) {
 		return Promise.reject(new Error(`${site.id} has invalid version ${version}`));
 	}
 	var siteDir = Path.join(dataDir, site.id, version);
+
 	return getPkg(siteDir).then(function(pkg) {
-		if (pkg.version == null || pkg.name == null) {
+		if (pkg.name == null) {
 			pkg.install = true;
 			return pkg;
 		}
-		if (pkg.version == site.data.version) return pkg;
-		return fs.lstat(Path.join(siteDir, 'node_modules', pkg.name))
-		.catch(function() {}).then(function(stat) {
+		var siteModuleDir = Path.join(siteDir, 'node_modules', pkg.name);
+		return fs.lstat(siteModuleDir).catch(function() {}).then(function(stat) {
 			if (stat && stat.isSymbolicLink()) {
 				console.warn("detected linked module", pkg.name);
-			} else {
+			} else if (pkg.version == null || pkg.version != site.data.version) {
 				pkg.install = true;
 			}
 			return pkg;
