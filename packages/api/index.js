@@ -56,6 +56,7 @@ function init(All) {
 	var opt = All.opt;
 	var dbOpt = knexConfig(opt);
 	var knexInst = knex(dbOpt);
+
 	objection.Model.createValidator = function() {
 		return new objection.AjvValidator({
 			onCreateAjv: function(ajv) {
@@ -154,7 +155,7 @@ exports.validate = function(site, pkg) {
 		var scripts = filter(list, 'scripts');
 		var styles = filter(list, 'stylesheets');
 
-		if (env == "dev") {
+		if (env == "dev" || !pkg.dir) {
 			eltsMap.page.scripts = scripts;
 			eltsMap.page.stylesheets = styles;
 			return Promise.resolve();
