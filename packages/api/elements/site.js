@@ -2,24 +2,33 @@ Pageboard.elements.site = {
 	properties : {
 		title: {
 			title: 'Site title',
-			type: 'string' // the site public name
+			anyOf: [{type: "null"}, {type: "string"}]
 		},
 		domain: {
 			title: 'Domain name',
-			type: 'string',
-			format: 'hostname'
+			anyOf: [{
+				type: "null",
+			}, {
+				type: "string",
+				format: 'hostname'
+			}]
 		},
 		lang: {
 			title: 'Language',
-			type: ["string", "null"]
+			anyOf: [{type: "null"}, {type: "string"}]
 		},
 		module: {
 			title: 'Module name',
-			type: 'string'
+			anyOf: [{type: "null"}, {type: "string"}]
 		},
 		version: {
 			title: 'Module version',
-			type: 'string'
+			description: 'Semantic version or git tag or commit',
+			anyOf: [{
+				type: "null"
+			}, {
+				type: "string" // TODO patterns, see core
+			}]
 		},
 		env: {
 			title: 'Environment',

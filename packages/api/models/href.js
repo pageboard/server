@@ -29,7 +29,7 @@ Href.jsonSchema = {
 			default: true
 		},
 		url: {
-			oneOf: [{
+			anyOf: [{
 				type: 'string',
 				format: 'uri'
 			}, {
@@ -44,7 +44,7 @@ Href.jsonSchema = {
 			type: 'string'
 		},
 		icon: {
-			type: ['string', 'null']
+			anyOf: [{type: "null"}, {type: "string"}]
 		},
 		site: {
 			type: 'string'
@@ -53,18 +53,18 @@ Href.jsonSchema = {
 			type: 'string'
 		},
 		lang: {
-			type: ['string', 'null']
+			anyOf: [{type: "null"}, {type: "string"}]
 		},
 		meta: {
 			type: 'object',
 			default: {},
 			properties: {
 				description: {
-					type: ['string', 'null']
+					anyOf: [{type: "null"}, {type: "string"}]
 				},
 				thumbnail: {
 					// local images are stored as data-uri, no need to path pattern
-					oneOf: [{
+					anyOf: [{
 						type: "null"
 					}, {
 						type: "string",
@@ -72,16 +72,16 @@ Href.jsonSchema = {
 					}]
 				},
 				size: {
-					type: ['integer', 'null']
+					anyOf: [{type: "null"}, {type: "integer"}]
 				},
 				width: {
-					type: ['integer', 'null']
+					anyOf: [{type: "null"}, {type: "integer"}]
 				},
 				height: {
-					type: ['integer', 'null']
+					anyOf: [{type: "null"}, {type: "integer"}]
 				},
 				duration: {
-					type: ['string', 'null']
+					anyOf: [{type: "null"}, {type: "integer"}]
 				}
 			}
 		}

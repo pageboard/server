@@ -35,9 +35,6 @@ Block.jsonSchema = {
 			type: 'object',
 			default: {}
 		},
-		lang: {
-			type: ['string', 'null']
-		},
 		standalone: { // a standalone block can have 0 or multiple parents
 			type: 'boolean',
 			default: false
@@ -47,27 +44,27 @@ Block.jsonSchema = {
 			type: 'string'
 		},
 		locks: {
-			oneOf: [{
+			anyOf: [{
+				type: 'null'
+			}, {
 				type: 'array',
 				items: {
 					type: 'string',
 					pattern: '^\\w+$'
 				},
 				uniqueItems: true
-			}, {
-				type: 'null'
 			}]
 		},
 		keys: {
-			oneOf: [{
+			anyOf: [{
+				type: 'null'
+			}, {
 				type: 'array',
 				items: {
 					type: 'string',
 					pattern: '^\\w+$'
 				},
 				uniqueItems: true
-			}, {
-				type: 'null'
 			}]
 		}
 	},
