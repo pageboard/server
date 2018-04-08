@@ -173,6 +173,15 @@ exports.validate = function(site, pkg) {
 		site.Block.source = toSource(pkg.eltsMap);
 		delete pkg.eltsMap;
 		delete pkg.Block;
+	}).then(function() {
+		if (site.data.version != null) return All.api.Block.query().where({
+			type: 'site',
+			id: site.id
+		}).patchObject({
+			data: {
+				version: site.data.version
+			}
+		});
 	});
 };
 
