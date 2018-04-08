@@ -109,11 +109,9 @@ exports.bundle = function(site, list, filename) {
 	var opts = All.opt.statics;
 	var id = site.id;
 	var outUrl = '/.files';
-	if (site.data.version != null) {
-		id += '/' + site.data.version;
-		outUrl += '/' + site.data.version;
-	}
-	outUrl += `/${filename}`;
+	var version = site.data.version;
+	if (version == null) version = '~';
+	outUrl += `/${version}/${filename}`;
 	var inputs = list.map(function(url) {
 		return urlToPath(opts, site.id, url);
 	});
