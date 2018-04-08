@@ -70,3 +70,11 @@ action: submit mail.send, url: /login/email
 Then on /login/email, add a Auth Login button.
 That's it !
 
+Fine and now how do i call api that is site-dependent ?
+-------------------------------------------------------
+
+An example:
+```
+pageboard --site=mysiteid page.search text=test
+```
+
