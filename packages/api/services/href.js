@@ -200,7 +200,7 @@ exports.add = function(site, data) {
 			if (!href) {
 				return site.$relatedQuery('hrefs').insert(result).returning(Href.tableColumns);
 			} else {
-				return site.$relatedQuery('hrefs').patch(result).where('_id', href._id)
+				return site.$relatedQuery('hrefs').patchObject(result).where('_id', href._id)
 					.first().returning(Href.tableColumns);
 			}
 		});
@@ -223,7 +223,7 @@ exports.save = function(site, data) {
 		if (!href) {
 			return exports.add(site, data);
 		} else {
-			return Href.query().patch({title: data.title}).skipUndefined().where('_id', href._id);
+			return Href.query().patchObject({title: data.title}).where('_id', href._id);
 		}
 	});
 };
@@ -243,7 +243,7 @@ exports.save.schema = {
 
 exports.del = function(site, data) {
 	return exports.get(site, data).throwIfNotFound().then(function(href) {
-		return site.$relatedQuery('hrefs').patch({
+		return site.$relatedQuery('hrefs').patchObject({
 			visible: false
 		}).where('_id', href._id).then(function() {
 			href.visible = false;
