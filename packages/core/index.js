@@ -158,7 +158,7 @@ function install(site) {
 	};
 	return Install.install(site, All.opt).then(function(pkg) {
 		if (pkg.version != null) {
-			// when install is not called by site.save, new version is not saved
+			// api.validate will save the version on success
 			site.data.version = pkg.version;
 		}
 		return All.api.install(site, pkg, All).then(function() {
