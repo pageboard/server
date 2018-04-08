@@ -138,7 +138,10 @@ exports.save = function(data) {
 		Object.assign(site.data, data.data);
 
 		return All.install(site).then(function() {
-			return site.$query().patch(site).then(function() {
+			return site.$query().patchObject({
+				type: site.type,
+				data: data.data
+			}).then(function() {
 				if (!sameDomain) {
 					All.domains.hosts[dataNew.domain] = All.domains.hosts[oldDomain];
 					delete All.domains.hosts[oldDomain];

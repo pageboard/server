@@ -233,6 +233,7 @@ class BlockQueryBuilder extends QueryBuilder {
 	}
 	patchObject(obj) {
 		var refs = asPaths(obj, {}, "", true);
+		this.skipUndefined();
 		this.addOperation(this._patchOperationFactory(this), refs);
 		return this;
 	}

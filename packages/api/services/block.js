@@ -68,11 +68,7 @@ exports.search = function(site, data) {
 		q.where('block.id', data.id);
 	}
 	if (data.data) {
-		var refs = {};
-		asPaths(data.data, refs, 'block.data:');
-		for (var k in refs) {
-			q.where(ref(k).castText(), Array.isArray(refs[k]) ? 'IN' : '=', refs[k]);
-		}
+		q.whereObject({data: data.data});
 	}
 	if (data.text != null) {
 		var text = data.text.split(/\W+/).filter(x => !!x).map(x => x + ':*').join(' <-> ');
@@ -229,7 +225,7 @@ exports.add.schema = {
 exports.save = function(site, data) {
 	return exports.get(site, data).then(function(block) {
 		return site.Block.query()
-		.patch(data).skipUndefined().where('block.id', block.id).then(function(count) {
+		.patchObject(data).where('block.id', block.id).then(function(count) {
 			if (count == 0) throw new Error(`Block not found for update ${data.id}`);
 		});
 	});
@@ -281,19 +277,4 @@ exports.gc = function(days) {
 		};
 	});
 };
-
-
-function asPaths(obj, ret, pre) {
-	if (!ret) ret = {};
-	Object.keys(obj).forEach(function(key) {
-		var val = obj[key];
-		var cur = `${pre || ""}${key}`;
-		if (Array.isArray(val) || typeof val != "object") {
-			ret[cur] = val;
-		} else if (typeof val == "object") {
-			asPaths(val, ret, cur + '.');
-		}
-	});
-	return ret;
-}
 
