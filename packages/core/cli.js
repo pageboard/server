@@ -3,9 +3,11 @@
 var pkgOpt = {};
 if (process.env.APPNAME) pkgOpt.name = process.env.APPNAME;
 
-if (process.argv.length > 2 && process.argv[2].startsWith('--') == false) {
-	for (var i=3; i < process.argv.length; i++) {
-		process.argv[i] = '--data.' + process.argv[i];
+if (process.argv.length > 2) {
+	var thenData = false;
+	for (var i=2; i < process.argv.length; i++) {
+		if (thenData) process.argv[i] = '--data.' + process.argv[i];
+		if (process.argv[i].startsWith('--') == false) thenData = true;
 	}
 }
 
@@ -19,15 +21,31 @@ console.info(title);
 
 pageboard.init(config).then(function(All) {
 	var p = Promise.resolve();
+	var site = All.opt.site;
+
 	if (All.opt._.length > 1) {
 		console.error("Cannot process arguments", All.opt._);
 		process.exit(1);
 	}
 	if (All.opt._.length == 1) {
 		var command = All.opt._[0];
-		return All.run(command, config.data).catch(function(err) {
-			console.error(err.toString());
-			process.exit(1);
+		var args = [command];
+		return Promise.resolve().then(function() {
+			if (All.opt.site) {
+				return All.run('site.get', {id: All.opt.site}).then(function(site) {
+					return All.install(site).then(function(site) {
+						args.push(site);
+						args.push(config.data);
+					});
+				});
+			} else {
+				args.push(config.data);
+			}
+		}).then(function() {
+			return All.run.apply(All, args).catch(function(err) {
+				console.error(err);
+				process.exit(1);
+			});
 		}).then(function(results) {
 			console.log(JSON.stringify(results, null, ' '));
 			console.info(`${command} done.`);

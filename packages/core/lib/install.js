@@ -17,7 +17,7 @@ var fs = {
 
 exports.install = function(site, opt) {
 	if (!site.data.module) {
-		return Promise.resolve();
+		return getPkg();
 	}
 	var dataDir = Path.join(opt.dirs.data, 'sites');
 
@@ -246,13 +246,14 @@ function populatePkg(site, pkg) {
 }
 
 function getPkg(pkgDir) {
-	var pkgPath = Path.join(pkgDir, 'package.json');
+	var pkgPath = pkgDir != null ? Path.join(pkgDir, 'package.json') : null;
 	var pkg = {
 		dir: pkgDir,
 		path: pkgPath,
 		directories: [],
 		elements: []
 	};
+	if (pkgDir == null) return Promise.resolve(pkg);
 	return fs.readFile(pkgPath).then(function(buf) {
 		var obj = JSON.parse(buf.toString());
 		var deps = Object.keys(obj.dependencies);

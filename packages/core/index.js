@@ -150,7 +150,6 @@ exports.init = function(opt) {
 function install(site) {
 	var All = this;
 	All.domains.update(site);
-	if (!site.href) return Promise.resolve();
 	All.domains.hold(site);
 
 	var config = {
