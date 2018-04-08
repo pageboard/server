@@ -145,7 +145,8 @@ exports.resolve = function(id, url) {
 	return urlToPath(All.opt.statics, id, url);
 };
 
-exports.install = function(site, {directories}, All) {
+exports.install = function(site, {dir, directories}, All) {
+	if (site && !dir) return Promise.resolve(); // nothing to install
 	var dir = site ? site.id : null;
 	if (dir) dir = Path.join("files", dir);
 	else dir = "pageboard";
