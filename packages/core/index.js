@@ -157,7 +157,7 @@ function install(site) {
 		elements: []
 	};
 	return Install.install(site, All.opt).then(function(pkg) {
-		if (pkg.version) {
+		if (pkg.version != null) {
 			// when install is not called by site.save, new version is not saved
 			site.data.version = pkg.version;
 		}

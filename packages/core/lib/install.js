@@ -124,15 +124,16 @@ exports.clean = function(site, pkg, opt) {
 };
 
 function decideInstall(dataDir, site) {
-	var version = site.data.version + '';
+	var version = site.data.version;
+	if (version == "") version = site.data.version = null; // temporary fix, should not happen
 	if (version == null) {
 		version = "~";
 	} else if (/\s/.test(version) == true || semverRegex().test(version) == false && /^\w+$/.test(version) == false) {
-		throw new Error("Site has invalid version", site.id, version);
+		return Promise.reject(new Error(`${site.id} has invalid version ${version}`));
 	}
 	var siteDir = Path.join(dataDir, site.id, version);
 	return getPkg(siteDir).then(function(pkg) {
-		if (!pkg.version || !pkg.name) {
+		if (pkg.version == null || pkg.name == null) {
 			pkg.install = true;
 			return pkg;
 		}
@@ -158,7 +159,7 @@ function doInstall(site, pkg, opt) {
 	}).then(function() {
 		var version = site.data.version;
 		var module = site.data.module;
-		if (version) {
+		if (version != null) {
 			if (module.indexOf('/') > 0 && !module.startsWith('@')) module += "#";
 			else module += "@";
 			module += version;
@@ -226,7 +227,8 @@ function doInstall(site, pkg, opt) {
 }
 
 function populatePkg(site, pkg) {
-	var pair = `${site.id}/${pkg.version || site.data.version || '~'}`;
+	var version = pkg.version != null ? pkg.version : site.data.version != null ? site.data.version : '~';
+	var pair = `${site.id}/${version}`;
 	var siteModuleDir = Path.join(pkg.dir, 'node_modules', pkg.name);
 	return fs.readFile(Path.join(siteModuleDir, "package.json")).then(function(buf) {
 		return JSON.parse(buf.toString());
@@ -263,6 +265,7 @@ function getPkg(pkgDir) {
 		var name = deps[0];
 		var version = obj.dependencies[name];
 		if (version.indexOf('#') > 0) version = version.split('#').pop();
+		// version is a string here so this boolean check is all right
 		if (!version || version.indexOf('/') >= 0) version = null;
 		pkg.name = name;
 		if (version != null) pkg.version = version;
