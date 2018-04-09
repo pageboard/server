@@ -49,8 +49,19 @@ exports.QueryBuilder = class CommonQueryBuilder extends QueryBuilder {
 		return this.where.apply(this, args);
 	}
 	patchObject(obj) {
-		this.skipUndefined();
 		var patchObjectOperation = this._patchObjectOperationFactory();
+		obj = Object.assign({}, obj);
+		var type = patchObjectOperation.instance && patchObjectOperation.instance.type;
+		if (type) {
+			if (obj.type) {
+				if (obj.type != type) throw new Error("Cannot patch object with different type");
+			} else {
+				obj.type = type;
+			}
+		} else if (!obj.type) {
+			throw new Error("Cannot patch object without type");
+		}
+		this.skipUndefined();
 		this.addOperation(patchObjectOperation, [obj]);
 		return this;
 	}

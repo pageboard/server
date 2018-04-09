@@ -174,10 +174,7 @@ exports.validate = function(site, pkg) {
 		delete pkg.eltsMap;
 		delete pkg.Block;
 	}).then(function() {
-		if (site.data.version != null) return All.api.Block.query().where({
-			type: 'site',
-			id: site.id
-		}).patchObject({
+		if (site.data.version != null) return site.$query().patchObject({
 			data: {
 				version: site.data.version
 			}
