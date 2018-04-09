@@ -1,6 +1,6 @@
 var objection = require('objection');
-var Model = objection.Model;
-var CommonQueryBuilder = require('./common').CommonQueryBuilder;
+var common = require('./common');
+var Model = common.Model;
 
 var crypto = require('crypto');
 
@@ -219,13 +219,11 @@ Block.genId = function(length) {
 	});
 };
 
-class BlockQueryBuilder extends CommonQueryBuilder {
+Block.QueryBuilder = class BlockQueryBuilder extends common.QueryBuilder {
 	whereSite(siteId) {
 		return this.joinRelation('parents')
 			.where('parents.type', 'site')
 			.where('parents.id', siteId);
 	}
-}
-
-Block.QueryBuilder = BlockQueryBuilder;
+};
 

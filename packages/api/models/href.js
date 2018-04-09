@@ -1,8 +1,8 @@
 var objection = require('objection');
 var Model = objection.Model;
-var CommonQueryBuilder = require('./common').CommonQueryBuilder;
+var common = require('./common');
 
-class Href extends Model {}
+class Href extends common.Model {}
 
 module.exports = Href;
 
@@ -113,13 +113,11 @@ Href.relationMappings = {
 	}
 };
 
-class HrefQueryBuilder extends CommonQueryBuilder {
+Href.QueryBuilder = class HrefQueryBuilder extends common.QueryBuilder {
 	whereSite(id) {
 		return this.joinRelation('parent')
 		.where('parent.type', 'site')
 		.where('parent.id', id);
 	}
-}
-
-Href.QueryBuilder = HrefQueryBuilder;
+};
 

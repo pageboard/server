@@ -1,17 +1,57 @@
 var objection = require('objection');
 var ref = objection.ref;
+var Model = objection.Model;
 var QueryBuilder = objection.QueryBuilder;
 
-exports.CommonQueryBuilder = class CommonQueryBuilder extends QueryBuilder {
+var UpdateOperation = require(
+	require('path').join(
+		require.resolve('objection'),
+		'..',
+		'queryBuilder/operations/UpdateOperation'
+	)
+);
+
+var InstanceUpdateOperation = require(
+	require('path').join(
+		require.resolve('objection'),
+		'..',
+		'queryBuilder/operations/InstanceUpdateOperation'
+	)
+);
+
+exports.Model = class CommonModel extends Model {
+	$query(trx) {
+		return super.$query(trx).patchObjectOperationFactory(() => {
+			return new InstancePatchObjectOperation('patch', {
+				instance: this,
+				modelOptions: { patch: true }
+			});
+		});
+	}
+};
+
+exports.QueryBuilder = class CommonQueryBuilder extends QueryBuilder {
+	constructor(modelClass) {
+		super(modelClass);
+		this._patchObjectOperationFactory = function patchObjectOperationFactory() {
+			return new UpdateOperation('patch', {
+				modelOptions: { patch: true }
+			});
+		};
+	}
+	patchObjectOperationFactory(factory) {
+		this._patchObjectOperationFactory = factory;
+		return this;
+	}
 	whereJsonText(a) {
 		var args = Array.from(arguments).slice(1);
 		args.unshift(ref(a).castText());
 		return this.where.apply(this, args);
 	}
 	patchObject(obj) {
-		var refs = asPaths(obj, {}, "", true);
 		this.skipUndefined();
-		this.addOperation(this._patchOperationFactory(this), [refs]);
+		var patchObjectOperation = this._patchObjectOperationFactory();
+		this.addOperation(patchObjectOperation, [obj]);
 		return this;
 	}
 	whereObject(obj) {
@@ -21,6 +61,11 @@ exports.CommonQueryBuilder = class CommonQueryBuilder extends QueryBuilder {
 			this.where(ref(k).castText(), Array.isArray(refs[k]) ? 'IN' : '=', refs[k]);
 		}
 		return this;
+	}
+	clone() {
+		var builder = super.clone();
+		builder._patchObjectOperationFactory = this._patchObjectOperationFactory;
+		return builder;
 	}
 };
 
@@ -36,4 +81,19 @@ function asPaths(obj, ret, pre, first) {
 	});
 	return ret;
 }
+
+
+class PatchObjectOperation extends UpdateOperation {
+	onBuildKnex(knexBuilder, builder) {
+		const json = this.model.$toDatabaseJson(builder.knex());
+		const jsonPaths = asPaths(json, {}, "", true);
+		const convertedJson = this.convertFieldExpressionsToRaw(builder, jsonPaths);
+
+		knexBuilder.update(convertedJson);
+	}
+}
+
+class InstancePatchObjectOperation extends InstanceUpdateOperation {}
+
+InstancePatchObjectOperation.prototype.onBuildKnex = PatchObjectOperation.prototype.onBuildKnex;
 
