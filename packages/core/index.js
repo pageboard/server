@@ -325,9 +325,9 @@ function filesError(err, req, res, next) {
 	if (isNaN(code) || code < 200 || code >= 600) {
 		code = 500;
 	}
+	if (code >= 500) console.error(err);
 	if (code >= 400) All.log(req, res, function() {
-		if (err.message) res.status(code).send(err.message);
-		else res.sendStatus(code);
+		res.sendStatus(code);
 	});
 	else res.sendStatus(code);
 }
