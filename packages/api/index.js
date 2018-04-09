@@ -155,7 +155,7 @@ exports.validate = function(site, pkg) {
 		var scripts = filter(list, 'scripts');
 		var styles = filter(list, 'stylesheets');
 
-		if (env == "dev" || !pkg.dir) {
+		if (env == "dev" || !pkg.dir || !site.href) {
 			eltsMap.page.scripts = scripts;
 			eltsMap.page.stylesheets = styles;
 			return Promise.resolve();
