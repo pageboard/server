@@ -34,17 +34,12 @@ exports = module.exports = function(opt) {
 	};
 };
 
-// deux cas potentiels
-// - un fichier uploadé est utilisé comme une image, /public/uploads/file.jpg?rs=xxx
-// - un fichier distant est utilisé comme une image. On ne peut pas redimensionner.
-// - fabriquer un thumbnail à partir d'une image distante
-
 function initFile(All) {
 	var opt = All.opt;
 	var uploadDir = opt.upload && opt.upload.dir;
 	if (uploadDir) {
 		uploadDir = "." + uploadDir;
-		console.info("Images resizable by upload at", "/" + uploadDir);
+		console.info("Uploaded images resizable by upload at", "/" + uploadDir);
 		All.app.get(`:url(/${uploadDir}/*)`, function(req, res, next) {
 			if (!req.query.rs && !req.query.ex && !req.query.lqip) next('route');
 			else next();
@@ -61,7 +56,7 @@ function initFile(All) {
 }
 
 function initService(All) {
-	console.info(`Images resizable by proxy at /.api/image`);
+	console.info(`Remote images resizable by proxy at /.api/image`);
 	All.app.get('/.api/image', sharpie(All.opt.image));
 }
 
