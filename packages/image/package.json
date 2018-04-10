@@ -17,8 +17,8 @@
   },
   "homepage": "https://github.com/pageboard/image#readme",
   "dependencies": {
-    "bl": "^1.2.0",
-    "datauri": "^1.0.5",
+    "bl": "^1.2.2",
+    "datauri": "^1.1.0",
     "express-urlrewrite": "^1.2.0",
     "sharpie": "^3.3.0"
   }
