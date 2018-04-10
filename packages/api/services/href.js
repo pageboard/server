@@ -195,7 +195,10 @@ exports.add = function(site, data) {
 		}).then(filterResult).then(embedThumbnail);
 	}
 	return p.then(function(result) {
-		if (isLocal) result.url = data.url;
+		if (isLocal) {
+			result.url = data.url;
+			result.site = null;
+		}
 		return exports.get(site, data).then(function(href) {
 			if (!href) {
 				return site.$relatedQuery('hrefs').insert(result).returning(Href.tableColumns);
