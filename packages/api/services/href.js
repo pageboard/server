@@ -1,5 +1,4 @@
 var ref = require('objection').ref;
-var URL = require('url');
 var Path = require('path');
 
 exports = module.exports = function(opt) {
@@ -25,33 +24,6 @@ function init(All) {
 		All.run('href.del', req.site, req.query).then(function(href) {
 			res.send(href);
 		}).catch(next);
-	});
-}
-
-function filterResult(result) {
-	var obj = {meta:{}};
-	['mime', 'url', 'type', 'title', 'icon', 'site']
-	.forEach(function(key) {
-		if (result[key] !== undefined) obj[key] = result[key];
-	});
-	if (result.url) obj.pathname = URL.parse(result.url).pathname;
-	var meta = {};
-	['width', 'height', 'duration', 'size', 'thumbnail', 'description']
-	.forEach(function(key) {
-		if (result[key] !== undefined) obj.meta[key] = result[key];
-	});
-	if (obj.type == "image" && obj.mime != "text/html" && !obj.meta.thumbnail) {
-		obj.meta.thumbnail = obj.url;
-	}
-	return obj;
-}
-
-function embedThumbnail(obj) {
-	var thumb = obj.meta.thumbnail;
-	if (!thumb) return obj;
-	return All.image.thumbnail(thumb).then(function(datauri) {
-		obj.meta.thumbnail = datauri;
-		return obj;
 	});
 }
 
@@ -188,17 +160,9 @@ exports.add = function(site, data) {
 			};
 		});
 	} else {
-		p = All.inspector.get({url: url, nofavicon: isLocal}).catch(function(err) {
-			// inspector failure
-			if (typeof err == 'number') err = new HttpError[err]("Inspector failure");
-			throw err;
-		}).then(filterResult).then(embedThumbnail);
+		p = callInspector(site, url, isLocal);
 	}
 	return p.then(function(result) {
-		if (isLocal) {
-			result.url = data.url;
-			result.site = null;
-		}
 		return exports.get(site, data).then(function(href) {
 			if (!href) {
 				return site.$relatedQuery('hrefs').insert(result).returning(Href.tableColumns);
@@ -298,17 +262,10 @@ exports.reinspect = function(site, data) {
 	.whereObject(data)
 	.then(function(rows) {
 		return Promise.all(rows.map(function(href) {
-			var url = href.url;
-			var isLocal = url.startsWith('/.uploads/');
-			if (isLocal) {
-				url = host + url;
-			}
-			return All.inspector.get({url: url, nofavicon: true})
-			.then(filterResult)
-			.then(embedThumbnail).then(function(result) {
-				if (isLocal) result.site = null;
+			return callInspector(site, href.url, url.startsWith('/.uploads/'))
+			.then(function(obj) {
 				return site.$relatedQuery('hrefs')
-				.patchObject(result).where('_id', href._id);
+				.patchObject(obj).where('_id', href._id);
 			}).catch(function(err) {
 				console.error("Error inspecting", href, err);
 			});
@@ -342,3 +299,21 @@ exports.reinspect.schema = {
 		return All.api.Href.jsonSchema.properties;
 	}
 };
+
+function callInspector(site, url, local) {
+	var inspectorUrl = url;
+	if (local && url.startsWith('/.uploads/')) {
+		inspectorUrl = url.replace('/.uploads/', 'uploads/' + site.id + '/');
+		inspectorUrl = "file://" + Path.join(All.opt.dirs.data, inspectorUrl);
+	}
+	return All.inspector.get({
+		url: inspectorUrl,
+		local: local
+	}).then(function(obj) {
+		if (local) {
+			obj.site = null;
+			obj.url = url;
+		}
+		return obj;
+	});
+}
