@@ -253,10 +253,7 @@ exports.gc = function(days) {
 
 exports.reinspect = function(site, data) {
 	// usage
-	// pageboard --site=<id> href.reinspect type=image meta.width= site="<http_site_href>"
-	if (!data.site) throw new Error("Use site=<host> to fix using the given host as prefix");
-	var host = data.site;
-	delete data.site;
+	// pageboard --site=<id> href.reinspect type=image meta.width=
 	return All.api.Href.query()
 	.whereSite(site.id)
 	.whereObject(data)
