@@ -287,3 +287,58 @@ exports.gc = function(days) {
 	});
 };
 
+exports.reinspect = function(site, data) {
+	// usage
+	// pageboard --site=<id> href.reinspect type=image meta.width= site="<http_site_href>"
+	if (!data.site) throw new Error("Use site=<host> to fix using the given host as prefix");
+	var host = data.site;
+	delete data.site;
+	return All.api.Href.query()
+	.whereSite(site.id)
+	.whereObject(data)
+	.then(function(rows) {
+		return Promise.all(rows.map(function(href) {
+			var url = href.url;
+			var isLocal = url.startsWith('/.uploads/');
+			if (isLocal) {
+				url = host + url;
+			}
+			return All.inspector.get({url: url, nofavicon: true})
+			.then(filterResult)
+			.then(embedThumbnail).then(function(result) {
+				if (isLocal) result.site = null;
+				return site.$relatedQuery('hrefs')
+				.patchObject(result).where('_id', href._id);
+			}).catch(function(err) {
+				console.error("Error inspecting", href, err);
+			});
+		}));
+	}).then(function(arr) {
+		console.info("Inspected", arr.length, "hrefs");
+		return Promise.all([
+			All.api.Block.raw(`UPDATE block
+				SET data = jsonb_set(data, '{meta,width}', href.meta->'width')
+				FROM href WHERE block.type = 'image'
+				AND block.data->'meta'->'width' IS NULL
+				AND href.url = block.data->>'url'
+				AND href.meta->'width' IS NOT NULL
+				AND href._parent_id = ?`, site._id),
+			All.api.Block.raw(`UPDATE block
+				SET data = jsonb_set(data, '{meta,height}', href.meta->'height')
+				FROM href WHERE block.type = 'image'
+				AND block.data->'meta'->'height' IS NULL
+				AND href.url = block.data->>'url'
+				AND href.meta->'height' IS NOT NULL
+				AND href._parent_id = ?`, site._id)
+		]).then(function(counts) {
+			require('assert').equal(counts[0].rowCount, counts[1].rowCount, "not updated same number of meta.width and meta.height");
+			console.info("Updated", counts[0].rowCount, "image blocks meta dimensions");
+		});
+	});
+};
+exports.reinspect.schema = {
+	required: ['type'],
+	get properties() {
+		return All.api.Href.jsonSchema.properties;
+	}
+};
