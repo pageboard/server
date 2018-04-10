@@ -262,7 +262,7 @@ exports.reinspect = function(site, data) {
 	.whereObject(data)
 	.then(function(rows) {
 		return Promise.all(rows.map(function(href) {
-			return callInspector(site, href.url, url.startsWith('/.uploads/'))
+			return callInspector(site, href.url, href.url.startsWith('/.uploads/'))
 			.then(function(obj) {
 				return site.$relatedQuery('hrefs')
 				.patchObject(obj).where('_id', href._id);
