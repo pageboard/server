@@ -32,7 +32,7 @@ pageboard.init(config).then(function(All) {
 		var args = [command];
 		return Promise.resolve().then(function() {
 			if (All.opt.site) {
-				return All.run('site.get', {id: All.opt.site}).then(function(site) {
+				return All.site.get({id: All.opt.site}).select('_id').then(function(site) {
 					return All.install(site).then(function(site) {
 						args.push(site);
 						args.push(config.data);
