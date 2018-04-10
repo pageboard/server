@@ -68,9 +68,13 @@ exports.QueryBuilder = class CommonQueryBuilder extends QueryBuilder {
 	whereObject(obj) {
 		var table = this.tableRefFor(this.modelClass());
 		var refs = asPaths(obj, {}, table + '.', true);
-		for (var k in refs) {
-			this.where(ref(k).castText(), Array.isArray(refs[k]) ? 'IN' : '=', refs[k]);
-		}
+		Object.keys(refs).forEach(function(k) {
+			var cond = refs[k];
+			var refk = ref(k);
+			if (cond == null) this.whereNull(refk);
+			else if (Array.isArray(cond)) this.where(refk.castText(), 'IN', cond);
+			else this.where(refk.castText(), cond);
+		}, this);
 		return this;
 	}
 	clone() {
