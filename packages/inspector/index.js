@@ -26,7 +26,11 @@ exports.get = function({url, local}) {
 		throw err;
 	})
 	.then(filterResult)
-	.then(embedThumbnail);
+	.then(function(obj) {
+		// temporary work around the fact sharpie cannot work with a local file
+		if (url.startsWith("file://") == false) return embedThumbnail(obj);
+		else return obj;
+	});
 };
 
 function filterResult(result) {
