@@ -161,7 +161,7 @@ exports.add = function(site, data) {
 			};
 		});
 	} else {
-		p = callInspector(site, data.url, isLocal);
+		p = callInspector(site.id, data.url, isLocal);
 	}
 	return p.then(function(result) {
 		return exports.get(site, data).then(function(href) {
@@ -299,12 +299,12 @@ exports.reinspect.schema = {
 	}
 };
 
-function callInspector(site, url, local) {
+function callInspector(siteId, url, local) {
 	var fileUrl = url;
 	var dir = All.opt.upload.dir;
 	if (local === undefined) local = url.startsWith(`/.${dir}/`);
 	if (local) {
-		fileUrl = url.replace(`/.${dir}/`, `${dir}/${site.id}/`);
+		fileUrl = url.replace(`/.${dir}/`, `${dir}/${siteId}/`);
 		fileUrl = "file://" + Path.join(All.opt.dirs.data, fileUrl);
 	}
 	return All.inspector.get({
