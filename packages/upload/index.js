@@ -46,7 +46,12 @@ function init(All) {
 			filename: function (req, file, cb) {
 				var parts = file.originalname.split('.');
 				var basename = speaking(parts.shift(), {truncate: 128});
-				var extensions = parts.join('.').toLowerCase();
+				var extensions = parts.map(function(str) {
+					return speaking(str, {
+						symbols: false,
+						truncate: 8
+					});
+				}).join('.').toLowerCase();
 
 				crypto.pseudoRandomBytes(4, function (err, raw) {
 					if (err) return cb(err);
