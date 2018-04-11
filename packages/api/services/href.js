@@ -253,18 +253,26 @@ exports.gc = function(days) {
 	});
 };
 
-exports.reinspect = function(site, data) {
+exports.reinspect = function(data) {
 	// usage
-	// pageboard --site=<id> href.reinspect type=image meta.width=
-	return All.api.Href.query()
-	.whereSite(site.id)
-	.whereObject(data)
-	.then(function(rows) {
+	// to force reinspect
+	// UPDATE block SET data = jsonb_set(data, '{meta}', '{}'::jsonb) WHERE type='image';
+	// UPDATE href SET meta = '{}'::jsonb WHERE type='image';
+	// pageboard href.reinspect site=idsite type=image meta.width=
+	// (site is optional)
+	var site = {
+		id: data.site
+	};
+	delete data.site;
+	var q = All.api.Href.query().joinRelation('parent')
+	.select('href.url', 'href._id', 'parent.id AS site')
+	.whereObject(data);
+	if (site.id) q.where('parent.id', site.id);
+	return q.then(function(rows) {
 		return Promise.all(rows.map(function(href) {
-			return callInspector(site, href.url)
+			return callInspector(href.site, href.url)
 			.then(function(obj) {
-				return site.$relatedQuery('hrefs')
-				.patchObject(obj).where('_id', href._id);
+				return All.api.Href.query().patchObject(obj).where('_id', href._id);
 			}).catch(function(err) {
 				console.error("Error inspecting", href, err);
 			});
@@ -273,19 +281,40 @@ exports.reinspect = function(site, data) {
 		console.info("Inspected", arr.length, "hrefs");
 		return Promise.all([
 			All.api.Block.raw(`UPDATE block
-				SET data = jsonb_set(data, '{meta,width}', href.meta->'width')
-				FROM href WHERE block.type = 'image'
+				SET data = jsonb_set(block.data, '{meta,width}', href.meta->'width')
+				FROM href, block AS site, relation AS r WHERE block.type = 'image'
 				AND block.data->'meta'->'width' IS NULL
 				AND href.url = block.data->>'url'
 				AND href.meta->'width' IS NOT NULL
-				AND href._parent_id = ?`, site._id),
+				AND r.child_id = block._id AND site._id = r.parent_id AND site.type = 'site'
+				${site.id ? ' AND site.id = ?' : ''}
+				AND href._parent_id = site._id`, site.id),
 			All.api.Block.raw(`UPDATE block
-				SET data = jsonb_set(data, '{meta,height}', href.meta->'height')
-				FROM href WHERE block.type = 'image'
+				SET data = jsonb_set(block.data, '{meta,height}', href.meta->'height')
+				FROM href, block AS site, relation AS r WHERE block.type = 'image'
 				AND block.data->'meta'->'height' IS NULL
 				AND href.url = block.data->>'url'
 				AND href.meta->'height' IS NOT NULL
-				AND href._parent_id = ?`, site._id)
+				AND r.child_id = block._id AND site._id = r.parent_id AND site.type = 'site'
+				${site.id ? ' AND site.id = ?' : ''}
+				AND href._parent_id = site._id`, site.id),
+			All.api.Block.raw(`UPDATE block
+				SET data = jsonb_set(block.data, '{meta,size}', href.meta->'size')
+				FROM href, block AS site, relation AS r WHERE block.type = 'image'
+				AND block.data->'meta'->'size' IS NULL
+				AND href.url = block.data->>'url'
+				AND href.meta->'size' IS NOT NULL
+				AND r.child_id = block._id AND site._id = r.parent_id AND site.type = 'site'
+				${site.id ? ' AND site.id = ?' : ''}
+				AND href._parent_id = site._id`, site.id),
+			All.api.Block.raw(`UPDATE block
+				SET data = jsonb_set(block.data, '{meta,mime}', to_jsonb(href.mime))
+				FROM href, block AS site, relation AS r WHERE block.type = 'image'
+				AND block.data->'meta'->'mime' IS NULL
+				AND href.url = block.data->>'url'
+				AND r.child_id = block._id AND site._id = r.parent_id AND site.type = 'site'
+				${site.id ? ' AND site.id = ?' : ''}
+				AND href._parent_id = site._id`, site.id)
 		]).then(function(counts) {
 			require('assert').equal(counts[0].rowCount, counts[1].rowCount, "not updated same number of meta.width and meta.height");
 			console.info("Updated", counts[0].rowCount, "image blocks meta dimensions");
@@ -295,8 +324,13 @@ exports.reinspect = function(site, data) {
 exports.reinspect.schema = {
 	required: ['type'],
 	get properties() {
-		return All.api.Href.jsonSchema.properties;
-	}
+		return Object.assign({}, All.api.Href.jsonSchema.properties, {
+			site: {
+				type: 'string'
+			}
+		});
+	},
+	additionalProperties: false
 };
 
 function callInspector(siteId, url, local) {
