@@ -135,8 +135,6 @@ exports.save = function(data) {
 		var oldDomain = dataOld.domain;
 		var sameDomain = oldDomain == dataNew.domain;
 
-		Object.assign(site.data, data.data);
-
 		return All.install(site).then(function() {
 			return site.$query().patchObject({
 				type: site.type,

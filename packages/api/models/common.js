@@ -100,6 +100,18 @@ function asPaths(obj, ret, pre, first) {
 	return ret;
 }
 
+function deepAssign(model, obj) {
+	Object.keys(obj).forEach(function(key) {
+		var val = obj[key];
+		var src = model[key];
+		if (val == null || typeof val != "object" || src == null) {
+			model[key] = val;
+		} else {
+			deepAssign(src, val);
+		}
+	});
+}
+
 
 class PatchObjectOperation extends UpdateOperation {
 	onBuildKnex(knexBuilder, builder) {
@@ -111,7 +123,17 @@ class PatchObjectOperation extends UpdateOperation {
 	}
 }
 
-class InstancePatchObjectOperation extends InstanceUpdateOperation {}
+class InstancePatchObjectOperation extends InstanceUpdateOperation {
+	onAfter2(builder, result) {
+		const clone = this.instance.$clone();
+		result = super.onAfter2(builder, result);
+		if (!result || typeof result != "object") {
+			this.instance.$set(clone);
+			deepAssign(this.instance, this.model);
+		}
+		return result;
+	}
+}
 
 InstancePatchObjectOperation.prototype.onBuildKnex = PatchObjectOperation.prototype.onBuildKnex;
 
