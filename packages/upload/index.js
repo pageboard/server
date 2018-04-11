@@ -65,9 +65,18 @@ function init(All) {
 
 		All.app.post('/.api/upload', mw.array('files'), function(req, res, next) {
 			var curDest = Path.join(dest, req.site.id);
-			res.send(req.files.map(function(file) {
-				return req.site.href + '/.' + Path.join(upload.dir, Path.relative(curDest, file.destination), file.filename);
-			}));
+			var href = req.site.href;
+			Promise.all(req.files.map(function(file) {
+				return All.image.upload(file).then(function() {
+					return href + '/.' + Path.join(
+						upload.dir,
+						Path.relative(curDest, file.destination),
+						file.filename
+					);
+				});
+			})).then(function(list) {
+				res.send(list);
+			}).catch(next);
 		});
 	});
 }
