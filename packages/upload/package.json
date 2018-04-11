@@ -17,10 +17,8 @@
   },
   "homepage": "https://github.com/pageboard/upload#readme",
   "dependencies": {
-    "express-throttle-bandwidth": "^1.0.0",
     "mkdirp": "^0.5.1",
     "multer": "^1.3.0",
-    "speakingurl": "^13.0.0",
-    "stream-throttle": "^0.1.3"
+    "speakingurl": "^13.0.0"
   }
 }

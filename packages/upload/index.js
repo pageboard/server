@@ -5,7 +5,6 @@ var mkdirp = require('mkdirp');
 var pify = require('util').promisify;
 var mkdirpp = pify(mkdirp);
 var speaking = require('speakingurl');
-var throttle = require('express-throttle-bandwidth');
 var fs = {
 	unlink: pify(require('fs').unlink)
 };
@@ -15,11 +14,7 @@ exports = module.exports = function(opt) {
 	if (!opt.upload.files) opt.upload.files = 100;
 	if (!opt.upload.size) opt.upload.size = 50000000;
 	if (!opt.upload.dir) opt.upload.dir = "uploads";
-	if (opt.upload.bandwidth === undefined) {
-		if (opt.env == "development") {
-			opt.upload.bandwidth = 500000;
-		}
-	}
+
 	var dest = Path.resolve(opt.dirs.data, "uploads");
 	console.info("Upload to :", dest);
 	opt.directories.push({
@@ -70,10 +65,7 @@ function init(All) {
 			}
 		});
 
-		var bps = upload.bandwidth;
-		if (bps) console.info("Upload bandwidth limited to", Math.round(bps / 1000) + 'KB/s');
-
-		All.app.post('/.api/upload', throttle(bps), mw.array('files'), function(req, res, next) {
+		All.app.post('/.api/upload', mw.array('files'), function(req, res, next) {
 			var curDest = Path.join(dest, req.site.id);
 			res.send(req.files.map(function(file) {
 				return req.site.href + '/.' + Path.join(upload.dir, Path.relative(curDest, file.destination), file.filename);
