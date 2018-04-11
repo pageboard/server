@@ -116,11 +116,10 @@ exports.upload = function(file) {
 		return;
 	}
 	var dst = file.path + ".tmp";
-	return sharp(file.path)
-	.jpeg({quality:100})
-	.webp({quality: 100})
-	.tiff({quality: 100})
-	.toFile(dst).then(function() {
+	var pipeline = sharp(file.path);
+	return pipeline.metadata().then(function(meta) {
+		return pipeline.toFormat(meta.format, {quality:93}).toFile(dst);
+	}).then(function() {
 		return fs.rename(dst, file.path);
 	});
 };
