@@ -51,15 +51,18 @@ exports.QueryBuilder = class CommonQueryBuilder extends QueryBuilder {
 	patchObject(obj) {
 		var patchObjectOperation = this._patchObjectOperationFactory();
 		obj = Object.assign({}, obj);
-		var type = patchObjectOperation.instance && patchObjectOperation.instance.type;
-		if (type) {
-			if (obj.type) {
-				if (obj.type != type) throw new Error("Cannot patch object with different type");
-			} else {
-				obj.type = type;
+		var table = this.tableRefFor(this.modelClass());
+		if (table == "block") {
+			var type = patchObjectOperation.instance && patchObjectOperation.instance.type;
+			if (type) {
+				if (obj.type) {
+					if (obj.type != type) throw new Error("Cannot patch object with different type");
+				} else {
+					obj.type = type;
+				}
+			} else if (!obj.type) {
+				throw new Error("Cannot patch block without type");
 			}
-		} else if (!obj.type) {
-			throw new Error("Cannot patch object without type");
 		}
 		this.skipUndefined();
 		this.addOperation(patchObjectOperation, [obj]);
