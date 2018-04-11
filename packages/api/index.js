@@ -10,7 +10,7 @@ var ajvApi = require('ajv')({
 	ownProperties: true,
 	coerceTypes: 'array',
 	removeAdditional: false,
-	useDefaults: true
+	useDefaults: false
 });
 ajvApi.addMetaSchema(require('ajv/lib/refs/json-schema-draft-06.json'));
 
