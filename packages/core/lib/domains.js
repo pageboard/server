@@ -107,7 +107,7 @@ Domains.prototype.init = function(req, res, next) {
 		p = new Promise(function(resolve) {
 			setTimeout(resolve, host.parked ? 0 : 2000);
 		}).then(function() {
-			if (host.isWaiting) {
+			if (host.isWaiting && !req.path.startsWith('/.')) {
 				next = null;
 				res.redirect("/.well-known/status.html?" + encodeURIComponent(req.url));
 			} else {
