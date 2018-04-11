@@ -1,12 +1,15 @@
 var sharpie = require('sharpie');
-sharpie.sharp.simd(true);
+var sharp = sharpie.sharp;
+var pify = require('util').promisify;
+var fs = {
+	rename: pify(require('fs').rename)
+};
 
 var BufferList = require('bl');
 var DataUri = require('datauri');
 
-var thumbnailer;
-
 exports = module.exports = function(opt) {
+	sharp.simd(true);
 	if (!opt.image) opt.image = {};
 	if (!opt.image.dir) opt.image.dir = ".image";
 	if (!opt.image.converter) opt.image.converter = 'convert';
@@ -15,16 +18,6 @@ exports = module.exports = function(opt) {
 		assignment: '-',
 		separator: '_'
 	};
-
-	thumbnailer = sharpie(Object.assign({
-		rs: `h${opt.image.signs.assignment}64${opt.image.signs.separator}max`,
-		q: '70',
-		bg: 'white',
-		flatten: true,
-		hostnames: true,
-		format: 'jpeg',
-		signs: opt.image.signs
-	}, All.opt.thumbnail));
 
 	return {
 		name: 'image',
@@ -74,38 +67,60 @@ exports.favicon = function(path) {
 	});
 };
 
-exports.thumbnail = function(url, query) {
-	return new Promise(function(resolve, reject) {
-		var status, mime;
-		var req = {
-			params: {url: url},
-			query: query || {},
-			get: function() { return ''; }
-		};
+function request(url) {
+	var obj = require('url').parse(url);
+	var agent;
+	if (obj.protocol == "http:") agent = require('http');
+	else if (obj.protocol == "https:") agent = require('https');
+	var stream = new require('stream').PassThrough();
+	agent.get(url).on('response', function(res) {
+		res.pipe(stream);
+	});
+	return stream;
+}
 
-		var res = BufferList(function(err, data) {
-			if (err) return reject(err);
-			var dtu = new DataUri();
-			dtu.format('.' + mime.split('/').pop(), data);
-			resolve(dtu.content);
-		});
-		res.setHeader = function(name, value) {
-			if (name.toLowerCase() == 'content-type') {
-				mime = value;
-			}
-		};
-		res.get = function() {};
-		res.type = function() { return res; };
-		res.status = function(code) {
-			status = code;
-			return res;
-		};
-		res.send = function(txt) {
-			if (status != 200) reject(HttpError(status, txt));
-			return res;
-		};
-		thumbnailer(req, res, function(err) {
-			reject(new Error(err));
-		});
+exports.thumbnail = function(url) {
+	var pipeline;
+	if (url.startsWith('file://')) {
+		pipeline = sharp(url.substring(7));
+	} else {
+		pipeline = sharp();
+		request(url).pipe(pipeline);
+	}
+	return pipeline
+	.resize(null, 64)
+	.max()
+	.background('white')
+	.flatten()
+	.toFormat('jpeg', {
+		quality: 65
+	})
+	.toBuffer().then(function(buf) {
+		var dtu = new DataUri();
+		dtu.format('.jpeg', buf);
+		return dtu.content;
+	});
+};
+
+exports.upload = function(file) {
+	var mime = file.mimetype;
+	if (!mime) {
+		console.warn("image.upload cannot inspect file without mime type", file);
+		return;
+	}
+	if (!mime.startsWith('image/')) return;
+	if (mime.startsWith('image/svg')) return;
+	var format = mime.split('/').pop();
+	if (!sharp.format[format]) {
+		console.warn("image.upload cannot process", mime);
+		return;
+	}
+	var dst = file.path + ".tmp";
+	return sharp(file.path)
+	.jpeg({quality:100})
+	.webp({quality: 100})
+	.tiff({quality: 100})
+	.toFile(dst).then(function() {
+		return fs.rename(dst, file.path);
 	});
 };
