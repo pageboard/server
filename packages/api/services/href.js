@@ -1,5 +1,6 @@
 var ref = require('objection').ref;
 var Path = require('path');
+var URL = require('url');
 
 exports = module.exports = function(opt) {
 	this.opt = opt;
