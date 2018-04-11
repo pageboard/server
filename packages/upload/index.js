@@ -47,8 +47,6 @@ function init(All) {
 				var parts = file.originalname.split('.');
 				var basename = speaking(parts.shift(), {truncate: 128});
 				var extensions = parts.join('.').toLowerCase();
-				// TODO use url-inspector to determine the real mime file type
-				// and allow only specific file types
 
 				crypto.pseudoRandomBytes(4, function (err, raw) {
 					if (err) return cb(err);
