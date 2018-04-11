@@ -231,6 +231,7 @@ exports.del.schema = {
 };
 
 exports.gc = function(days) {
+	return Promise.resolve([]);
 	// TODO use sites schemas to known which paths to check:
 	// for example, data.url comes from elements.image.properties.url.input.name == "href"
 
