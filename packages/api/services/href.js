@@ -161,7 +161,7 @@ exports.add = function(site, data) {
 			};
 		});
 	} else {
-		p = callInspector(site, url, isLocal);
+		p = callInspector(site, data.url, isLocal);
 	}
 	return p.then(function(result) {
 		return exports.get(site, data).then(function(href) {
