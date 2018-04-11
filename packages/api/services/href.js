@@ -260,7 +260,7 @@ exports.reinspect = function(site, data) {
 	.whereObject(data)
 	.then(function(rows) {
 		return Promise.all(rows.map(function(href) {
-			return callInspector(site, href.url, href.url.startsWith('/.uploads/'))
+			return callInspector(site, href.url)
 			.then(function(obj) {
 				return site.$relatedQuery('hrefs')
 				.patchObject(obj).where('_id', href._id);
@@ -299,13 +299,15 @@ exports.reinspect.schema = {
 };
 
 function callInspector(site, url, local) {
-	var inspectorUrl = url;
-	if (local && url.startsWith('/.uploads/')) {
-		inspectorUrl = url.replace('/.uploads/', 'uploads/' + site.id + '/');
-		inspectorUrl = "file://" + Path.join(All.opt.dirs.data, inspectorUrl);
+	var fileUrl = url;
+	var dir = All.opt.upload.dir;
+	if (local === undefined) local = url.startsWith(`/.${dir}/`);
+	if (local) {
+		fileUrl = url.replace(`/.${dir}/`, `${dir}/${site.id}/`);
+		fileUrl = "file://" + Path.join(All.opt.dirs.data, fileUrl);
 	}
 	return All.inspector.get({
-		url: inspectorUrl,
+		url: fileUrl,
 		local: local
 	}).then(function(obj) {
 		if (local) {
