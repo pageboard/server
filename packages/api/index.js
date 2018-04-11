@@ -3,16 +3,24 @@ var AjvKeywords = require('ajv-keywords');
 var bodyParserJson = require('body-parser').json();
 var schedule = require('node-schedule');
 
-var ajvApi = require('ajv')({
+var ajv = require('ajv');
+var ajvMetaSchema = require('ajv/lib/refs/json-schema-draft-06.json');
+
+var ajvApiSettings = {
 	$data: true,
 	allErrors: true,
 	validateSchema: true,
 	ownProperties: true,
 	coerceTypes: 'array',
-	removeAdditional: false,
+	removeAdditional: false
+};
+var ajvApiWithDefaults = ajv(Object.assign({}, ajvApiSettings, {
+	useDefaults: true
+})).addMetaSchema(ajvMetaSchema);
+
+var ajvApiWithNoDefaults = ajv(Object.assign({}, ajvApiSettings, {
 	useDefaults: false
-});
-ajvApi.addMetaSchema(require('ajv/lib/refs/json-schema-draft-06.json'));
+})).addMetaSchema(ajvMetaSchema);
 
 var knex = require('knex');
 
@@ -60,7 +68,7 @@ function init(All) {
 	objection.Model.createValidator = function() {
 		return new objection.AjvValidator({
 			onCreateAjv: function(ajv) {
-				ajv.addMetaSchema(require('ajv/lib/refs/json-schema-draft-06.json'));
+				ajv.addMetaSchema(ajvMetaSchema);
 				AjvKeywords(ajv, 'select');
 			},
 			options: {
@@ -104,7 +112,11 @@ function init(All) {
 exports.check = function(fun, data) {
 	if (!fun.schema) return data;
 	if (!fun.validate) {
-		fun.validate = ajvApi.compile(fun.schema);
+		if (fun.schema.defaults === false) {
+			fun.validate = ajvApiWithNoDefaults.compile(fun.schema);
+		} else {
+			fun.validate = ajvApiWithDefaults.compile(fun.schema);
+		}
 	}
 	// coerceTypes mutates data
 	if (fun.validate(data)) {

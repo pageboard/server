@@ -330,7 +330,8 @@ exports.reinspect.schema = {
 			}
 		});
 	},
-	additionalProperties: false
+	additionalProperties: false,
+	defaults: false
 };
 
 function callInspector(siteId, url, local) {
