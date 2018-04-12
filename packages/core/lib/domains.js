@@ -70,7 +70,7 @@ Domains.prototype.init = function(req, res, next) {
 			return site;
 		}).catch(function(err) {
 			host._error = err;
-			throw err;
+			if (host.finalize) host.finalize();
 		}).finally(function() {
 			host.isSearching = false;
 		});
@@ -78,6 +78,7 @@ Domains.prototype.init = function(req, res, next) {
 	if (!host.installing) {
 		host.isInstalling = true;
 		host.installing = host.searching.then(function(site) {
+			if (host._error) return;
 			site.href = host.href;
 			site.hostname = host.name;
 			// never throw an error since errors are already dealt with in install
@@ -119,6 +120,7 @@ Domains.prototype.init = function(req, res, next) {
 	}
 	return p.then(function() {
 		if (!next) return;
+		if (host._error) return;
 		var site = self.sites[host.id];
 		var Block = site.Block;
 		var errors = site.errors;
