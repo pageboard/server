@@ -103,23 +103,25 @@ exports.thumbnail = function(url) {
 };
 
 exports.upload = function(file) {
-	var mime = file.mimetype;
-	if (!mime) {
-		console.warn("image.upload cannot inspect file without mime type", file);
-		return;
-	}
-	if (!mime.startsWith('image/')) return;
-	if (mime.startsWith('image/svg')) return;
-	var format = mime.split('/').pop();
-	if (!sharp.format[format]) {
-		console.warn("image.upload cannot process", mime);
-		return;
-	}
-	var dst = file.path + ".tmp";
-	var pipeline = sharp(file.path);
-	return pipeline.metadata().then(function(meta) {
-		return pipeline.toFormat(meta.format, {quality:93}).toFile(dst);
-	}).then(function() {
-		return fs.rename(dst, file.path);
+	return Promise.resolve().then(function() {
+		var mime = file.mimetype;
+		if (!mime) {
+			console.warn("image.upload cannot inspect file without mime type", file);
+			return;
+		}
+		if (!mime.startsWith('image/')) return;
+		if (mime.startsWith('image/svg')) return;
+		var format = mime.split('/').pop();
+		if (!sharp.format[format]) {
+			console.warn("image.upload cannot process", mime);
+			return;
+		}
+		var dst = file.path + ".tmp";
+		var pipeline = sharp(file.path);
+		return pipeline.metadata().then(function(meta) {
+			return pipeline.toFormat(meta.format, {quality:93}).toFile(dst);
+		}).then(function() {
+			return fs.rename(dst, file.path);
+		});
 	});
 };
