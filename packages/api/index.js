@@ -185,12 +185,6 @@ exports.validate = function(site, pkg) {
 		site.Block.source = toSource(pkg.eltsMap);
 		delete pkg.eltsMap;
 		delete pkg.Block;
-	}).then(function() {
-		if (site.data.version != null) return site.$query().patchObject({
-			data: {
-				version: site.data.version
-			}
-		});
 	});
 };
 
