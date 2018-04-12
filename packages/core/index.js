@@ -157,10 +157,6 @@ function install(site) {
 		elements: []
 	};
 	return Install.install(site, All.opt).then(function(pkg) {
-		if (pkg.version != null) {
-			// api.validate will save the version on success
-			site.data.version = pkg.version;
-		}
 		return All.api.install(site, pkg, All).then(function() {
 			return All.statics.install(site, pkg, All).then(function() {
 				return All.api.validate(site, pkg);
