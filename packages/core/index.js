@@ -149,7 +149,7 @@ exports.init = function(opt) {
 
 function install(site) {
 	var All = this;
-	All.domains.update(site);
+	All.domains.promote(site);
 	All.domains.hold(site);
 
 	var config = {
@@ -171,6 +171,7 @@ function install(site) {
 			return Install.clean(site, pkg, All.opt);
 		});
 	}).then(function(pkg) {
+		All.domains.replace(site);
 		All.domains.release(site);
 		return site;
 	}).catch(function(err) {

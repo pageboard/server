@@ -210,7 +210,7 @@ Domains.prototype.check = function(host, req) {
 	});
 };
 
-Domains.prototype.update = function(site) {
+Domains.prototype.promote = function(site) {
 	var cur = this.sites[site.id] || {};
 	var href = site.href || cur.href;
 	Object.defineProperty(site, 'href', {
@@ -239,6 +239,16 @@ Domains.prototype.update = function(site) {
 		writable: true,
 		value: Block
 	});
+};
+
+Domains.prototype.replace = function(site) {
+	var cur = this.sites[site.id];
+	var oldDomain = cur && cur.data && cur.data.domain;
+	var newDomain = site.data && site.data.domain;
+	if (oldDomain != newDomain) {
+		this.hosts[newDomain] = this.hosts[oldDomain] || this.hosts[site.hostname];
+		if (oldDomain) delete this.hosts[oldDomain];
+	}
 	this.sites[site.id] = site;
 };
 
