@@ -54,6 +54,10 @@ function embedThumbnail(obj) {
 	if (!thumb) return obj;
 	return All.image.thumbnail(thumb).then(function(datauri) {
 		obj.meta.thumbnail = datauri;
+	}).catch(function(err) {
+		console.error("Error embedding thumbnail", obj.meta.thumbnail, err);
+		delete obj.meta.thumbnail;
+	}).then(function() {
 		return obj;
 	});
 }
