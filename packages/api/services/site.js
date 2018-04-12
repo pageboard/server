@@ -130,21 +130,12 @@ exports.add.schema = {
 
 exports.save = function(data) {
 	return exports.get(data).select('_id').then(function(site) {
-		var dataOld = site.data || {};
-		var dataNew = data.data || {};
-		var oldDomain = dataOld.domain;
-		var sameDomain = oldDomain == dataNew.domain;
-
-		return All.install(site).then(function() {
-			return site.$query().patchObject({
+		return All.api.trx(function(trx) {
+			return site.$query(trx).patchObject({
 				type: site.type,
 				data: data.data
 			}).then(function() {
-				if (!sameDomain) {
-					All.domains.hosts[dataNew.domain] = All.domains.hosts[oldDomain];
-					delete All.domains.hosts[oldDomain];
-				}
-				All.domains.update(site);
+				return All.install(site);
 			});
 		});
 	});
