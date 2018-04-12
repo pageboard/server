@@ -73,7 +73,13 @@ function request(url) {
 	if (obj.protocol == "http:") agent = require('http');
 	else if (obj.protocol == "https:") agent = require('https');
 	var stream = new require('stream').PassThrough();
-	agent.get(url).on('response', function(res) {
+	// high profile web sites sniff ua/accept fields (facebook, linkedin, gmaps...)
+	obj.headers = {
+		"User-Agent": "Mozilla/5.0 (compatible; Googlebot/2.1; +http://www.google.com/bot.html)",
+		"Accept-Encoding": "identity",
+		"Accept": "*/*"
+	};
+	agent.get(obj).on('response', function(res) {
 		res.pipe(stream);
 	});
 	return stream;
