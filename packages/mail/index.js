@@ -59,36 +59,36 @@ exports = module.exports = function(opt) {
 };
 
 function filterUser(email, builder) {
-	builder.select(this.tableColumns)
+	builder.select(this)
 		.whereJsonText('block.data:email', email)
 		.where('block.type', 'user')
 		.first().throwIfNotFound();
 }
 
 exports.send = function(site, data) {
-	var Block = site.Block;
+	var cols = site.$model.tableColumns;
 	var what = [
 		'parents(owner) as owner',
 		'children(to) as to',
 		'children(page) as page'
 	];
 	var filters = {
-		to: filterUser.bind(Block, data.to),
+		to: filterUser.bind(cols, data.to),
 		page: function(builder) {
-			builder.select(Block.tableColumns)
+			builder.select(cols)
 				.where('type', 'page')
 				.whereJsonText('block.data:url', data.url)
 				.first().throwIfNotFound();
 		},
 		owner: function(builder) {
-			builder.select(Block.tableColumns)
+			builder.select(cols)
 				.where('type', 'user')
 				.first().throwIfNotFound();
 		}
 	};
 	if (data.from) {
 		what.push('children(from) as from');
-		filters.from = filterUser.bind(Block, data.from);
+		filters.from = filterUser.bind(cols, data.from);
 	}
 
 	return site.$query()
