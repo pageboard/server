@@ -372,7 +372,10 @@ function initDumps(All) {
 		dir: Path.join(All.opt.dirs.data, 'dumps'),
 		keep: 15
 	}, opt);
-	console.info("Dumps db every", opt.interval, "days to", opt.dir);
+	console.info(`Dumps db
+ every ${opt.interval} days
+ for ${opt.keep} days
+ to ${opt.dir}`);
 	var job = new (require("cron").CronJob)({
 		cronTime: `0 3 */${opt.interval} * *`,
 		onTick: function() {
