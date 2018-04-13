@@ -212,6 +212,7 @@ Domains.prototype.check = function(host, req) {
 
 Domains.prototype.promote = function(site) {
 	var cur = this.sites[site.id] || {};
+	cur.errors = [];
 	var href = site.href || cur.href;
 	Object.defineProperty(site, 'href', {
 		enumerable: false,
@@ -230,7 +231,7 @@ Domains.prototype.promote = function(site) {
 		enumerable: false,
 		configurable: true,
 		writable: true,
-		value: []
+		value: cur.errors
 	});
 };
 
