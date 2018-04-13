@@ -122,7 +122,6 @@ Domains.prototype.init = function(req, res, next) {
 		if (!next) return;
 		if (host._error) return;
 		var site = self.sites[host.id];
-		var Block = site.Block;
 		var errors = site.errors;
 		if (req.url.startsWith('/.api/')) {
 			// api needs a real site instance and be able to toy with it
@@ -134,7 +133,6 @@ Domains.prototype.init = function(req, res, next) {
 		site.href = host.href;
 		site.hostname = host.name;
 		site.errors = errors;
-		site.Block = Block;
 
 		req.site = site;
 		req.upgradable = host.upgradable;
@@ -234,13 +232,6 @@ Domains.prototype.promote = function(site) {
 		writable: true,
 		value: []
 	});
-	var Block = site.Block || cur.Block;
-	Object.defineProperty(site, 'Block', {
-		enumerable: false,
-		configurable: true,
-		writable: true,
-		value: Block
-	});
 };
 
 Domains.prototype.replace = function(site) {
@@ -255,7 +246,7 @@ Domains.prototype.replace = function(site) {
 };
 
 Domains.prototype.hold = function(site) {
-	if (site.data.env == "production" && site.Block) return; // do not hold
+	if (site.data.env == "production" && site.$model) return; // do not hold
 	var host = this.hosts[site.hostname];
 	if (!host) return;
 	doWait(host);
@@ -277,7 +268,7 @@ Domains.prototype.error = function(site, err) {
 			return;
 		}
 		site.errors.push(errorObject(site, err));
-		if (site.data.env == "production" && site.Block) {
+		if (site.data.env == "production" && site.$model) {
 			// do nothing
 		} else {
 			host.isWaiting = true;
