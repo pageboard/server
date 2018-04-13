@@ -137,7 +137,7 @@ exports.add = function(site, data) {
 	var isLocal = false;
 	if (site.hostname == objUrl.hostname) {
 		url = data.url;
-		data.url = objUrl.path;
+		data.url = objUrl.pathname;
 		isLocal = true;
 	} else if (!objUrl.hostname) {
 		url = site.href + url;
