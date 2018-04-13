@@ -157,7 +157,8 @@ exports.add = function(site, data) {
 				title: pageBlock.data.title,
 				site: null,
 				ext: 'html',
-				pathname: objUrl.pathname
+				pathname: objUrl.pathname,
+				url: objUrl.path
 			};
 		});
 	} else {
