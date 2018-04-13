@@ -29,6 +29,7 @@ Pageboard.elements.login = {
 		var anchor = doc.dom`<a class="ui auth button" href="${href}" block-content="text">login</a>`;
 		var action = doc.getElementById('loginAction');
 		if (action) action.remove();
+		// https://www.google.com/webmasters/markup-tester/
 		var ld = {
 			"@context": "http://schema.org",
 			"@type": "EmailMessage",
