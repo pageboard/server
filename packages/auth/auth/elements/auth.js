@@ -34,7 +34,7 @@ Pageboard.elements.login = {
 			"@type": "EmailMessage",
 			"potentialAction": {
 				"@type": "ViewAction",
-				"target": href,
+				"url": href,
 				"name": "Login"
 			},
 			"description": anchor.innerText
