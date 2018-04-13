@@ -110,7 +110,7 @@ Domains.prototype.init = function(req, res, next) {
 		}).then(function() {
 			if (host.isWaiting && !req.path.startsWith('/.')) {
 				next = null;
-				res.redirect("/.well-known/status.html?" + encodeURIComponent(req.url));
+				res.redirect(host.href +  "/.well-known/status.html?" + encodeURIComponent(req.url));
 			} else {
 				return host.waiting;
 			}
