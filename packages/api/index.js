@@ -101,8 +101,7 @@ function init(All) {
 		All.cache.tag('share', 'file').for('0s'),
 		function(req, res, next) {
 			res.type('text/javascript');
-			var source = req.site.Block.source;
-			res.send('if (!window.Pageboard) Pageboard = {};\nPageboard.elements = ' + source);
+			res.send('if (!window.Pageboard) Pageboard = {};\nPageboard.elements = ' + req.site.$source);
 		}
 	);
 	All.app.get('/.api/*', All.cache.tag('file')); // because api depends on site elements
@@ -181,8 +180,8 @@ exports.validate = function(site, pkg) {
 			eltsMap.page.stylesheets = both[1];
 		});
 	}).then(function() {
-		site.Block = pkg.Block;
-		site.Block.source = toSource(pkg.eltsMap);
+		site.constructor = pkg.Block;
+		site.$source = toSource(pkg.eltsMap);
 		delete pkg.eltsMap;
 		delete pkg.Block;
 	});

@@ -52,10 +52,9 @@ function init(All) {
 }
 
 function QueryPage(site) {
-	var cols = site.Block.tableColumns;
-	return site.Block.query()
+	var cols = site.$model.tableColumns;
+	return site.$relatedQuery('children')
 	.select(cols)
-	.whereSite(site.id)
 	.first()
 	// eager load children (in which there are standalones)
 	// and children of standalones
@@ -73,7 +72,6 @@ function QueryPage(site) {
 }
 
 exports.get = function(site, data) {
-	var Block = site.Block;
 	return QueryPage(site).where('block.type', 'page')
 	.whereJsonText("block.data:url", data.url)
 	.then(function(page) {
@@ -94,7 +92,7 @@ exports.get = function(site, data) {
 			}).select([
 				ref('block.data:url').as('url'),
 				ref('block.data:title').as('title')
-			]).omit(Block.columns)
+			]).omit(site.$model.columns)
 		]).then(function(list) {
 			page.links = {};
 			page.links.up = list[0];
@@ -127,7 +125,7 @@ function getParents(site, url) {
 	for (var i=1; i < urlParts.length - 1; i++) {
 		urlParents.push(urlParts.slice(0, i + 1).join('/'));
 	}
-	return site.Block.query().whereSite(site.id).select([
+	return site.$relatedQuery('children').select([
 		ref('block.data:url').as('url'),
 		ref('block.data:title').as('title')
 	])
@@ -137,10 +135,9 @@ function getParents(site, url) {
 }
 
 function listPages(site, data) {
-	var q = site.Block.query()
-	.select(site.Block.tableColumns)
+	var q = site.$relatedQuery('children')
+	.select(site.$model.tableColumns)
 	.omit(['content'])
-	.whereSite(site.id)
 	.where('block.type', 'page');
 	if (data.parent) {
 		q.whereJsonText('block.data:url', '~', `^${data.parent}/[^/]+$`)
@@ -216,7 +213,7 @@ exports.search = function(site, data) {
 			obj.total = result.count;
 		}
 		obj.schemas = {
-			page: site.Block.schemaByType('page')
+			page: site.$schema('page')
 		};
 		return obj;
 	});
@@ -393,7 +390,7 @@ function updatePage(site, trx, page) {
 		var oldUrl = dbPage.url;
 		var newUrl = page.data.url;
 		if (oldUrl == newUrl) return dbPage;
-		var hrefs = site.Block.hrefs;
+		var hrefs = site.$model.hrefs;
 		return Promise.all(Object.keys(hrefs).map(function(type) {
 			return Promise.all(hrefs[type].map(function(key) {
 				key = 'block.data:' + key;
@@ -441,7 +438,7 @@ function applyRelate(site, trx, obj) {
 
 exports.add = function(site, data) {
 	var emptyPage = {};
-	return site.Block.prototype.$beforeInsert.call(emptyPage).then(function() {
+	return site.prototype.$beforeInsert.call(emptyPage).then(function() {
 		return exports.save(site, {
 			add: [{
 				id: emptyPage.id,

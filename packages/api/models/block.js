@@ -4,7 +4,33 @@ var Model = common.Model;
 
 var crypto = require('crypto');
 
-class Block extends Model {}
+class Block extends Model {
+	$beforeInsert() {
+		if (!this.id) return Block.genId().then(function(id) {
+			this.id = id;
+		}.bind(this));
+	}
+
+	$beforeUpdate() {
+		this.updated_at = new Date().toISOString();
+	}
+
+	$schema(type) {
+		return this.constructor.jsonSchema.selectCases[type];
+	}
+
+	get $model() {
+		return this.constructor;
+	}
+
+	get $source() {
+		return this.$$source;
+	}
+
+	set $source(source) {
+		this.$$source = source;
+	}
+}
 
 module.exports = Block;
 
@@ -72,16 +98,6 @@ Block.jsonSchema = {
 
 Block.columns = Object.keys(Block.jsonSchema.properties);
 Block.tableColumns = Block.columns.map(col => `block.${col}`);
-
-Block.prototype.$beforeInsert = function() {
-	if (!this.id) return Block.genId().then(function(id) {
-		this.id = id;
-	}.bind(this));
-};
-
-Block.prototype.$beforeUpdate = function() {
-	this.updated_at = new Date().toISOString();
-};
 
 Block.createNotFoundError = function(data) {
 	return new HttpError.NotFound("Block not found");
@@ -175,12 +191,13 @@ Block.extendSchema = function extendSchema(name, schemas) {
 	DomainBlock.relationMappings.parents.modelClass = DomainBlock;
 	DomainBlock.jsonSchema = schema;
 	DomainBlock.hrefs = hrefs;
+
+	delete DomainBlock.$$validator;
+	DomainBlock.uniqueTag = function() {
+		return schema.$id;
+	};
 	return DomainBlock;
 }
-
-Block.schemaByType = function(type) {
-	return this.jsonSchema.selectCases[type];
-};
 
 function stringProperties(obj) {
 	var props = {};

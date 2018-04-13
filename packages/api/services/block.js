@@ -20,15 +20,14 @@ function init(All) {
 }
 
 exports.get = function(site, data) {
-	var Block = site.Block;
-	var q = Block.query()
-		.select(Block.tableColumns)
-		.whereSite(site.id)
+	var cols = site.$model.tableColumns;
+	var q = site.$relatedQuery('children')
+		.select(cols)
 		.where('block.id', data.id);
 	if (data.type) q.where('block.type', data.type);
 	if (data.standalone) q.eager(`[children(childrenFilter)]`, {
 		childrenFilter: function(query) {
-			return query.select(Block.tableColumns).where('block.standalone', false);
+			return query.select(cols).where('block.standalone', false);
 		}
 	});
 	return q.first().throwIfNotFound();
@@ -51,17 +50,16 @@ exports.get.schema = {
 };
 
 exports.search = function(site, data) {
-	var Block = site.Block;
-	var q = Block.query()
-		.select(Block.tableColumns)
-		.whereSite(site.id)
+	var cols = site.$model.tableColumns;
+	var q = site.$relatedQuery('children')
+		.select(cols)
 		.whereIn('block.type', data.type);
 	if (data.parent) {
 		q.joinRelation('parents as parent').where('parent.id', data.parent);
 	}
 	if (data.childrenType) q.eager('[children(childrenFilter)]', {
 		childrenFilter: function(query) {
-			return query.select(Block.tableColumns).whereIn('block.type', data.childrenType);
+			return query.select(cols).whereIn('block.type', data.childrenType);
 		}
 	});
 	if (data.id) {
@@ -89,7 +87,7 @@ exports.search = function(site, data) {
 		};
 		obj.schemas = {};
 		data.type.concat(data.childrenType || []).forEach(function(type) {
-			var sch = Block.schemaByType(type);
+			var sch = site.$schema(type);
 			if (sch) obj.schemas[type] = sch;
 		});
 		return obj;
@@ -201,14 +199,11 @@ exports.add = function(site, data) {
 	var id = data.parent;
 	delete data.parent;
 	return All.api.trx(function(trx) {
-		return site.Block.query(trx).where('block.id', site.id)
-		.first().throwIfNotFound().then(function(site) {
-			return site.$relatedQuery('children', trx).insert(data).then(function(child) {
-				if (!id) return child;
-				return site.$relatedQuery('children', trx).where('block.id', id)
-				.select('_id').first().throwIfNotFound().then(function(parent) {
-					return parent.$relatedQuery('children', trx).relate(child);
-				});
+		return site.$relatedQuery('children', trx).insert(data).then(function(child) {
+			if (!id) return child;
+			return site.$relatedQuery('children', trx).where('block.id', id)
+			.select('_id').first().throwIfNotFound().then(function(parent) {
+				return parent.$relatedQuery('children', trx).relate(child);
 			});
 		});
 	});
@@ -224,8 +219,8 @@ exports.add.schema = {
 
 exports.save = function(site, data) {
 	return exports.get(site, data).then(function(block) {
-		return site.Block.query()
-		.patchObject(data).where('block.id', block.id).then(function(count) {
+		return site.$relatedQuery('children').patchObject(data)
+		.where('block.id', block.id).then(function(count) {
 			if (count == 0) throw new Error(`Block not found for update ${data.id}`);
 		});
 	});
@@ -244,10 +239,8 @@ exports.save.schema = {
 };
 
 exports.del = function(site, data) {
-	var Block = site.Block;
-	return Block.query().where('id',
-		Block.query().select('block.id').where('block.id', data.id).whereSite(site.id)
-	).delete();
+	// TODO check data.type to not be site, user
+	return site.$relatedQuery('children').where('id', data.id).where('type', data.type).delete();
 };
 exports.del.schema = {
 	required: ['id', 'type'],
