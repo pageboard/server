@@ -37,6 +37,19 @@ function mailPlugin(page, settings, request, response) {
 				node.removeAttribute('class');
 				var tag = node.nodeName.toLowerCase();
 				if (tag != "br" && tag != "img" && node.childNodes.length == 0) return;
+				if (tag == "img") {
+					if (node.srcset) {
+						delete node.srcset;
+					}
+					var src = node.src; // absolute url
+					if (!src) return;
+					var srcParts = src.split('?');
+					if (srcParts[0].endsWith('.svg')) {
+						if (srcParts.length > 1) src += '&format=png';
+						else src += '?format=png';
+					}
+					node.setAttribute('src', src);
+				}
 				fragBody.appendChild(node.cloneNode(true));
 				var heading = tag.match(/h(\d)/);
 				if (heading) {
