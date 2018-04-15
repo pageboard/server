@@ -15,33 +15,36 @@ HTMLCustomElement.define = function(name, cla) {
 
 Pageboard.fetch = function(method, url, data) {
 	method = method.toLowerCase();
-	var doCache = document.body.isContentEditable == false && method == "get";
 	var fetchOpts = {
 		method: method,
 		headers: {
-			'Accept': 'application/json',
-			'Content-Type': 'application/json'
+			'Accept': 'application/json'
 		},
 		credentials: "same-origin"
 	};
+	var pendings = Pageboard.fetch.pendings;
 	if (method == "get") {
 		url = Page.format(Object.assign(Page.parse(url), {query: data}));
-	} else {
-		fetchOpts.body = JSON.stringify(data);
-	}
-	if (doCache) {
-		var cached = Pageboard.fetch.cache[url];
-		if (cached) {
-			return cached;
+		var pending = pendings[url];
+		if (pending) {
+			return pending;
 		}
+	} else {
+		headers['Content-Type'] = 'application/json';
+		fetchOpts.body = JSON.stringify(data);
 	}
 
 	var p = fetch(url, fetchOpts).then(function(res) {
 		if (res.status >= 400) throw new Error(res.statusText);
 		return res.json();
 	});
-	if (doCache) Pageboard.fetch.cache[url] = p;
+	if (method == "get") {
+		pendings[url] = p;
+		p.finally(function() {
+			delete pendings[url];
+		});
+	}
 	return p;
 };
-Pageboard.fetch.cache = {};
+Pageboard.fetch.pendings = {};
 
