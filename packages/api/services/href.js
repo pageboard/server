@@ -48,7 +48,7 @@ exports.search = function(site, data) {
 	var Href = All.api.Href;
 	var q = Href.query().select(Href.tableColumns).whereSite(site.id);
 
-	if (data.type && data.type.length > 1) {
+	if (data.type) {
 		q.whereIn('href.type', data.type);
 	}
 	if (data.maxSize) {
