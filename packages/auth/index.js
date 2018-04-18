@@ -87,6 +87,14 @@ exports.login = function(data) {
 	});
 };
 
+Object.defineProperty(exports.login, 'schema', {
+	enumerable: true,
+	configurable: false,
+	get: function() {
+		return All.user.get.schema;
+	}
+});
+
 exports.validate = function(data) {
 	return All.user.get(data).select('_id').eager('children(sites) as sites', {
 		sites: function(builder) {builder.where('type', 'site');}
