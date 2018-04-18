@@ -23,7 +23,7 @@ exports.get = function(data) {
 	return QueryUser(data);
 };
 exports.get.schema = {
-	oneOf: [{
+	anyOf: [{
 		required: ['email']
 	}, {
 		required: ['id']
