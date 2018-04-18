@@ -318,6 +318,8 @@ exports.save = function(site, changes) {
 				console.error(err);
 			});
 		}));
+		// TODO return saved time stamp
+		return {};
 	});
 };
 exports.save.schema = {
