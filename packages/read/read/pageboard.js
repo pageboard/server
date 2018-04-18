@@ -30,7 +30,7 @@ Pageboard.fetch = function(method, url, data) {
 			return pending;
 		}
 	} else {
-		headers['Content-Type'] = 'application/json';
+		fetchOpts.headers['Content-Type'] = 'application/json';
 		fetchOpts.body = JSON.stringify(data);
 	}
 
