@@ -36,7 +36,9 @@ Pageboard.fetch = function(method, url, data) {
 
 	var p = fetch(url, fetchOpts).then(function(res) {
 		if (res.status >= 400) throw new Error(res.statusText);
-		return res.json();
+		var len = res.headers.get('Content-Length');
+		if (len > 0) return res.json();
+		else return null;
 	});
 	if (method == "get") {
 		pendings[url] = p;
