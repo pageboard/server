@@ -133,13 +133,21 @@ exports.install = function(site, pkg, All) {
 	var elements = pkg.elements;
 	var directories = pkg.directories;
 	debug("installing", id, elements, directories);
-	var eltsMap = {};
 	var id = site ? site.id : null;
 	var allDirs = id ? All.opt.directories.concat(directories) : directories;
 	var allElts = id ? All.opt.elements.concat(elements) : elements;
+	var elts = {};
+	var names = [];
+	var context = {};
 	return Promise.all(allElts.map(function(path) {
-		return importElements(path, eltsMap, id, allDirs);
+		return importElements(path, context, elts, names);
 	})).then(function() {
+		var eltsMap = {};
+		names.forEach(function(name) {
+			var elt = Object.assign({}, elts[name]); // drop proxy
+			rewriteElementPaths(name, elt, id, allDirs);
+			eltsMap[name] = elt;
+		});
 		var Block = exports.Block.extendSchema(id, eltsMap);
 		if (id) {
 			pkg.Block = Block;
@@ -147,6 +155,9 @@ exports.install = function(site, pkg, All) {
 		} else {
 			exports.Block = All.api.Block = Block;
 		}
+	}).catch(function(err) {
+		console.error(err);
+		throw err;
 	});
 };
 
@@ -223,64 +234,102 @@ function filter(elements, prop) {
 	return res;
 }
 
-function promotePath(dir, path) {
-	if (!path) return;
-	if (path.startsWith('/') || /^(http|https|data):/.test(path)) return path;
-	return Path.join(dir, path);
-}
 
-function removeEmptyPath(what, name, path) {
-	if (!path) {
-		console.warn(`${name}.${what} does not resolve to a path`);
-		return false;
-	} else {
-		return true;
-	}
-}
-
-function rewriteElementPaths(name, path, elt, id, directories) {
+function getMountPath(eltPath, id, directories) {
 	var mount = directories.find(function(mount) {
-		return path.startsWith(mount.from);
+		return eltPath.startsWith(mount.from);
 	});
 	if (!mount) {
-		console.warn(`Warning: element ${path} cannot be mounted`);
+		console.warn(`Warning: element ${eltPath} cannot be mounted`);
 		return;
 	}
 	var basePath = id ? mount.to.replace(id + "/", "") : mount.to;
-	var eltPathname = Path.join(basePath, path.substring(mount.from.length));
-	var eltDirPath = Path.dirname(eltPathname);
-	var promotePathFn = promotePath.bind(null, eltDirPath);
+	var eltPathname = Path.join(basePath, eltPath.substring(mount.from.length));
+	return Path.dirname(eltPathname);
+}
+
+function rewriteElementPaths(name, elt, id, directories) {
 	['scripts', 'stylesheets', 'resources'].forEach(function(what) {
 		if (elt[what] != null) {
-			if (typeof elt[what] == "string") elt[what] = [elt[what]];
-			elt[what] = elt[what].map(promotePathFn)
-			.filter(removeEmptyPath.bind(null, what, name));
+			elt[what] = elt[what]
+			.map(function(obj) {
+				var dir = getMountPath(obj.base, id, directories);
+				if (!dir) {
+					console.error("Could not find mount path for", obj.base, id);
+					return;
+				}
+				if (obj.path.startsWith('/') || /^(http|https|data):/.test(obj.path)) return obj.path;
+				return Path.join(dir, obj.path);
+			})
+			.filter(x => !!x);
 		} else {
 			delete elt[what];
 		}
 	});
 }
 
-function importElements(path, eltsMap, id, directories) {
+function importElements(path, context, elts, names) {
 	return fs.readFile(path).then(function(buf) {
-		var script = new vm.Script(buf, {filename: path});
-		var copyMap = Object.assign({}, eltsMap);
-		var sandbox = {Pageboard: {elements: copyMap}};
-		script.runInNewContext(sandbox, {filename: path, timeout: 1000});
-		var elts = sandbox.Pageboard.elements;
-		var elt, oelt;
+		context.path = path;
+		var script = new vm.Script(buf, {
+			filename: path
+		});
+		var sandbox = {
+			Pageboard: {
+				elements: elts
+			}
+		};
+		script.runInNewContext(sandbox, {
+			filename: path,
+			timeout: 1000
+		});
+
+		var elt;
 		for (var name in elts) {
 			elt = elts[name];
-			oElt = eltsMap[name];
-			if (oElt) {
-				if (name == "user" || name == "site") {
-					continue;
-				}
+			if (!elt) {
+				console.warn("element", name, "is not defined at", path);
+				continue;
 			}
-			rewriteElementPaths(name, path, elt, id, directories);
-			eltsMap[name] = elt;
+			['scripts', 'stylesheets', 'resources'].forEach(function(what) {
+				var list = elt[what];
+				if (!list) return;
+				if (typeof list == "string") list = [list];
+				elt[what] = list.map(function(str) {
+					return {base: path, path: str};
+				});
+			});
+			if (name == "user") {
+				console.warn(`Drop element ${name} at ${path}`);
+				elt = {};
+			} else {
+				names.push(name);
+			}
+			Object.defineProperty(elts, name, {
+				value: new Proxy(elt, new EltProxy(context)),
+				writable: false,
+				enumerable: false,
+				configurable: false
+			});
 		}
 	});
+}
+
+class EltProxy {
+	constructor(context) {
+		this.context = context;
+	}
+	set(elt, name, val) {
+		if (name == "scripts" || name == "stylesheets" || name == "resources") {
+			val = val.map(function(str) {
+				return {
+					path: str,
+					base: this.context.path // this value change with path by design
+				};
+			}, this);
+		}
+		return Reflect.set(elt, name, val);
+	}
 }
 
 function migrate(knex, dirs) {
