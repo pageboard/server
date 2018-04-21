@@ -67,7 +67,7 @@ function init(All) {
 				validateSchema: false,
 				ownProperties: true,
 				coerceTypes: 'array',
-				removeAdditional: true
+				removeAdditional: false
 			}
 		});
 	};
