@@ -16,16 +16,23 @@ exports.install = function(site, pkg, All) {
 	var id = site ? site.id : null;
 	var allDirs = id ? All.opt.directories.concat(directories) : directories;
 	var allElts = id ? All.opt.elements.concat(elements) : elements;
-	var elts = {};
-	var names = [];
-	var context = {};
+
 	return Promise.all(allElts.map(function(path) {
-		return importElements(path, context, elts, names);
-	})).then(function() {
+		return fs.readFile(path);
+	})).then(function(bufs) {
+		var elts = {};
+		var names = [];
+		var context = {};
+		bufs.forEach(function(buf, i) {
+			var path = allElts[i];
+			context.mount = getMountPath(path, id, allDirs);
+			context.path = path;
+			loadFromFile(buf, elts, names, context);
+		});
+
 		var eltsMap = {};
 		names.forEach(function(name) {
 			var elt = Object.assign({}, elts[name]); // drop proxy
-			rewriteElementPaths(name, elt, id, allDirs);
 			eltsMap[name] = elt;
 		});
 		var Block = All.api.Block.extendSchema(id, eltsMap);
@@ -118,91 +125,72 @@ function getMountPath(eltPath, id, directories) {
 	var mount = directories.find(function(mount) {
 		return eltPath.startsWith(mount.from);
 	});
-	if (!mount) {
-		console.warn(`Warning: element ${eltPath} cannot be mounted`);
-		return;
-	}
+	if (!mount) return;
 	var basePath = id ? mount.to.replace(id + "/", "") : mount.to;
 	var eltPathname = Path.join(basePath, eltPath.substring(mount.from.length));
 	return Path.dirname(eltPathname);
 }
 
-function rewriteElementPaths(name, elt, id, directories) {
-	['scripts', 'stylesheets', 'resources'].forEach(function(what) {
-		if (elt[what] != null) {
-			elt[what] = elt[what]
-			.map(function(obj) {
-				var dir = getMountPath(obj.base, id, directories);
-				if (!dir) {
-					console.error("Could not find mount path for", obj.base, id);
-					return;
-				}
-				if (obj.path.startsWith('/') || /^(http|https|data):/.test(obj.path)) return obj.path;
-				return Path.join(dir, obj.path);
-			})
-			.filter(x => !!x);
-		} else {
-			delete elt[what];
+function absolutePaths(list, file) {
+	if (!list) return list;
+	if (typeof list == "string") list = [list];
+	return list.map(function(path) {
+		if (path.startsWith('/') || /^(http|https|data):/.test(path)) {
+			return path;
 		}
-	});
+		if (!file.mount) {
+			console.error("Cannot mount", path, "from element defined in", file.path);
+			return;
+		}
+		return Path.join(file.mount, path);
+	}).filter(x => !!x);
 }
 
-function importElements(path, context, elts, names) {
-	return fs.readFile(path).then(function(buf) {
-		context.path = path;
-		var script = new vm.Script(buf, {
-			filename: path
-		});
-		var sandbox = {
-			Pageboard: {
-				elements: elts
-			}
-		};
-		script.runInNewContext(sandbox, {
-			filename: path,
-			timeout: 1000
-		});
-
-		var elt;
-		for (var name in elts) {
-			elt = elts[name];
-			if (!elt) {
-				console.warn("element", name, "is not defined at", path);
-				continue;
-			}
-			['scripts', 'stylesheets', 'resources'].forEach(function(what) {
-				var list = elt[what];
-				if (!list) return;
-				if (typeof list == "string") list = [list];
-				elt[what] = list.map(function(str) {
-					return {base: path, path: str};
-				});
-			});
-			names.push(name);
-			Object.defineProperty(elts, name, {
-				value: new Proxy(elt, new EltProxy(context, name)),
-				writable: false,
-				enumerable: false,
-				configurable: false
-			});
-		}
+function loadFromFile(buf, elts, names, context) {
+	var script = new vm.Script(buf, {
+		filename: context.path
 	});
+	var sandbox = {
+		Pageboard: {
+			elements: elts
+		}
+	};
+	script.runInNewContext(sandbox, {
+		filename: context.path,
+		timeout: 1000
+	});
+
+	var elt;
+	for (var name in elts) {
+		elt = elts[name];
+		if (!elt) {
+			console.warn("element", name, "is not defined at", context.path);
+			continue;
+		}
+		['scripts', 'stylesheets', 'resources'].forEach(function(what) {
+			var list = absolutePaths(elt[what], context);
+			if (list) elt[what] = list;
+			else delete elt[what];
+		});
+		names.push(name);
+		Object.defineProperty(elts, name, {
+			value: new Proxy(elt, new EltProxy(name, context)),
+			writable: false,
+			enumerable: false,
+			configurable: false
+		});
+	}
 }
 
 class EltProxy {
-	constructor(context, name) {
+	constructor(name, context) {
 		this.name = name;
 		this.context = context;
 	}
 	set(elt, key, val) {
 		if (this.name == "user") return false; // changing user is forbidden
 		if (key == "scripts" || key == "stylesheets" || key == "resources") {
-			val = val.map(function(str) {
-				return {
-					path: str,
-					base: this.context.path // this value change with path by design
-				};
-			}, this);
+			val = absolutePaths(val, this.context);
 		}
 		return Reflect.set(elt, key, val);
 	}
