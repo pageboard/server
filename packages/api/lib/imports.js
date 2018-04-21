@@ -7,7 +7,7 @@ var fs = {
 	readFile: pify(require('fs').readFile)
 };
 var vm = require('vm');
-var debug = require('debug')('pageboard:api');
+var debug = require('debug')('pageboard:imports');
 
 exports.install = function(site, pkg, All) {
 	var elements = pkg.elements;
