@@ -17,6 +17,7 @@ var fs = {
 
 exports.install = function(site, opt) {
 	if (!site.data.module) {
+		console.info("site has no module");
 		return getPkg();
 	}
 	var dataDir = Path.join(opt.dirs.data, 'sites');
