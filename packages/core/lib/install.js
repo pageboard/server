@@ -181,11 +181,12 @@ function doInstall(site, pkg, opt) {
 		}
 		if (opt.core.installer == "yarn") {
 			return All.utils.spawn(opt.installerPath, [
-				"--non-interactive",
-				"--ignore-optional",
+				"--non-interactive", // yarn only
+				"--ignore-optional", // yarn
+				"--no-progress",
 				"--prefer-offline",
 				"--production",
-				"--no-lockfile",
+				"--no-lockfile", // yarn
 				"--silent",
 				"add", module
 			], {
@@ -196,18 +197,18 @@ function doInstall(site, pkg, opt) {
 		} else {
 			return All.utils.spawn(opt.installerPath, [
 				"install",
+				"--no-optional", // npm
+				"--no-progress",
+				"--prefer-offline",
+				"--production",
+				"--no-package-lock", // npm
+				"--silent",
 				"--save", module
 			], {
 				cwd: pkg.dir,
 				timeout: 60 * 1000,
 				env: Object.assign(baseEnv, {
-					npm_config_userconfig: '', // attempt to disable user config
-					npm_config_ignore_scripts: 'false',
-					npm_config_loglevel: 'error',
-					npm_config_progress: 'false',
-					npm_config_package_lock: 'false',
-					npm_config_only: 'prod',
-					npm_config_prefer_offline: 'true'
+					npm_config_userconfig: '' // attempt to disable user config
 				})
 			});
 		}
