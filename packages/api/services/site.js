@@ -1,4 +1,5 @@
 var ref = require('objection').ref;
+var lodash = require('objection').lodash;
 
 exports = module.exports = function(opt) {
 	return {
@@ -130,12 +131,13 @@ exports.add.schema = {
 
 exports.save = function(data) {
 	return exports.get(data).select('_id').then(function(site) {
-		return All.api.trx(function(trx) {
-			return site.$query(trx).patchObject({
+		lodash.merge(site.data, data.data);
+		return All.install(site).then(function(site) {
+			return site.$query().patchObject({
 				type: site.type,
 				data: data.data
 			}).then(function() {
-				return All.install(site);
+				return site;
 			});
 		});
 	});
