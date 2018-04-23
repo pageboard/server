@@ -10,6 +10,7 @@ class HTMLCustomElement extends HTMLElement {
 	init() {}
 }
 HTMLCustomElement.define = function(name, cla) {
+	if (cla.init) cla.init();
 	if (!window.customElements.get(name)) window.customElements.define(name, cla);
 };
 
