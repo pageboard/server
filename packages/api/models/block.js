@@ -15,8 +15,12 @@ class Block extends Model {
 		this.updated_at = new Date().toISOString();
 	}
 
+	static schema(type) {
+		return this.jsonSchema.selectCases[type];
+	}
+
 	$schema(type) {
-		return this.constructor.jsonSchema.selectCases[type];
+		return this.constructor.schema(type);
 	}
 
 	get $model() {
@@ -29,6 +33,9 @@ class Block extends Model {
 
 	set $source(source) {
 		this.$$source = source;
+	}
+	$ref(str) {
+		return objection.ref(str);
 	}
 }
 
