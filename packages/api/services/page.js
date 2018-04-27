@@ -52,9 +52,8 @@ function init(All) {
 }
 
 function QueryPage(site) {
-	var cols = site.$model.tableColumns;
 	return site.$relatedQuery('children')
-	.select(cols)
+	.select()
 	.first()
 	// eager load children (in which there are standalones)
 	// and children of standalones
@@ -63,10 +62,10 @@ function QueryPage(site) {
 		children(standalonesFilter) as standalones .children(childrenFilter)
 	]`, {
 		childrenFilter: function(query) {
-			return query.select(cols).where('block.standalone', false);
+			return query.select().where('block.standalone', false);
 		},
 		standalonesFilter: function(query) {
-			return query.select(cols).where('block.standalone', true);
+			return query.select().where('block.standalone', true);
 		}
 	});
 }
@@ -136,7 +135,7 @@ function getParents(site, url) {
 
 function listPages(site, data) {
 	var q = site.$relatedQuery('children')
-	.select(site.$model.tableColumns)
+	.select()
 	.omit(['content'])
 	.where('block.type', 'page');
 	if (data.parent) {

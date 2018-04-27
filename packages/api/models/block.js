@@ -97,7 +97,6 @@ Block.jsonSchema = {
 };
 
 Block.columns = Object.keys(Block.jsonSchema.properties);
-Block.tableColumns = Block.columns.map(col => `block.${col}`);
 
 Block.createNotFoundError = function(data) {
 	return new HttpError.NotFound("Block not found");

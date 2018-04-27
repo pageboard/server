@@ -23,7 +23,7 @@ function QuerySite(data) {
 }
 
 exports.get = function(data) {
-	return QuerySite(data).select(All.api.Block.columns);
+	return QuerySite(data).select();
 };
 
 exports.get.schema = {
@@ -45,7 +45,7 @@ exports.get.schema = {
 
 exports.search = function(data) {
 	var Block = All.api.Block;
-	return Block.query().select(Block.tableColumns)
+	return Block.query().select()
 	.joinRelation('parents as owners')
 	.whereJsonText('owners.data:email', data.email)
 	.orderBy('updated_at', 'block.desc')

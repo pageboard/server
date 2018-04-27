@@ -7,7 +7,7 @@ exports = module.exports = function(opt) {
 
 function QueryUser(data) {
 	var Block = All.api.Block;
-	var q = Block.query().alias('user').select(Block.columns)
+	var q = Block.query().alias('user').select()
 	.first().throwIfNotFound().where('user.type', 'user');
 	if (data.id) {
 		q.where('user.id', data.id);

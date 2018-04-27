@@ -20,14 +20,12 @@ function init(All) {
 }
 
 exports.get = function(site, data) {
-	var cols = site.$model.tableColumns;
-	var q = site.$relatedQuery('children')
-		.select(cols)
+	var q = site.$relatedQuery('children').select()
 		.where('block.id', data.id);
 	if (data.type) q.where('block.type', data.type);
 	if (data.standalone) q.eager(`[children(childrenFilter)]`, {
 		childrenFilter: function(query) {
-			return query.select(cols).where('block.standalone', false);
+			return query.select().where('block.standalone', false);
 		}
 	});
 	return q.first().throwIfNotFound();
@@ -51,15 +49,14 @@ exports.get.schema = {
 
 exports.search = function(site, data) {
 	var cols = site.$model.tableColumns;
-	var q = site.$relatedQuery('children')
-		.select(cols)
+	var q = site.$relatedQuery('children').select()
 		.whereIn('block.type', data.type);
 	if (data.parent) {
 		q.joinRelation('parents as parent').where('parent.id', data.parent);
 	}
 	if (data.childrenType) q.eager('[children(childrenFilter)]', {
 		childrenFilter: function(query) {
-			return query.select(cols).whereIn('block.type', data.childrenType);
+			return query.select().whereIn('block.type', data.childrenType);
 		}
 	});
 	if (data.id) {

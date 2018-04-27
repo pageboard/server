@@ -46,7 +46,7 @@ exports.get.schema = {
 
 exports.search = function(site, data) {
 	var Href = All.api.Href;
-	var q = Href.query().select(Href.tableColumns).whereSite(site.id);
+	var q = Href.query().select().whereSite(site.id);
 
 	if (data.type) {
 		q.whereIn('href.type', data.type);

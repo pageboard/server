@@ -90,7 +90,6 @@ Href.jsonSchema = {
 };
 
 Href.columns = Object.keys(Href.jsonSchema.properties);
-Href.tableColumns = Href.columns.map(col => `href.${col}`);
 
 /* not needed, default is set by db
 Href.prototype.$beforeInsert = function() {
