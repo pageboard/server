@@ -38,3 +38,21 @@ Pageboard.elements.user = {
 	}
 };
 
+Pageboard.elements.user_settings = {
+	properties : {
+		grants: {
+			type: 'array',
+			uniqueItems: true,
+			items: {
+				anyOf: [{
+					const: 'owner',
+					title: 'Owner'
+				}, {
+					const: 'webmaster',
+					title: 'Webmaster'
+				}]
+			}
+		}
+	}
+};
+
