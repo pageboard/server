@@ -91,12 +91,6 @@ Href.jsonSchema = {
 
 Href.columns = Object.keys(Href.jsonSchema.properties);
 
-/* not needed, default is set by db
-Href.prototype.$beforeInsert = function() {
-	this.created_at = new Date().toISOString();
-};
-*/
-
 Href.prototype.$beforeUpdate = function() {
 	this.updated_at = new Date().toISOString();
 };
