@@ -40,11 +40,12 @@ exports.QueryBuilder = class CommonQueryBuilder extends QueryBuilder {
 		};
 	}
 	select(...args) {
-		var model = this.modelClass();
-		var table = this.tableRefFor(model);
-		if (args.length == 0) args = model.columns;
-		if (args.length == 1 && Array.isArray(args[0])) args = args[0];
-		return super.select(args.map(x => `${table}.${x}`));
+		if (args.length == 0) {
+			var model = this.modelClass();
+			var table = this.tableRefFor(model);
+			args = model.columns.map(col => `${table}.${col}`);
+		}
+		return super.select(args);
 	}
 	patchObjectOperationFactory(factory) {
 		this._patchObjectOperationFactory = factory;
