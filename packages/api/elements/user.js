@@ -38,7 +38,7 @@ Pageboard.elements.user = {
 	}
 };
 
-Pageboard.elements.user_settings = {
+Pageboard.elements.settings = {
 	properties : {
 		grants: {
 			type: 'array',

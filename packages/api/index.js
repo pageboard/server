@@ -31,6 +31,7 @@ exports = module.exports = function(opt) {
 	opt.plugins.unshift(
 		__dirname + '/services/user',
 		__dirname + '/services/site',
+		__dirname + '/services/settings',
 		__dirname + '/services/page',
 		__dirname + '/services/block',
 		__dirname + '/services/href',
