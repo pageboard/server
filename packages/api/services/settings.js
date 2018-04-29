@@ -5,21 +5,18 @@ exports = module.exports = function(opt) {
 };
 
 exports.get = function(site, data) {
-	return site.$relatedQuery('children').alias('settings')
+	var q = site.$relatedQuery('children').alias('settings')
 	.where('settings.type', 'settings').first().throwIfNotFound().select()
-	.joinRelation('parents', {alias: 'user'})
-	.where('user.id', data.user_id);
+	.joinRelation('parents', {alias: 'user'});
+	if (data.id) q.where('user.id', data.id);
+	else if (data.email) q.whereJsonText('user.data:email', data.email);
+	return q;
 };
-exports.get.schema = {
-	required: ['user_id'],
-	properties: {
-		user_id: {
-			type: 'string'
-		}
-	},
-	additionalProperties: false
-};
-
+Object.defineProperty(exports.get, 'schema', {
+	get: function() {
+		return All.user.get.schema;
+	}
+});
 
 exports.save = function(site, data) {
 	return exports.get(site, data).select('settings._id').then(function(settings) {
@@ -43,16 +40,15 @@ exports.save = function(site, data) {
 		});
 	});
 };
-exports.save.schema = {
-	required: ['user_id'],
-	properties: {
-		user_id: {
-			type: 'string'
-		},
-		data: {
-			type: 'object'
-		}
-	},
-	additionalProperties: false
-};
+Object.defineProperty(exports.save, 'schema', {
+	get: function() {
+		var schema = Object.assign({}, All.user.get.schema);
+		schema.properties = Object.assign({
+			data: {
+				type: 'object'
+			}
+		}, schema.properties);
+		return schema;
+	}
+});
 
