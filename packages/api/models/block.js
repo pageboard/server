@@ -86,18 +86,6 @@ Block.jsonSchema = {
 				},
 				uniqueItems: true
 			}]
-		},
-		keys: {
-			anyOf: [{
-				type: 'null'
-			}, {
-				type: 'array',
-				items: {
-					type: 'string',
-					pattern: '^\\w+$'
-				},
-				uniqueItems: true
-			}]
 		}
 	},
 	additionalProperties: false
