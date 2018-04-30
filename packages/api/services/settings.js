@@ -35,6 +35,7 @@ exports.save = function(site, data) {
 				relate: ['parents']
 			}).then(function(settings) {
 				delete settings.parents;
+				delete settings._id;
 				return settings;
 			});
 		});
