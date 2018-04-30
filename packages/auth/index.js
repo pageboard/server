@@ -118,15 +118,19 @@ exports.validate = function(site, data) {
 		});
 	});
 };
-Object.defineProperty(exports.validate, 'schema', {
-	get: function() {
-		var schema = Object.assign({}, All.settings.get.schema);
-		schema.required = (schema.required || []).concat(['hash']);
-		schema.properties = Object.assign({}, schema.properties);
-		schema.properties.hash = All.api.Block.schema('settings').properties.session.properties.hash;
-		return schema;
+exports.validate.schema = {
+	required: ['id', 'hash'],
+	properties: {
+		id: {
+			type: 'string',
+			minLength: 1
+		},
+		hash: {
+			type: 'string',
+			minLength: 1
+		}
 	}
-});
+};
 
 function isGranted(grants, settings) {
 	if (!grants.length) return false;
