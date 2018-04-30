@@ -33,13 +33,14 @@ function init(All) {
 		});
 
 		All.app.get('/.api/auth/validate', function(req, res, next) {
-			return All.run('auth.validate', req.site, req.query).then(function(session) {
+			return All.run('auth.validate', req.site, req.query).then(function(settings) {
 				var keys = {};
+				var session = settings.data.session;
 				session.grants.forEach(function(grant) {
 					keys[grant] = true;
 				});
 				scope.login(res, {
-					id: session.settings.id,
+					id: settings.id,
 					scopes: keys
 				});
 				res.redirect(session.referer || '/');
