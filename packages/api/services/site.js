@@ -144,14 +144,16 @@ exports.add.schema = {
 };
 
 exports.save = function(data) {
-	return exports.get(data).select('_id').then(function(site) {
-		lodash.merge(site.data, data.data);
-		return All.install(site).then(function(site) {
-			return site.$query().patchObject({
-				type: site.type,
-				data: data.data
-			}).then(function() {
-				return site;
+	return All.api.trx(function(trx) {
+		return exports.get(data).select('_id').transacting(trx).forUpdate().then(function(site) {
+			lodash.merge(site.data, data.data);
+			return All.install(site).then(function(site) {
+				return site.$query(trx).patchObject({
+					type: site.type,
+					data: data.data
+				}).then(function() {
+					return site;
+				});
 			});
 		});
 	});
