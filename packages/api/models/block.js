@@ -15,8 +15,15 @@ class Block extends Model {
 		this.updated_at = new Date().toISOString();
 	}
 
-	static schema(type) {
-		return this.jsonSchema.selectCases[type];
+	static schema(path) {
+		var list = path.split('.');
+		var type = list.shift();
+		var sch = this.jsonSchema.selectCases[type];
+		for (var i=0; i < list.length; i++) {
+			sch = sch.properties && sch.properties[list[i]];
+			if (!sch) throw new Error("Schema not found: " + path);
+		}
+		return sch;
 	}
 
 	$schema(type) {
