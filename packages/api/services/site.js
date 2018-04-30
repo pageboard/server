@@ -45,10 +45,18 @@ exports.get.schema = {
 
 exports.search = function(data) {
 	var Block = All.api.Block;
-	return Block.query().select()
-	.joinRelation('parents as owners')
-	.whereJsonText('owners.data:email', data.email)
-	.orderBy('updated_at', 'block.desc')
+	var q = Block.query().alias('site').select().where('site.type', 'site')
+	.joinRelation('children', {alias: 'settings'})
+	.where('settings.type', 'settings');
+	if (data.grants) q.where(function(builder) {
+		data.grants.forEach(function(grant, i) {
+			builder.orWhereJsonSupersetOf('settings.data:grants', [grant]);
+		});
+	});
+	return q.joinRelation('parents', {alias: 'user'})
+	.where('user.type', 'user')
+	.whereJsonText('user.data:email', data.email)
+	.orderBy('site.updated_at', 'site.desc')
 	.offset(data.offset)
 	.limit(data.limit).then(function(rows) {
 		var obj = {
@@ -57,7 +65,7 @@ exports.search = function(data) {
 			limit: data.limit
 		};
 		obj.schemas = {
-			site: Block.schemaByType('site')
+			site: Block.schema('site')
 		};
 		return obj;
 	});
@@ -68,6 +76,12 @@ exports.search.schema = {
 		email: {
 			type: 'string',
 			format: 'email'
+		},
+		grants: {
+			type: 'array',
+			items: {
+				type: 'string'
+			}
 		},
 		limit: {
 			type: 'integer',
