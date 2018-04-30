@@ -101,28 +101,12 @@ exports.add = function(data) {
 	return QuerySite({id: data.id}).then(function(site) {
 		console.info("There is already a site with this id", data.id);
 	}).catch(function(err) {
-		data = Object.assign({
-			type: 'site'
-		}, data);
-		if (data.data.domain) {
-			console.info("Use site.save to change site.data.domain");
-			delete data.data.domain; // setting domain is done and checked elsewhere
-		}
-		return All.user.get({
-			email: data.email
-		}).select('_id').then(function(user) {
-			data.parents = [{
-				'#dbRef': user._id
-			}];
-			data.children = [{
-				'#dbRef': user._id // a user is also child of its own site
-			}, {
-				type: 'notfound',
-				standalone: true
-			}];
-			delete data.email;
-			return All.api.Block.query().insertGraph(data);
-		});
+		data.type = 'site';
+		data.children = [{
+			type: 'notfound',
+			standalone: true
+		}];
+		return All.api.Block.query().insertGraph(data);
 	});
 };
 
@@ -131,10 +115,6 @@ exports.add.schema = {
 	properties: {
 		id: {
 			type: 'string'
-		},
-		email: {
-			type: 'string',
-			format: 'email'
 		},
 		data: {
 			type: 'object'
