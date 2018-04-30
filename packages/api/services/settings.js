@@ -5,6 +5,21 @@ exports = module.exports = function(opt) {
 };
 
 exports.get = function(site, data) {
+	return site.$relatedQuery('children').alias('settings')
+	.where('settings.type', 'settings')
+	.where('settings.id', data.id).first().throwIfNotFound().select();
+};
+exports.get.schema = {
+	required: ['id'],
+	properties: {
+		id: {
+			type: 'string',
+			minLength: 1
+		}
+	}
+};
+
+exports.find = function(site, data) {
 	var q = site.$relatedQuery('children').alias('settings')
 	.where('settings.type', 'settings').first().throwIfNotFound().select()
 	.joinRelation('parents', {alias: 'user'});
@@ -13,14 +28,14 @@ exports.get = function(site, data) {
 	else if (data.email) q.whereJsonText('user.data:email', data.email);
 	return q;
 };
-Object.defineProperty(exports.get, 'schema', {
+Object.defineProperty(exports.find, 'schema', {
 	get: function() {
 		return All.user.get.schema;
 	}
 });
 
 exports.save = function(site, data) {
-	return exports.get(site, data).select('settings._id').then(function(settings) {
+	return exports.find(site, data).select('settings._id').then(function(settings) {
 		return settings.$query().patchObject({data: data.data}).then(function() {
 			delete settings._id;
 			return settings;
