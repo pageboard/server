@@ -29,11 +29,25 @@ Pageboard.elements.settings = {
 			uniqueItems: true,
 			items: {
 				anyOf: [{
+					const: 'root',
+					title: 'Root',
+					description: 'Allowed to do anything'
+				}, {
 					const: 'owner',
-					title: 'Owner'
+					title: 'Owner',
+					description: 'Allowed to modify site'
 				}, {
 					const: 'webmaster',
-					title: 'Webmaster'
+					title: 'Webmaster',
+					description: 'Allowed to modify pages'
+				}, {
+					const: 'writer',
+					title: 'Writer',
+					description: 'Allowed to modify some public blocks'
+				}, {
+					const: 'user',
+					title: 'User',
+					description: 'Allowed to modify some private blocks'
 				}]
 			}
 		},
