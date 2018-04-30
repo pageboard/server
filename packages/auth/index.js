@@ -96,22 +96,25 @@ Object.defineProperty(exports.login, 'schema', {
 });
 
 exports.validate = function(site, data) {
-	return All.settings.get(site, data).select('_id').then(function(settings) {
-		var hash = settings.data.session && settings.data.session.hash;
-		if (!hash) {
-			throw new HttpError.BadRequest("Unlogged user");
-		}
-		if (settings.data.session.verified) {
-			throw new HttpError.BadRequest("Already logged user");
-		}
-		if (hash != data.hash) {
-			throw new HttpError.BadRequest("Bad validation link");
-		}
-		return settings.$query().patchObject({
-			data: { session: { verified: true }}
-		}).then(function(count) {
-			if (count == 0) throw new HttpError.NotFound("Bad validation link");
-			return settings;
+	return All.api.trx(function(trx) {
+		return All.settings.get(site, data).select('_id')
+		.transacting(trx).forUpdate().then(function(settings) {
+			var hash = settings.data.session && settings.data.session.hash;
+			if (!hash) {
+				throw new HttpError.BadRequest("Unlogged user");
+			}
+			if (settings.data.session.verified) {
+				throw new HttpError.BadRequest("Already logged user");
+			}
+			if (hash != data.hash) {
+				throw new HttpError.BadRequest("Bad validation link");
+			}
+			return settings.$query(trx).patch({
+				'data:session.verified': true
+			}).then(function(count) {
+				if (count == 0) throw new HttpError.NotFound("Bad validation link");
+				return settings;
+			});
 		});
 	});
 };
