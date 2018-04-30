@@ -26,7 +26,7 @@ exports.save = function(site, data) {
 		});
 	}).catch(function(err) {
 		if (err.statusCode != 404) throw err;
-		return All.user.get({id: data.user_id}).select('_id').then(function(user) {
+		return All.user.get(data).select('_id').then(function(user) {
 			return site.$model.query().insertGraph({
 				type: 'settings',
 				data: data.data,
