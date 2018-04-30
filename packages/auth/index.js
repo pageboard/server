@@ -90,7 +90,7 @@ Object.defineProperty(exports.login, 'schema', {
 		var schema = Object.assign({}, All.user.get.schema);
 		schema.required = (schema.required || []).concat(['grants']);
 		schema.properties = Object.assign({}, schema.properties);
-		schema.properties.grants = All.api.Block.schema('settings').properties.grants;
+		schema.properties.grants = All.api.Block.schema('settings.data.grants');
 		return schema;
 	}
 });
