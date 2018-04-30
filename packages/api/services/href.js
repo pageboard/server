@@ -190,12 +190,11 @@ exports.add.schema = {
 
 exports.save = function(site, data) {
 	var Href = All.api.Href;
-	return exports.get(site, data).then(function(href) {
-		if (!href) {
-			return exports.add(site, data);
-		} else {
-			return Href.query().patchObject({title: data.title}).where('_id', href._id);
-		}
+	return All.api.trx(function(trx) {
+		return exports.get(site, data).throwIfNotFound()
+		.transacting(trx).forUpdate().then(function(href) {
+			return Href.query(trx).patchObject({title: data.title}).where('_id', href._id);
+		});
 	});
 };
 
