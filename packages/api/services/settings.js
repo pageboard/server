@@ -8,6 +8,7 @@ exports.get = function(site, data) {
 	var q = site.$relatedQuery('children').alias('settings')
 	.where('settings.type', 'settings').first().throwIfNotFound().select()
 	.joinRelation('parents', {alias: 'user'});
+	if (!data.id && !data.email) throw new HttpError.BadRequest("Missing id or email");
 	if (data.id) q.where('user.id', data.id);
 	else if (data.email) q.whereJsonText('user.data:email', data.email);
 	return q;

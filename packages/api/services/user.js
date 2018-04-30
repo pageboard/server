@@ -9,6 +9,7 @@ function QueryUser(data) {
 	var Block = All.api.Block;
 	var q = Block.query().alias('user').select()
 	.first().throwIfNotFound().where('user.type', 'user');
+	if (!data.id && !data.email) throw new HttpError.BadRequest("Missing id or email");
 	if (data.id) {
 		q.where('user.id', data.id);
 		delete data.id;
@@ -30,10 +31,12 @@ exports.get.schema = {
 	}],
 	properties: {
 		id: {
-			type: 'string'
+			type: 'string',
+			minLength: 1
 		},
 		email: {
-			type: 'string'
+			type: 'string',
+			format: 'email'
 		}
 	},
 	additionalProperties: false
