@@ -57,29 +57,29 @@ function init(All) {
 }
 
 exports.login = function(site, data) {
-	return All.settings.get(site, data).then(function(settings) {
-		if (!isGranted(data.grants, settings)) {
-			throw new HttpError.Forbidden("Insufficient grants");
-		}
-
-		return All.api.Block.genId(16).then(function(hash) {
-			return settings.$query().patchObject({
-				data: {
-					session: {
+	return All.api.trx(function(trx) {
+		return All.settings.find(site, data).select('settings._id')
+		transacting(trx).forUpdate().then(function(settings) {
+			if (!isGranted(data.grants, settings)) {
+				throw new HttpError.Forbidden("Insufficient grants");
+			}
+			return All.api.Block.genId(16).then(function(hash) {
+				return settings.$query(trx).patch({
+					'data:session': {
 						grants: data.grants,
 						hash: hash,
 						verified: false,
 						referer: data.referer || null
 					}
-				}
-			}).then(function(count) {
-				if (count == 0) throw new HttpError.NotFound("TODO use a transaction here");
-				return {
-					type: 'login',
-					data: {
-						href: `/.api/auth/validate?id=${settings.id}&hash=${hash}`
-					}
-				};
+				}).then(function(count) {
+					if (count == 0) throw new HttpError.ServerError("Could not patch settings");
+					return {
+						type: 'login',
+						data: {
+							href: `/.api/auth/validate?id=${settings.id}&hash=${hash}`
+						}
+					};
+				});
 			});
 		});
 	});
