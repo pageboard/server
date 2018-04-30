@@ -27,25 +27,22 @@ function init(All) {
 		All.app.use('/.api/auth/*', All.cache.disable());
 
 		All.app.get('/.api/auth/login', All.auth.restrict("auth.login"), function(req, res, next) {
-			exports.login(req.query).then(function(linkObj) {
+			return All.run('auth.login', req.site, req.query).then(function(linkObj) {
 				res.send(linkObj);
 			}).catch(next);
 		});
 
 		All.app.get('/.api/auth/validate', function(req, res, next) {
-			exports.validate(req.query).then(function(user) {
-				// check if user owns this site
-				var owner = user.sites.some(function(site) {
-					return site.id == req.site.id;
+			return All.run('auth.validate', req.site, req.query).then(function(session) {
+				var keys = {};
+				session.grants.forEach(function(grant) {
+					keys[grant] = true;
 				});
-				// upcache sets jwt.issuer to req.hostname so we should be fine
-				var keys = user.keys || {};
-				if (owner) keys.webmaster = true;
 				scope.login(res, {
-					id: user.id,
+					id: session.settings.id,
 					scopes: keys
 				});
-				res.redirect(user.data.session.referer || '/');
+				res.redirect(session.referer || '/');
 			}).catch(next);
 		});
 
@@ -58,21 +55,28 @@ function init(All) {
 	});
 }
 
-exports.login = function(data) {
-	return All.user.get(data).select('_id').then(function(user) {
+exports.login = function(site, data) {
+	return All.settings.get(site, data).then(function(settings) {
+		if (!isGranted(data.grants, settings)) {
+			throw new HttpError.Forbidden("Insufficient grants");
+		}
+
 		return All.api.Block.genId(16).then(function(hash) {
-			return user.$query().skipUndefined().patch({
-				'data:session': {
-					hash: hash,
-					done: false,
-					referer: data.referer
+			return settings.$query().patchObject({
+				data: {
+					session: {
+						grants: data.grants,
+						hash: hash,
+						verified: false,
+						referer: data.referer || null
+					}
 				}
 			}).then(function(count) {
 				if (count == 0) throw new HttpError.NotFound("TODO use a transaction here");
 				return {
 					type: 'login',
 					data: {
-						href: `/.api/auth/validate?id=${user.id}&hash=${hash}`
+						href: `/.api/auth/validate?id=${settings.id}&hash=${hash}`
 					}
 				};
 			});
@@ -81,33 +85,50 @@ exports.login = function(data) {
 };
 
 Object.defineProperty(exports.login, 'schema', {
-	enumerable: true,
-	configurable: false,
 	get: function() {
-		return All.user.get.schema;
+		var schema = Object.assign({}, All.user.get.schema);
+		schema.required = (schema.required || []).concat(['grants']);
+		schema.properties = Object.assign({}, schema.properties);
+		schema.properties.grants = All.api.Block.schema('settings').properties.grants;
+		return schema;
 	}
 });
 
-exports.validate = function(data) {
-	return All.user.get(data).select('_id').eager('children(sites) as sites', {
-		sites: function(builder) {builder.where('type', 'site');}
-	}).then(function(user) {
-		var hash = user.data.session && user.data.session.hash;
+exports.validate = function(site, data) {
+	return All.settings.get(site, data).select('_id').then(function(settings) {
+		var hash = settings.data.session && settings.data.session.hash;
 		if (!hash) {
 			throw new HttpError.BadRequest("Unlogged user");
 		}
-		if (user.data.session.done) {
+		if (settings.data.session.verified) {
 			throw new HttpError.BadRequest("Already logged user");
 		}
 		if (hash != data.hash) {
 			throw new HttpError.BadRequest("Bad validation link");
 		}
-		return user.$query().where('id', user.id).skipUndefined().patch({
-			'data:session.done': true
+		return settings.$query().patchObject({
+			data: { session: { verified: true }}
 		}).then(function(count) {
-			if (count == 0) throw new HttpError.NotFound("User has been deleted since activation");
-			return user;
+			if (count == 0) throw new HttpError.NotFound("Bad validation link");
+			return settings;
 		});
 	});
 };
+Object.defineProperty(exports.validate, 'schema', {
+	get: function() {
+		var schema = Object.assign({}, All.settings.get.schema);
+		schema.required = (schema.required || []).concat(['hash']);
+		schema.properties = Object.assign({}, schema.properties);
+		schema.properties.hash = All.api.Block.schema('settings').properties.session.properties.hash;
+		return schema;
+	}
+});
+
+function isGranted(grants, settings) {
+	if (!grants.length) return false;
+	if (!settings.data || !settings.data.grants || !settings.data.grants.length) return false;
+	return grants.every(function(grant) {
+		return settings.data.grants.indexOf(grant) >= 0;
+	});
+}
 
