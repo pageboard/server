@@ -165,13 +165,15 @@ exports.add = function(site, data) {
 		p = callInspector(site.id, data.url, isLocal);
 	}
 	return p.then(function(result) {
-		return exports.get(site, data).then(function(href) {
-			if (!href) {
-				return site.$relatedQuery('hrefs').insert(result).returning(Href.tableColumns);
-			} else {
-				return site.$relatedQuery('hrefs').patchObject(result).where('_id', href._id)
-					.first().returning(Href.tableColumns);
-			}
+		return All.api.trx(function(trx) {
+			return exports.get(site, data).transacting(trx).forUpdate().then(function(href) {
+				if (!href) {
+					return site.$relatedQuery('hrefs', trx).insert(result).returning(Href.tableColumns);
+				} else {
+					return site.$relatedQuery('hrefs', trx).patchObject(result).where('_id', href._id)
+						.first().returning(Href.tableColumns);
+				}
+			});
 		});
 	});
 };
