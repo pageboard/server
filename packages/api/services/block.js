@@ -215,10 +215,12 @@ exports.add.schema = {
 };
 
 exports.save = function(site, data) {
-	return exports.get(site, data).then(function(block) {
-		return site.$relatedQuery('children').patchObject(data)
-		.where('block.id', block.id).then(function(count) {
-			if (count == 0) throw new Error(`Block not found for update ${data.id}`);
+	return All.api.trx(function(trx) {
+		return exports.get(site, data).transacting(trx).forUpdate().then(function(block) {
+			return site.$relatedQuery('children', trx).patchObject(data)
+			.where('block.id', block.id).then(function(count) {
+				if (count == 0) throw new Error(`Block not found for update ${data.id}`);
+			});
 		});
 	});
 };
