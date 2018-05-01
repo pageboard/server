@@ -42,8 +42,12 @@ Pageboard.fetch = function(method, url, data) {
 	});
 	if (method == "get") {
 		pendings[url] = p;
-		p.finally(function() {
+		p.catch(function(err) {
 			delete pendings[url];
+			throw err;
+		}).then(function(r) {
+			delete pendings[url];
+			return r;
 		});
 	}
 	return p;
