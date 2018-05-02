@@ -19,11 +19,5 @@
   "dependencies": {
     "spawn-please": "^0.3.0",
     "upcache": "^0.9.2"
-  },
-  "pageboard": {
-    "directories": [
-      "auth"
-    ],
-    "elements": "auth/elements/auth.js"
   }
 }
