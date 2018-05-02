@@ -56,14 +56,19 @@ function init(All) {
 	});
 }
 
+// formulaire de login -> auth.login -> mail option which receives the validation url by query
+
 exports.login = function(site, data) {
 	return All.api.trx(function(trx) {
 		return All.settings.find(site, data).select('settings._id')
-		transacting(trx).forUpdate().then(function(settings) {
+		.transacting(trx).forUpdate().then(function(settings) {
 			if (!isGranted(data.grants, settings)) {
 				throw new HttpError.Forbidden("Insufficient grants");
 			}
 			return All.api.Block.genId(16).then(function(hash) {
+				// problem here
+				// the hash is returned at the same time the grants are asked
+				// the form should ask grants
 				return settings.$query(trx).patch({
 					'data:session': {
 						grants: data.grants,
@@ -73,12 +78,18 @@ exports.login = function(site, data) {
 					}
 				}).then(function(count) {
 					if (count == 0) throw new HttpError.ServerError("Could not patch settings");
-					return {
-						type: 'login',
-						data: {
-							href: `/.api/auth/validate?id=${settings.id}&hash=${hash}`
-						}
-					};
+					var validation = `/.api/auth/validate?id=${settings.id}&hash=${hash}`;
+					if (data.page) {
+						return All.run('mail.send', site, {
+							url: data.page,
+							query: {
+								validation: validation
+							},
+							to: data.email
+						});
+					} else {
+						return validation;
+					}
 				});
 			});
 		});
@@ -87,10 +98,25 @@ exports.login = function(site, data) {
 
 Object.defineProperty(exports.login, 'schema', {
 	get: function() {
-		var schema = Object.assign({}, All.user.get.schema);
+		var schema = Object.assign({}, All.settings.find.schema);
 		schema.required = (schema.required || []).concat(['grants']);
-		schema.properties = Object.assign({}, schema.properties);
-		schema.properties.grants = All.api.Block.schema('settings.data.grants');
+		schema.properties = Object.assign({
+			grants: All.api.Block.schema('settings.data.grants'),
+			page: {
+				anyOf: [{
+					type: 'null'
+				}, {
+					type: 'string',
+					pattern: "^(/[a-zA-Z0-9-.]*)+$" // notice the absence of underscore
+				}],
+				input: {
+					name: 'href',
+					filter: {
+						type: ["link"]
+					}
+				}
+			}
+		}, schema.properties);
 		return schema;
 	}
 });
