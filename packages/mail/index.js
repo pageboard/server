@@ -125,3 +125,4 @@ exports.send.schema = {
 		}
 	}
 };
+exports.send.external = true;
