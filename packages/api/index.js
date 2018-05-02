@@ -92,7 +92,7 @@ function init(All) {
 	Object.assign(exports, imports);
 
 	All.app.get('/.api/elements.js',
-		All.cache.tag('share', 'file').for('0s'),
+		All.cache.tag('share', 'file').for('0s'), // asks browser to always revalidate
 		function(req, res, next) {
 			res.type('text/javascript');
 			res.send('if (!window.Pageboard) Pageboard = {};\nPageboard.elements = ' + req.site.$source);
