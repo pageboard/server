@@ -120,6 +120,7 @@ Object.defineProperty(exports.login, 'schema', {
 		return schema;
 	}
 });
+exports.login.external = true;
 
 exports.validate = function(site, data) {
 	return All.api.trx(function(trx) {
