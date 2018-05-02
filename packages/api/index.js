@@ -98,6 +98,13 @@ function init(All) {
 			res.send('if (!window.Pageboard) Pageboard = {};\nPageboard.elements = ' + req.site.$source);
 		}
 	);
+	All.app.get('/.api/services.js',
+		All.cache.tag('share').for('0s'),
+		function(req, res, next) {
+			res.type('text/javascript');
+			res.send('if (!window.Pageboard) Pageboard = {};\nPageboard.services = ' + JSON.stringify(All.service));
+		}
+	);
 	All.app.get('/.api/*', All.cache.tag('file')); // because api depends on site elements
 	All.app.use('/.api/*', All.cache.tag('api'), bodyParserJson);
 }
