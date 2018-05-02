@@ -17,6 +17,8 @@ Pageboard.elements.page = {
 			type: "string",
 			pattern: "^(/[a-zA-Z0-9-.]*)+$", // notice the absence of underscore
 			input: {
+				// works with sitemap editor to update pages url in a coherent manner
+				// see also page.save: the href updater will only change input.name == "href".
 				name: 'pageUrl'
 			}
 		},

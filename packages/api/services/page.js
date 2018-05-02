@@ -392,6 +392,7 @@ function updatePage(site, trx, page) {
 		var newUrl = page.data.url;
 		if (oldUrl == newUrl) return dbPage;
 		var hrefs = site.$model.hrefs;
+		// page.data.url is not a href input, see also page element.
 		return Promise.all(Object.keys(hrefs).map(function(type) {
 			return Promise.all(hrefs[type].map(function(key) {
 				key = 'block.data:' + key;
