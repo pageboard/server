@@ -194,9 +194,8 @@ function initDirs(dirs) {
 
 function initPlugins(plugins, type) {
 	var All = this;
-	if (type) {
-		if (All[type]) throw new Error("what");
-		All[type] = {};
+	if (type == "service") {
+		All.services = {};
 	}
 	plugins = plugins.filter(function(obj) {
 		if (type && !obj[type]) return false;
@@ -228,11 +227,15 @@ function initPlugins(plugins, type) {
 				if (to[key] !== undefined) throw new Error(`module conflict ${obj.name || 'All'}.${key}`);
 				to[key] = plugin[key];
 				delete plugin[key]; // we made a copy before
-				if (type && obj.name && to[key].hasOwnProperty('schema')) All[type][`${obj.name}.${key}`] = {
-					get schema() {
-						return to[key].schema;
-					}
-				};
+				if (type == "service" && obj.name != "api" && to[key].hasOwnProperty('schema') && to[key].external) {
+					if (!All.services[obj.name]) All.services[obj.name] = {};
+					Object.defineProperty(All.services[obj.name], key, {
+						enumerable: true,
+						get: function() {
+							return to[key].schema;
+						}
+					});
+				}
 			});
 		});
 	});
