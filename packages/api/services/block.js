@@ -145,6 +145,7 @@ exports.search.schema = {
 	},
 	additionalProperties: false
 };
+exports.search.external = true;
 
 exports.find = function(site, data) {
 	data.limit = 1;
@@ -191,6 +192,7 @@ exports.find.schema = {
 	},
 	additionalProperties: false
 };
+exports.find.external = true;
 
 exports.add = function(site, data) {
 	var id = data.parent;
@@ -213,6 +215,7 @@ exports.add.schema = {
 	},
 	additionalProperties: true
 };
+exports.add.external = true;
 
 exports.save = function(site, data) {
 	return All.api.trx(function(trx) {
@@ -236,6 +239,7 @@ exports.save.schema = {
 	},
 	additionalProperties: true
 };
+exports.save.external = true;
 
 exports.del = function(site, data) {
 	// TODO check data.type to not be site, user
@@ -253,6 +257,7 @@ exports.del.schema = {
 	},
 	additionalProperties: false
 };
+exports.del.external = true;
 
 exports.gc = function(days) {
 	return All.api.Block.raw(`DELETE FROM block USING (
