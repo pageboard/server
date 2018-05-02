@@ -58,74 +58,41 @@ exports = module.exports = function(opt) {
 	};
 };
 
-function filterUser(email, builder) {
-	builder.select(this)
-		.whereJsonText('block.data:email', email)
-		.where('block.type', 'user')
-		.first().throwIfNotFound();
-}
-
 exports.send = function(site, data) {
-	var cols = site.$model.tableColumns;
-	var what = [
-		'parents(owner) as owner',
-		'children(to) as to',
-		'children(page) as page'
-	];
-	var filters = {
-		to: filterUser.bind(cols, data.to),
-		page: function(builder) {
-			builder.select(cols)
-				.where('type', 'page')
-				.whereJsonText('block.data:url', data.url)
-				.first().throwIfNotFound();
-		},
-		owner: function(builder) {
-			builder.select(cols)
-				.where('type', 'user')
-				.first().throwIfNotFound();
-		}
-	};
-	if (data.from) {
-		what.push('children(from) as from');
-		filters.from = filterUser.bind(cols, data.from);
-	}
-
-	return site.$query()
-	.eager(`[${what.join(',')}]`, filters)
-	.then(function(row) {
-		if (!row.from) row.from = row.owner;
-		var emailUrl = site.href + row.page[0].data.url;
-		var authCookie = All.auth.cookie({hostname: site.hostname}, {
-			scopes: {
-				"auth.login": true
-			}
-		});
+	return Promise.all([
+		All.run('block.search', site, {
+			type: 'page',
+			data: {url: data.url}
+		}),
+		All.run('user.get', {
+			email: data.to
+		})
+	]).then(function([pages, user]) {
+		var emailPage = pages.data[0];
+		if (!emailPage) throw new HttpError.NotFound("Page not found");
+		var emailUrl = site.href + emailPage.data.url;
 
 		return got(emailUrl, {
 			json: true,
-			query: {
-				from: row.from[0].id,
-				to: row.to[0].id,
+			query: Object.assign(data.query, {
 				email: true
-			},
-			headers: {
-				cookie: authCookie
-			}
+			})
 		}).then(function(response) {
 			return response.body;
 		}).then(function(obj) {
 			var mail = {
 				from: sender,
 				to: {
-					name: row.to[0].data.name,
-					address: row.to[0].data.email
+					name: user.data.name,
+					address: user.data.email
 				},
 				subject: obj.title,
+				/* this cannot really work. What could work is replying to <id>.pageboard.fr
 				replyTo: {
-					name: row.from[0].data.name,
-					address: row.from[0].data.email
+					name: sender.data.name,
+					address: sender.data.email
 				},
+				*/
 				html: obj.html,
 				text: obj.text,
 //				attachments: [{
@@ -148,6 +115,9 @@ exports.send.schema = {
 	properties: {
 		url: {
 			type: 'string'
+		},
+		query: {
+			type: 'object'
 		},
 		to: {
 			type: 'string',
