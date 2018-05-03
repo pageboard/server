@@ -1,3 +1,6 @@
+var Path = require('path');
+var pify = require('util').promisify;
+var exec = pify(require('child_process').exec);
 var schedule = require('node-schedule');
 
 exports.migrate = function(knex, dirs) {
@@ -25,8 +28,10 @@ exports.seed = function(knex, dirs) {
 };
 
 exports.dump = function(conn, opt) {
+	var dumpDir = opt.database.dump && opt.database.dump.dir;
+	if (!dumpDir) throw new HttpError.BadRequest("Missing database.dump.dir config");
 	var stamp = (new Date).toISOString().split('.')[0].replace(/[-:]/g, '');
-	var file = Path.join(opt.database.dump.dir, `${opt.name}-${stamp}.dump`);
+	var file = Path.join(dumpDir, `${opt.name}-${stamp}.dump`);
 	return exec(`pg_dump --format=custom --file=${file} --username=${conn.user} ${conn.database}`, {}).then(function() {
 		return file;
 	});

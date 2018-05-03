@@ -1,7 +1,6 @@
 var Path = require('path');
 var pify = require('util').promisify;
 var toSource = require('tosource');
-var exec = pify(require('child_process').exec);
 
 var fs = {
 	readFile: pify(require('fs').readFile)
