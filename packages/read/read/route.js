@@ -21,6 +21,8 @@ Page.route(function(state) {
 		Pageboard.view = new Pagecut.Viewer({
 			elements: Pageboard.elements
 		});
+		Pageboard.hrefs = page.hrefs || {};
+		delete page.hrefs;
 		return Pageboard.view.from(page).then(function(body) {
 			if (body.nodeName != "BODY") {
 				throw new Error("Element page.render did not return a body node");
@@ -36,6 +38,7 @@ Page.route(function(state) {
 			return Promise.all(Pageboard.view.elements.map(function(el) {
 				if (el.install) return el.install.call(el, doc, page, Pageboard.view);
 			})).then(function() {
+				delete page.site;
 				state.document = doc;
 			});
 		});
