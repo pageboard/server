@@ -79,9 +79,9 @@ exports.login = function(site, data) {
 				}).then(function(count) {
 					if (count == 0) throw new HttpError.ServerError("Could not patch settings");
 					var validation = `/.api/auth/validate?id=${settings.id}&hash=${hash}`;
-					if (data.page) {
+					if (data.url) {
 						return All.run('mail.send', site, {
-							url: data.page,
+							url: data.url,
 							query: {
 								validation: validation
 							},
@@ -102,7 +102,7 @@ Object.defineProperty(exports.login, 'schema', {
 		schema.required = (schema.required || []).concat(['grants']);
 		schema.properties = Object.assign({
 			grants: All.api.Block.schema('settings.data.grants'),
-			page: {
+			url: {
 				anyOf: [{
 					type: 'null'
 				}, {
