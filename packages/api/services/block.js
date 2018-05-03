@@ -48,7 +48,6 @@ exports.get.schema = {
 };
 
 exports.search = function(site, data) {
-	var cols = site.$model.tableColumns;
 	var q = site.$relatedQuery('children').select()
 		.whereIn('block.type', data.type);
 	if (data.parent) {

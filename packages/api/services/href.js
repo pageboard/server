@@ -168,10 +168,10 @@ exports.add = function(site, data) {
 		return All.api.trx(function(trx) {
 			return exports.get(site, data).transacting(trx).forUpdate().then(function(href) {
 				if (!href) {
-					return site.$relatedQuery('hrefs', trx).insert(result).returning(Href.tableColumns);
+					return site.$relatedQuery('hrefs', trx).insert(result).returning(Href.columns);
 				} else {
 					return site.$relatedQuery('hrefs', trx).patchObject(result).where('_id', href._id)
-						.first().returning(Href.tableColumns);
+						.first().returning(Href.columns);
 				}
 			});
 		});
