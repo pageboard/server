@@ -26,7 +26,7 @@ exports.get = function({url, local}) {
 		throw err;
 	})
 	.then(filterResult)
-	.then(embedThumbnail);
+	.then(preview);
 };
 
 function filterResult(result) {
@@ -49,15 +49,22 @@ function filterResult(result) {
 	return obj;
 }
 
-function embedThumbnail(obj) {
+function preview(obj) {
+	var desc = obj.meta.description || '';
+	delete obj.meta.description;
 	var thumb = obj.meta.thumbnail;
-	if (!thumb) return obj;
-	return All.image.thumbnail(thumb).then(function(datauri) {
-		obj.meta.thumbnail = datauri;
-	}).catch(function(err) {
-		console.error("Error embedding thumbnail", obj.meta.thumbnail, err);
-		delete obj.meta.thumbnail;
-	}).then(function() {
-		return obj;
-	});
+	delete obj.meta.thumbnail;
+	if (thumb != null) {
+		return All.image.thumbnail(thumb).then(function(datauri) {
+			obj.preview = `<img src="${datauri}" alt="${desc}" />`;
+		}).catch(function(err) {
+			console.error("Error embedding thumbnail", thumb, err);
+		}).then(function() {
+			return obj;
+		});
+	}
+	if (description != null) {
+		obj.preview = description;
+	}
+	return Promise.resolve(obj);
 }
