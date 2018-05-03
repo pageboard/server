@@ -55,22 +55,13 @@ Href.jsonSchema = {
 		lang: {
 			anyOf: [{type: "null"}, {type: "string"}]
 		},
+		preview: {
+			anyOf: [{type: "null"}, {type: "string"}]
+		},
 		meta: {
 			type: 'object',
 			default: {},
 			properties: {
-				description: {
-					anyOf: [{type: "null"}, {type: "string"}]
-				},
-				thumbnail: {
-					// local images are stored as data-uri, no need to path pattern
-					anyOf: [{
-						type: "null"
-					}, {
-						type: "string",
-						format: "uri"
-					}]
-				},
 				size: {
 					anyOf: [{type: "null"}, {type: "integer"}]
 				},
