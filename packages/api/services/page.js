@@ -52,7 +52,7 @@ function init(All) {
 }
 
 function QueryPage(site) {
-	return site.$relatedQuery('children')
+	return site.$relatedQuery('children').alias('page')
 	.select()
 	.first()
 	// eager load children (in which there are standalones)
@@ -62,20 +62,60 @@ function QueryPage(site) {
 		children(standalonesFilter) as standalones .children(childrenFilter)
 	]`, {
 		childrenFilter: function(query) {
-			return query.select().where('block.standalone', false);
+			return query.select().where('page.standalone', false);
 		},
 		standalonesFilter: function(query) {
-			return query.select().where('block.standalone', true);
+			return query.select().where('page.standalone', true);
 		}
 	});
 }
 
+function QueryPageHref(site) {
+	var hrefs = site.$model.hrefs;
+	return site.$model.query().alias('site').where('site._id', site._id)
+	.joinRelation('children', {alias: 'page'}).clearSelect()
+	.first()
+	.select(
+		site.$raw(`jsonb_object_agg(
+			href.url,
+			jsonb_set(href.meta, '{mime}', to_jsonb(href.mime))
+		) AS hrefs`)
+	)
+	.join('relation AS r', {
+		'r.parent_id': 'page._id'
+	})
+	.join('block AS b', {
+		'b._id': 'r.child_id'
+	})
+	.where('b.standalone', false)
+	.join('href', function() {
+		Object.keys(hrefs).forEach(function(type) {
+			this.orOn(function() {
+				this.on('b.type', site.$lit(type));
+				var list = hrefs[type];
+				this.on(function() {
+					list.forEach(function(path) {
+						this.orOn(ref(`b.data:${path}`).castText(), 'href.url');
+					}, this);
+				});
+			});
+		}, this);
+	});
+}
+
 exports.get = function(site, data) {
-	return QueryPage(site).where('block.type', 'page')
-	.whereJsonText("block.data:url", data.url)
+	return QueryPage(site).where('page.type', 'page')
+	.whereJsonText("page.data:url", data.url)
+	.select(
+		QueryPageHref(site).where('page.type', 'page')
+		.whereJsonText("page.data:url", data.url).as('hrefs')
+	)
 	.then(function(page) {
 		if (!page) {
-			return QueryPage(site).where('block.type', 'notfound').throwIfNotFound();
+			return QueryPage(site).where('page.type', 'notfound').throwIfNotFound()
+			.select(
+				QueryPageHref(site).where('page.type', 'notfound').as('hrefs')
+			)
 		} else {
 			return page;
 		}
