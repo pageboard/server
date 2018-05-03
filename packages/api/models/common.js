@@ -28,6 +28,21 @@ exports.Model = class CommonModel extends Model {
 			});
 		});
 	}
+	get $model() {
+		return this.constructor;
+	}
+
+	$ref(str) {
+		return objection.ref(str);
+	}
+
+	$lit(str) {
+		return objection.lit(str);
+	}
+
+	$raw(str) {
+		return objection.raw(str);
+	}
 };
 
 exports.QueryBuilder = class CommonQueryBuilder extends QueryBuilder {

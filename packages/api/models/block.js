@@ -30,19 +30,12 @@ class Block extends Model {
 		return this.constructor.schema(type);
 	}
 
-	get $model() {
-		return this.constructor;
-	}
-
 	get $source() {
 		return this.$$source;
 	}
 
 	set $source(source) {
 		this.$$source = source;
-	}
-	$ref(str) {
-		return objection.ref(str);
 	}
 }
 
