@@ -35,11 +35,11 @@ pageboard.init(config).then(function(All) {
 				return All.site.get({id: All.opt.site}).select('_id').then(function(site) {
 					return All.install(site).then(function(site) {
 						args.push(site);
-						args.push(config.data);
+						if (config.data !== undefined) args.push(config.data);
 					});
 				});
 			} else {
-				args.push(config.data);
+				if (config.data !== undefined) args.push(config.data);
 			}
 		}).then(function() {
 			return All.run.apply(All, args).catch(function(err) {

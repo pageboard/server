@@ -362,7 +362,7 @@ function run(apiStr) {
 		var fun = mod[funName];
 		if (!fun) throw new HttpError.BadRequest(`Unknown api method ${funName}`);
 		if (args.length != fun.length) {
-			throw new HttpError.BadRequest(`Api method ${funName} got ${fun.length} over ${args.length} arguments`);
+			throw new HttpError.BadRequest(`Api method ${funName} expected ${fun.length} arguments, and got ${args.length} arguments`);
 		}
 		var data = args[args.length - 1] || {};
 		try {
