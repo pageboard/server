@@ -34,8 +34,12 @@ function initFile(All) {
 		uploadDir = "." + uploadDir;
 		console.info("Uploaded images resizable by upload at", "/" + uploadDir);
 		All.app.get(`:url(/${uploadDir}/*)`, function(req, res, next) {
-			if (!req.query.rs && !req.query.ex && !req.query.q && !req.query.format) next('route');
-			else next();
+			if (req.query.raw !== undefined) {
+				next('route');
+			} else {
+				req.params.url += '?raw';
+				next();
+			}
 		}, sharpie(All.opt.image));
 	}
 	return All.utils.which(opt.image.converter).catch(function() {}).then(function(path) {
