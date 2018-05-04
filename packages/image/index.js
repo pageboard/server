@@ -127,10 +127,9 @@ exports.upload = function(file) {
 			return;
 		}
 		var dst = file.path + ".tmp";
-		var pipeline = sharp(file.path);
-		return pipeline.metadata().then(function(meta) {
-			return pipeline.toFormat(meta.format, {quality:93}).toFile(dst);
-		}).then(function() {
+		return sharp(file.path)
+		.toFormat(format, {quality:93})
+		.toFile(dst).then(function() {
 			return fs.rename(dst, file.path);
 		});
 	});
