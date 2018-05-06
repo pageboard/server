@@ -156,7 +156,6 @@ exports.add = function(site, data) {
 				type: 'link',
 				title: pageBlock.data.title,
 				site: null,
-				ext: 'html',
 				pathname: objUrl.pathname,
 				url: objUrl.path
 			};
