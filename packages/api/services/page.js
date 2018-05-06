@@ -307,15 +307,17 @@ exports.save = function(site, changes) {
 		relate: {}
 	}, changes);
 
-	var pages = changes.add.concat(changes.update).filter(function(block) {
-		var url = block.data && block.data.url;
-		if (url) {
-			var objUrl = URL.parse(url);
-			if (objUrl.hostname == site.hostname) {
-				block.data.url = objUrl.path;
-			}
-		}
-		return block.type == "page"; // might be obj.data.url but not sure
+	var pages = {
+		add: changes.add.filter(b => b.type == "page"),
+		update: changes.update.filter(b => b.type == "page")
+	};
+	pages.all = pages.add.concat(pages.update);
+
+	changes.add.forEach(function(b) {
+		stripHostname(site, b);
+	});
+	changes.update.forEach(function(b) {
+		stripHostname(site, b);
 	});
 
 	return All.api.trx(function(trx) {
@@ -325,7 +327,7 @@ exports.save = function(site, changes) {
 		return site.$relatedQuery('children', trx)
 		.select('block.id', ref('block.data:url').as('url'))
 		.where('block.type', 'page').then(function(dbPages) {
-			pages.forEach(function(page) {
+			pages.all.forEach(function(page) {
 				if (allUrl[page.data.url]) throw new HttpError.BadRequest("Two pages with same url");
 				if (!page.id) throw new HttpError.BadRequest("Page without id");
 				allUrl[page.data.url] = page.id;
@@ -349,10 +351,23 @@ exports.save = function(site, changes) {
 		});
 	}).then(function() {
 		// do not return that promise - reply now
-		Promise.all(pages.map(function(child) {
+		Promise.all(pages.update.map(function(child) {
 			return All.href.save(site, {
 				url: child.data.url,
 				title: child.data.title
+			}).catch(function(err) {
+				if (err.statusCode == 404) return All.href.add(site, {
+					url: child.data.url
+				}).catch(function(err) {
+					console.error(err);
+				});
+				else console.error(err);
+			});
+		}));
+		Promise.all(pages.add.map(function(child) {
+			// problem: added pages are not saved here
+			return All.href.add(site, {
+				url: child.data.url
 			}).catch(function(err) {
 				console.error(err);
 			});
@@ -389,6 +404,16 @@ exports.save.schema = {
 		}
 	}
 };
+
+function stripHostname(site, block) {
+	var url = block.data && block.data.url; // FIXME use site.$model.hrefs
+	if (url) {
+		var objUrl = URL.parse(url);
+		if (objUrl.hostname == site.hostname) {
+			block.data.url = objUrl.path;
+		}
+	}
+}
 
 function applyUnrelate(site, trx, obj) {
 	return Promise.all(Object.keys(obj).map(function(parentId) {
