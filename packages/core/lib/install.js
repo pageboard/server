@@ -86,8 +86,8 @@ exports.config = function(moduleDir, id, module, config) {
 				if (stat.isDirectory()) return fs.readdir(absPath).then(function(paths) {
 					// make sure files are ordered by basename
 					paths.sort(function(a, b) {
-						a = Path.basename(a);
-						b = Path.basename(b);
+						a = Path.basename(a, Path.extname(a));
+						b = Path.basename(b, Path.extname(b));
 						if (a == b) return 0;
 						else if (a > b) return 1;
 						else if (a < b) return -1;
