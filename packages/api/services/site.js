@@ -1,5 +1,5 @@
 var ref = require('objection').ref;
-var lodash = require('objection').lodash;
+var lodashMerge = require('lodash.merge');
 
 exports = module.exports = function(opt) {
 	return {
@@ -126,7 +126,7 @@ exports.add.schema = {
 exports.save = function(data) {
 	return All.api.trx(function(trx) {
 		return exports.get(data).select('_id').transacting(trx).forUpdate().then(function(site) {
-			lodash.merge(site.data, data.data);
+			lodashMerge(site.data, data.data);
 			return All.install(site).then(function(site) {
 				return site.$query(trx).patchObject({
 					type: site.type,
