@@ -53,9 +53,10 @@ exports.search = function(site, data) {
 	if (data.parent) {
 		q.joinRelation('parents as parent').where('parent.id', data.parent);
 	}
-	if (data.childrenType) q.eager('[children(childrenFilter)]', {
+	if (data.children) q.eager('[children(childrenFilter)]', {
 		childrenFilter: function(query) {
-			return query.select().whereIn('block.type', data.childrenType);
+			query.select();
+			if (data.children.type) query.whereIn('block.type', data.children.type);
 		}
 	});
 	if (data.id) {
@@ -82,9 +83,10 @@ exports.search = function(site, data) {
 			limit: data.limit
 		};
 		obj.schemas = {};
-		data.type.concat(data.childrenType || []).forEach(function(type) {
+		data.type.concat(data.children && data.children.type || []).forEach(function(type) {
 			var sch = site.$schema(type);
 			if (sch) obj.schemas[type] = sch;
+			else console.warn(`Unknown schema for type '${type}'`);
 		});
 		return obj;
 	});
@@ -117,16 +119,22 @@ exports.search.schema = {
 				}
 			}
 		},
-		childrenType: {
-			type: 'array',
-			items: {
-				type: 'string',
-				not: { // TODO permissions should be managed dynamically
-					oneOf: [{
-						const: "user"
-					}, {
-						const: "site"
-					}]
+		children: {
+			type: 'object',
+			required: ['type'],
+			properties: {
+				type: {
+					type: 'array',
+					items: {
+						type: 'string',
+						not: { // TODO permissions should be managed dynamically
+							oneOf: [{
+								const: "user"
+							}, {
+								const: "site"
+							}]
+						}
+					}
 				}
 			}
 		},
@@ -175,19 +183,7 @@ exports.find.schema = {
 				}
 			}
 		},
-		childrenType: {
-			type: 'array',
-			items: {
-				type: 'string',
-				not: { // TODO permissions should be managed dynamically
-					oneOf: [{
-						const: "user"
-					}, {
-						const: "site"
-					}]
-				}
-			}
-		}
+		children: exports.search.schema.properties.children
 	},
 	additionalProperties: false
 };
