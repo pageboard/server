@@ -21,36 +21,29 @@ site
 ----
 
 pageboard site.add \
-data.name=local \
-data.domain=localhost \
-email='your@email.com'
+id=<newsiteid> \
+data.domain=<fqdn> \
+data.module=pageboard/site-semantic-ui
 
-TODO how to relate user -> site from cli
-and also site -> user to make sure the login form works.
-
-pageboard site.save \
-domain=localhost \
-data.dependencies.@pageboard/elements=pageboard/elements \
-data.dependencies.@pageboard/elements-gallery=pageboard/elements-gallery \
-data.dependencies.myproject=mygithubrepositoryorg/myproject
+domain, module, env can be changed using site.save.
 
 also add a github hook in your github project settings, sending application/json payloads to
 http://myproject.pageboard.fr/.api/github
 
-How to login the first time, without a login page ?
----------------------------------------------------
-
-Do:
-pageboard auth.login email='you@email.com' domain='localhost'
-
-You obtain a one-time activation link, and just need to prepend your site
-hostname to it to build an absolute url.
-
-
 How to set a user as webmaster for a site ?
 -------------------------------------------
 
-pageboard site.own email='you@email.com' domain='localhost'
+pageboard --site=<id> settings.save data.grants=webmaster email=you@email.com
+
+How to login the first time, without a login page ?
+---------------------------------------------------
+
+Complete previous step then
+
+pageboard --site=<id> auth.login grants=webmaster email='you@email.com'
+
+You obtain a one-time activation link, and just need to prepend your site
+hostname to it to build an absolute url.
 
 
 How to setup login ?
