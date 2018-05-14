@@ -237,8 +237,10 @@ exports.save.schema = {
 exports.save.external = true;
 
 exports.del = function(site, data) {
-	// TODO check data.type to not be site, user
-	return site.$relatedQuery('children').where('id', data.id).where('type', data.type).delete();
+	return site.$relatedQuery('children')
+		.where('block.id', data.id)
+		.whereIn('block.type', data.type)
+		.delete();
 };
 exports.del.schema = {
 	required: ['id', 'type'],
@@ -247,7 +249,17 @@ exports.del.schema = {
 			type: 'string'
 		},
 		type: {
-			type: 'string'
+			type: 'array',
+			items: {
+				type: 'string',
+				not: { // TODO permissions should be managed dynamically
+					oneOf: [{
+						const: "user"
+					}, {
+						const: "site"
+					}]
+				}
+			}
 		}
 	},
 	additionalProperties: false
