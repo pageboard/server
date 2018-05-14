@@ -57,6 +57,10 @@ exports.search = function(site, data) {
 		childrenFilter: function(query) {
 			query.select();
 			if (data.children.type) query.whereIn('block.type', data.children.type);
+			if (data.children.order) data.children.order.forEach(function(order) {
+				var {col, dir} = parseOrder('block', order);
+				query.orderBy(col, dir);
+			});
 		}
 	});
 	if (data.id) {
@@ -74,6 +78,10 @@ exports.search = function(site, data) {
 		q.whereRaw('query @@ block.tsv');
 		q.orderByRaw('ts_rank(block.tsv, query) DESC');
 	}
+	if (data.order) data.order.forEach(function(order) {
+		var {col, dir} = parseOrder('block', order);
+		q.orderBy(col, dir);
+	});
 	q.orderBy('updated_at', 'block.desc');
 	q.offset(data.offset).limit(data.limit);
 	return q.then(function(rows) {
@@ -135,7 +143,19 @@ exports.search.schema = {
 							}]
 						}
 					}
+				},
+				order: {
+					type: 'array',
+					items: {
+						type: 'string'
+					}
 				}
+			}
+		},
+		order: {
+			type: 'array',
+			items: {
+				type: 'string'
 			}
 		},
 		limit: {
@@ -281,4 +301,18 @@ exports.gc = function(days) {
 		};
 	});
 };
+
+function parseOrder(table, str) {
+	var col = str;
+	var dir = 'asc';
+	if (col.startsWith('-')) {
+		dir = 'desc';
+		col = col.substring(1);
+	}
+	var list = col.split('.');
+	var first = list.shift();
+	col = `${table}.${first}`;
+	if (list.length > 0) col += `:${list.join('.')}`;
+	return {col: ref(col), dir};
+}
 
