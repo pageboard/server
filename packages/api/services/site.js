@@ -111,7 +111,7 @@ exports.add = function(data) {
 };
 
 exports.add.schema = {
-	required: ['id', 'email', 'data'],
+	required: ['id', 'data'],
 	properties: {
 		id: {
 			type: 'string'
