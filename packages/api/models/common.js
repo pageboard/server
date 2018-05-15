@@ -93,7 +93,7 @@ exports.QueryBuilder = class CommonQueryBuilder extends QueryBuilder {
 	}
 	whereObject(obj, schema) {
 		var table = this.tableRefFor(this.modelClass());
-		var refs = asPaths(obj, {}, table + '.', true, schema || {});
+		var refs = asPaths(obj, {}, table + '.', true, schema);
 		Object.keys(refs).forEach(function(k) {
 			var cond = refs[k];
 			var refk = ref(k);
@@ -119,6 +119,7 @@ exports.QueryBuilder = class CommonQueryBuilder extends QueryBuilder {
 };
 
 function asPaths(obj, ret, pre, first, schema) {
+	if (!schema) schema = {};
 	var props = schema.properties || {};
 	Object.keys(obj).forEach(function(key) {
 		var val = obj[key];
