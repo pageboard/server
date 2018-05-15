@@ -51,12 +51,14 @@ exports.search = function(site, data) {
 	var q = site.$relatedQuery('children').select()
 		.where('block.type', data.type);
 	if (data.parent) {
-		if (typeof data.parent == "string") {
-			q.joinRelation('parents as parent').where('parent.id', data.parent);
-		} else {
-			q.joinRelation('parents as parent').whereObject(data.parent);
-		}
+		q.joinRelation('parents', {alias: 'parent'}).where('parent.id', data.parent);
 	}
+	if (data.parents) q.eager('[parents(parentFilter)]', {
+		parentFilter: function(query) {
+			query.select();
+			if (data.parents.type) query.whereIn('block.type', data.parents.type);
+		}
+	});
 	if (data.children) q.eager('[children(childrenFilter)]', {
 		childrenFilter: function(query) {
 			query.select();
@@ -69,7 +71,7 @@ exports.search = function(site, data) {
 	});
 	var schemas = {};
 	[data.type].concat(data.children && data.children.type || [])
-	.concat(data.parent && data.parent.type || [])
+	.concat(data.parents && data.parents.type || [])
 	.forEach(function(type) {
 		var sch = site.$schema(type);
 		if (sch) schemas[type] = sch;
@@ -103,6 +105,12 @@ exports.search = function(site, data) {
 			limit: data.limit,
 			schemas: schemas
 		};
+		if (data.parents && data.parents.first) {
+			rows.forEach(function(row) {
+				row.parent = row.parents[0];
+				delete row.parents;
+			});
+		}
 		return obj;
 	});
 };
@@ -113,27 +121,30 @@ exports.search.schema = {
 			type: 'string'
 		},
 		parent: {
-			anyOf: [{
-				type: 'string' // the parent id
-			}, {
-				type: 'object',
-				required: ['type'],
-				properties: {
-					type: {
-						type: 'array',
-						items: {
-							type: 'string',
-							not: { // TODO permissions should be managed dynamically
-								oneOf: [{
-									const: "user"
-								}, {
-									const: "site"
-								}]
-							}
+			type: 'string'
+		},
+		parents: {
+			type: 'object',
+			required: ['type'],
+			properties: {
+				first: {
+					type: 'boolean',
+					default: false
+				},
+				type: {
+					type: 'array',
+					items: {
+						type: 'string',
+						not: { // TODO permissions should be managed dynamically
+							oneOf: [{
+								const: "user"
+							}, {
+								const: "site"
+							}]
 						}
 					}
 				}
-			}]
+			}
 		},
 		id: {
 			type: 'string'
@@ -226,6 +237,7 @@ exports.find.schema = {
 		},
 		children: exports.search.schema.properties.children,
 		parent: exports.search.schema.properties.parent,
+		parents: exports.search.schema.properties.parents
 	},
 	additionalProperties: false
 };
