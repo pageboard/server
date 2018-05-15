@@ -141,7 +141,7 @@ function partialDate(val) {
 	var end = new Date(start);
 	var parts = val.split('-');
 	if (parts.length == 1) {
-		end.setYear(end.getYear() + 1);
+		end.setFullYear(end.getFullYear() + 1);
 	} else if (parts.length == 2) {
 		end.setMonth(end.getMonth() + 1);
 	} else if (parts.length == 3) {
