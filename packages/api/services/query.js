@@ -37,9 +37,12 @@ exports.query = function(site, data) {
 		// vars: destPath: queryPath
 		// allow rewriting variables
 		if (fd.vars) Object.keys(fd.vars).forEach(function(key) {
-			var val = getVar(data, fd.vars[key]);
+			var varName = fd.vars[key];
+			if (!varName) return;
+			varName = varName.split('|').shift();
+			var val = getVar(data, varName);
 			if (val === undefined) return;
-			setVar(data, fd.vars[key]);
+			setVar(data, varName);
 			setVar(params, key, val);
 		});
 		if (fd.type) {
