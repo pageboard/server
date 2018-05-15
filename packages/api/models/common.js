@@ -91,15 +91,23 @@ exports.QueryBuilder = class CommonQueryBuilder extends QueryBuilder {
 		this.addOperation(patchObjectOperation, [obj]);
 		return this;
 	}
-	whereObject(obj) {
+	whereObject(obj, schema) {
 		var table = this.tableRefFor(this.modelClass());
-		var refs = asPaths(obj, {}, table + '.', true);
+		var refs = asPaths(obj, {}, table + '.', true, schema || {});
 		Object.keys(refs).forEach(function(k) {
 			var cond = refs[k];
 			var refk = ref(k);
-			if (cond == null) this.whereNull(refk);
-			else if (Array.isArray(cond)) this.where(refk.castText(), 'IN', cond);
-			else this.where(refk.castText(), cond);
+			if (cond == null) {
+				this.whereNull(refk);
+			} else if (Array.isArray(cond)) {
+				this.where(refk.castText(), 'IN', cond);
+			} else if (typeof cond == "object" && cond.range == "date") {
+				this.whereRaw(`'[${cond.start}, ${cond.end})'::daterange @> ??`, [
+					refk.castTo('date')
+				]);
+			} else {
+				this.where(refk.castText(), cond);
+			}
 		}, this);
 		return this;
 	}
@@ -110,17 +118,41 @@ exports.QueryBuilder = class CommonQueryBuilder extends QueryBuilder {
 	}
 };
 
-function asPaths(obj, ret, pre, first) {
+function asPaths(obj, ret, pre, first, schema) {
+	var props = schema.properties || {};
 	Object.keys(obj).forEach(function(key) {
 		var val = obj[key];
+		var schem = props[key] || {};
 		var cur = `${pre || ""}${key}`;
 		if (Array.isArray(val) || val == null || typeof val != "object") {
+			if (typeof val == "string" && schem.type == "string" && schem.format == "date-time") {
+				val = partialDate(val);
+			}
 			ret[cur] = val;
 		} else if (typeof val == "object") {
-			asPaths(val, ret, cur + (first ? ':' : '.'));
+			asPaths(val, ret, cur + (first ? ':' : '.'), false, schem);
 		}
 	});
 	return ret;
+}
+
+function partialDate(val) {
+	var start = new Date(val);
+	var end = new Date(start);
+	var parts = val.split('-');
+	if (parts.length == 1) {
+		end.setYear(end.getYear() + 1);
+	} else if (parts.length == 2) {
+		end.setMonth(end.getMonth() + 1);
+	} else if (parts.length == 3) {
+		end.setDate(end.getDate() + 1);
+	}
+
+	return {
+		range: "date",
+		start: start.toISOString(),
+		end: end.toISOString()
+	};
 }
 
 function deepAssign(model, obj) {

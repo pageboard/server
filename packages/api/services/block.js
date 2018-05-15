@@ -49,9 +49,13 @@ exports.get.schema = {
 
 exports.search = function(site, data) {
 	var q = site.$relatedQuery('children').select()
-		.whereIn('block.type', data.type);
+		.where('block.type', data.type);
 	if (data.parent) {
-		q.joinRelation('parents as parent').where('parent.id', data.parent);
+		if (typeof data.parent == "string") {
+			q.joinRelation('parents as parent').where('parent.id', data.parent);
+		} else {
+			q.joinRelation('parents as parent').whereObject(data.parent);
+		}
 	}
 	if (data.children) q.eager('[children(childrenFilter)]', {
 		childrenFilter: function(query) {
@@ -63,11 +67,19 @@ exports.search = function(site, data) {
 			});
 		}
 	});
+	var schemas = {};
+	[data.type].concat(data.children && data.children.type || [])
+	.concat(data.parent && data.parent.type || [])
+	.forEach(function(type) {
+		var sch = site.$schema(type);
+		if (sch) schemas[type] = sch;
+		else console.warn(`Unknown schema for type '${type}'`);
+	});
 	if (data.id) {
 		q.where('block.id', data.id);
 	}
 	if (data.data) {
-		q.whereObject({data: data.data});
+		q.whereObject({data: data.data}, schemas[data.type]);
 	}
 	if (data.text != null) {
 		var text = data.text.split(/\W+/).filter(x => !!x).map(x => x + ':*').join(' <-> ');
@@ -82,20 +94,15 @@ exports.search = function(site, data) {
 		var {col, dir} = parseOrder('block', order);
 		q.orderBy(col, dir);
 	});
-	q.orderBy('updated_at', 'block.desc');
+	q.orderBy('updated_at', 'block.asc');
 	q.offset(data.offset).limit(data.limit);
 	return q.then(function(rows) {
 		var obj = {
 			data: rows,
 			offset: data.offset,
-			limit: data.limit
+			limit: data.limit,
+			schemas: schemas
 		};
-		obj.schemas = {};
-		data.type.concat(data.children && data.children.type || []).forEach(function(type) {
-			var sch = site.$schema(type);
-			if (sch) obj.schemas[type] = sch;
-			else console.warn(`Unknown schema for type '${type}'`);
-		});
 		return obj;
 	});
 };
@@ -106,7 +113,27 @@ exports.search.schema = {
 			type: 'string'
 		},
 		parent: {
-			type: 'string'
+			anyOf: [{
+				type: 'string' // the parent id
+			}, {
+				type: 'object',
+				required: ['type'],
+				properties: {
+					type: {
+						type: 'array',
+						items: {
+							type: 'string',
+							not: { // TODO permissions should be managed dynamically
+								oneOf: [{
+									const: "user"
+								}, {
+									const: "site"
+								}]
+							}
+						}
+					}
+				}
+			}]
 		},
 		id: {
 			type: 'string'
@@ -115,16 +142,13 @@ exports.search.schema = {
 			type: 'object'
 		},
 		type: {
-			type: 'array',
-			items: {
-				type: 'string',
-				not: { // TODO permissions should be managed dynamically
-					oneOf: [{
-						const: "user"
-					}, {
-						const: "site"
-					}]
-				}
+			type: 'string',
+			not: { // TODO permissions should be managed dynamically
+				oneOf: [{
+					const: "user"
+				}, {
+					const: "site"
+				}]
 			}
 		},
 		children: {
@@ -191,19 +215,17 @@ exports.find.schema = {
 			type: 'string'
 		},
 		type: {
-			type: 'array',
-			items: {
-				type: 'string',
-				not: { // TODO permissions should be managed dynamically
-					oneOf: [{
-						const: "user"
-					}, {
-						const: "site"
-					}]
-				}
+			type: 'string',
+			not: { // TODO permissions should be managed dynamically
+				oneOf: [{
+					const: "user"
+				}, {
+					const: "site"
+				}]
 			}
 		},
-		children: exports.search.schema.properties.children
+		children: exports.search.schema.properties.children,
+		parent: exports.search.schema.properties.parent,
 	},
 	additionalProperties: false
 };
