@@ -44,7 +44,7 @@ function init(All) {
 	});
 
 	All.app.get('/.api/sitemap.txt', function(req, res, next) {
-		All.run('page.list', req.site).then(function(pages) {
+		All.run('page.list', req.site, {}).then(function(pages) {
 			res.type('text/plain');
 			res.send(pages.map(page => req.site.href + page.data.url).join('\n'));
 		});
