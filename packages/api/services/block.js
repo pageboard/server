@@ -250,7 +250,7 @@ exports.add = function(site, data) {
 		if (!id) return child;
 		return site.$relatedQuery('children').where('block.id', id)
 		.first().throwIfNotFound().then(function(parent) {
-			return parent.$relatedQuery('children').relate(child).then(function() {
+			return parent.$relatedQuery('children', site.trx).relate(child).then(function() {
 				return child;
 			});
 		});
