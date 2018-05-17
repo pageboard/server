@@ -59,38 +59,36 @@ function init(All) {
 // formulaire de login -> auth.login -> mail option which receives the validation url by query
 
 exports.login = function(site, data) {
-	return All.api.trx(function(trx) {
-		return All.settings.find(site, data).select('settings._id')
-		.transacting(trx).forUpdate().then(function(settings) {
-			if (!isGranted(data.grants, settings)) {
-				throw new HttpError.Forbidden("Insufficient grants");
-			}
-			return All.api.Block.genId(16).then(function(hash) {
-				// problem here
-				// the hash is returned at the same time the grants are asked
-				// the form should ask grants
-				return settings.$query(trx).patch({
-					'data:session': {
-						grants: data.grants,
-						hash: hash,
-						verified: false,
-						referer: data.referer || null
-					}
-				}).then(function(count) {
-					if (count == 0) throw new HttpError.ServerError("Could not patch settings");
-					var validation = `/.api/auth/validate?id=${settings.id}&hash=${hash}`;
-					if (data.url) {
-						return All.run('mail.send', site, {
-							url: data.url,
-							query: {
-								validation: validation
-							},
-							to: data.email
-						});
-					} else {
-						return validation;
-					}
-				});
+	return All.settings.find(site, data).select('settings._id')
+	.forUpdate().then(function(settings) {
+		if (!isGranted(data.grants, settings)) {
+			throw new HttpError.Forbidden("Insufficient grants");
+		}
+		return All.api.Block.genId(16).then(function(hash) {
+			// problem here
+			// the hash is returned at the same time the grants are asked
+			// the form should ask grants
+			return settings.$query(site.trx).patch({
+				'data:session': {
+					grants: data.grants,
+					hash: hash,
+					verified: false,
+					referer: data.referer || null
+				}
+			}).then(function(count) {
+				if (count == 0) throw new HttpError.ServerError("Could not patch settings");
+				var validation = `/.api/auth/validate?id=${settings.id}&hash=${hash}`;
+				if (data.url) {
+					return All.run('mail.send', site, {
+						url: data.url,
+						query: {
+							validation: validation
+						},
+						to: data.email
+					});
+				} else {
+					return validation;
+				}
 			});
 		});
 	});
@@ -123,25 +121,23 @@ Object.defineProperty(exports.login, 'schema', {
 exports.login.external = true;
 
 exports.validate = function(site, data) {
-	return All.api.trx(function(trx) {
-		return All.settings.get(site, data).select('_id')
-		.transacting(trx).forUpdate().then(function(settings) {
-			var hash = settings.data.session && settings.data.session.hash;
-			if (!hash) {
-				throw new HttpError.BadRequest("Unlogged user");
-			}
-			if (settings.data.session.verified) {
-				throw new HttpError.BadRequest("Already logged user");
-			}
-			if (hash != data.hash) {
-				throw new HttpError.BadRequest("Bad validation link");
-			}
-			return settings.$query(trx).patch({
-				'data:session.verified': true
-			}).then(function(count) {
-				if (count == 0) throw new HttpError.NotFound("Bad validation link");
-				return settings;
-			});
+	return All.settings.get(site, data).select('_id').forUpdate()
+	.then(function(settings) {
+		var hash = settings.data.session && settings.data.session.hash;
+		if (!hash) {
+			throw new HttpError.BadRequest("Unlogged user");
+		}
+		if (settings.data.session.verified) {
+			throw new HttpError.BadRequest("Already logged user");
+		}
+		if (hash != data.hash) {
+			throw new HttpError.BadRequest("Bad validation link");
+		}
+		return settings.$query(site.trx).patch({
+			'data:session.verified': true
+		}).then(function(count) {
+			if (count == 0) throw new HttpError.NotFound("Bad validation link");
+			return settings;
 		});
 	});
 };
