@@ -1,23 +1,9 @@
 Pageboard.elements.user = {
-	required: ['email', 'nickname', 'name'],
+	required: ['email'],
 	properties: {
 		email: {
 			type: 'string',
 			format: 'email'
-		},
-		origin: {
-			type: ['string', 'null'] // TODO the form id? type? that created this user
-			// could be registration, contact, newsletter forms...
-		},
-		nickname: {
-			type: 'string'
-		},
-		name: {
-			type: 'string'
-		},
-		picture: {
-			type: 'string',
-			format: 'uri'
 		}
 	}
 };
