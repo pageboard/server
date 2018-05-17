@@ -41,7 +41,10 @@ exports.save = function(site, data) {
 		});
 	}).catch(function(err) {
 		if (err.statusCode != 404) throw err;
-		return All.user.get(data).then(function(user) {
+		return All.run('user.get', {email: data.email}).catch(function(err) {
+			if (err.statusCode != 404) throw err;
+			return All.run('user.add', {data: {email: data.email}});
+		}).then(function(user) {
 			return site.$model.query(site.trx).insertGraph({
 				type: 'settings',
 				data: data.data,
