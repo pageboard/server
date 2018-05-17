@@ -36,14 +36,14 @@ Object.defineProperty(exports.find, 'schema', {
 
 exports.save = function(site, data) {
 	return exports.find(site, data).select('settings._id').then(function(settings) {
-		return settings.$query().patchObject({data: data.data}).then(function() {
 			delete settings._id;
+		return settings.$query(site.trx).patchObject({data: data.data}).then(function() {
 			return settings;
 		});
 	}).catch(function(err) {
 		if (err.statusCode != 404) throw err;
 		return All.user.get(data).select('_id').then(function(user) {
-			return site.$model.query().insertGraph({
+			return site.$model.query(site.trx).insertGraph({
 				type: 'settings',
 				data: data.data,
 				parents: [site, user]

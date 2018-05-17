@@ -29,7 +29,7 @@ function init(All) {
 }
 
 exports.get = function(site, data) {
-	return All.api.Href.query().select('href._id')
+	return All.api.Href.query(site.trx).select('href._id')
 		.whereSite(site.id)
 		.where('href.url', data.url).first();
 };
@@ -164,15 +164,13 @@ exports.add = function(site, data) {
 		p = callInspector(site.id, data.url, isLocal);
 	}
 	return p.then(function(result) {
-		return All.api.trx(function(trx) {
-			return exports.get(site, data).transacting(trx).forUpdate().then(function(href) {
-				if (!href) {
-					return site.$relatedQuery('hrefs', trx).insert(result).returning(Href.columns);
-				} else {
-					return site.$relatedQuery('hrefs', trx).patchObject(result).where('_id', href._id)
-						.first().returning(Href.columns);
-				}
-			});
+		return exports.get(site, data).forUpdate().then(function(href) {
+			if (!href) {
+				return site.$relatedQuery('hrefs').insert(result).returning(Href.columns);
+			} else {
+				return site.$relatedQuery('hrefs').patchObject(result).where('_id', href._id)
+					.first().returning(Href.columns);
+			}
 		});
 	});
 };
@@ -189,11 +187,13 @@ exports.add.schema = {
 
 exports.save = function(site, data) {
 	var Href = All.api.Href;
-	return All.api.trx(function(trx) {
-		return exports.get(site, data).throwIfNotFound()
-		.transacting(trx).forUpdate().then(function(href) {
-			return Href.query(trx).patchObject({title: data.title}).where('_id', href._id);
-		});
+	return exports.get(site, data)
+	.throwIfNotFound()
+	.forUpdate()
+	.then(function(href) {
+		return site.$relatedQuery('hrefs').patchObject({
+			title: data.title
+		}).where('_id', href._id).first().returning(Href.columns);
 	});
 };
 

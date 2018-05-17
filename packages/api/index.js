@@ -82,7 +82,10 @@ function init(All) {
 
 	exports.Href = models.Href;
 	exports.Block = models.Block;
-	exports.trx = knexInst.transaction.bind(knexInst);
+	exports.transaction = function(fn) {
+		if (fn) return knextInst.transaction(fn);
+		else return objection.transaction.start(knexInst);
+	};
 
 	exports.migrate = dba.migrate.bind(null, knexInst, opt.migrations);
 	exports.seed = dba.seed.bind(null, knexInst, opt.seeds);

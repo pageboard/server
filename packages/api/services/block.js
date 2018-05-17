@@ -246,12 +246,12 @@ exports.find.external = true;
 exports.add = function(site, data) {
 	var id = data.parent;
 	delete data.parent;
-	return All.api.trx(function(trx) {
-		return site.$relatedQuery('children', trx).insert(data).then(function(child) {
-			if (!id) return child;
-			return site.$relatedQuery('children', trx).where('block.id', id)
-			.select('_id').first().throwIfNotFound().then(function(parent) {
-				return parent.$relatedQuery('children', trx).relate(child);
+	return site.$relatedQuery('children').insert(data).then(function(child) {
+		if (!id) return child;
+		return site.$relatedQuery('children').where('block.id', id)
+		.first().throwIfNotFound().then(function(parent) {
+			return parent.$relatedQuery('children').relate(child).then(function() {
+				return child;
 			});
 		});
 	});
@@ -267,12 +267,10 @@ exports.add.schema = {
 exports.add.external = true;
 
 exports.save = function(site, data) {
-	return All.api.trx(function(trx) {
-		return exports.get(site, data).transacting(trx).forUpdate().then(function(block) {
-			return site.$relatedQuery('children', trx).patchObject(data)
-			.where('block.id', block.id).then(function(count) {
-				if (count == 0) throw new Error(`Block not found for update ${data.id}`);
-			});
+	return exports.get(site, data).forUpdate().then(function(block) {
+		return site.$relatedQuery('children').patchObject(data)
+		.where('block.id', block.id).then(function(count) {
+			if (count == 0) throw new Error(`Block not found for update ${data.id}`);
 		});
 	});
 };

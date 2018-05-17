@@ -21,6 +21,7 @@ var InstanceUpdateOperation = require(
 
 exports.Model = class CommonModel extends Model {
 	$query(trx) {
+		if (this.trx && !trx) trx = this.trx;
 		return super.$query(trx).patchObjectOperationFactory(() => {
 			return new InstancePatchObjectOperation('patch', {
 				instance: this,
@@ -28,6 +29,12 @@ exports.Model = class CommonModel extends Model {
 			});
 		});
 	}
+
+	$relatedQuery(what, trx) {
+		if (this.trx && !trx) trx = this.trx;
+		return super.$relatedQuery(what, trx);
+	}
+
 	get $model() {
 		return this.constructor;
 	}
