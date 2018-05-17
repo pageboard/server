@@ -371,7 +371,39 @@ function run(apiStr) {
 			console.error(`run ${apiStr} ${JSON.stringify(data)}`);
 			throw err;
 		}
-		return fun.apply(mod, args);
+		// start a transaction on set trx object on site
+		var site = args.length == 2 ? args[0] : null;
+		var hadTrx = false;
+		return Promise.resolve().then(function() {
+			if (!site) {
+				return;
+			}
+			if (site.trx) {
+				hadTrx = true;
+				return;
+			}
+			return All.api.transaction().then(function(trx) {
+				site.trx = trx;
+			});
+		}).then(function() {
+			return fun.apply(mod, args);
+		}).then(function(obj) {
+			if (!hadTrx && site) {
+				return site.trx.commit().then(function() {
+					return obj;
+				});
+			}
+			return obj;
+		}).catch(function(err) {
+			if (!hadTrx && site) {
+				return site.trx.rollback().then(function() {
+					throw err;
+				});
+			} else {
+				throw err;
+			}
+
+		});
 	}.bind(this));
 }
 
