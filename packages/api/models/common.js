@@ -50,6 +50,12 @@ exports.Model = class CommonModel extends Model {
 	$raw(str) {
 		return objection.raw(str);
 	}
+
+	$formatJson(json) {
+		let superJson = super.$formatJson(json);
+		delete superJson._id;
+		return superJson;
+	}
 };
 
 exports.QueryBuilder = class CommonQueryBuilder extends QueryBuilder {

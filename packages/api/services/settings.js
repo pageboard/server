@@ -35,14 +35,13 @@ Object.defineProperty(exports.find, 'schema', {
 });
 
 exports.save = function(site, data) {
-	return exports.find(site, data).select('settings._id').then(function(settings) {
-			delete settings._id;
+	return exports.find(site, data).then(function(settings) {
 		return settings.$query(site.trx).patchObject({data: data.data}).then(function() {
 			return settings;
 		});
 	}).catch(function(err) {
 		if (err.statusCode != 404) throw err;
-		return All.user.get(data).select('_id').then(function(user) {
+		return All.user.get(data).then(function(user) {
 			return site.$model.query(site.trx).insertGraph({
 				type: 'settings',
 				data: data.data,
@@ -51,7 +50,6 @@ exports.save = function(site, data) {
 				relate: ['parents']
 			}).then(function(settings) {
 				delete settings.parents;
-				delete settings._id;
 				return settings;
 			});
 		});

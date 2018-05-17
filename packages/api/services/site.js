@@ -124,8 +124,8 @@ exports.add.schema = {
 };
 
 exports.save = function(data) {
-		return exports.get(data).select('_id').transacting(trx).forUpdate().then(function(site) {
 	return All.api.transaction(function(trx) {
+		return exports.get(data).transacting(trx).forUpdate().then(function(site) {
 			lodashMerge(site.data, data.data);
 			return All.install(site).then(function(site) {
 				return site.$query(trx).patchObject({

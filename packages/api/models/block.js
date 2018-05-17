@@ -91,7 +91,8 @@ Block.jsonSchema = {
 	additionalProperties: false
 };
 
-Block.columns = Object.keys(Block.jsonSchema.properties);
+// _id is removed in $formatJson
+Block.columns = Object.keys(Block.jsonSchema.properties).concat(['_id']);
 
 Block.createNotFoundError = function(data) {
 	return new HttpError.NotFound("Block not found");
