@@ -17,7 +17,7 @@ exports.subscribe = function(site, data) {
 			id: data.id,
 			type: 'event_date'
 		}).then(function(eventDate) {
-			var total = data.reservation.seats + eventDate.data.reservations;
+			var total = data.reservation.seats + (eventDate.data.reservations || 0);
 			if (eventDate.data.seats > 0 && total > eventDate.data.seats) {
 				throw new HttpError.BadRequest("Cannot reserve that much seats");
 			}
