@@ -58,6 +58,7 @@ exports.subscribe.schema = {
 		},
 		settings: {
 			type: 'object',
+			default: {},
 			properties: {
 				allowNews: {
 					title: 'Allow sending news',
