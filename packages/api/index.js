@@ -84,7 +84,7 @@ function init(All) {
 	exports.Href = models.Href;
 	exports.Block = models.Block;
 	exports.transaction = function(fn) {
-		if (fn) return knextInst.transaction(fn);
+		if (fn) return knexInst.transaction(fn);
 		else return objection.transaction.start(knexInst);
 	};
 
