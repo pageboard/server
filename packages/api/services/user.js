@@ -46,11 +46,7 @@ exports.add = function(data) {
 	data = Object.assign({
 		type: 'user'
 	}, data);
-	return All.api.Block.query().insert(data).then(function(user) {
-		if (data.domain) return All.site.get(data).then(function(site) {
-			return site.relate(user);
-		});
-	});
+	return All.api.Block.query().insert(data);
 };
 
 exports.save = function(data) {
