@@ -16,6 +16,8 @@ function init(All) {
 		}).catch(next);
 	});
 	All.app.get('/.api/pages', function(req, res, next) {
+		var data = req.query;
+		if (All.auth.test(req, 'webmaster')) req.query.drafts = true;
 		All.run('page.list', req.site, req.query).then(function(pages) {
 			res.send(pages);
 		}).catch(next);
@@ -178,6 +180,9 @@ function listPages(site, data) {
 	.select()
 	.omit(['content'])
 	.where('block.type', 'page');
+	if (!data.drafts) {
+		q.whereNotNull(ref('block.data:url'));
+	}
 	if (data.parent) {
 		q.whereJsonText('block.data:url', '~', `^${data.parent}/[^/]+$`)
 		.orderBy(ref('block.data:index'));
@@ -289,6 +294,11 @@ exports.list.schema = {
 		},
 		url: {
 			type: 'string'
+		},
+		drafts: {
+			title: 'Show pages that have no url',
+			type: 'boolean',
+			default: false
 		}
 	}
 };
@@ -324,11 +334,16 @@ exports.save = function(site, changes) {
 	var allUrl = {};
 	return site.$relatedQuery('children')
 	.select('block.id', ref('block.data:url').as('url'))
-	.where('block.type', 'page').then(function(dbPages) {
+	.where('block.type', 'page').whereNotNull(ref('block.data:url')).then(function(dbPages) {
 		pages.all.forEach(function(page) {
-			if (allUrl[page.data.url]) throw new HttpError.BadRequest("Two pages with same url");
-			if (!page.id) throw new HttpError.BadRequest("Page without id");
-			allUrl[page.data.url] = page.id;
+			if (!page.data.url || page.data.url.startsWith('/$/')) {
+				delete page.data.url;
+			} else if (allUrl[page.data.url]) {
+				throw new HttpError.BadRequest("Two pages with same url");
+			} else {
+				if (!page.id) throw new HttpError.BadRequest("Page without id");
+				allUrl[page.data.url] = page.id;
+			}
 		});
 		dbPages.forEach(function(dbPage) {
 			var id = allUrl[dbPage.url];
@@ -351,6 +366,7 @@ exports.save = function(site, changes) {
 	}).then(function() {
 		// do not return that promise - reply now
 		Promise.all(pages.update.map(function(child) {
+			if (!child.data.url) return;
 			return All.href.save(site, {
 				url: child.data.url,
 				title: child.data.title
@@ -364,6 +380,7 @@ exports.save = function(site, changes) {
 			});
 		}));
 		Promise.all(pages.add.map(function(child) {
+			if (!child.data.url) return;
 			// problem: added pages are not saved here
 			return All.href.add(site, {
 				url: child.data.url
