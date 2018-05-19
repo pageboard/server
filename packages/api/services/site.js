@@ -1,4 +1,5 @@
 var ref = require('objection').ref;
+var raw = require('objection').raw;
 var lodashMerge = require('lodash.merge');
 
 exports = module.exports = function(opt) {
@@ -12,6 +13,15 @@ function init(All) {
 }
 
 function QuerySite(data) {
+	/* gets distinct typesin this site as json array
+	.select(
+		Block.query().from('block AS b')
+			.select(raw('array_to_json(array_agg(distinct b.type))'))
+			.join('relation as r', 'b._id', 'r.child_id')
+			.where('r.parent_id', ref('site._id'))
+			.as('types')
+	)
+	*/
 	var Block = All.api.Block;
 	var q = Block.query().alias('site')
 	.first().throwIfNotFound()
