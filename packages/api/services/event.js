@@ -13,10 +13,12 @@ exports.subscribe = function(site, data) {
 			event: data.settings
 		}
 	}).then(function(settings) {
-		return All.block.get(site, {
+		return All.run('block.find', site, {
 			id: data.id,
-			type: 'event_date'
-		}).then(function(eventDate) {
+			type: 'event_date',
+			parents: {type: 'event', first: true}
+		}).then(function(foundObj) {
+			var eventDate = foundObj.data;
 			var total = data.reservation.seats + (eventDate.data.reservations || 0);
 			if (eventDate.data.seats > 0 && total > eventDate.data.seats) {
 				throw new HttpError.BadRequest("Cannot reserve that much seats");
