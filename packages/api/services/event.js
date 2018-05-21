@@ -44,6 +44,24 @@ exports.subscribe = function(site, data) {
 					};
 				});
 			});
+		}).then(function(obj) {
+			if (!data.url) return obj; // can't send confirmation email
+			var date = obj.date;
+			var event = date.parent;
+			var resa = obj.reservation;
+			return All.run('mail.send', site, {
+				url: data.url,
+				to: data.email,
+				query: {
+					title: event.data.title,
+					venue: event.data.venue,
+					begin: date.data.slot.start,
+					end: date.data.slot.end,
+					seats: resa.data.seats,
+					name: resa.data.name,
+					groups: event.data.groupsOnly
+				}
+			});
 		});
 	});
 };
@@ -57,6 +75,18 @@ exports.subscribe.schema = {
 		email: {
 			type: 'string',
 			format: 'email'
+		},
+		url: {
+			title: 'email page template',
+			anyOf: [{
+				type: "null"
+			}, {
+				type: "string",
+				format: "uri"
+			}, {
+				type: "string",
+				pattern: "^(/[\\w-.]*)+$"
+			}],
 		},
 		settings: {
 			type: 'object',
