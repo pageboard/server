@@ -364,8 +364,7 @@ exports.save = function(site, changes) {
 			return applyRelate(site, changes.relate);
 		});
 	}).then(function() {
-		// do not return that promise - reply now
-		Promise.all(pages.update.map(function(child) {
+		return Promise.all(pages.update.map(function(child) {
 			if (!child.data.url) return;
 			return All.href.save(site, {
 				url: child.data.url,
@@ -379,7 +378,8 @@ exports.save = function(site, changes) {
 				else console.error(err);
 			});
 		}));
-		Promise.all(pages.add.map(function(child) {
+	}).then(function() {
+		return Promise.all(pages.add.map(function(child) {
 			if (!child.data.url) return;
 			// problem: added pages are not saved here
 			return All.href.add(site, {
@@ -388,6 +388,7 @@ exports.save = function(site, changes) {
 				console.error(err);
 			});
 		}));
+	}).then(function() {
 		// TODO return saved time stamp
 		return {};
 	});
