@@ -19,13 +19,13 @@ var ajvApiSettings = {
 	coerceTypes: 'array',
 	removeAdditional: false
 };
-var ajvApiWithDefaults = ajv(Object.assign({}, ajvApiSettings, {
+var ajvApiWithDefaults = AjvKeywords(ajv(Object.assign({}, ajvApiSettings, {
 	useDefaults: true
-})).addMetaSchema(ajvMetaSchema);
+})).addMetaSchema(ajvMetaSchema));
 
-var ajvApiWithNoDefaults = ajv(Object.assign({}, ajvApiSettings, {
+var ajvApiWithNoDefaults = AjvKeywords(ajv(Object.assign({}, ajvApiSettings, {
 	useDefaults: false
-})).addMetaSchema(ajvMetaSchema);
+})).addMetaSchema(ajvMetaSchema));
 
 exports = module.exports = function(opt) {
 	opt.plugins.unshift(
@@ -61,7 +61,7 @@ function init(All) {
 		return new objection.AjvValidator({
 			onCreateAjv: function(ajv) {
 				ajv.addMetaSchema(ajvMetaSchema);
-				AjvKeywords(ajv, 'select');
+				AjvKeywords(ajv);
 			},
 			options: {
 				$data: true,
