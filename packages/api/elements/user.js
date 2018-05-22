@@ -3,7 +3,8 @@ Pageboard.elements.user = {
 	properties: {
 		email: {
 			type: 'string',
-			format: 'email'
+			format: 'email',
+			transform: ['trim', 'toLowerCase']
 		}
 	}
 };
