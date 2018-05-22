@@ -34,9 +34,8 @@ exports.get.schema = {
 			type: 'string',
 			minLength: 1
 		},
-		email: {
-			type: 'string',
-			format: 'email'
+		get email() {
+			return All.api.Block.schema('user.data.email');
 		}
 	},
 	additionalProperties: false
