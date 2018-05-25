@@ -569,7 +569,8 @@ exports.del = function(site, data) {
 
 exports.robots = function(site) {
 	var lines = ["User-agent: *"];
-	if (site.data.env == "production") {
+	if (site.data.env == "production" && site.hostname == site.data.domain) {
+		lines.push("Allow : /");
 		lines.push(`Sitemap: ${site.href}/.api/sitemap.txt`);
 	} else {
 		lines.push("Disallow: /");
