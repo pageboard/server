@@ -22,7 +22,7 @@ Page.route(function(state) {
 			elements: Pageboard.elements
 		});
 		Pageboard.hrefs = page.hrefs || {};
-		var site = page.site;
+		Pageboard.site = page.site;
 		delete page.hrefs;
 		delete page.site;
 		return Pageboard.view.from(page).then(function(body) {
@@ -36,11 +36,9 @@ Page.route(function(state) {
 				Pageboard.write = true;
 				window.parent.Pageboard.install(doc);
 			}
-			page.site = site;
 			return Promise.all(Pageboard.view.elements.map(function(el) {
 				if (el.install) return el.install.call(el, doc, page, Pageboard.view);
 			})).then(function() {
-				delete page.site;
 				state.document = doc;
 			});
 		});
