@@ -54,9 +54,10 @@ Pageboard.elements.page = {
 	},
 	icon: '<i class="icon file outline"></i>',
 	render: function(doc, block) {
-		if (block.data.redirect && block.data.redirect != block.data.url) {
+		var d = block.data;
+		if (d.redirect && d.redirect != d.url && (!d.transition || !d.transition.from)) {
 			doc.head.appendChild(doc.dom`<meta http-equiv="Status" content="302 Found">
-	<meta http-equiv="Location" content="${block.data.redirect}">`);
+	<meta http-equiv="Location" content="${d.redirect}">`);
 		}
 		doc.body.setAttribute('block-content', "body");
 		var title = doc.head.querySelector('title');
@@ -73,7 +74,7 @@ Pageboard.elements.page = {
 				doc.documentElement.lang = site.lang;
 			}
 		}
-		title.textContent = block.data.title || '';
+		title.textContent = d.title || '';
 		return doc.body;
 	},
 	install: function(doc, page, view) {

@@ -130,22 +130,23 @@ exports.get = function(site, data) {
 			getParents(site, pageUrl),
 			listPages(site, {
 				parent: pageUrl.split('/').slice(0, -1).join('/') || '/'
-			}).select([
+			}).clearSelect().select([
 				ref('block.data:url').as('url'),
+				ref('block.data:redirect').as('redirect'),
 				ref('block.data:title').as('title')
-			]).omit(site.$model.columns)
+			])
 		]).then(function(list) {
 			page.links = {};
-			page.links.up = list[0];
+			page.links.up = list[0].map(redUrl);
 			var siblings = list[1];
 			var position = siblings.findIndex(function(item) {
 				return item.url == pageUrl;
 			});
-			if (position > 0) page.links.prev = siblings[position - 1];
-			if (position < siblings.length - 1) page.links.next = siblings[position + 1];
+			if (position > 0) page.links.prev = redUrl(siblings[position - 1]);
+			if (position < siblings.length - 1) page.links.next = redUrl(siblings[position + 1]);
 			if (siblings.length > 1) {
-				page.links.first = siblings[0];
-				page.links.last = siblings[siblings.length - 1];
+				page.links.first = redUrl(siblings[0]);
+				page.links.last = redUrl(siblings[siblings.length - 1]);
 			}
 			return page;
 		});
@@ -160,6 +161,14 @@ exports.get.schema = {
 	}
 };
 
+function redUrl(obj) {
+	if (obj.redirect) {
+		obj.url = obj.redirect;
+	}
+	delete obj.redirect;
+	return obj;
+}
+
 function getParents(site, url) {
 	var urlParts = url.split('/');
 	var urlParents = ['/'];
@@ -168,6 +177,7 @@ function getParents(site, url) {
 	}
 	return site.$relatedQuery('children').select([
 		ref('block.data:url').as('url'),
+		ref('block.data:redirect').as('redirect'),
 		ref('block.data:title').as('title')
 	])
 	.where('block.type', 'page')
