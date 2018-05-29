@@ -1,3 +1,5 @@
+var lodashMerge = require('lodash.merge');
+
 exports = module.exports = function(opt) {
 	return {
 		name: 'search',
@@ -36,19 +38,20 @@ exports.query = function(site, data) {
 		// consts: destPath: val
 		// vars: destPath: queryPath
 		// allow rewriting variables
+		var copy = lodashMerge({}, data);
 		if (fd.vars) Object.keys(fd.vars).forEach(function(key) {
 			var varName = fd.vars[key];
 			if (!varName) return;
 			varName = varName.split('|').shift();
 			var val = getVar(data, varName);
 			if (val === undefined) return;
-			setVar(data, varName);
+			setVar(copy, varName); // problem, it removes the variables but might need it later...
 			setVar(params, key, val);
 		});
 		if (fd.type) {
 			params.type = fd.type;
-			if (Object.keys(data).length > 0) {
-				params.data = data;
+			if (Object.keys(copy).length > 0) {
+				params.data = copy;
 			}
 		}
 		// overwriting values
