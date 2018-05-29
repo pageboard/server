@@ -104,8 +104,8 @@ exports.QueryBuilder = class CommonQueryBuilder extends QueryBuilder {
 		this.addOperation(patchObjectOperation, [obj]);
 		return this;
 	}
-	whereObject(obj, schema) {
-		var table = this.tableRefFor(this.modelClass());
+	whereObject(obj, schema, alias) {
+		var table = alias || this.tableRefFor(this.modelClass());
 		var refs = asPaths(obj, {}, table + '.', true, schema);
 		Object.keys(refs).forEach(function(k) {
 			var cond = refs[k];

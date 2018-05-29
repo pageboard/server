@@ -1,4 +1,5 @@
 var ref = require('objection').ref;
+var raw = require('objection').raw;
 
 exports = module.exports = function(opt) {
 	return {
@@ -48,56 +49,49 @@ exports.get.schema = {
 };
 
 exports.search = function(site, data) {
-	var q = site.$relatedQuery('children').select()
-		.where('block.type', data.type);
+	var schemas = {};
+	if (data.type) {
+		schemas[data.type] = site.$schema(data.type);
+	}
+	if (data.parents && data.parents.type) {
+		schemas[data.parents.type] = site.$schema(data.parents.type);
+	}
+	if (data.children && data.children.type) {
+		schemas[data.children.type] = site.$schema(data.children.type);
+	}
+	var q = site.$relatedQuery('children');
 	if (data.parent) {
 		q.joinRelation('parents', {alias: 'parent'}).where('parent.id', data.parent);
 	}
-	if (data.parents) q.eager('[parents(parentFilter)]', {
-		parentFilter: function(query) {
-			query.select();
-			if (data.parents.type) query.whereIn('block.type', data.parents.type);
+	if (data.child) {
+		q.joinRelation('children', {alias: 'child'})
+		.whereObject(data.child, schemas[data.children.type], 'child');
+	}
+
+	filterSub(q, data, schemas[data.type]);
+
+	if (data.parents) q.eager('[parents(parentsFilter)]', {
+		parentsFilter: function(query) {
+			filterSub(query, data.parents, schemas[data.parents.type]);
 		}
 	});
-	if (data.children) q.eager('[children(childrenFilter)]', {
-		childrenFilter: function(query) {
-			query.select();
-			if (data.children.type) query.whereIn('block.type', data.children.type);
-			if (data.children.order) data.children.order.forEach(function(order) {
-				var {col, dir} = parseOrder('block', order);
-				query.orderBy(col, dir);
-			});
-		}
-	});
-	var schemas = {};
-	[data.type].concat(data.children && data.children.type || [])
-	.concat(data.parents && data.parents.type || [])
-	.forEach(function(type) {
-		var sch = site.$schema(type);
-		if (sch) schemas[type] = sch;
-		else console.warn(`Unknown schema for type '${type}'`);
-	});
-	if (data.id) {
-		q.where('block.id', data.id);
+
+	if (data.children) {
+		if (data.children.count) {
+			delete data.children.count;
+			delete data.children.limit;
+			delete data.children.offset;
+			var qc = site.$relatedQuery('children').alias('children');
+			whereSub(qc, data.children, schemas[data.children.type], 'children');
+			qc.joinRelation('parents', {alias: 'parents'}).where('parents._id', ref('block._id'))
+			q.select(All.api.Block.query().count().from(qc.as('sub')).as('childrenCount'));
+		} else q.eager('[children(childrenFilter)]', {
+			childrenFilter: function(query) {
+				filterSub(query, data.children, schemas[data.children.type]);
+			}
+		});
 	}
-	if (data.data) {
-		q.whereObject({data: data.data}, schemas[data.type]);
-	}
-	if (data.text != null) {
-		var text = data.text.split(/\W+/).filter(x => !!x).map(x => x + ':*').join(' <-> ');
-		q.from(Block.raw([
-			Block.raw("to_tsquery('unaccent', ?) AS query", [text]),
-			'block'
-		]));
-		q.whereRaw('query @@ block.tsv');
-		q.orderByRaw('ts_rank(block.tsv, query) DESC');
-	}
-	if (data.order) data.order.forEach(function(order) {
-		var {col, dir} = parseOrder('block', order);
-		q.orderBy(col, dir);
-	});
-	q.orderBy('updated_at', 'block.asc');
-	q.offset(data.offset).limit(data.limit);
+
 	return q.then(function(rows) {
 		var obj = {
 			data: rows,
@@ -118,39 +112,60 @@ exports.search.schema = {
 	required: ['type'],
 	properties: {
 		text: {
-			type: 'string'
+			type: ['null', 'string']
 		},
 		parent: {
 			type: 'string'
 		},
+		child: {
+			type: 'object',
+		},
 		parents: {
 			type: 'object',
 			required: ['type'],
+			additionalProperties: false,
 			properties: {
 				first: {
 					type: 'boolean',
 					default: false
 				},
 				type: {
+					type: 'string',
+					not: { // TODO permissions should be managed dynamically
+						oneOf: [{
+							const: "user"
+						}, {
+							const: "site"
+						}]
+					}
+				},
+				text: {
+					type: ['null', 'string']
+				},
+				data: {
+					type: 'object'
+				},
+				order: {
 					type: 'array',
 					items: {
-						type: 'string',
-						not: { // TODO permissions should be managed dynamically
-							oneOf: [{
-								const: "user"
-							}, {
-								const: "site"
-							}]
-						}
+						type: 'string'
 					}
+				},
+				limit: {
+					type: 'integer',
+					minimum: 0,
+					maximum: 50,
+					default: 10
+				},
+				offset: {
+					type: 'integer',
+					minimum: 0,
+					default: 0
 				}
 			}
 		},
 		id: {
 			type: 'string'
-		},
-		data: {
-			type: 'object'
 		},
 		type: {
 			type: 'string',
@@ -162,30 +177,8 @@ exports.search.schema = {
 				}]
 			}
 		},
-		children: {
-			type: 'object',
-			required: ['type'],
-			properties: {
-				type: {
-					type: 'array',
-					items: {
-						type: 'string',
-						not: { // TODO permissions should be managed dynamically
-							oneOf: [{
-								const: "user"
-							}, {
-								const: "site"
-							}]
-						}
-					}
-				},
-				order: {
-					type: 'array',
-					items: {
-						type: 'string'
-					}
-				}
-			}
+		data: {
+			type: 'object'
 		},
 		order: {
 			type: 'array',
@@ -203,11 +196,87 @@ exports.search.schema = {
 			type: 'integer',
 			minimum: 0,
 			default: 0
+		},
+		children: {
+			type: 'object',
+			required: ['type'],
+			additionalProperties: false,
+			properties: {
+				type: {
+					type: 'string',
+					not: { // TODO permissions should be managed dynamically
+						oneOf: [{
+							const: "user"
+						}, {
+							const: "site"
+						}]
+					}
+				},
+				text: {
+					type: ['null', 'string']
+				},
+				data: {
+					type: 'object'
+				},
+				order: {
+					type: 'array',
+					items: {
+						type: 'string'
+					}
+				},
+				limit: {
+					type: 'integer',
+					minimum: 0,
+					maximum: 50,
+					default: 10
+				},
+				offset: {
+					type: 'integer',
+					minimum: 0,
+					default: 0
+				},
+				count: {
+					type: 'boolean',
+					default: false
+				}
+			}
 		}
 	},
 	additionalProperties: false
 };
 exports.search.external = true;
+
+function whereSub(q, data, schema, alias = 'block') {
+	if (data.type) {
+		q.where(`${alias}.type`, data.type);
+	}
+	if (data.id) {
+		q.where(`${alias}.id`, data.id);
+	}
+	if (data.data) {
+		q.whereObject({data: data.data}, schema, alias);
+	}
+	if (data.text) {
+		var text = data.text.split(/\W+/).filter(x => !!x).map(x => x + ':*').join(' <-> ');
+		q.from(raw([
+			raw("to_tsquery('unaccent', ?) AS query", [text]),
+			alias
+		]));
+		q.whereRaw(`query @@ ${alias}.tsv`);
+		q.orderByRaw(`ts_rank(${alias}.tsv, query) DESC`);
+	}
+}
+
+function filterSub(q, data, schema) {
+	q.select();
+	whereSub(q, data, schema);
+	if (data.order) data.order.forEach(function(order) {
+		var {col, dir} = parseOrder('block', order);
+		q.orderBy(col, dir);
+	});
+	q.orderBy('block.updated_at', 'asc');
+	q.offset(data.offset).limit(data.limit);
+}
 
 exports.find = function(site, data) {
 	data.limit = 1;
@@ -319,7 +388,7 @@ exports.del.schema = {
 exports.del.external = true;
 
 exports.gc = function(days) {
-	return All.api.Block.raw(`DELETE FROM block USING (
+	return raw(`DELETE FROM block USING (
 		SELECT count(relation.child_id), b._id FROM block AS b
 			LEFT OUTER JOIN relation ON (relation.child_id = b._id)
 			LEFT JOIN block AS p ON (p._id = relation.parent_id AND p.type='site')
