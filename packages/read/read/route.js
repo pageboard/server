@@ -30,7 +30,10 @@ Page.route(function(state) {
 				throw new Error("Element page.render did not return a body node");
 			}
 			var doc = body.ownerDocument;
-			doc.documentElement.replaceChild(body, doc.body);
+			if (body.parentNode != doc.documentElement) {
+				console.warn("route needs to replace body");
+				doc.documentElement.replaceChild(body, doc.body);
+			}
 
 			if (window.parent.Pageboard && window.parent.Pageboard.write) {
 				Pageboard.write = true;
