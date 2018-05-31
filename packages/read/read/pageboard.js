@@ -36,7 +36,13 @@ Pageboard.fetch = function(method, url, data) {
 	}
 
 	var p = fetch(url, fetchOpts).then(function(res) {
-		if (res.status >= 400) throw new Error(res.statusText);
+		if (res.status >= 400) {
+			return res.text().then(function(text) {
+				var err = new Error(res.statusText);
+				err.body = text;
+				throw err;
+			});
+		}
 		if (res.status == 204) return null;
 		return res.json();
 	});
