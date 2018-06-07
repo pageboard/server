@@ -30,14 +30,7 @@ exports = module.exports = function(opt) {
 	return {
 		priority: -10, // because default prerendering happens at 0
 		name: 'mail',
-		/* disable /.api/mail because mail.send is called by /.api/form
-		service: function(All) {
-			All.app.post('/.api/email', All.body, function(req, res, next) {
-				exports.send(req.body).then(function(result) {
-					res.send(result);
-				}).catch(next);
-			});
-		},*/
+		service: function(All) {}, // needed to register a service
 		view: function(All) {
 			return domemail.init().then(function() {
 				// TODO remove cache.tag call if express-dom keeps headers when proxying
