@@ -35,10 +35,7 @@ Domains.prototype.init = function(req, res, next) {
 			name: hostname
 		};
 	}
-	if (host._error) {
-		return next(host._error);
-	}
-	if (!host.searching) {
+	if (!host.searching && !host._error) {
 		host.isSearching = true;
 		host.searching = Promise.resolve().then(function() {
 			return this.check(host, req);
@@ -75,7 +72,7 @@ Domains.prototype.init = function(req, res, next) {
 			host.isSearching = false;
 		});
 	}
-	if (!host.installing) {
+	if (!host.installing && !host._error) {
 		host.isInstalling = true;
 		host.installing = host.searching.then(function(site) {
 			if (host._error) return;
@@ -87,7 +84,7 @@ Domains.prototype.init = function(req, res, next) {
 			host.isInstalling = false;
 		});
 	}
-	if (!host.waiting) {
+	if (!host.waiting && !host._error) {
 		doWait(host);
 	}
 
@@ -120,7 +117,10 @@ Domains.prototype.init = function(req, res, next) {
 	}
 	return p.then(function() {
 		if (!next) return;
-		if (host._error) return;
+		if (host._error) {
+			next(host._error);
+			return;
+		}
 		var site = self.sites[host.id];
 		var errors = site.errors;
 		if (req.url.startsWith('/.api/')) {
