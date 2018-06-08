@@ -63,8 +63,8 @@ function preview(obj) {
 			return obj;
 		});
 	}
-	if (description != null) {
-		obj.preview = description;
+	if (desc) {
+		obj.preview = desc;
 	}
 	return Promise.resolve(obj);
 }
