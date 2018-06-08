@@ -64,7 +64,7 @@ exports.search = function(site, data) {
 	if (data.url) {
 		q.where('url', data.url);
 	} else if (data.text) {
-		var text = data.text.split(' ').filter(x => !!x).map(x => x + ':*').join(' <-> ');
+		var text = data.text.split(/\W+/).filter(x => !!x).map(x => x + ':*').join(' <-> ');
 		q.from(Href.raw([
 			Href.raw("to_tsquery('unaccent', ?) AS query", [text]),
 			'href'
