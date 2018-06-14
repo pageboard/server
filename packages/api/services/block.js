@@ -154,7 +154,7 @@ exports.search.schema = {
 				limit: {
 					type: 'integer',
 					minimum: 0,
-					maximum: 50,
+					maximum: 100,
 					default: 10
 				},
 				offset: {
@@ -189,7 +189,7 @@ exports.search.schema = {
 		limit: {
 			type: 'integer',
 			minimum: 0,
-			maximum: 50,
+			maximum: 100,
 			default: 10
 		},
 		offset: {
