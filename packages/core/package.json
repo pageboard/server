@@ -49,7 +49,7 @@
   },
   "pageboard": {
     "directories": [
-      "core"
+      "statics"
     ]
   }
 }

@@ -138,7 +138,7 @@ exports.init = function(opt) {
 		return All.api.install(null, All.opt, All);
 	}).then(function() {
 //		return All.cache.install(null, All.opt, All);
-		return fs.readFile(Path.join(__dirname, 'core/status.html')).then(function(buf) {
+		return fs.readFile(Path.join(__dirname, 'statics/status.html')).then(function(buf) {
 			statusPage = buf;
 		});
 	}).then(function() {
