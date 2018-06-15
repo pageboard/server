@@ -128,7 +128,7 @@ function decideInstall(dataDir, site) {
 	var version = site.data.version;
 	if (version == "") version = site.data.version = null; // temporary fix, should not happen
 	if (version == null) {
-		version = "~";
+		version = "-";
 	} else if (/\s/.test(version) == true || semverRegex().test(version) == false && /^\w+$/.test(version) == false) {
 		return Promise.reject(new Error(`${site.id} has invalid version ${version}`));
 	}
@@ -234,7 +234,7 @@ function doInstall(site, pkg, opt) {
 }
 
 function populatePkg(site, pkg) {
-	var version = pkg.version != null ? pkg.version : site.data.version != null ? site.data.version : '~';
+	var version = pkg.version != null ? pkg.version : site.data.version != null ? site.data.version : '-';
 	var pair = `${site.id}/${version}`;
 	var siteModuleDir = Path.join(pkg.dir, 'node_modules', pkg.name);
 	return fs.readFile(Path.join(siteModuleDir, "package.json")).then(function(buf) {
