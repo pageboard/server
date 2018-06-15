@@ -78,28 +78,6 @@ Pageboard.elements.page = {
 		}
 		title.textContent = d.title || '';
 		return doc.body;
-	},
-	install: function(doc, page, view) {
-		// must happen after all el.install methods have been called
-		return (new Promise(function(resolve) {
-			setTimeout(resolve);
-		})).then(function() {
-			view.elements.forEach(function(el) {
-				if (el.name == this.name) return;
-				if (el.scripts) Array.prototype.push.apply(this.scripts, el.scripts);
-				if (el.stylesheets) Array.prototype.push.apply(this.stylesheets, el.stylesheets);
-			}, this);
-			doc.head.insertAdjacentHTML('beforeEnd', "\n" +
-				this.stylesheets.map(function(href) {
-					return `<link rel="stylesheet" href="${href}" />`;
-				}).join("\n")
-			);
-			doc.head.insertAdjacentHTML('beforeEnd', "\n" +
-				this.scripts.map(function(src) {
-					return `<script src="${src}"></script>`;
-				}).join("\n")
-			);
-		}.bind(this));
 	}
 };
 
@@ -110,8 +88,7 @@ Pageboard.elements.notfound = Object.assign({}, Pageboard.elements.page, {
 	render: function(doc, block, view) {
 		doc.head.appendChild(doc.dom`<meta http-equiv="Status" content="404 Not Found">`);
 		return Pageboard.elements.page.render(doc, block, view);
-	},
-	install: null
+	}
 });
 delete Pageboard.elements.notfound.properties.url;
 
