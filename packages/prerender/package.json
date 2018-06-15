@@ -24,5 +24,6 @@
   "dependencies": {
     "express-dom": "^5.9.2",
     "webkitgtk": "^4.8.5"
-  }
+  },
+  "pageboard": true
 }
