@@ -5,7 +5,8 @@ var pify = require('util').promisify;
 var fs = {
 	symlink: pify(require('fs').symlink),
 	unlink: pify(require('fs').unlink),
-	stat: pify(require('fs').stat)
+	stat: pify(require('fs').stat),
+	copyFile: pify(require('fs').copyFile)
 };
 
 var mkdirp = pify(require('mkdirp'));
@@ -107,14 +108,15 @@ function init(All) {
 
 exports.bundle = function(site, pkg, list, filename) {
 	if (list.length == 0) return [];
-	var output = Path.join(pkg.dir, filename);
+	var installPath = Path.join(pkg.dir, filename);
 	var opts = All.opt.statics;
-	var id = site.id;
 	var version = site.data.version;
 	if (version == null) version = '-';
 	var inputs = list.map(function(url) {
 		return urlToPath(opts, site.id, url);
 	});
+	var outUrl = `/.files/${version}/${filename}`;
+	var output = urlToPath(opts, site.id, outUrl);
 
 	if (!site.bundles) Object.defineProperty(site, 'bundles', {
 		value: {}
@@ -126,7 +128,7 @@ exports.bundle = function(site, pkg, list, filename) {
 		}
 	}
 	return Promise.resolve().then(function() {
-		if (version != '-') return fs.stat(output).catch(function(err) {})
+		if (version != '-') return fs.stat(installPath).catch(function(err) {})
 		.then(function(stat) {
 			return !!stat;
 		});
@@ -143,11 +145,16 @@ exports.bundle = function(site, pkg, list, filename) {
 			delete err.source;
 			if (err.reason) delete err.message;
 			throw err;
-		})
+		}).then(function() {
+			return true;
+		});
+	}).then(function(copyFromRuntime) {
+		if (copyFromRuntime) {
+			return fs.copyFile(output, installPath);
+		} else {
+			return fs.copyFile(installPath, output);
+		}
 	}).then(function() {
-		return mountPath(output, `/.files/${site.id}/${version}/${filename}`);
-	}).then(function() {
-		var outUrl = `/.files/${version}/${filename}`;
 		site.bundles[outUrl] = hash;
 		return [outUrl];
 	});
