@@ -42,6 +42,22 @@ Page.route(function(state) {
 			return Promise.all(Pageboard.view.elements.map(function(el) {
 				if (el.install) return el.install.call(el, doc, page, Pageboard.view);
 			})).then(function() {
+				var pageEl = Pageboard.elements[page.type];
+				Pageboard.view.elements.forEach(function(el) {
+					if (el.group == "page") return;
+					if (el.scripts) Array.prototype.push.apply(this.scripts, el.scripts);
+					if (el.stylesheets) Array.prototype.push.apply(this.stylesheets, el.stylesheets);
+				}, pageEl);
+				doc.head.insertAdjacentHTML('beforeEnd', "\n" +
+					pageEl.stylesheets.map(function(href) {
+						return `<link rel="stylesheet" href="${href}" />`;
+					}).join("\n")
+				);
+				doc.head.insertAdjacentHTML('beforeEnd', "\n" +
+					pageEl.scripts.map(function(src) {
+						return `<script src="${src}"></script>`;
+					}).join("\n")
+				);
 				state.document = doc;
 			});
 		});
