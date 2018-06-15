@@ -50,32 +50,21 @@ exports.install = function(site, pkg, All) {
 exports.validate = function(site, pkg) {
 	return Promise.resolve().then(function() {
 		var eltsMap = pkg.eltsMap;
-		var env = site.data.env;
+		var pages = [];
 		var list = Object.keys(eltsMap).map(function(key) {
 			var el = eltsMap[key];
 			if (!el.name) el.name = key;
+			if (el.group == "page") pages.push(el);
 			return el;
 		}).sort(function(a, b) {
 			return (a.priority || 0) - (b.priority || 0);
 		});
-		eltsMap.page = Object.assign({}, eltsMap.page);
-
-		var scripts = filter(list, 'scripts');
-		var styles = filter(list, 'stylesheets');
-
-		if (env == "dev" || !pkg.dir || !site.href) {
-			eltsMap.page.scripts = scripts;
-			eltsMap.page.stylesheets = styles;
-			return Promise.resolve();
-		}
-
-		return Promise.all([
-			All.statics.bundle(site, scripts, `scripts.js`),
-			All.statics.bundle(site, styles, `styles.css`)
-		]).then(function(both) {
-			eltsMap.page.scripts = both[0];
-			eltsMap.page.stylesheets = both[1];
-		});
+		return pages.reduce(function(p, page) {
+			return p.then(function() {
+				page = eltsMap[page.name] = Object.assign({}, page);
+				return bundle(site, pkg, page);
+			});
+		}, Promise.resolve());
 	}).then(function() {
 		site.constructor = pkg.Block;
 		site.$source = toSource(pkg.eltsMap);
@@ -83,6 +72,66 @@ exports.validate = function(site, pkg) {
 		delete pkg.Block;
 	});
 };
+
+function bundle(site, pkg, page) {
+	var list = listDependencies(site.id, pkg.eltsMap, page);
+	var scripts = filter(list, 'scripts');
+	var styles = filter(list, 'stylesheets');
+
+	if (site.data.env == "dev" || !pkg.dir || !site.href) {
+		page.scripts = scripts;
+		page.stylesheets = styles;
+		return Promise.resolve();
+	}
+
+	var prefix = page.name == "page" ? "" : `${page.name}-`;
+
+	return Promise.all([
+		All.statics.bundle(site, pkg, scripts, `${prefix}scripts.js`),
+		All.statics.bundle(site, pkg, styles, `${prefix}styles.css`)
+	]).then(function(both) {
+		page.scripts = both[0];
+		page.stylesheets = both[1];
+	});
+}
+
+function listDependencies(id, eltsMap, el, list=[], sieve={}) {
+	var word;
+	if (typeof el == "string") {
+		word = el;
+		el = eltsMap[word];
+		if (!el) {
+			var isGroup = false;
+			Object.keys(eltsMap).forEach(function(key) {
+				var el = eltsMap[key];
+				if (!el.group || el.group == "page") return;
+				if (el.group.split(" ").indexOf(word)) {
+					isGroup = true;
+					listDependencies(id, eltsMap, el, list, sieve);
+				}
+			});
+			if (!isGroup) console.error("Cannot find element");
+		}
+	}
+	if (!el || sieve[el.name]) return list;
+	list.push(el);
+	sieve[el.name] = true;
+	if (!el.contents) return list;
+	var contents = el.contents;
+	if (typeof contents == "string") contents = {content: contents};
+	Object.keys(contents).forEach(function(key) {
+		var val = contents[key];
+		var spec = typeof val == "string" ? val : val.spec;
+		if (!spec) return;
+		spec.split(/\W+/).filter(x => !!x).forEach(function(word) {
+			if (word == "text" || word == "page") return;
+			if (!sieve[word]) {
+				listDependencies(id, eltsMap, word, list, sieve);
+			}
+		});
+	});
+	return list;
+}
 
 function filter(elements, prop) {
 	var map = {};
