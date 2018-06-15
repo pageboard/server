@@ -36,23 +36,12 @@ exports.install = function(site, opt) {
 
 exports.config = function(moduleDir, id, module, config) {
 	debug("Module directory", module, moduleDir);
-	return fs.readFile(Path.join(moduleDir, 'package.json')).catch(function(err) {
-		// it's ok to not have a package.json here
-		return false;
-	}).then(function(buf) {
-		var dstDir = id != 'pageboard' ? Path.join('/', '.files', id, module) : '/.' + id;
-		if (buf === false) {
-			console.info(`${moduleDir} has no package.json, mounting the module directory`);
-			config.directories.push({
-				from: Path.resolve(moduleDir),
-				to: dstDir
-			});
-			return;
-		}
+	return fs.readFile(Path.join(moduleDir, 'package.json')).then(function(buf) {
 		var meta = JSON.parse(buf);
 		if (!meta.pageboard) {
-			return; // nothing to do
+			return true; // nothing to do
 		}
+		var dstDir = id != 'pageboard' ? Path.join('/', '.files', id, module) : '/.' + id;
 		var directories = meta.pageboard.directories || [];
 		if (!Array.isArray(directories)) directories = [directories];
 		debug("processing directories from", moduleDir, directories);
@@ -107,6 +96,9 @@ exports.config = function(moduleDir, id, module, config) {
 		}));
 	}).catch(function(err) {
 		console.error(`Error: ${id} dependency ${module} cannot be extracted`, err);
+	}).then(function(not) {
+		if (id != "pageboard" || not === true) return;
+		return module;
 	});
 };
 

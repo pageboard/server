@@ -9,6 +9,7 @@ var prettyBytes = require('pretty-bytes');
 var rc = require('rc');
 var mkdirp = pify(require('mkdirp'));
 var xdg = require('xdg-basedir');
+var resolvePkg = require('resolve-pkg');
 var pkgup = require('pkg-up');
 var debug = require('debug')('pageboard:core');
 var csp = require('content-security-policy-builder');
@@ -82,54 +83,46 @@ exports.init = function(opt) {
 
 	if (opt.global) global.All = All;
 
-	Object.keys(opt.dependencies).forEach(function(module) {
-		opt.plugins.push(module);
-	});
-
-	var pluginList = [];
-
-	while (opt.plugins.length) {
-		var module = opt.plugins.shift();
-		var plugin;
-		try {
-			plugin = require(module);
-		} catch(ex) {
-			console.error("Cannot require plugin", module, ex);
-			continue;
-		}
-		if (typeof plugin != "function") continue;
-		var obj = plugin(opt) || {};
-		obj.plugin = plugin;
-		pluginList.push(obj);
-	}
-
 	All.log = initLog(opt);
+
+	var plugins = [];
 
 	return All.utils.which(opt.core.installer).then(function(path) {
 		console.info("using core installer", path);
 		opt.installerPath = path;
 	}).then(function() {
 		return Promise.all(Object.keys(opt.dependencies).map(function(module) {
-			return pkgup(require.resolve(module)).then(function(pkgPath) {
+			return pkgup(resolvePkg(module)).then(function(pkgPath) {
 				return Install.config(Path.dirname(pkgPath), All.opt.name, module, All.opt);
 			});
-		}));
+		})).then(function(modules) {
+			opt.plugins = modules.filter(x => !!x);
+			var plugin;
+			while (opt.plugins.length) {
+				module = opt.plugins.shift();
+				try { plugin = require(module); } catch(ex) { plugin = null; }
+				if (typeof plugin != "function") continue;
+				var obj = plugin(opt) || {};
+				obj.plugin = plugin;
+				plugins.push(obj);
+			}
+		});
 	}).then(function() {
 		return initDirs(opt.dirs);
 	}).then(function() {
-		return initPlugins.call(All, pluginList);
+		return initPlugins.call(All, plugins);
 	}).then(function() {
-		return initPlugins.call(All, pluginList, 'file');
+		return initPlugins.call(All, plugins, 'file');
 	}).then(function() {
 		All.app.use(filesError);
 		All.app.use(All.log);
-		return initPlugins.call(All, pluginList, 'service');
+		return initPlugins.call(All, plugins, 'service');
 	}).then(function() {
 		All.app.use('/.api/*', function(req, res, next) {
 			next(new HttpError.NotFound(`Cannot ${req.method} ${req.originalUrl}`));
 		});
 		All.app.use(servicesError);
-		return initPlugins.call(All, pluginList, 'view');
+		return initPlugins.call(All, plugins, 'view');
 	}).then(function() {
 		All.app.use(viewsError);
 	}).then(function() {
