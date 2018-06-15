@@ -104,7 +104,14 @@ function listDependencies(id, eltsMap, el, list=[], sieve={}) {
 			var isGroup = false;
 			Object.keys(eltsMap).forEach(function(key) {
 				var el = eltsMap[key];
-				if (!el.group || el.group == "page") return;
+				if (!el.group) {
+					if (!el.render && (el.stylesheets || el.scripts)) {
+						listDependencies(id, eltsMap, el, list, sieve);
+					}
+					return;
+				} else if (el.group == "page") {
+					return;
+				}
 				if (el.group.split(" ").indexOf(word)) {
 					isGroup = true;
 					listDependencies(id, eltsMap, el, list, sieve);
