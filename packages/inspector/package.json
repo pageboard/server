@@ -18,5 +18,6 @@
   "homepage": "https://github.com/pageboard/inspector#readme",
   "dependencies": {
     "url-inspector": "^2.3.3"
-  }
+  },
+  "pageboard": true
 }
