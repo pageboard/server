@@ -51,13 +51,10 @@ exports.validate = function(site, pkg) {
 	return Promise.resolve().then(function() {
 		var eltsMap = pkg.eltsMap;
 		var pages = [];
-		var list = Object.keys(eltsMap).map(function(key) {
+		Object.keys(eltsMap).forEach(function(key) {
 			var el = eltsMap[key];
 			if (!el.name) el.name = key;
 			if (el.group == "page") pages.push(el);
-			return el;
-		}).sort(function(a, b) {
-			return (a.priority || 0) - (b.priority || 0);
 		});
 		return pages.reduce(function(p, page) {
 			return p.then(function() {
@@ -75,6 +72,9 @@ exports.validate = function(site, pkg) {
 
 function bundle(site, pkg, page) {
 	var list = listDependencies(site.id, pkg.eltsMap, page);
+	list.sort(function(a, b) {
+		return (a.priority || 0) - (b.priority || 0);
+	});
 	var scripts = filter(list, 'scripts');
 	var styles = filter(list, 'stylesheets');
 
