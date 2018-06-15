@@ -15,5 +15,6 @@
   "bugs": {
     "url": "https://github.com/kapouer/github-webhook/issues"
   },
-  "homepage": "https://github.com/kapouer/github-webhook#readme"
+  "homepage": "https://github.com/kapouer/github-webhook#readme",
+  "pageboard": true
 }
