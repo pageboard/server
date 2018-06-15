@@ -4,7 +4,8 @@ var Path = require('path');
 var pify = require('util').promisify;
 var fs = {
 	symlink: pify(require('fs').symlink),
-	unlink: pify(require('fs').unlink)
+	unlink: pify(require('fs').unlink),
+	stat: pify(require('fs').stat)
 };
 
 var mkdirp = pify(require('mkdirp'));
@@ -104,31 +105,50 @@ function init(All) {
 	});
 }
 
-exports.bundle = function(site, list, filename) {
+exports.bundle = function(site, pkg, list, filename) {
 	if (list.length == 0) return [];
+	var output = Path.join(pkg.dir, filename);
 	var opts = All.opt.statics;
 	var id = site.id;
-	var outUrl = '/.files';
 	var version = site.data.version;
-	if (version == null) version = '~';
-	outUrl += `/${version}/${filename}`;
+	if (version == null) version = '-';
 	var inputs = list.map(function(url) {
 		return urlToPath(opts, site.id, url);
 	});
-	var output = urlToPath(opts, site.id, outUrl);
 
-	var ext = Path.extname(filename).substring(1);
-	if (ext != "js" && ext != "css") throw new Error("Bundles only .js or .css extensions");
-	return bundlers[ext].call(inputs, output, {
-		minify: site.data.env == "production",
-		builtinClasses: true,
-		browsers: opts.browsers
-	}).catch(function(err) {
-		delete err.input;
-		delete err.source;
-		if (err.reason) delete err.message;
-		throw err;
+	if (!site.bundles) Object.defineProperty(site, 'bundles', {
+		value: {}
+	});
+	var hash = inputs.join('\n');
+	for (var bfn in site.bundles) {
+		if (site.bundles[bfn] == hash) {
+			return Promise.resolve([bfn]);
+		}
+	}
+	return Promise.resolve().then(function() {
+		if (version != '-') return fs.stat(output).catch(function(err) {})
+		.then(function(stat) {
+			return !!stat;
+		});
+	}).then(function(exists) {
+		if (exists) return;
+		var ext = Path.extname(filename).substring(1);
+		if (ext != "js" && ext != "css") throw new Error("Bundles only .js or .css extensions");
+		return bundlers[ext].call(inputs, output, {
+			minify: site.data.env == "production",
+			builtinClasses: true,
+			browsers: opts.browsers
+		}).catch(function(err) {
+			delete err.input;
+			delete err.source;
+			if (err.reason) delete err.message;
+			throw err;
+		})
 	}).then(function() {
+		return mountPath(output, `/.files/${site.id}/${version}/${filename}`);
+	}).then(function() {
+		var outUrl = `/.files/${version}/${filename}`;
+		site.bundles[outUrl] = hash;
 		return [outUrl];
 	});
 };
