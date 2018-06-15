@@ -150,9 +150,15 @@ exports.bundle = function(site, pkg, list, filename) {
 		});
 	}).then(function(copyFromRuntime) {
 		if (copyFromRuntime) {
-			return fs.copyFile(output, installPath);
+			return Promise.all([
+				fs.copyFile(output, installPath),
+				fs.copyFile(output + '.map', installPath + '.map').catch(function() {})
+			]);
 		} else {
-			return fs.copyFile(installPath, output);
+			return Promise.all([
+				fs.copyFile(installPath, output),
+				fs.copyFile(installPath + '.map', output + '.map').catch(function() {})
+			]);
 		}
 	}).then(function() {
 		site.bundles[outUrl] = hash;
