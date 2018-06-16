@@ -35,7 +35,8 @@ Domains.prototype.init = function(req, res, next) {
 			name: hostname
 		};
 	}
-	if (!host.searching && !host._error) {
+	if (!host.searching && (!host._error || host._error.statusCode == 503)) {
+		delete host._error;
 		host.isSearching = true;
 		host.searching = Promise.resolve().then(function() {
 			return this.check(host, req);
@@ -202,8 +203,7 @@ Domains.prototype.check = function(host, req) {
 			if (lookup.address == hostname) throw new Error("hostname is an ip " + hostname);
 			var expected = ips['ip' + lookup.family];
 			if (lookup.address != expected) {
-				throw new HttpError.NotFound(`Wrong ip${lookup.family} for hostname: ${lookup.address}
-				expected ${expected}`);
+				throw new HttpError.ServiceUnavailable(`ip${lookup.family} ${lookup.address} does not match ${expected}`);
 			}
 			return hostname;
 		});
