@@ -9,6 +9,7 @@ function Domains(All) {
 	this.All = All;
 	this.sites = {}; // cache sites by id
 	this.hosts = {}; // cache hosts by hostname
+	this.alts = {}; // alternative alt domains mapped to domains
 	this.init = this.init.bind(this);
 }
 
@@ -28,7 +29,13 @@ Domains.prototype.init = function(req, res, next) {
 	var self = this;
 	var sites = this.sites;
 	var hosts = this.hosts;
+	var alts = this.alts;
 	var hostname = req.hostname;
+	var alt;
+	if (alts[hostname]) {
+		alt = hostname;
+		hostname = alts[hostname];
+	}
 	var host = hosts[hostname];
 	if (!host) {
 		hosts[hostname] = host = {
@@ -64,6 +71,13 @@ Domains.prototype.init = function(req, res, next) {
 			if (site.data.domain && !hosts[site.data.domain]) {
 				// alienate current hostname with official data.domain
 				hosts[site.data.domain] = host;
+				if (site.data.alt) {
+					if (site.data.alt == host.name) {
+						alt = site.data.alt;
+						host.name = site.data.domain;
+					}
+					alts[site.data.alt] = site.data.domain;
+				}
 			}
 			return site;
 		}).catch(function(err) {
@@ -120,6 +134,10 @@ Domains.prototype.init = function(req, res, next) {
 		if (!next) return;
 		if (host._error) {
 			next(host._error);
+			return;
+		}
+		if (alt) {
+			res.redirect(host.href +  req.url);
 			return;
 		}
 		var site = self.sites[host.id];
