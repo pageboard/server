@@ -71,14 +71,16 @@ Domains.prototype.init = function(req, res, next) {
 			if (site.data.domain && !hosts[site.data.domain]) {
 				// alienate current hostname with official data.domain
 				hosts[site.data.domain] = host;
-				if (site.data.alt) {
-					if (site.data.alt == host.name) {
-						alt = site.data.alt;
-						host.name = site.data.domain;
-					}
-					alts[site.data.alt] = site.data.domain;
-				}
 			}
+			if (site.data.alt) {
+				if (site.data.alt == host.name) {
+					alt = site.data.alt;
+					host.name = site.data.domain;
+				}
+				alts[site.data.alt] = site.data.domain;
+				}
+			var hparts = req.get('Host').split(':');
+			host.href = (host.upgradable ? 'https' : req.protocol) + '://' + host.name + (hparts.length == 2 ? `:${hparts[1]}` : '');
 			return site;
 		}).catch(function(err) {
 			host._error = err;
@@ -136,8 +138,10 @@ Domains.prototype.init = function(req, res, next) {
 			next(host._error);
 			return;
 		}
-		if (alt) {
-			res.redirect(host.href +  req.url);
+		if (alt && !req.path.startsWith('/.well-known/')) {
+			All.cache.tag('api')(req, res, function() {
+				res.redirect(host.href +  req.url);
+			});
 			return;
 		}
 		var site = self.sites[host.id];
@@ -194,7 +198,6 @@ Domains.prototype.check = function(host, req) {
 
 	host.local = local;
 	host.upgradable = req.get('Upgrade-Insecure-Requests') && !local;
-	host.href = (host.upgradable ? 'https' : req.protocol) + '://' + req.get('Host');
 
 	var hostname = host.name;
 
