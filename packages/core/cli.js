@@ -31,6 +31,13 @@ pageboard.init(config).then(function(All) {
 		var command = All.opt._[0];
 		var args = [command];
 		return Promise.resolve().then(function() {
+			if (config.data !== undefined && typeof config.data.data == "string") {
+				try {
+					config.data.data = JSON.parse(config.data.data);
+				} catch(ex) {
+					console.error(ex);
+				}
+			}
 			if (All.opt.site) {
 				return All.site.get({id: All.opt.site}).select('_id').then(function(site) {
 					return All.install(site).then(function(site) {
