@@ -44,6 +44,24 @@ Pageboard.elements.page = {
 			type: "integer",
 			default: 0,
 			minimum: 0
+		},
+		metas: {
+			title: 'Meta tags',
+			type: 'array',
+			items: [{
+				type: 'object',
+				title: 'Meta',
+				properties: {
+					name: {
+						title: 'Name',
+						type: 'string'
+					},
+					value: {
+						title: 'Value',
+						type: 'string'
+					}
+				}
+			}]
 		}
 	},
 	contents: {
@@ -58,6 +76,11 @@ Pageboard.elements.page = {
 		if (d.redirect && d.redirect != d.url && (!d.transition || !d.transition.from)) {
 			doc.head.appendChild(doc.dom`<meta http-equiv="Status" content="302 Found">
 	<meta http-equiv="Location" content="${d.redirect}">`);
+		}
+		if (d.metas) {
+			d.metas.forEach(function(meta) {
+				doc.head.appendChild(doc.dom`<meta name="${meta.name}" content="${meta.value}">\n`);
+			});
 		}
 		doc.body.setAttribute('block-content', "body");
 		var title = doc.head.querySelector('title');
