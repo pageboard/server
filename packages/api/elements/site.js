@@ -13,6 +13,16 @@ Pageboard.elements.site = {
 				format: 'hostname'
 			}]
 		},
+		alt: {
+			title: 'Alt domain name',
+			description: 'redirects to domain',
+			anyOf: [{
+				type: "null",
+			}, {
+				type: "string",
+				format: 'hostname'
+			}]
+		},
 		lang: {
 			title: 'Language',
 			anyOf: [{type: "null"}, {type: "string"}]
