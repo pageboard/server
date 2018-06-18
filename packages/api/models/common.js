@@ -62,7 +62,7 @@ exports.QueryBuilder = class CommonQueryBuilder extends QueryBuilder {
 	constructor(modelClass) {
 		super(modelClass);
 		this._patchObjectOperationFactory = function patchObjectOperationFactory() {
-			return new UpdateOperation('patch', {
+			return new PatchObjectOperation('patch', {
 				modelOptions: { patch: true }
 			});
 		};
