@@ -100,7 +100,13 @@ exports.init = function(opt) {
 			var plugin;
 			while (opt.plugins.length) {
 				module = opt.plugins.shift();
-				try { plugin = require(module); } catch(ex) { plugin = null; }
+				try {
+					plugin = require(module);
+				} catch(ex) {
+					console.error("Error loading module", ex);
+					plugin = null;
+					continue;
+				}
 				if (typeof plugin != "function") continue;
 				var obj = plugin(opt) || {};
 				obj.plugin = plugin;
