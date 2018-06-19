@@ -96,6 +96,7 @@ exports.config = function(moduleDir, id, module, config) {
 		}));
 	}).catch(function(err) {
 		console.error(`Error: ${id} dependency ${module} cannot be extracted`, err);
+		return true;
 	}).then(function(not) {
 		if (id != "pageboard" || not === true) return;
 		return module;
