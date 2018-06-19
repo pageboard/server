@@ -65,6 +65,7 @@ exports.validate = function(site, pkg) {
 	}).then(function() {
 		site.constructor = pkg.Block;
 		site.$source = toSource(pkg.eltsMap);
+		site.$resources = pkg.eltsMap.site.resources;
 		delete pkg.eltsMap;
 		delete pkg.Block;
 	});
