@@ -29,12 +29,5 @@
     "pg": "^7.4.1",
     "tosource": "^1.0.0"
   },
-  "pageboard": {
-    "directories": [
-      "elements"
-    ],
-    "elements": [
-      "elements/"
-    ]
-  }
+  "pageboard": true
 }
