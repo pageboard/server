@@ -34,7 +34,6 @@
     "@pageboard/prerender": "github:pageboard/prerender",
     "@pageboard/read": "github:pageboard/read",
     "@pageboard/statics": "github:pageboard/statics",
-    "@pageboard/upload": "github:pageboard/upload",
-    "@pageboard/write": "github:pageboard/write"
+    "@pageboard/upload": "github:pageboard/upload"
   }
 }
