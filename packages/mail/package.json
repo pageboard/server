@@ -27,13 +27,5 @@
   "postinstall": {
     "inlineresources/dist/inlineresources.allinone.nocssom.js": "link lib/inlineresources.js"
   },
-  "pageboard": {
-    "directories": [
-      "mail/elements",
-      "mail/ui"
-    ],
-    "elements": [
-      "mail/elements/"
-    ]
-  }
+  "pageboard": true
 }
