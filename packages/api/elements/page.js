@@ -79,7 +79,7 @@ Pageboard.elements.page = {
 		}
 		if (d.metas) {
 			d.metas.forEach(function(meta) {
-				doc.head.appendChild(doc.dom`<meta name="${meta.name}" content="${meta.value}">\n`);
+				doc.head.appendChild(doc.dom`<meta name="${meta.name}" content="${meta.value}">`);
 			});
 		}
 		doc.body.setAttribute('block-content', "body");
