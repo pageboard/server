@@ -111,7 +111,7 @@ exports.bundle = function(site, pkg, list, filename) {
 	var installPath = Path.join(pkg.dir, filename);
 	var opts = All.opt.statics;
 	var version = site.data.version;
-	if (version == null) version = '-';
+	if (version == null) version = 'master';
 	var inputs = list.map(function(url) {
 		return urlToPath(opts, site.id, url);
 	});
