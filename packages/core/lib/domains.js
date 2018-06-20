@@ -39,8 +39,9 @@ Domains.prototype.init = function(req, res, next) {
 	var host = hosts[hostname];
 	if (!host) {
 		hosts[hostname] = host = {
-			name: hostname
+			port: port(req)
 		};
+		hostUpdate(host, hostname);
 	}
 	if (!host.searching && !host._error) {
 		delete host._error;
@@ -75,12 +76,10 @@ Domains.prototype.init = function(req, res, next) {
 			if (site.data.alt) {
 				if (site.data.alt == host.name) {
 					alt = site.data.alt;
-					host.name = site.data.domain;
+					hostUpdate(host, site.data.domain);
 				}
 				alts[site.data.alt] = site.data.domain;
-				}
-			var hparts = req.get('Host').split(':');
-			host.href = (host.upgradable ? 'https' : req.protocol) + '://' + host.name + (hparts.length == 2 ? `:${hparts[1]}` : '');
+			}
 			return site;
 		}).catch(function(err) {
 			host._error = err;
@@ -305,6 +304,18 @@ Domains.prototype.error = function(site, err) {
 		console.error(ex);
 	}
 };
+
+function port(req) {
+	var host = req.get('Host');
+	var parts = host.split(':');
+	if (parts.length == 2) return `:${parts[1]}`;
+	else return '';
+}
+
+function hostUpdate(host, name) {
+	host.name = name;
+	host.href = (host.upgradable ? 'https' : 'http') + '://' + name + host.port;
+}
 
 function errorObject(site, err) {
 	var std = err.toString();
