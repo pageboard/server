@@ -4,8 +4,7 @@
   "description": "",
   "main": "index.js",
   "scripts": {
-    "test": "echo \"Error: no test specified\" && exit 1",
-    "postinstall": "postinstall"
+    "test": "echo \"Error: no test specified\" && exit 1"
   },
   "repository": {
     "type": "git",
@@ -17,23 +16,5 @@
     "url": "https://github.com/pageboard/read/issues"
   },
   "homepage": "https://github.com/pageboard/read#readme",
-  "dependencies": {
-    "document-register-element": "^1.9.0",
-    "dom-template-strings": "^2.4.2",
-    "pagecut": "1.0.0-beta.70",
-    "postinstall": "^0.1.0",
-    "window-page": "^3.0.3"
-  },
-  "postinstall": {
-    "pagecut/dist": "link pagecut",
-    "document-register-element/build/document-register-element.js": "link read/custom-elements.min.js",
-    "window-page/window-page.js": "link read/",
-    "dom-template-strings/dist/dom-template-strings.js": "link read/"
-  },
-  "pageboard": {
-    "directories": [
-      "read",
-      "pagecut"
-    ]
-  }
+  "pageboard": true
 }
