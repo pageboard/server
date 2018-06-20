@@ -109,8 +109,8 @@ function init(All) {
 			res.send('if (!window.Pageboard) Pageboard = {};\nPageboard.services = ' + JSON.stringify(All.services));
 		}
 	);
-	All.app.get('/.api/*', All.cache.tag('file')); // because api depends on site elements
-	All.app.use('/.api/*', All.cache.tag('api'), bodyParserJson);
+	All.app.get('/.api/*', All.cache.tag('file'));
+	All.app.use('/.api/*', All.auth.restrict('*'), All.cache.tag('api'), bodyParserJson);
 }
 
 exports.check = function(fun, data) {

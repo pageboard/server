@@ -11,9 +11,13 @@ exports = module.exports = function(opt) {
 
 function init(All) {
 	All.app.get('/.api/page', function(req, res, next) {
-		All.run('page.get', req.site, req.query).then(function(page) {
-			res.send(page);
-		}).catch(next);
+		if (All.auth.test(req, 'webmaster') && URL.parse(req.get('Referer') || '', true).query.develop === undefined) {
+			res.send({type: 'write'});
+		} else {
+			All.run('page.get', req.site, req.query).then(function(page) {
+				res.send(page);
+			}).catch(next);
+		}
 	});
 	All.app.get('/.api/pages', function(req, res, next) {
 		var data = req.query;
