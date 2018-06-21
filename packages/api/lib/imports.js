@@ -16,14 +16,17 @@ exports.install = function(site, pkg, All) {
 	var allDirs = id ? All.opt.directories.concat(directories) : directories;
 	var allElts = id ? All.opt.elements.concat(elements) : elements;
 
-	return Promise.all(allElts.map(function(path) {
-		return fs.readFile(path);
+	sortPriority(allDirs);
+	sortPriority(allElts);
+
+	return Promise.all(allElts.map(function(eltObj) {
+		return fs.readFile(eltObj.path);
 	})).then(function(bufs) {
 		var elts = {};
 		var names = [];
 		var context = {};
 		bufs.forEach(function(buf, i) {
-			var path = allElts[i];
+			var path = allElts[i].path;
 			context.mount = getMountPath(path, id, allDirs);
 			context.path = path;
 			loadFromFile(buf, elts, names, context);
@@ -70,6 +73,16 @@ exports.validate = function(site, pkg) {
 		delete pkg.Block;
 	});
 };
+
+function sortPriority(list) {
+	list.sort(function(a, b) {
+		var pa = a.priority;
+		var pb = b.priority;
+		if (pa == pb) return 0;
+		if (pa < pb) return -1;
+		else return 1;
+	});
+}
 
 function bundle(site, pkg, page) {
 	var list = listDependencies(site.id, pkg.eltsMap, page);
