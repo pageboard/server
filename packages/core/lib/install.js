@@ -38,11 +38,15 @@ exports.config = function(moduleDir, id, module, config) {
 	debug("Module directory", module, moduleDir);
 	return fs.readFile(Path.join(moduleDir, 'package.json')).then(function(buf) {
 		var meta = JSON.parse(buf);
-		if (!meta.pageboard) {
+		var modOpts = meta.pageboard;
+		if (!modOpts) {
 			return true; // nothing to do
+		} else if (modOpts === true) {
+			modOpts = {};
 		}
+
 		var dstDir = id != 'pageboard' ? Path.join('/', '.files', id, module) : '/.' + id;
-		var directories = meta.pageboard.directories || [];
+		var directories = modOpts.directories || [];
 		if (!Array.isArray(directories)) directories = [directories];
 		debug("processing directories from", moduleDir, directories);
 		directories.forEach(function(mount) {
@@ -62,11 +66,12 @@ exports.config = function(moduleDir, id, module, config) {
 			}
 			config.directories.push({
 				from: from,
-				to: to
+				to: to,
+				priority: modOpts.priority || 0
 			});
 		});
 
-		var elements = meta.pageboard.elements || [];
+		var elements = modOpts.elements || [];
 		if (!Array.isArray(elements)) elements = [elements];
 		debug("processing elements from", moduleDir, elements);
 		return Promise.all(elements.map(function(path) {
@@ -89,7 +94,10 @@ exports.config = function(moduleDir, id, module, config) {
 			}).then(function(paths) {
 				paths.forEach(function(path) {
 					if (path.endsWith('.js')) {
-						config.elements.push(path);
+						config.elements.push({
+							path: path,
+							priority: modOpts.priority || 0
+						});
 					}
 				});
 			});
