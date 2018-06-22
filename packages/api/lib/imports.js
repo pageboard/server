@@ -66,6 +66,12 @@ exports.validate = function(site, pkg) {
 			});
 		}, Promise.resolve());
 	}).then(function() {
+		Object.values(pkg.eltsMap).forEach(function(elt) {
+			if (elt.group != "page" && elt.name != "site") {
+				delete elt.stylesheets;
+				delete elt.scripts;
+			}
+		});
 		site.constructor = pkg.Block;
 		site.$source = toSource(pkg.eltsMap);
 		site.$resources = pkg.eltsMap.site.resources;
@@ -160,7 +166,6 @@ function filter(elements, prop) {
 	elements.forEach(function(el) {
 		var list = el[prop];
 		if (!list) return;
-		delete el[prop];
 		if (typeof list == "string") list = [list];
 		var url, prev;
 		for (var i=0; i < list.length; i++) {
