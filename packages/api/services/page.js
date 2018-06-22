@@ -21,7 +21,10 @@ function init(All) {
 	});
 	All.app.get('/.api/pages', function(req, res, next) {
 		var data = req.query;
-		if (All.auth.test(req, 'webmaster')) req.query.drafts = true;
+		if (All.auth.test(req, 'webmaster')) {
+			req.query.drafts = true; // TODO replace by proper permission management
+			req.query.type = ['page', 'mail'];
+		}
 		All.run('page.list', req.site, req.query).then(function(pages) {
 			res.send(pages);
 		}).catch(next);
@@ -110,7 +113,7 @@ function QueryPageHref(site) {
 }
 
 exports.get = function(site, data) {
-	return QueryPage(site).where('page.type', 'page')
+	return QueryPage(site).whereIn('page.type', ['page', 'mail'])
 	.whereJsonText("page.data:url", data.url)
 	.select(
 		QueryPageHref(site).where('page.type', 'page')
@@ -129,11 +132,13 @@ exports.get = function(site, data) {
 		page.site = site.data;
 		page.children = page.children.concat(page.standalones);
 		delete page.standalones;
+		if (page.type != 'page') return page;
 		var pageUrl = page.data.url || data.url;
 		return Promise.all([
 			getParents(site, pageUrl),
 			listPages(site, {
-				parent: pageUrl.split('/').slice(0, -1).join('/') || '/'
+				parent: pageUrl.split('/').slice(0, -1).join('/') || '/',
+				type: ['page']
 			}).clearSelect().select([
 				ref('block.data:url').as('url'),
 				ref('block.data:redirect').as('redirect'),
@@ -193,7 +198,7 @@ function listPages(site, data) {
 	var q = site.$relatedQuery('children')
 	.select()
 	.omit(['content'])
-	.where('block.type', 'page');
+	.whereIn('block.type', data.type);
 	if (!data.drafts) {
 		q.whereNotNull(ref('block.data:url'));
 	}
@@ -313,6 +318,13 @@ exports.list.schema = {
 			title: 'Show pages that have no url',
 			type: 'boolean',
 			default: false
+		},
+		type: {
+			type: 'array',
+			items: {
+				type: 'string'
+			},
+			default: ['page']
 		}
 	}
 };
