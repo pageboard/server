@@ -99,7 +99,7 @@ function init(All) {
 		All.cache.tag('share', 'file').for('0s'), // asks browser to always revalidate
 		function(req, res, next) {
 			res.type('text/javascript');
-			res.send('if (!window.Pageboard) Pageboard = {};\nPageboard.elements = ' + req.site.$source);
+			res.send('if (!window.Pageboard) Pageboard = {};\nPageboard.elements = ' + req.site.$elements[req.query.type || 'page']);
 		}
 	);
 	All.app.get('/.api/services.js',

@@ -73,7 +73,9 @@ exports.validate = function(site, pkg) {
 			}
 		});
 		site.constructor = pkg.Block;
-		site.$source = toSource(pkg.eltsMap);
+		Object.keys(site.$elements).forEach(function(name) {
+			site.$elements[name] = toSource(site.$elements[name]);
+		});
 		site.$resources = pkg.eltsMap.site.resources;
 		delete pkg.eltsMap;
 		delete pkg.Block;
@@ -97,6 +99,13 @@ function bundle(site, pkg, page) {
 	});
 	var scripts = filter(list, 'scripts');
 	var styles = filter(list, 'stylesheets');
+
+	if (!site.$elements) site.$elements = {};
+	var pageMap = {};
+	list.forEach(function(elt) {
+		pageMap[elt.name] = elt;
+	});
+	site.$elements[page.name] = pageMap;
 
 	if (site.data.env == "dev" || !pkg.dir || !site.href) {
 		page.scripts = scripts;
@@ -123,18 +132,18 @@ function listDependencies(id, eltsMap, el, list=[], sieve={}) {
 		if (!el) {
 			var isGroup = false;
 			Object.keys(eltsMap).forEach(function(key) {
-				var el = eltsMap[key];
-				if (!el.group) {
-					if (!el.render && (el.stylesheets || el.scripts)) {
-						listDependencies(id, eltsMap, el, list, sieve);
+				var gel = eltsMap[key];
+				if (!gel.group) {
+					if (!gel.render && (gel.stylesheets || gel.scripts)) {
+						listDependencies(id, eltsMap, gel, list, sieve);
 					}
 					return;
-				} else if (el.group == "page") {
+				} else if (gel.group == "page") {
 					return;
 				}
-				if (el.group.split(" ").indexOf(word)) {
+				if (gel.group.split(" ").indexOf(word) >= 0) {
 					isGroup = true;
-					listDependencies(id, eltsMap, el, list, sieve);
+					listDependencies(id, eltsMap, gel, list, sieve);
 				}
 			});
 			if (!isGroup) console.error("Cannot find element");
