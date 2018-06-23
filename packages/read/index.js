@@ -14,15 +14,14 @@ function init(All) {
 		All.auth.restrict('*'),
 		All.cache.tag('api', 'share', 'file'),
 		All.dom(function(mw, settings, req, res) {
-			var scripts = ["/.api/elements.js"].concat(req.site.$resources);
-			var tags = scripts.map(function(src) {
+			var scripts = req.site.$resources.map(function(src) {
 				return `<script src="${src}"></script>`;
 			});
 			settings.view = `<!DOCTYPE html>
 <html>
 <head>
 	<title></title>
-	${tags.join('\n')}
+	${scripts.join('\n')}
 </head>
 <body>
 </body>
