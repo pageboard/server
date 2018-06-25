@@ -40,9 +40,6 @@ module.exports = function(opt) {
 };
 
 function init(All) {
-	var views = [All.opt.statics.root];
-	if (All.opt.statics.runtime != All.opt.statics.root) views.push(All.opt.statics.runtime);
-	All.app.set('views', views);
 	All.dom = dom;
 };
 
