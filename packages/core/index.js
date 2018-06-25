@@ -124,10 +124,11 @@ exports.init = function(opt) {
 		All.app.use(All.log);
 		return initPlugins.call(All, plugins, 'service');
 	}).then(function() {
-		All.app.use('/.*', function(req, res, next) {
-			next(new HttpError.NotFound(`Cannot ${req.method} ${req.originalUrl}`));
-		});
 		All.app.use(servicesError);
+		All.app.use(function(req, res, next) {
+			if (req.accepts('html') != "html") res.sendStatus(406);
+			else next();
+		});
 		return initPlugins.call(All, plugins, 'view');
 	}).then(function() {
 		All.app.use(viewsError);
@@ -295,8 +296,6 @@ function createApp(All) {
 			res.type("html").send(statusPage);
 		} else if (req.path == "/.well-known/pageboard") {
 			res.type('text').sendStatus(200);
-		} else if (req.path.startsWith('/.well-known/')) {
-			res.type('text').sendStatus(404);
 		} else if (req.protocol == "http" && req.upgradable) {
 			res.redirect(301, "https://" + req.get('Host') + req.url);
 		} else {
