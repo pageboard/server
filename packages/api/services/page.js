@@ -113,10 +113,11 @@ function QueryPageHref(site) {
 }
 
 exports.get = function(site, data) {
-	return QueryPage(site).whereIn('page.type', ['page', 'mail'])
+	var pageTypes = Object.keys(site.$pages);
+	return QueryPage(site).whereIn('page.type', pageTypes)
 	.whereJsonText("page.data:url", data.url)
 	.select(
-		QueryPageHref(site).where('page.type', 'page')
+		QueryPageHref(site).whereIn('page.type', pageTypes)
 		.whereJsonText("page.data:url", data.url).as('hrefs')
 	)
 	.then(function(page) {
@@ -132,7 +133,7 @@ exports.get = function(site, data) {
 		page.site = site.data;
 		page.children = page.children.concat(page.standalones);
 		delete page.standalones;
-		if (page.type != 'page') return page;
+		if (page.data.url == null) return page;
 		var pageUrl = page.data.url || data.url;
 		return Promise.all([
 			getParents(site, pageUrl),
@@ -348,6 +349,7 @@ exports.save = function(site, changes) {
 		update: changes.update.filter(b => b.type == "page")
 	};
 	pages.all = pages.add.concat(pages.update);
+	var pageTypes = Object.keys(site.$pages);
 
 	changes.add.forEach(function(b) {
 		stripHostname(site, b);
@@ -360,7 +362,7 @@ exports.save = function(site, changes) {
 	var allUrl = {};
 	return site.$relatedQuery('children')
 	.select('block.id', ref('block.data:url').as('url'))
-	.where('block.type', 'page').whereNotNull(ref('block.data:url')).then(function(dbPages) {
+	.whereIn('block.type', pageTypes).whereNotNull(ref('block.data:url')).then(function(dbPages) {
 		pages.all.forEach(function(page) {
 			if (!page.data.url || page.data.url.startsWith('/$/')) {
 				delete page.data.url;
@@ -483,7 +485,7 @@ function applyAdd(site, list) {
 
 function applyUpdate(site, list) {
 	return Promise.all(list.map(function(block) {
-		if (block.type == "page") {
+		if (site.$pages[block.type] != null) {
 			return updatePage(site, block);
 		} else {
 			// simpler path
@@ -496,7 +498,8 @@ function applyUpdate(site, list) {
 }
 
 function updatePage(site, page) {
-	return site.$relatedQuery('children').where('block.id', page.id).where('block.type', 'page')
+	var pageTypes = Object.keys(site.$pages);
+	return site.$relatedQuery('children').where('block.id', page.id).whereIn('block.type', pageTypes)
 	.select(ref('block.data:url').as('url')).first().throwIfNotFound().then(function(dbPage) {
 		var oldUrl = dbPage.url;
 		var newUrl = page.data.url;
@@ -529,7 +532,7 @@ function updatePage(site, page) {
 			return dbPage;
 		});
 	}).then(function(dbPage) {
-		return site.$relatedQuery('children').where('block.id', page.id).where('block.type', 'page').patchObject(page);
+		return site.$relatedQuery('children').where('block.id', page.id).whereIn('block.type', pageTypes).patchObject(page);
 	}).catch(function(err) {
 		console.error("cannot updatePage", err);
 		throw err;

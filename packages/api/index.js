@@ -99,7 +99,13 @@ function init(All) {
 		All.cache.tag('share', 'file').for('0s'), // asks browser to always revalidate
 		function(req, res, next) {
 			res.type('text/javascript');
-			res.send('if (!window.Pageboard) Pageboard = {};\nPageboard.elements = ' + req.site.$elements[req.query.type || 'page']);
+			var pageObj = req.site.$pages[req.query.type || 'page'];
+			if (!pageObj) {
+				res.sendStatus(400);
+			} else {
+				res.send('if (!window.Pageboard) Pageboard = {};\n' +
+				'Pageboard.elements = ' + pageObj.source);
+			}
 		}
 	);
 	All.app.get('/.api/services.js',

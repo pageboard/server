@@ -59,12 +59,11 @@ exports.validate = function(site, pkg) {
 			if (!el.name) el.name = key;
 			if (el.group == "page") pages.push(el);
 		});
-		return pages.reduce(function(p, page) {
-			return p.then(function() {
-				page = eltsMap[page.name] = Object.assign({}, page);
-				return bundle(site, pkg, page);
-			});
-		}, Promise.resolve());
+		site.$pages = {};
+		return Promise.all(pages.map(function(page) {
+			page = eltsMap[page.name] = Object.assign({}, page);
+			return bundle(site, pkg, page);
+		}));
 	}).then(function() {
 		Object.values(pkg.eltsMap).forEach(function(elt) {
 			if (elt.group != "page" && elt.name != "site") {
@@ -73,8 +72,19 @@ exports.validate = function(site, pkg) {
 			}
 		});
 		site.constructor = pkg.Block;
-		Object.keys(site.$elements).forEach(function(name) {
-			site.$elements[name] = toSource(site.$elements[name]);
+		var eltsPages = {};
+		Object.keys(site.$pages).forEach(function(name) {
+			eltsPages[name] = Object.assign({}, pkg.eltsMap[name]);
+			delete eltsPages[name].scripts;
+			delete eltsPages[name].stylesheets;
+			delete eltsPages[name].resources;
+			delete eltsPages[name].render;
+			delete eltsPages[name].contents;
+		});
+		Object.keys(site.$pages).forEach(function(name) {
+			site.$pages[name] = {
+				source: toSource(Object.assign({}, eltsPages, site.$pages[name]))
+			};
 		});
 		site.$resources = pkg.eltsMap.site.resources;
 		delete pkg.eltsMap;
@@ -100,12 +110,11 @@ function bundle(site, pkg, page) {
 	var scripts = filter(list, 'scripts');
 	var styles = filter(list, 'stylesheets');
 
-	if (!site.$elements) site.$elements = {};
 	var pageMap = {};
 	list.forEach(function(elt) {
 		pageMap[elt.name] = elt;
 	});
-	site.$elements[page.name] = pageMap;
+	site.$pages[page.name] = pageMap;
 
 	if (site.data.env == "dev" || !pkg.dir || !site.href) {
 		page.scripts = scripts;
