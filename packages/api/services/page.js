@@ -25,8 +25,8 @@ function init(All) {
 			req.query.drafts = true; // TODO replace by proper permission management
 			req.query.type = ['page', 'mail'];
 		}
-		All.run('page.list', req.site, req.query).then(function(pages) {
-			res.send(pages);
+		All.run('page.list', req.site, req.query).then(function(obj) {
+			res.send(obj);
 		}).catch(next);
 	});
 	All.app.post('/.api/page', All.auth.restrict('webmaster'), function(req, res, next) {
@@ -53,9 +53,9 @@ function init(All) {
 	});
 
 	All.app.get('/.api/sitemap.txt', function(req, res, next) {
-		All.run('page.list', req.site, {}).then(function(pages) {
+		All.run('page.list', req.site, {}).then(function(obj) {
 			res.type('text/plain');
-			res.send(pages.map(page => req.site.href + page.data.url).join('\n'));
+			res.send(obj.data.map(page => req.site.href + page.data.url).join('\n'));
 		});
 	});
 }
@@ -305,7 +305,11 @@ exports.search.schema = {
 };
 
 exports.list = function(site, data) {
-	return listPages(site, data);
+	return listPages(site, data).then(function(pages) {
+		return {
+			data: pages
+		};
+	});
 };
 exports.list.schema = {
 	properties: {
