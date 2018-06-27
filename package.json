@@ -22,17 +22,17 @@
   },
   "homepage": "https://github.com/pageboard/pageboard#readme",
   "dependencies": {
-    "@pageboard/api": "github:pageboard/api",
-    "@pageboard/auth": "github:pageboard/auth",
-    "@pageboard/cache": "github:pageboard/cache",
-    "@pageboard/core": "github:pageboard/core",
-    "@pageboard/github-webhook": "github:pageboard/github-webhook",
-    "@pageboard/image": "github:pageboard/image",
-    "@pageboard/inspector": "github:pageboard/inspector",
-    "@pageboard/mail": "github:pageboard/mail",
-    "@pageboard/prerender": "github:pageboard/prerender",
-    "@pageboard/read": "github:pageboard/read",
-    "@pageboard/statics": "github:pageboard/statics",
-    "@pageboard/upload": "github:pageboard/upload"
+    "@pageboard/api": "^0.2.0",
+    "@pageboard/auth": "^0.1.0",
+    "@pageboard/cache": "^0.1.0",
+    "@pageboard/core": "^0.2.0",
+    "@pageboard/github-webhook": "^0.1.0",
+    "@pageboard/image": "^0.1.0",
+    "@pageboard/inspector": "^0.1.0",
+    "@pageboard/mail": "^0.1.0",
+    "@pageboard/prerender": "^0.1.0",
+    "@pageboard/read": "^0.2.0",
+    "@pageboard/statics": "^0.1.0",
+    "@pageboard/upload": "^0.1.0"
   }
 }
