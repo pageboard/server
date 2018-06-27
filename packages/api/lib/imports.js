@@ -252,6 +252,7 @@ function loadFromFile(buf, elts, names, context) {
 		timeout: 1000
 	});
 
+	var arrProxy = new ArrProxy(context);
 	var elt;
 	for (var name in elts) {
 		elt = elts[name];
@@ -259,12 +260,15 @@ function loadFromFile(buf, elts, names, context) {
 			console.warn("element", name, "is not defined at", context.path);
 			continue;
 		}
+
+		names.push(name);
+
 		['scripts', 'stylesheets', 'resources'].forEach(function(what) {
 			var list = absolutePaths(elt[what], context);
 			if (list) elt[what] = list;
 			else delete elt[what];
 		});
-		names.push(name);
+
 		Object.defineProperty(elts, name, {
 			value: new Proxy(elt, new EltProxy(name, context)),
 			writable: false,
@@ -282,8 +286,31 @@ class EltProxy {
 	set(elt, key, val) {
 		if (this.name == "user") return false; // changing user is forbidden
 		if (key == "scripts" || key == "stylesheets" || key == "resources") {
-			val = absolutePaths(val, this.context);
+			val = new Proxy(absolutePaths(val, this.context), new ArrProxy(this.context));
 		}
 		return Reflect.set(elt, key, val);
 	}
 }
+
+class ArrProxy {
+	constructor(context) {
+		this.context = context;
+	}
+	set(arr, key, val) {
+		if (typeof key == "integer" && val != null) {
+			val = absolutePaths(val, this.context);
+		}
+		return Reflect.set(arr, key, val);
+	}
+	get(arr, key) {
+		if (['push', 'unshift'].includes(key)) {
+			var context = this.context;
+			return function() {
+				var args = absolutePaths(Array.from(arguments), context);
+				return Array.prototype[key].apply(arr, args);
+			};
+		}
+		return Reflect.get(arr, key);
+	}
+}
+
