@@ -33,13 +33,13 @@ module.exports = function(opt) {
 
 	dom.clear();
 
+	All.dom = dom; // because we need it asap
+
 	return {
 		priority: -Infinity,
 		view: init
 	};
 };
 
-function init(All) {
-	All.dom = dom;
-};
+function init(All) {};
 
