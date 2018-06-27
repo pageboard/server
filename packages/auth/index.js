@@ -99,7 +99,13 @@ Object.defineProperty(exports.login, 'schema', {
 		var schema = Object.assign({}, All.settings.find.schema);
 		schema.required = (schema.required || []).concat(['grants']);
 		schema.properties = Object.assign({
-			grants: All.api.Block.schema('settings.data.grants'),
+			grants: {
+				type: 'array',
+				uniqueItems: true,
+				items: {
+					type: 'string'
+				}
+			},
 			url: {
 				anyOf: [{
 					type: 'null'
