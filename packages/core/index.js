@@ -78,7 +78,6 @@ exports.init = function(opt) {
 	All.run = run.bind(All);
 	All.install = install.bind(All);
 	All.domains = new Domains(All);
-
 	All.app = createApp(All);
 
 	if (opt.global) global.All = All;
@@ -138,9 +137,6 @@ exports.init = function(opt) {
 		return All.api.install(null, All.opt, All);
 	}).then(function() {
 //		return All.cache.install(null, All.opt, All);
-		return fs.readFile(Path.join(__dirname, 'statics/status.html')).then(function(buf) {
-			statusPage = buf;
-		});
 	}).then(function() {
 		initDumps(All);
 		return All;
@@ -290,12 +286,8 @@ function createApp(All) {
 	});
 	app.use(All.domains.init);
 	app.use(function(req, res, next) {
-		if (req.path == "/.well-known/status.json") {
+		if (req.path == "/.well-known/pageboard") {
 			res.type("json").send({errors: req.site.errors});
-		} else if (req.path == "/.well-known/status.html") {
-			res.type("html").send(statusPage);
-		} else if (req.path == "/.well-known/pageboard") {
-			res.type('text').sendStatus(200);
 		} else if (req.protocol == "http" && req.upgradable) {
 			res.redirect(301, "https://" + req.get('Host') + req.url);
 		} else {

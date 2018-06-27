@@ -110,12 +110,9 @@ Domains.prototype.init = function(req, res, next) {
 		}
 		p = host.installing;
 	} else if (req.path == "/.well-known/pageboard") {
-		p = host.searching;
+		if (req.accepts('json')) p = host.waiting;
+		else p = host.searching;
 	} else if (req.path == "/favicon.ico" || req.path.startsWith('/.files/') || req.path.startsWith('/.api/')) {
-		p = host.waiting;
-	} else if (req.path == "/.well-known/status.html") {
-		return next();
-	} else if (req.path == "/.well-known/status.json") {
 		p = host.waiting;
 	} else if (host.isWaiting) {
 		p = new Promise(function(resolve) {
@@ -123,7 +120,7 @@ Domains.prototype.init = function(req, res, next) {
 		}).then(function() {
 			if (host.isWaiting && !req.path.startsWith('/.')) {
 				next = null;
-				res.redirect(host.href +  "/.well-known/status.html?" + encodeURIComponent(req.url));
+				res.type('html').sendStatus(503);
 			} else {
 				return host.waiting;
 			}
