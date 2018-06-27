@@ -3,7 +3,7 @@ var Mailgun = require('nodemailer-mailgun-transport');
 var got = require('got');
 // TODO https://nodemailer.com/dkim/
 
-var domemail = require('./express-dom-email');
+var mailPlugin = require('./express-dom-email');
 
 var mailer, sender;
 
@@ -30,23 +30,8 @@ exports = module.exports = function(opt) {
 	return {
 		priority: -10, // because default prerendering happens at 0
 		name: 'mail',
-		service: function(All) {}, // needed to register a service
-		view: function(All) {
-			return domemail.init().then(function() {
-				// TODO remove cache.tag call if express-dom keeps headers when proxying
-				All.app.get('*',
-					function(req, res, next) {
-						if (req.query.email !== undefined) {
-							delete req.query.email;
-							next();
-						} else {
-							next('route');
-						}
-					},
-					All.cache.tag('api', 'share', 'file'),
-					domemail.mw(All.dom)
-				);
-			});
+		service: function(All) {
+			All.dom.settings.helpers.unshift(mailPlugin);
 		}
 	};
 };
@@ -54,7 +39,7 @@ exports = module.exports = function(opt) {
 exports.send = function(site, data) {
 	return Promise.all([
 		All.run('block.search', site, {
-			type: 'page',
+			type: 'mail',
 			data: {url: data.url}
 		}),
 		All.run('user.get', {
@@ -66,12 +51,11 @@ exports.send = function(site, data) {
 		var emailUrl = site.href + emailPage.data.url;
 
 		return got(emailUrl, {
-			json: true,
 			query: Object.assign(data.query, {
 				email: true
 			})
 		}).then(function(response) {
-			return response.body;
+			return JSON.parse(response.body);
 		}).then(function(obj) {
 			var mail = {
 				from: sender,
