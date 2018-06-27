@@ -1,6 +1,19 @@
 pageboard -- website editor
 ===========================
 
+install
+-------
+
+Besides `npm install pageboard`:
+- a postgresql 10 database
+- exiftool (for inspector)
+- webkitgtk 2.20 (for prerender)
+- vips 8.6 (for image)
+
+all of which are trivial to install on a debian or fedora operating system.
+
+The server module requires more tools (iptables, nginx, memcached, upcache).
+
 
 modules
 -------
