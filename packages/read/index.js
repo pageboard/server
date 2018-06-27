@@ -13,16 +13,21 @@ function init(All) {
 		'*',
 		All.auth.restrict('*'),
 		All.cache.tag('api', 'share', 'file'),
-		All.dom(function(mw, settings, req, res) {
-			if (req.path != '/.well-known/notfound' && /^(\/[a-zA-Z0-9-]*)+$/.test(req.path) == false) {
-				settings.view = req.site.href + '/.well-known/notfound';
-				settings.load.disable = true;
-				settings.prepare.disable = true;
-			} else {
-				var scripts = req.site.$resources.map(function(src) {
-					return `<script src="${src}"></script>`;
-				});
-				settings.view = `<!DOCTYPE html>
+		prerender(All.dom)
+	);
+}
+
+function prerender(dom) {
+	return dom(function(mw, settings, req, res) {
+		if (req.path != '/.well-known/notfound' && /^(\/[a-zA-Z0-9-]*)+$/.test(req.path) == false) {
+			settings.view = req.site.href + '/.well-known/notfound';
+			settings.load.disable = true;
+			settings.prepare.disable = true;
+		} else {
+			var scripts = req.site.$resources.map(function(src) {
+				return `<script src="${src}"></script>`;
+			});
+			settings.view = `<!DOCTYPE html>
 <html>
 <head>
 	<title></title>
@@ -31,7 +36,6 @@ function init(All) {
 <body>
 </body>
 </html>`;
-			}
-		}).load()
-	);
+		}
+	}).load();
 }
