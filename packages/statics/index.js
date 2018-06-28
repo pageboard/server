@@ -118,16 +118,14 @@ exports.bundle = function(site, pkg, list, filename) {
 	var outUrl = `/.files/${version}/${filename}`;
 	var output = urlToPath(opts, site.id, outUrl);
 
-	if (!site.bundles) Object.defineProperty(site, 'bundles', {
-		value: {}
-	});
+	if (!site.$bundles) site.$bundles = {};
 	var hash = inputs.join('\n');
-	for (var bfn in site.bundles) {
-		if (site.bundles[bfn] == hash) {
-			return Promise.resolve([bfn]);
+	for (var bfn in site.$bundles) {
+		if (site.$bundles[bfn].hash == hash) {
+			return site.$bundles[bfn].promise;
 		}
 	}
-	return Promise.resolve().then(function() {
+	var p = Promise.resolve().then(function() {
 		if (version != '-') return fs.stat(installPath).catch(function(err) {})
 		.then(function(stat) {
 			return !!stat;
@@ -161,9 +159,13 @@ exports.bundle = function(site, pkg, list, filename) {
 			]);
 		}
 	}).then(function() {
-		site.bundles[outUrl] = hash;
 		return [outUrl];
 	});
+	site.$bundles[outUrl] = {
+		hash: hash,
+		promise: p
+	};
+	return p;
 };
 
 function urlToPath(opts, id, url) {
