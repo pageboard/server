@@ -304,6 +304,7 @@ Domains.prototype.error = function(site, err) {
 
 function port(req) {
 	var host = req.get('Host');
+	if (host == null) throw new Error(`Missing Host header for ${req.hostname}`);
 	var parts = host.split(':');
 	if (parts.length == 2) return `:${parts[1]}`;
 	else return '';
