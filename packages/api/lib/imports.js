@@ -224,7 +224,7 @@ function getMountPath(eltPath, id, directories) {
 }
 
 function absolutePaths(list, file) {
-	if (!list) return list;
+	if (!list) return [];
 	if (typeof list == "string") list = [list];
 	return list.map(function(path) {
 		if (path.startsWith('/') || /^(http|https|data):/.test(path)) {
@@ -264,9 +264,7 @@ function loadFromFile(buf, elts, names, context) {
 		names.push(name);
 
 		['scripts', 'stylesheets', 'resources'].forEach(function(what) {
-			var list = absolutePaths(elt[what], context);
-			if (list) elt[what] = list;
-			else delete elt[what];
+			elt[what] = new Proxy(absolutePaths(elt[what], context), new ArrProxy(context));
 		});
 
 		Object.defineProperty(elts, name, {
@@ -299,6 +297,8 @@ class ArrProxy {
 	set(arr, key, val) {
 		if (typeof key == "integer" && val != null) {
 			val = absolutePaths(val, this.context);
+			if (val.length == 1) val = val[0];
+			else throw new Error(`Cannot set ${this.context}.${key} with ${val}`);
 		}
 		return Reflect.set(arr, key, val);
 	}
