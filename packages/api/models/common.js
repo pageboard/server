@@ -3,6 +3,14 @@ var ref = objection.ref;
 var Model = objection.Model;
 var QueryBuilder = objection.QueryBuilder;
 
+const { isKnexRaw, isKnexQueryBuilder } = require(
+	require('path').join(
+		require.resolve('objection'),
+		'..',
+		'utils/knexUtils'
+	)
+);
+
 var UpdateOperation = require(
 	require('path').join(
 		require.resolve('objection'),
@@ -214,7 +222,7 @@ class PatchObjectOperation extends UpdateOperation {
 				}
 
 				convertedJson[parsed.column] = knex.raw(
-					`jsonb_set_recursive(??, '${jsonRefs}', ${valuePlaceholder}, true)`,
+					`jsonb_set_recursive(??, '${jsonRefs}', ${valuePlaceholder})`,
 					[convertedJson[parsed.column] || parsed.column, val]
 				);
 			} else {
