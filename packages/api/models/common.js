@@ -190,6 +190,40 @@ class PatchObjectOperation extends UpdateOperation {
 
 		knexBuilder.update(convertedJson);
 	}
+	convertFieldExpressionsToRaw(builder, json) {
+		const knex = builder.knex();
+		const convertedJson = {};
+		const keys = Object.keys(json);
+
+		for (let i = 0, l = keys.length; i < l; ++i) {
+			let key = keys[i];
+			let val = json[key];
+
+			if (key.indexOf(':') > -1) {
+				// 'col:attr' : ref('other:lol') is transformed to
+				// "col" : raw(`jsonb_set("col", '{attr}', to_jsonb("other"#>'{lol}'), true)`)
+
+				let parsed = ref(key);
+				let jsonRefs = '{' + parsed.reference.access.map(it => it.ref).join(',') + '}';
+				let valuePlaceholder = '?';
+
+				if (isKnexQueryBuilder(val) || isKnexRaw(val)) {
+					valuePlaceholder = 'to_jsonb(?)';
+				} else {
+					val = JSON.stringify(val);
+				}
+
+				convertedJson[parsed.column] = knex.raw(
+					`jsonb_set_recursive(??, '${jsonRefs}', ${valuePlaceholder}, true)`,
+					[convertedJson[parsed.column] || parsed.column, val]
+				);
+			} else {
+				convertedJson[key] = val;
+			}
+		}
+
+		return convertedJson;
+	}
 }
 
 class InstancePatchObjectOperation extends InstanceUpdateOperation {
