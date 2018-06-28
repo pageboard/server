@@ -32,7 +32,7 @@
     "@pageboard/mail": "^0.1.0",
     "@pageboard/prerender": "^0.1.0",
     "@pageboard/read": "^0.2.0",
-    "@pageboard/statics": "^0.1.0",
+    "@pageboard/statics": "^0.1.1",
     "@pageboard/upload": "^0.1.0"
   }
 }
