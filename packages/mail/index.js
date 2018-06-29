@@ -37,18 +37,10 @@ exports = module.exports = function(opt) {
 };
 
 exports.send = function(site, data) {
-	return Promise.all([
-		All.run('block.search', site, {
-			type: 'mail',
-			data: {url: data.url}
-		}),
-		All.run('user.get', {
-			email: data.to
-		}).catch(function(err) {
-			if (err.statusCode != 404) throw err;
-		})
-	]).then(function([pages, user]) {
-		if (!user) throw new HttpError.NotFound("User not found");
+	return All.run('block.search', site, {
+		type: 'mail',
+		data: {url: data.url}
+	}).then(function(pages) {
 		var emailPage = pages.data[0];
 		if (!emailPage) throw new HttpError.NotFound("Page not found");
 		var emailUrl = site.href + emailPage.data.url;
@@ -62,10 +54,7 @@ exports.send = function(site, data) {
 		}).then(function(obj) {
 			var mail = {
 				from: sender,
-				to: {
-					name: user.data.name,
-					address: user.data.email
-				},
+				to: data.to,
 				subject: obj.title,
 				/* this cannot really work. What could work is replying to <id>.pageboard.fr
 				replyTo: {
@@ -100,8 +89,11 @@ exports.send.schema = {
 			type: 'object'
 		},
 		to: {
-			type: 'string',
-			format: 'email'
+			type: 'array',
+			items: {
+				type: 'string',
+				format: 'email'
+			}
 		}
 	}
 };
