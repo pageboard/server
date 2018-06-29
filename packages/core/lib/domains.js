@@ -39,6 +39,7 @@ Domains.prototype.init = function(req, res, next) {
 	var host = hosts[hostname];
 	if (!host) {
 		hosts[hostname] = host = {
+			protocol: req.protocol,
 			port: port(req)
 		};
 		hostUpdate(host, hostname);
@@ -312,7 +313,7 @@ function port(req) {
 
 function hostUpdate(host, name) {
 	host.name = name;
-	host.href = (host.upgradable ? 'https' : 'http') + '://' + name + host.port;
+	host.href = (host.upgradable ? 'https' : host.protocol) + '://' + name + host.port;
 }
 
 function errorObject(site, err) {
