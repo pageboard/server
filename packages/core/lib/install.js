@@ -185,7 +185,6 @@ function doInstall(site, pkg, opt) {
 				"--non-interactive", // yarn only
 				"--ignore-optional", // yarn
 				"--no-progress",
-				"--prefer-offline",
 				"--production",
 				"--no-lockfile", // yarn
 				"--silent",
@@ -200,7 +199,6 @@ function doInstall(site, pkg, opt) {
 				"install",
 				"--no-optional", // npm
 				"--no-progress",
-				"--prefer-offline",
 				"--production",
 				"--no-package-lock", // npm
 				"--silent",
