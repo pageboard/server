@@ -114,7 +114,7 @@ exports.QueryBuilder = class CommonQueryBuilder extends QueryBuilder {
 	}
 	whereObject(obj, schema, alias) {
 		var table = alias || this.tableRefFor(this.modelClass());
-		var refs = asPaths(obj, {}, table + '.', true, schema);
+		var refs = asPaths(obj, {}, table, true, schema);
 		Object.keys(refs).forEach(function(k) {
 			var cond = refs[k];
 			var refk = ref(k);
@@ -145,7 +145,18 @@ function asPaths(obj, ret, pre, first, schema) {
 	Object.keys(obj).forEach(function(key) {
 		var val = obj[key];
 		var schem = props[key] || {};
-		var cur = pre ? `${pre}[${key}]` : key;
+		var cur;
+		if (pre) {
+			if (first) {
+				cur = `${pre}.${key}`;
+			} else if (pre.endsWith(':')) {
+				cur = `${pre}${key}`;
+			} else {
+				cur = `${pre}[${key}]`;
+			}
+		} else {
+			cur = key;
+		}
 		if (Array.isArray(val) || val == null || typeof val != "object") {
 			if (typeof val == "string" && schem.type == "string" && schem.format == "date-time") {
 				val = partialDate(val);
