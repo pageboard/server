@@ -40,8 +40,9 @@ Domains.prototype.init = function(req, res, next) {
 	if (!host) {
 		hosts[hostname] = host = {
 			protocol: req.protocol,
-			port: port(req)
+			upgradable: req.get('Upgrade-Insecure-Requests')
 		};
+		portUpdate(host, req.get('Host'));
 		hostUpdate(host, hostname);
 	}
 	if (!host.searching && !host._error) {
@@ -184,37 +185,17 @@ Domains.prototype.check = function(host, req) {
 			if (!isIPv6(tryFour)) ips.ip4 = tryFour;
 		}
 	}
-	var local = false;
-	if (ips.ip4 == localhost4) {
-		local = true;
-		if (!ips.ip6) ips.ip6 = localhost6;
-	} else if (ips.ip6 == localhost6) {
-		local = true;
-		if (!ips.ip4) ips.ip4 = localhost4;
-	}
-
-	host.local = local;
-	host.upgradable = req.get('Upgrade-Insecure-Requests') && !local;
 
 	var hostname = host.name;
 
 	return Promise.resolve().then(function() {
-		if (!pageboardNames) {
-			if (local) {
-				if (hostname == "localhost") hostname += ".localdomain";
-				var parts = hostname.split('.');
-				parts[0] = "";
-				pageboardNames = [parts.join('.')];
-			} else {
-				return DNS.reverse(ip).then(function(hostnames) {
-					pageboardNames = hostnames.map(function(hn) {
-						return '.' + hn;
-					});
-				});
-			}
-		}
+		if (!pageboardNames) return DNS.reverse(ip).then(function(hostnames) {
+			pageboardNames = hostnames.map(function(hn) {
+				if (hn == "localhost") hn += ".localdomain";
+				return '.' + hn;
+			});
+		});
 	}).then(function() {
-		if (host.local) return hostname;
 		return DNS.lookup(hostname, {
 			all: false
 		}).then(function(lookup) {
@@ -303,17 +284,19 @@ Domains.prototype.error = function(site, err) {
 	}
 };
 
-function port(req) {
-	var host = req.get('Host');
-	if (host == null) throw new Error(`Missing Host header for ${req.hostname}`);
-	var parts = host.split(':');
-	if (parts.length == 2) return `:${parts[1]}`;
-	else return '';
+function portUpdate(host, header) {
+	if (header == null) throw new Error(`Missing Host header for ${host.name}`);
+	var parts = header.split(':');
+	var port = parts.length == 2 ? parseInt(parts[1]) : null;
+	if (!isNaN(port)) host.port = port;
+	else delete host.port;
 }
 
 function hostUpdate(host, name) {
 	host.name = name;
-	host.href = (host.upgradable ? 'https' : host.protocol) + '://' + name + host.port;
+	var port = host.port;
+	if (host.upgradable && host.port) port += - 80 + 443;
+	host.href = (host.upgradable ? 'https' : host.protocol) + '://' + name + (port ? `:${port}` : '');
 }
 
 function errorObject(site, err) {
