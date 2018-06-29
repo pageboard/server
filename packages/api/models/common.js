@@ -145,14 +145,14 @@ function asPaths(obj, ret, pre, first, schema) {
 	Object.keys(obj).forEach(function(key) {
 		var val = obj[key];
 		var schem = props[key] || {};
-		var cur = `${pre || ""}${key}`;
+		var cur = pre ? `${pre}[${key}]` : key;
 		if (Array.isArray(val) || val == null || typeof val != "object") {
 			if (typeof val == "string" && schem.type == "string" && schem.format == "date-time") {
 				val = partialDate(val);
 			}
 			ret[cur] = val;
 		} else if (typeof val == "object") {
-			asPaths(val, ret, cur + (first ? ':' : '.'), false, schem);
+			asPaths(val, ret, cur + (first ? ':' : ''), false, schem);
 		}
 	});
 	return ret;
