@@ -494,7 +494,7 @@ function applyUpdate(site, list) {
 		} else {
 			// simpler path
 			return site.$relatedQuery('children')
-			.where('block.id', block.id).patchObject(block).then(function(count) {
+			.where('block.id', block.id).patch(block).then(function(count) {
 				if (count == 0) throw new Error(`Block not found for update ${block.id}`);
 			});
 		}
@@ -536,7 +536,7 @@ function updatePage(site, page) {
 			return dbPage;
 		});
 	}).then(function(dbPage) {
-		return site.$relatedQuery('children').where('block.id', page.id).whereIn('block.type', pageTypes).patchObject(page);
+		return site.$relatedQuery('children').where('block.id', page.id).whereIn('block.type', pageTypes).patch(page);
 	}).catch(function(err) {
 		console.error("cannot updatePage", err);
 		throw err;
