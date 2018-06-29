@@ -44,8 +44,11 @@ exports.send = function(site, data) {
 		}),
 		All.run('user.get', {
 			email: data.to
+		}).catch(function(err) {
+			if (err.statusCode != 404) throw err;
 		})
 	]).then(function([pages, user]) {
+		if (!user) throw new HttpError.NotFound("User not found");
 		var emailPage = pages.data[0];
 		if (!emailPage) throw new HttpError.NotFound("Page not found");
 		var emailUrl = site.href + emailPage.data.url;
