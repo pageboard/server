@@ -22,7 +22,7 @@
   },
   "homepage": "https://github.com/pageboard/pageboard#readme",
   "dependencies": {
-    "@pageboard/api": "^0.2.2",
+    "@pageboard/api": "^0.2.3",
     "@pageboard/auth": "^0.1.0",
     "@pageboard/cache": "^0.1.0",
     "@pageboard/core": "^0.2.2",
