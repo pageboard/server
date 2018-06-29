@@ -12,14 +12,14 @@ DECLARE
 	def_obj jsonb default '{}'::jsonb;
 BEGIN
 	chk_path := path[:array_length(path, 1) - 1];
-	IF (data #> chk_path IS NULL) THEN  -- fast check
+	IF (data #> chk_path = 'null'::jsonb) THEN
+		data = jsonb_set(data, chk_path, def_obj);
+	ELSEIF (data #> chk_path IS NULL) THEN  -- fast check
 		FOREACH cur_idx IN ARRAY chk_path
 		LOOP
 			cur_path := cur_path || cur_idx;
 			cur_value = data #> cur_path;
-
-
-			IF (cur_value IS NULL) THEN
+			IF (cur_value IS NULL OR cur_value = 'null'::jsonb) THEN
 				data = jsonb_set(data, cur_path, def_obj);
 			ELSIF (jsonb_typeof(cur_value) NOT IN ('object', 'array')) THEN
 				RAISE EXCEPTION 'path element by % is neither object
