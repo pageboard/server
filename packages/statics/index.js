@@ -187,18 +187,16 @@ exports.install = function(site, {dir, directories}, All) {
 	if (dir) dir = Path.join("files", dir);
 	else dir = "pageboard";
 	var runSiteDir = Path.join(All.opt.statics.runtime, dir);
-	return rimraf(runSiteDir).then(function() {
-		var p = mkdirp(runSiteDir);
-		directories.forEach(function(mount) {
-			p = p.then(function() {
-				return mountPath(mount.from, mount.to).catch(function(err) {
-					console.error("Cannot mount", mount.from, mount.to, err);
-					console.error("directories", directories);
-				});
+	var p = mkdirp(runSiteDir);
+	directories.forEach(function(mount) {
+		p = p.then(function() {
+			return mountPath(mount.from, mount.to).catch(function(err) {
+				console.error("Cannot mount", mount.from, mount.to, err);
+				console.error("directories", directories);
 			});
 		});
-		return p;
 	});
+	return p;
 };
 
 function mountPath(src, dst) {
