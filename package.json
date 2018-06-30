@@ -25,14 +25,14 @@
     "@pageboard/api": "^0.2.4",
     "@pageboard/auth": "^0.1.0",
     "@pageboard/cache": "^0.1.0",
-    "@pageboard/core": "^0.2.3",
+    "@pageboard/core": "^0.2.4",
     "@pageboard/github-webhook": "^0.1.0",
     "@pageboard/image": "^0.1.0",
     "@pageboard/inspector": "^0.1.0",
     "@pageboard/mail": "^0.2.0",
     "@pageboard/prerender": "^0.1.0",
     "@pageboard/read": "^0.2.0",
-    "@pageboard/statics": "^0.1.1",
+    "@pageboard/statics": "^0.1.2",
     "@pageboard/upload": "^0.1.0"
   }
 }
