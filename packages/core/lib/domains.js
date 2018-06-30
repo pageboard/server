@@ -168,6 +168,7 @@ Domains.prototype.check = function(host, req) {
 		var address = req.socket.address();
 		ip = address.address;
 		if (!ip) {
+			console.warn("Missing client socket IP", req.hostname, req.path);
 			ip = localhost4;
 		}
 		fam = address.family == 'IPv6' ? 6 : 4;
