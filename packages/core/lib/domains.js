@@ -295,7 +295,7 @@ function portUpdate(host, header) {
 function hostUpdate(host, name) {
 	host.name = name;
 	var port = host.port;
-	if (host.upgradable && host.port) port += - 80 + 443;
+	if (host.upgradable && host.port && host.protocol == "http") port += - 80 + 443;
 	host.href = (host.upgradable ? 'https' : host.protocol) + '://' + name + (port ? `:${port}` : '');
 }
 
