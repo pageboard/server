@@ -39,8 +39,7 @@ Domains.prototype.init = function(req, res, next) {
 	var host = hosts[hostname];
 	if (!host) {
 		hosts[hostname] = host = {
-			protocol: req.protocol,
-			upgradable: req.get('Upgrade-Insecure-Requests')
+			protocol: req.protocol
 		};
 		portUpdate(host, req.get('Host'));
 		hostUpdate(host, hostname);
@@ -156,7 +155,6 @@ Domains.prototype.init = function(req, res, next) {
 		site.errors = errors;
 
 		req.site = site;
-		req.upgradable = host.upgradable;
 		next();
 	}).catch(next);
 };
@@ -295,8 +293,8 @@ function portUpdate(host, header) {
 function hostUpdate(host, name) {
 	host.name = name;
 	var port = host.port;
-	if (host.upgradable && host.port && host.protocol == "http") port += - 80 + 443;
-	host.href = (host.upgradable ? 'https' : host.protocol) + '://' + name + (port ? `:${port}` : '');
+	if (host.port && host.protocol == "http") port += - 80 + 443;
+	host.href = 'https://' + name + (port ? `:${port}` : '');
 }
 
 function errorObject(site, err) {

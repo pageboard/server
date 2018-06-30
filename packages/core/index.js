@@ -288,7 +288,7 @@ function createApp(All) {
 	app.use(function(req, res, next) {
 		if (req.path == "/.well-known/pageboard") {
 			res.type("json").send({errors: req.site.errors});
-		} else if (req.protocol == "http" && req.upgradable) {
+		} else if (req.protocol == "http") {
 			res.redirect(301, req.site.href + req.url);
 		} else {
 			res.setHeader('X-XSS-Protection','1;mode=block');
