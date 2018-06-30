@@ -38,9 +38,7 @@ Domains.prototype.init = function(req, res, next) {
 	}
 	var host = hosts[hostname];
 	if (!host) {
-		hosts[hostname] = host = {
-			protocol: req.protocol
-		};
+		hosts[hostname] = host = {};
 		portUpdate(host, req.get('Host'));
 		hostUpdate(host, hostname);
 	}
@@ -293,8 +291,16 @@ function portUpdate(host, header) {
 function hostUpdate(host, name) {
 	host.name = name;
 	var port = host.port;
-	if (host.port && host.protocol == "http") port += - 80 + 443;
-	host.href = 'https://' + name + (port ? `:${port}` : '');
+	var protocol = "http";
+	if (port) {
+		if (port % 100 == 80) {
+			port += - 80 + 443;
+			protocol = "https";
+		}
+	} else {
+		protocol = "https";
+	}
+	host.href = protocol + '://' + name + (port ? `:${port}` : '');
 }
 
 function errorObject(site, err) {
