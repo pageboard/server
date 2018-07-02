@@ -1,6 +1,6 @@
 {
   "name": "@pageboard/core",
-  "version": "0.2.5",
+  "version": "0.2.6",
   "description": "Web pages content management - core server",
   "main": "index.js",
   "scripts": {
