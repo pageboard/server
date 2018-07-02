@@ -133,6 +133,7 @@ Domains.prototype.init = function(req, res, next) {
 			next(host._error);
 			return;
 		}
+		var site = self.sites[host.id];
 		req.params.site = site.id;
 		if (alt && !req.path.startsWith('/.well-known/')) {
 			All.cache.tag('data-:site')(req, res, function() {
@@ -140,7 +141,6 @@ Domains.prototype.init = function(req, res, next) {
 			});
 			return;
 		}
-		var site = self.sites[host.id];
 		var errors = site.errors;
 		if (req.url.startsWith('/.api/')) {
 			// api needs a real site instance and be able to toy with it
