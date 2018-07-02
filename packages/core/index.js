@@ -136,7 +136,7 @@ exports.init = function(opt) {
 	}).then(function() {
 		return All.api.install(null, All.opt, All);
 	}).then(function() {
-//		return All.cache.install(null, All.opt, All);
+		return All.cache.install(null, All.opt, All);
 	}).then(function() {
 		initDumps(All);
 		return All;
