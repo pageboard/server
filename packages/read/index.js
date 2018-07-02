@@ -12,7 +12,7 @@ function init(All) {
 	All.app.get(
 		'*',
 		All.auth.restrict('*'),
-		All.cache.tag('api', 'share', 'file'),
+		All.cache.tag('site-:site', 'data-:site'),
 		prerender(All.dom)
 	);
 }
