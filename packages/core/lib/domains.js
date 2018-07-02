@@ -133,8 +133,9 @@ Domains.prototype.init = function(req, res, next) {
 			next(host._error);
 			return;
 		}
+		req.params.site = site.id;
 		if (alt && !req.path.startsWith('/.well-known/')) {
-			All.cache.tag('api')(req, res, function() {
+			All.cache.tag('data-:site')(req, res, function() {
 				res.redirect(host.href +  req.url);
 			});
 			return;
