@@ -96,7 +96,7 @@ function init(All) {
 	Object.assign(exports, imports);
 
 	All.app.get('/.api/elements.js',
-		All.cache.tag('share', 'file').for('0s'), // asks browser to always revalidate
+		All.cache.tag('app-:site').for('0s'), // asks browser to always revalidate
 		function(req, res, next) {
 			res.type('text/javascript');
 			var pageObj = req.site.$pages[req.query.type || 'page'];
@@ -109,14 +109,15 @@ function init(All) {
 		}
 	);
 	All.app.get('/.api/services.js',
-		All.cache.tag('share').for('0s'),
+		All.cache.tag('app-:site').for('0s'),
 		function(req, res, next) {
 			res.type('text/javascript');
 			res.send('if (!window.Pageboard) Pageboard = {};\nPageboard.services = ' + JSON.stringify(All.services));
 		}
 	);
-	All.app.get('/.api/*', All.cache.tag('file'));
-	All.app.use('/.api/*', All.auth.restrict('*'), All.cache.tag('api'), bodyParserJson);
+	// api depends on site files
+	All.app.get('/.api/*', All.cache.tag('app-:site'));
+	All.app.use('/.api/*', All.auth.restrict('*'), All.cache.tag('data-:site'), bodyParserJson);
 }
 
 exports.check = function(fun, data) {
