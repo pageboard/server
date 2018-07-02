@@ -32,13 +32,11 @@ exports = module.exports = function(opt) {
 };
 
 function CacheState() {
-	this.mtime = 0;
 }
 
 CacheState.prototype.init = function(All) {
 	this.opt = All.opt;
 	this.path = Path.join(opt.dirs.data, 'cache.json');
-	this.mtimes = {};
 	return this.open();
 };
 
@@ -65,11 +63,15 @@ CacheState.prototype.open = function() {
 		console.info(`Unparsable ${me.path}, continuing anyway`);
 	}).then(function(data) {
 		me.data = data || {};
-		if (!me.data.sites) me.data.sites = {};
 	});
 };
 
 CacheState.prototype.install = function(site) {
+	if (!site) {
+		// because it's not possible to post without an actual url
+		// app tag invalidation is postponed until an actual site is installed
+		return;
+	}
 	setTimeout(function() {
 		if (site.href) got.post(`${site.href}/.well-known/upcache`).catch(function(err) {
 			console.error(err);
@@ -81,12 +83,11 @@ CacheState.prototype.mw = function(req, res, next) {
 	var me = this;
 	var tags = [];
 	var doSave = false;
-	var id = req.site.id;
-	var dobj = this.data.sites[id];
-	if (!dobj) dobj = this.data.sites[id] = {};
-	console.info("Check cache for", id);
+	var dobj = this.data;
+	if (!dobj) dobj = this.data = {};
+	console.info("Check app configuration changes");
 
-	if (!this.digest) {
+	if (!this.hash) {
 		var hash = crypto.createHash('sha256');
 		hash.update(Stringify(this.opt));
 		this.hash = hash.digest('hex');
@@ -99,65 +100,8 @@ CacheState.prototype.mw = function(req, res, next) {
 		dobj.hash = this.hash;
 		tags.push('app');
 	}
-	this.refreshMtime().then(function(mtime) {
-		if (dobj.share === undefined) {
-			doSave = true;
-			dobj.share = mtime;
-		} else if (mtime > dobj.share) {
-			doSave = true;
-			dobj.share = mtime;
-			tags.push('shared');
-		}
-		return me.refreshMtime(id);
-	}).then(function(mtime) {
-		if (dobj.file === undefined) {
-			doSave = true;
-			dobj.file = mtime;
-		} else if (mtime > dobj.file) {
-			doSave = true;
-			dobj.file = mtime;
-			tags.push('file');
-		}
-	}).then(function() {
-		if (tags.length) {
-			console.info(` up tags: ${tags.join(' ')}`);
-			tag.apply(null, tags)(req, res, next);
-		} else {
-			next();
-		}
-		if (doSave) me.save();
-	}).catch(function(err) {
-		console.error("Error in cacheState mw", err);
-	});
-}
-
-CacheState.prototype.refreshMtime = function(id) {
-	var dir = Path.join(this.opt.statics.runtime, id ? 'files/' + id : 'pageboard');
-	var mtime;
-	if (!id) {
-		// do not actually refresh every time
-		mtime = this.mtimes.pageboard;
-		if (mtime) return Promise.resolve(mtime);
-	}
-	mtime = 0;
-	var pattern = dir + '/**';
-	var me = this;
-
-	return new Promise(function(resolve, reject) {
-		var g = new Glob(pattern, {
-			follow: true, // symlinks
-			stat: true,
-			nodir: true
-		});
-		g.on('stat', function(file, stat) {
-			var ftime = stat.mtime.getTime();
-			if (ftime > mtime) mtime = ftime;
-		})
-		g.on('end', function() {
-			me.mtimes[id || 'pageboard'] = mtime;
-			resolve(mtime);
-		});
-		// not sure if end always happen, nor if error happens once
-		// g.on('error', reject)
-	});
+	tags.push('app-:site');
+	tag.apply(null, tags)(req, res, next);
+	if (doSave) me.save();
 };
+
