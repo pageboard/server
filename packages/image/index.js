@@ -12,7 +12,6 @@ exports = module.exports = function(opt) {
 	sharp.simd(true);
 	if (!opt.image) opt.image = {};
 	if (!opt.image.dir) opt.image.dir = ".image";
-	if (!opt.image.converter) opt.image.converter = 'convert';
 
 	if (!opt.image.signs) opt.image.signs = {
 		assignment: '-',
@@ -38,12 +37,13 @@ function initFile(All) {
 			else next();
 		}, sharpie(All.opt.image));
 	}
-	return All.utils.which(opt.image.converter).catch(function() {}).then(function(path) {
+	return All.utils.which(opt.image.im).catch(function() {}).then(function(path) {
 		if (path) {
-			opt.image.converterPath = path;
+			opt.image.im = path;
 			console.info("Using image converter", path);
 		} else {
-			console.warn("Missing image converter", opt.image.converter, "favicon disabled");
+			console.warn("Missing image converter", opt.image.im, "favicon disabled");
+			delete opt.image.im;
 		}
 	});
 }
@@ -52,20 +52,6 @@ function initService(All) {
 	console.info(`Remote images resizable by proxy at /.api/image`);
 	All.app.get('/.api/image', sharpie(All.opt.image));
 }
-
-exports.favicon = function(path) {
-	if (!All.opt.image.converterPath) throw new HttpError.NotFound("Cannot convert favicons");
-	return All.utils.spawn('convert', [
-		"-background", "none",
-		path,
-		"-define", "icon:auto-resize=64,32,16",
-		"ico:-"
-	], {
-		cwd: All.opt.statics.runtime,
-		timeout: 10 * 1000,
-		env: {}
-	});
-};
 
 function request(url) {
 	var obj = require('url').parse(url);
