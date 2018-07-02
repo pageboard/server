@@ -15,6 +15,7 @@ var state = new CacheState();
 
 exports = module.exports = function(opt) {
 	exports.tag = tag;
+	exports.for = tag.for;
 	exports.disable = tag.disable;
 	exports.install = state.install.bind(state);
 	return {
