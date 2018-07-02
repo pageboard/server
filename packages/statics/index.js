@@ -91,16 +91,10 @@ function init(All) {
 		);
 
 		All.app.get('/favicon.ico', function(req, res, next) {
-			var site = req.site;
 			if (!site || !site.data.favicon) {
-				throw new HttpError.NotFound("No favicon");
+				next(new HttpError.NotFound("No favicon"));
 			} else {
-				var path = All.statics.resolve(site.id, site.data.favicon);
-				if (!path) throw new HttpError.NotFound("No valid favicon path");
-				return All.image.favicon(path).then(function(blob) {
-					res.type('image/x-icon');
-					res.send(blob);
-				});
+				res.redirect(site.data.favicon + "?format=ico");
 			}
 		});
 	});
