@@ -62,15 +62,15 @@ function init(All) {
 				switch(req.params.dir) {
 					case ".pageboard":
 						req.url = "/" + url.substring(2);
-						All.cache.tag('shared').for(statics.nocache ? null : '1 hour')(req, res, next);
+						All.cache.tag('app').for(statics.nocache ? null : '1 hour')(req, res, next);
 						break;
 					case ".uploads":
 						req.url = "/uploads/" + req.site.id + url.substring(9);
-						All.cache.tag('upload').for(statics.nocache ? null : '1 year')(req, res, next);
+						All.cache.for(statics.nocache ? null : '1 year')(req, res, next);
 						break;
 					case ".files":
 						req.url = "/files/" + req.site.id + url.substring(7);
-						All.cache.tag('file').for(statics.nocache ? null : '1 year')(req, res, next);
+						All.cache.tag('app-:site').for(statics.nocache ? null : '1 year')(req, res, next);
 						break;
 				}
 				debug("Static url", url, "rewritten to", req.url);
