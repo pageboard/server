@@ -50,7 +50,10 @@ function initFile(All) {
 
 function initService(All) {
 	console.info(`Remote images resizable by proxy at /.api/image`);
-	All.app.get('/.api/image', sharpie(All.opt.image));
+	All.app.get('/.api/image', function(req, res, next) {
+		console.warn("/.api/image is used", req.url);
+		next();
+	}, sharpie(All.opt.image));
 }
 
 function request(url) {
