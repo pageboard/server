@@ -27,10 +27,7 @@ function QuerySite(data) {
 	.first().throwIfNotFound()
 	.where('site.type', 'site').where(function(q) {
 		if (data.id) q.orWhere('site.id', data.id);
-		if (data.domain) {
-			q.orWhere(ref('site.data:domain').castText(), data.domain);
-			q.orWhere(ref('site.data:alt').castText(), data.domain);
-		}
+		if (data.domain) q.orWhereJsonHasAny('site.data:domains', data.domain);
 	});
 	return q;
 }
