@@ -109,7 +109,6 @@ function init(All) {
 		}
 	);
 	All.app.get('/.api/services.js',
-		All.cache.tag('app-:site').for('0s'),
 		function(req, res, next) {
 			res.type('text/javascript');
 			res.send('if (!window.Pageboard) Pageboard = {};\nPageboard.services = ' + JSON.stringify(All.services));
