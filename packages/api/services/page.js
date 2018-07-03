@@ -12,7 +12,7 @@ exports = module.exports = function(opt) {
 function init(All) {
 	All.app.get('/.api/page', function(req, res, next) {
 		if (All.auth.test(req, 'webmaster') && req.query.develop === undefined) {
-			res.send({type: 'write'});
+			res.send({type: 'write', site: req.site.data});
 		} else {
 			All.run('page.get', req.site, req.query).then(function(page) {
 				res.send(page);
