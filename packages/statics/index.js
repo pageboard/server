@@ -56,15 +56,10 @@ function init(All) {
 		console.info(`Static directories are served from symlinks in ${statics.runtime}`);
 
 		app.get(
-			"/:dir(.pageboard|.files|.uploads)/*",
+			"/:dir(.files|.uploads)/*",
 			function(req, res, next) {
 				var url = req.url;
 				switch(req.params.dir) {
-					case ".pageboard":
-						console.warn("still used:", req.url);
-						req.url = "/" + url.substring(2);
-						All.cache.tag('app').for(statics.nocache ? null : '1 hour')(req, res, next);
-						break;
 					case ".uploads":
 						req.url = "/uploads/" + req.site.id + url.substring(9);
 						All.cache.for(statics.nocache ? null : '1 year')(req, res, next);
@@ -169,7 +164,7 @@ function urlToPath(opts, id, url) {
 	var list = obj.pathname.substring(1).split('/');
 	if (list[0].startsWith('.') == false) throw new Error(`Bad ${id} url: ${url}`);
 	list[0] = list[0].substring(1);
-	if (list[0] != "pageboard") list.splice(1, 0, id);
+	list.splice(1, 0, id);
 	return Path.join(opts.runtime, list.join('/'));
 }
 
@@ -177,11 +172,9 @@ exports.resolve = function(id, url) {
 	return urlToPath(All.opt.statics, id, url);
 };
 
-exports.install = function(site, {dir, directories}, All) {
-	if (site && !dir) return Promise.resolve(); // nothing to install
-	var dir = site ? site.id : null;
-	if (dir) dir = Path.join("files", dir);
-	else dir = "pageboard";
+exports.install = function(site, {directories}, All) {
+	if (!site) return; // nothing to install
+	var dir = Path.join("files", site.id);
 	var runSiteDir = Path.join(All.opt.statics.runtime, dir);
 	var p = mkdirp(runSiteDir);
 	directories.forEach(function(mount) {
