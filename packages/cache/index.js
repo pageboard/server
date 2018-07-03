@@ -99,6 +99,7 @@ CacheState.prototype.mw = function(req, res, next) {
 		doSave = true;
 		dobj.hash = this.hash;
 		tags.push('app');
+		console.info("detected application change");
 	}
 	tags.push('app-:site');
 	tag.apply(null, tags)(req, res, next);
