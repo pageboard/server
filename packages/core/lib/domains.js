@@ -170,7 +170,10 @@ Domains.prototype.check = function(host, req) {
 	if (fam == 6) {
 		if (ip.startsWith(prefix)) {
 			var tryFour = ip.substring(prefix.length);
-			if (!isIPv6(tryFour)) ips.ip4 = tryFour;
+			if (!isIPv6(tryFour)) {
+				ips.ip4 = tryFour;
+				ip = tryFour;
+			}
 		}
 	}
 
