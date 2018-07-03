@@ -92,7 +92,8 @@ exports.send.schema = {
 			type: 'array',
 			items: {
 				type: 'string',
-				format: 'email'
+				format: 'email',
+				transform: ['trim', 'toLowerCase']
 			}
 		}
 	}
