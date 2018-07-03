@@ -91,6 +91,7 @@ function init(All) {
 		);
 
 		All.app.get('/favicon.ico', function(req, res, next) {
+			var site = req.site;
 			if (!site || !site.data.favicon) {
 				next(new HttpError.NotFound("No favicon"));
 			} else {
