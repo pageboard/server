@@ -10,6 +10,12 @@ exports = module.exports = function(opt) {
 };
 
 function init(All) {
+	All.app.put('/.api/site', All.auth.restrict('webmaster'), function(req, res, next) {
+		var data = Object.assign(req.body, {id: req.site.id});
+		All.run('site.save', data).then(function(site) {
+			res.send(site);
+		}).catch(next);
+	});
 }
 
 function QuerySite(data) {
