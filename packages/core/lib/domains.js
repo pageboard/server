@@ -9,7 +9,6 @@ function Domains(All) {
 	this.All = All;
 	this.sites = {}; // cache sites by id
 	this.hosts = {}; // cache hosts by hostname
-	this.alts = {}; // alternative alt domains mapped to domains
 	this.init = this.init.bind(this);
 }
 
@@ -29,18 +28,11 @@ Domains.prototype.init = function(req, res, next) {
 	var self = this;
 	var sites = this.sites;
 	var hosts = this.hosts;
-	var alts = this.alts;
 	var hostname = req.hostname;
-	var alt;
-	if (alts[hostname]) {
-		alt = hostname;
-		hostname = alts[hostname];
-	}
 	var host = hosts[hostname];
 	if (!host) {
-		hosts[hostname] = host = {};
+		hosts[hostname] = host = {name: hostname};
 		portUpdate(host, req.get('Host'));
-		hostUpdate(host, hostname);
 	}
 	if (!host.searching && !host._error) {
 		delete host._error;
@@ -67,18 +59,16 @@ Domains.prototype.init = function(req, res, next) {
 			host.id = site.id;
 			sites[site.id] = site;
 			if (!site.data) site.data = {};
-			if (!site.hostname) site.hostname = host.name;
-			if (site.data.domain && !hosts[site.data.domain]) {
-				// alienate current hostname with official data.domain
-				hosts[site.data.domain] = host;
-			}
-			if (site.data.alt) {
-				if (site.data.alt == host.name) {
-					alt = site.data.alt;
-					hostUpdate(host, site.data.domain);
-				}
-				alts[site.data.alt] = site.data.domain;
-			}
+
+			// there was a miss, so update domains list
+			var domains = (site.data.domains || []).concat(pageboardNames.map(function(hn) {
+				return host.id + hn;
+			}));
+			domains.forEach(function(domain) {
+				hosts[domain] = host;
+			});
+			hostUpdate(host, domains[0]);
+			host.domains = domains;
 			return site;
 		}).catch(function(err) {
 			host._error = err;
@@ -135,7 +125,7 @@ Domains.prototype.init = function(req, res, next) {
 		}
 		var site = self.sites[host.id];
 		req.params.site = site.id;
-		if (alt && !req.path.startsWith('/.well-known/')) {
+		if (req.hostname != host.domains[0] && !req.path.startsWith('/.well-known/')) {
 			All.cache.tag('data-:site')(req, res, function() {
 				res.redirect(host.href +  req.url);
 			});
@@ -150,7 +140,7 @@ Domains.prototype.init = function(req, res, next) {
 		}
 
 		site.href = host.href;
-		site.hostname = host.name;
+		site.hostname = host.name; // at this point it should be == host.domains[0]
 		site.errors = errors;
 
 		req.site = site;
