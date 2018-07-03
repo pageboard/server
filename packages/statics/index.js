@@ -61,6 +61,7 @@ function init(All) {
 				var url = req.url;
 				switch(req.params.dir) {
 					case ".pageboard":
+						console.warn("still used:", req.url);
 						req.url = "/" + url.substring(2);
 						All.cache.tag('app').for(statics.nocache ? null : '1 hour')(req, res, next);
 						break;
