@@ -295,8 +295,11 @@ function hostUpdate(host, name) {
 	var port = host.port;
 	var protocol = "http";
 	if (port) {
-		if (port % 100 == 80) {
+		var right = port % 1000;
+		if (right == 80) {
 			port += - 80 + 443;
+			protocol = "https";
+		} else if (right == 443) {
 			protocol = "https";
 		}
 	} else {
