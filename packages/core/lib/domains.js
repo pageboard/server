@@ -126,7 +126,7 @@ Domains.prototype.init = function(req, res, next) {
 		req.params.site = site.id;
 		if (req.hostname != host.domains[0] && !req.path.startsWith('/.well-known/')) {
 			All.cache.tag('data-:site')(req, res, function() {
-				res.redirect(host.href +  req.url);
+				res.redirect(308, host.href +  req.url);
 			});
 			return;
 		}
