@@ -14,7 +14,15 @@ var got = require('got');
 var state = new CacheState();
 
 exports = module.exports = function(opt) {
-	exports.tag = tag;
+	exports.tag = function() {
+		var mw = tag.apply(null, Array.from(arguments));
+		function omw(req, res, next) {
+			req.params.site = req.site.id;
+			mw(req, res, next);
+		}
+		omw.for = mw.for;
+		return omw;
+	};
 	exports.for = tag.for;
 	exports.disable = tag.disable;
 	exports.install = state.install.bind(state);
