@@ -124,10 +124,6 @@ exports.init = function(opt) {
 		return initPlugins.call(All, plugins, 'service');
 	}).then(function() {
 		All.app.use(servicesError);
-		All.app.use(function(req, res, next) {
-			if (req.accepts('html') != "html") res.sendStatus(406);
-			else next();
-		});
 		return initPlugins.call(All, plugins, 'view');
 	}).then(function() {
 		All.app.use(viewsError);
