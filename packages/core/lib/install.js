@@ -116,8 +116,18 @@ exports.clean = function(site, pkg, opt) {
 	return fs.readdir(rootSite).then(function(paths) {
 		return Promise.all(paths.map(function(path) {
 			path = Path.join(rootSite, path);
-			if (path != pkg.dir) return rimraf(path);
-		}));
+			return fs.stat(path).then(stat => {stat, path});
+		})).then(function(stats) {
+			stats.sort(function(a, b) {
+				if (a.path == pkg.dir) return -1;
+				if (a.stat.mtimeMs > b.stat.mtimeMs) return -1;
+				if (a.stat.mtimeMs == b.stat.mtimeMs) return 0;
+				if (a.stat.mtimeMs < b.stat.mtimeMs) return 1;
+			});
+			return Promise.all(stats.slice(2).map(function(obj) {
+				return rimraf(obj.path);
+			}));
+		});
 	}).catch(function(err) {
 		console.error(err);
 	}).then(function() {
