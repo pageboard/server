@@ -122,14 +122,8 @@ Domains.prototype.init = function(req, res, next) {
 			next(host._error);
 			return;
 		}
+
 		var site = self.sites[host.id];
-		req.params.site = site.id;
-		if (req.hostname != host.domains[0] && !req.path.startsWith('/.well-known/')) {
-			All.cache.tag('data-:site')(req, res, function() {
-				res.redirect(308, host.href +  req.url);
-			});
-			return;
-		}
 		var errors = site.errors;
 		if (req.url.startsWith('/.api/')) {
 			// api needs a real site instance and be able to toy with it
@@ -138,11 +132,19 @@ Domains.prototype.init = function(req, res, next) {
 			// others don't
 		}
 
+		req.site = site;
+
+		if (req.hostname != host.domains[0] && !req.path.startsWith('/.well-known/')) {
+			All.cache.tag('data-:site')(req, res, function() {
+				res.redirect(308, host.href +  req.url);
+			});
+			return;
+		}
+
 		site.href = host.href;
 		site.hostname = host.name; // at this point it should be == host.domains[0]
 		site.errors = errors;
 
-		req.site = site;
 		next();
 	}).catch(next);
 };
