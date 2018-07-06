@@ -30,7 +30,7 @@
     "@pageboard/image": "^0.2.0",
     "@pageboard/inspector": "^0.1.0",
     "@pageboard/mail": "^0.2.1",
-    "@pageboard/prerender": "^0.1.1",
+    "@pageboard/prerender": "^0.1.2",
     "@pageboard/read": "^0.2.1",
     "@pageboard/statics": "^0.2.0",
     "@pageboard/upload": "^0.1.0"
