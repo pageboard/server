@@ -114,7 +114,7 @@ CacheState.prototype.mw = function(req, res, next) {
 		console.info("detected application change");
 	}
 	tags.push('app-:site');
-	tag.apply(null, tags)(req, res, next);
+	exports.tag.apply(null, tags)(req, res, next);
 	if (doSave) me.save();
 };
 
