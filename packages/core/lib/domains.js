@@ -118,12 +118,16 @@ Domains.prototype.init = function(req, res, next) {
 	}
 	return p.then(function() {
 		if (!next) return;
+		var site = sites[host.id];
+		if (!host.id || !site) {
+			next(new HttpError.ServiceUnavailable(`Missing host.id or site for ${host.name}`));
+			return;
+		}
 		if (host._error) {
 			next(host._error);
 			return;
 		}
 
-		var site = self.sites[host.id];
 		var errors = site.errors;
 		if (req.url.startsWith('/.api/')) {
 			// api needs a real site instance and be able to toy with it
@@ -198,7 +202,7 @@ Domains.prototype.check = function(host, req) {
 					// allow checking again in a minute
 					if (host._error && host._error.statusCode == 503) delete host._error;
 				}, 60000);
-				throw new HttpError.ServiceUnavailable(`ip${lookup.family} ${lookup.address} does not match ${expected}`);
+				throw new HttpError.ServiceUnavailable(`${hostname} ${lookup.family} ${lookup.address} does not match ${expected}`);
 			}
 			return hostname;
 		});
