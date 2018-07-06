@@ -1,6 +1,6 @@
 {
   "name": "@pageboard/prerender",
-  "version": "0.1.0",
+  "version": "0.1.1",
   "description": "setup prerendering of views in pageboard",
   "main": "index.js",
   "scripts": {
