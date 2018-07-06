@@ -19,7 +19,7 @@ function init(All) {
 
 function prerender(dom) {
 	return dom(function(mw, settings, req, res) {
-		if (req.path != '/.well-known/notfound' && /^(\/[a-zA-Z0-9-]*)+$/.test(req.path) == false) {
+		if (req.path != '/.well-known/notfound' && /^(\/[a-zA-Z0-9-]*|(\/[a-zA-Z0-9-]+)+)$/.test(req.path) == false) {
 			settings.view = req.site.href + '/.well-known/notfound';
 			settings.load.disable = true;
 			settings.prepare.disable = true;
