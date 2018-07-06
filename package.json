@@ -24,13 +24,13 @@
   "dependencies": {
     "@pageboard/api": "^0.5.1",
     "@pageboard/auth": "^0.1.0",
-    "@pageboard/cache": "^0.2.1",
+    "@pageboard/cache": "^0.2.2",
     "@pageboard/core": "^0.3.2",
     "@pageboard/github-webhook": "^0.1.0",
     "@pageboard/image": "^0.2.0",
     "@pageboard/inspector": "^0.1.0",
     "@pageboard/mail": "^0.2.1",
-    "@pageboard/prerender": "^0.1.0",
+    "@pageboard/prerender": "^0.1.1",
     "@pageboard/read": "^0.2.1",
     "@pageboard/statics": "^0.2.0",
     "@pageboard/upload": "^0.1.0"
