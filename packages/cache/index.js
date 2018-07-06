@@ -14,16 +14,8 @@ var got = require('got');
 var state = new CacheState();
 
 exports = module.exports = function(opt) {
-	exports.tag = function() {
-		var mw = tag.apply(null, Array.from(arguments));
-		function omw(req, res, next) {
-			req.params.site = req.site.id;
-			mw(req, res, next);
-		}
-		omw.for = mw.for;
-		return omw;
-	};
-	exports.for = tag.for;
+	exports.tag = paramSiteWrap(tag);
+	exports.for = paramSiteWrap(tag.for);
 	exports.disable = tag.disable;
 	exports.install = state.install.bind(state);
 	return {
@@ -38,6 +30,18 @@ exports = module.exports = function(opt) {
 		name: 'cache'
 	};
 };
+
+function paramSiteWrap(fn) {
+	return function() {
+		var mw = fn.apply(null, Array.from(arguments));
+		function omw(req, res, next) {
+			req.params.site = req.site.id;
+			mw(req, res, next);
+		}
+		if (mw.for) omw.for = paramSiteWrap(mw.for);
+		return omw;
+	};
+}
 
 function CacheState() {
 }
