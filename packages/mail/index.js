@@ -3,7 +3,7 @@ var Mailgun = require('nodemailer-mailgun-transport');
 var got = require('got');
 // TODO https://nodemailer.com/dkim/
 
-var mailPlugin = require('./express-dom-email');
+var mailPlugin = require('./lib/express-dom-email');
 
 var mailer, sender;
 
