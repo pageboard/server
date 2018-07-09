@@ -1,18 +1,22 @@
 var NodeMailer = require('nodemailer');
+var AddressParser = require('nodemailer/lib/addressparser');
 var Mailgun = require('nodemailer-mailgun-transport');
 var got = require('got');
 // TODO https://nodemailer.com/dkim/
+// TODO https://postmarkapp.com/blog/differences-in-delivery-between-transactional-and-bulk-email
+// use a different domain for transactional and for bulk sending
 
 var mailPlugin = require('./lib/express-dom-email');
+var validateMailgun = require('./lib/validate-mailgun.js');
 
-var mailer, sender;
+var mailer, sender, apiKey;
 
 exports = module.exports = function(opt) {
 	/*
 	opt.mailer.transport
 	opt.mailer.auth.api_key
 	opt.mailer.auth.domain
-	opt.mailer.sender - either a "name" <email> string or a sender.name sender.address object
+	opt.mailer.sender (the name of the email address)
 	*/
 	// TODO support available transports (SMTP, sendmail, SES)
 	if (!opt.mail) return; // quietly return
@@ -26,21 +30,81 @@ exports = module.exports = function(opt) {
 	}
 	mailer = NodeMailer.createTransport(Mailgun(opt.mail));
 	sender = opt.mail.sender;
+	apiKey = opt.mail.auth.api_key;
 
 	return {
 		priority: -10, // because default prerendering happens at 0
 		name: 'mail',
 		service: function(All) {
+			All.post('/.api/mail', function(req, res, next) {
+				All.run('mail.receive', req.site, req.body).then(function(ok) {
+					// https://documentation.mailgun.com/en/latest/user_manual.html#receiving-messages-via-http-through-a-forward-action
+					if (!ok) res.sendStatus(406);
+					else res.sendStatus(200);
+				}).catch(next);
+			});
 			All.dom.settings.helpers.unshift(mailPlugin);
 		}
 	};
 };
 
+function send(mail) {
+	return new Promise(function(resolve, reject) {
+		mailer.sendMail(mail, function (err, info) {
+			if (err) reject(err);
+			else resolve(info);
+		});
+	});
+}
+
+exports.receive = function(site, data) {
+	// https://documentation.mailgun.com/en/latest/user_manual.html#parsed-messages-parameters
+	if (!validateMailgun(apiKey, data.timestamp, data.token, data.signature)) {
+		return false;
+	}
+	return All.run('user.get', {
+		email: AddressParser(data.sender).address
+	}).then(function(sender) {
+		return Promise.all(AddressParser(data.recipient).map(function(item) {
+			var parts = item.address.split('@').shift().split('_');
+			if (parts.length != 2 || parts[0] != site.id) return false;
+			var userId = parts[1];
+			console.log("Received mail to userId", userId, data.sender, data.from, data.subject);
+			return All.run('user.get', {id: userId}).then(function(user) {
+				return send({
+					from: `${site.id}_${sender.id}@${All.opt.mailer.auth.domain}`,
+					to: user.data.email,
+					subject: data.subject,
+					html: data['stripped-html'],
+					text: data['stripped-text']
+				});
+			}).catch(function(err) {
+				if (err.status == 404) return false;
+				else throw err;
+			});
+		});
+	})).then(function(arr) {
+		return arr.some(ok => !!ok);
+	}).catch(function(err) {
+		if (err.status == 404) return false;
+		else throw err;
+	});
+};
+
 exports.send = function(site, data) {
-	return All.run('block.search', site, {
+	var list = [All.run('block.search', site, {
 		type: 'mail',
 		data: {url: data.url}
-	}).then(function(pages) {
+	})];
+	if (data.from) list.push(All.run('user.get', {
+		email: data.from
+	}));
+
+	return Promise.all(list).then(function(rows) {
+		var pages = rows[0];
+		var from = rows.length > 1 ? `${site.id}_${rows[1].id}` : sender;
+		from += '@' + All.opt.mailer.auth.domain;
+
 		var emailPage = pages.data[0];
 		if (!emailPage) throw new HttpError.NotFound("Page not found");
 		var emailUrl = site.href + emailPage.data.url;
@@ -53,15 +117,9 @@ exports.send = function(site, data) {
 			return JSON.parse(response.body);
 		}).then(function(obj) {
 			var mail = {
-				from: sender,
+				from: from,
 				to: data.to,
 				subject: obj.title,
-				/* this cannot really work. What could work is replying to <id>.pageboard.fr
-				replyTo: {
-					name: sender.data.name,
-					address: sender.data.email
-				},
-				*/
 				html: obj.html,
 				text: obj.text,
 //				attachments: [{
@@ -70,12 +128,7 @@ exports.send = function(site, data) {
 //					contentType: 'text/plain' // optional
 //				}]
 			};
-			return new Promise(function(resolve, reject) {
-				mailer.sendMail(mail, function (err, info) {
-					if (err) reject(err);
-					else resolve(info);
-				});
-			});
+			return send(mail);
 		});
 	});
 };
