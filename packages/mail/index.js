@@ -36,7 +36,7 @@ exports = module.exports = function(opt) {
 		priority: -10, // because default prerendering happens at 0
 		name: 'mail',
 		service: function(All) {
-			All.post('/.api/mail', function(req, res, next) {
+			All.app.post('/.api/mail', function(req, res, next) {
 				All.run('mail.receive', req.site, req.body).then(function(ok) {
 					// https://documentation.mailgun.com/en/latest/user_manual.html#receiving-messages-via-http-through-a-forward-action
 					if (!ok) res.sendStatus(406);
@@ -82,8 +82,8 @@ exports.receive = function(site, data) {
 				if (err.status == 404) return false;
 				else throw err;
 			});
-		});
-	})).then(function(arr) {
+		}));
+	}).then(function(arr) {
 		return arr.some(ok => !!ok);
 	}).catch(function(err) {
 		if (err.status == 404) return false;
