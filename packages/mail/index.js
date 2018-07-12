@@ -13,13 +13,17 @@ var mailer, sender, apiKey;
 
 exports = module.exports = function(opt) {
 	/*
-	opt.mailer.transport
-	opt.mailer.auth.api_key
-	opt.mailer.auth.domain
-	opt.mailer.sender (the name of the email address)
+	opt.mail.transport
+	opt.mail.api_key
+	opt.mail.domain
+	opt.mail.sender (the name of the email address)
 	*/
 	// TODO support available transports (SMTP, sendmail, SES)
 	if (!opt.mail) return; // quietly return
+	if (!opt.mail.domain) {
+		console.warn('Missing mail.domain');
+		return;
+	}
 	if (opt.mail.transport != 'mailgun') {
 		console.warn("Only `mail.transport: mailgun` is supported");
 		return;
@@ -30,7 +34,7 @@ exports = module.exports = function(opt) {
 	}
 	mailer = NodeMailer.createTransport(Mailgun(opt.mail));
 	sender = opt.mail.sender;
-	apiKey = opt.mail.auth.api_key;
+	apiKey = opt.mail.api_key;
 
 	return {
 		priority: -10, // because default prerendering happens at 0
@@ -72,7 +76,7 @@ exports.receive = function(site, data) {
 			console.log("Received mail to userId", userId, data.sender, data.from, data.subject);
 			return All.run('user.get', {id: userId}).then(function(user) {
 				return send({
-					from: `${site.id}_${sender.id}@${All.opt.mailer.auth.domain}`,
+					from: `${site.id}_${sender.id}@${All.opt.mail.domain}`,
 					to: user.data.email,
 					subject: data.subject,
 					html: data['stripped-html'],
@@ -103,7 +107,7 @@ exports.send = function(site, data) {
 	return Promise.all(list).then(function(rows) {
 		var pages = rows[0];
 		var from = rows.length > 1 ? `${site.id}_${rows[1].id}` : sender;
-		from += '@' + All.opt.mailer.auth.domain;
+		from += '@' + All.opt.mail.domain;
 
 		var emailPage = pages.data[0];
 		if (!emailPage) throw new HttpError.NotFound("Page not found");
