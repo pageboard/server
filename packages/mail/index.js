@@ -14,9 +14,9 @@ var mailer, defaultSender, mailDomain;
 exports = module.exports = function(opt) {
 	/*
 	opt.mail.transport
-	opt.mail.api_key
-	opt.mail.domain
-	opt.mail.sender (the name of the email address)
+	opt.mail.mailgun contains options auth.api_key, auth.domain
+	opt.mail.domain (the same as auth.domain but could be different)
+	opt.mail.sender (the name of default sender)
 	*/
 	// TODO support available transports (SMTP, sendmail, SES)
 	if (!opt.mail) return; // quietly return
