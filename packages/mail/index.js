@@ -9,7 +9,7 @@ var got = require('got');
 var mailPlugin = require('./lib/express-dom-email');
 var validateMailgun = require('./lib/validate-mailgun.js');
 
-var mailer, defaultSender, apiKey;
+var mailer, defaultSender;
 
 exports = module.exports = function(opt) {
 	/*
@@ -32,9 +32,8 @@ exports = module.exports = function(opt) {
 		console.warn('Missing mail.sender');
 		return;
 	}
-	mailer = NodeMailer.createTransport(Mailgun(opt.mail));
+	mailer = NodeMailer.createTransport(Mailgun(opt.mail.mailgun));
 	defaultSender = opt.mail.sender;
-	apiKey = opt.mail.api_key;
 
 	return {
 		priority: -10, // because default prerendering happens at 0
@@ -63,7 +62,7 @@ function send(mail) {
 
 exports.receive = function(site, data) {
 	// https://documentation.mailgun.com/en/latest/user_manual.html#parsed-messages-parameters
-	if (!validateMailgun(apiKey, data.timestamp, data.token, data.signature)) {
+	if (!validateMailgun(All.opt.mail.mailgun, data.timestamp, data.token, data.signature)) {
 		return false;
 	}
 	return All.run('user.get', {

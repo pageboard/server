@@ -5,7 +5,11 @@ const mailgunExpirey = 15 * 60 * 1000;
 const mailgunHashType = 'sha256';
 const mailgunSignatureEncoding = 'hex';
 
-module.exports = function validateMailgun(apiKey, timestamp, token, signature) {
+module.exports = function validateMailgun(config, timestamp, token, signature) {
+	if (!config.api_key) {
+		console.warn("Cannot do mailgun validation without api_key");
+		return false;
+	}
 	var actual;
 	var adjustedTimestamp = parseInt(timestamp, 10) * 1000;
 	var fresh = (Math.abs(Date.now() - adjustedTimestamp) < mailgunExpirey);
@@ -30,7 +34,7 @@ module.exports = function validateMailgun(apiKey, timestamp, token, signature) {
 		delete mailgunTokens[token];
 	}, mailgunExpirey + (5 * 1000));
 
-	var computed = crypto.createHmac(mailgunHashType, apiKey)
+	var computed = crypto.createHmac(mailgunHashType, config.api_key)
 		.update(new Buffer(timestamp + token, 'utf-8'))
 		.digest(mailgunSignatureEncoding);
 
