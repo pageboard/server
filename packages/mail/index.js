@@ -2,10 +2,12 @@ var NodeMailer = require('nodemailer');
 var AddressParser = require('nodemailer/lib/addressparser');
 var Mailgun = require('nodemailer-mailgun-transport');
 var got = require('got');
+
 // TODO https://nodemailer.com/dkim/
 // TODO https://postmarkapp.com/blog/differences-in-delivery-between-transactional-and-bulk-email
 // use a different domain for transactional and for bulk sending
 
+var multipart = require('./lib/multipart.js');
 var mailPlugin = require('./lib/express-dom-email');
 var validateMailgun = require('./lib/validate-mailgun.js');
 
@@ -40,7 +42,7 @@ exports = module.exports = function(opt) {
 		priority: -10, // because default prerendering happens at 0
 		name: 'mail',
 		service: function(All) {
-			All.app.post('/.api/mail', function(req, res, next) {
+			All.app.post('/.api/mail', multipart, function(req, res, next) {
 				All.run('mail.receive', req.body).then(function(ok) {
 					// https://documentation.mailgun.com/en/latest/user_manual.html#receiving-messages-via-http-through-a-forward-action
 					if (!ok) res.sendStatus(406);

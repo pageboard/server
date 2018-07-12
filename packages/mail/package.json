@@ -17,6 +17,7 @@
   },
   "homepage": "https://github.com/pageboard/mail#readme",
   "dependencies": {
+    "busboy": "^0.2.14",
     "got": "^8.3.0",
     "nodemailer": "^4.6.7",
     "nodemailer-mailgun-transport": "^1.4.0"
