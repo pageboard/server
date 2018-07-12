@@ -14,7 +14,7 @@ function QueryUser(data) {
 		q.where('user.id', data.id);
 		delete data.id;
 	} else if (data.email) {
-		q.whereJsonText('user.data:email', data.email);
+		q.whereJsonText('user.data:email', 'in', data.email);
 		delete data.email;
 	}
 	return q;
@@ -35,8 +35,12 @@ exports.get.schema = {
 			minLength: 1
 		},
 		email: {
-			type: 'string',
-			format: 'email'
+			type: 'array',
+			items: {
+				type: 'string',
+				format: 'email',
+				transform: ['trim', 'toLowerCase']
+			}
 		}
 	},
 	additionalProperties: false
