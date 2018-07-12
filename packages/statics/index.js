@@ -173,10 +173,12 @@ exports.resolve = function(id, url) {
 };
 
 exports.install = function(site, {directories}, All) {
-	if (!site) return; // nothing to install
-	var dir = Path.join("files", site.id);
-	var runSiteDir = Path.join(All.opt.statics.runtime, dir);
-	var p = mkdirp(runSiteDir);
+	var p = Promise.resolve();
+	if (site) {
+		var dir = Path.join("files", site.id);
+		var runSiteDir = Path.join(All.opt.statics.runtime, dir);
+		p = mkdirp(runSiteDir);
+	}
 	directories.forEach(function(mount) {
 		p = p.then(function() {
 			return mountPath(mount.from, mount.to).catch(function(err) {
