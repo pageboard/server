@@ -9,7 +9,7 @@ var got = require('got');
 var mailPlugin = require('./lib/express-dom-email');
 var validateMailgun = require('./lib/validate-mailgun.js');
 
-var mailer, sender, apiKey;
+var mailer, defaultSender, apiKey;
 
 exports = module.exports = function(opt) {
 	/*
@@ -33,7 +33,7 @@ exports = module.exports = function(opt) {
 		return;
 	}
 	mailer = NodeMailer.createTransport(Mailgun(opt.mail));
-	sender = opt.mail.sender;
+	defaultSender = opt.mail.sender;
 	apiKey = opt.mail.api_key;
 
 	return {
@@ -106,8 +106,7 @@ exports.send = function(site, data) {
 
 	return Promise.all(list).then(function(rows) {
 		var pages = rows[0];
-		var from = rows.length > 1 ? `${site.id}_${rows[1].id}` : sender;
-		from += '@' + All.opt.mail.domain;
+		var from = rows.length > 1 ? `${site.id}_${rows[1].id}@${All.opt.mail.domain}` : defaultSender;
 
 		var emailPage = pages.data[0];
 		if (!emailPage) throw new HttpError.NotFound("Page not found");
