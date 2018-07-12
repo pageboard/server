@@ -85,7 +85,6 @@ exports.receive = function(data) {
 			if (parts.length != 2) return false;
 			var siteId = parts[0];
 			var userId = parts[1];
-			console.info("Received mail", siteId, userId, data.sender, data.from, data.subject);
 			return Promise.all([
 				All.run('user.get', {id: userId}),
 				All.run('site.get', {id: siteId})
