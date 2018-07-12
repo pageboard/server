@@ -9,7 +9,7 @@ var got = require('got');
 var mailPlugin = require('./lib/express-dom-email');
 var validateMailgun = require('./lib/validate-mailgun.js');
 
-var mailer, defaultSender;
+var mailer, defaultSender, mailDomain;
 
 exports = module.exports = function(opt) {
 	/*
@@ -34,13 +34,14 @@ exports = module.exports = function(opt) {
 	}
 	mailer = NodeMailer.createTransport(Mailgun(opt.mail.mailgun));
 	defaultSender = opt.mail.sender;
+	mailDomain = opt.mail.domain;
 
 	return {
 		priority: -10, // because default prerendering happens at 0
 		name: 'mail',
 		service: function(All) {
 			All.app.post('/.api/mail', function(req, res, next) {
-				All.run('mail.receive', req.site, req.body).then(function(ok) {
+				All.run('mail.receive', req.body).then(function(ok) {
 					// https://documentation.mailgun.com/en/latest/user_manual.html#receiving-messages-via-http-through-a-forward-action
 					if (!ok) res.sendStatus(406);
 					else res.sendStatus(200);
@@ -60,7 +61,7 @@ function send(mail) {
 	});
 }
 
-exports.receive = function(site, data) {
+exports.receive = function(data) {
 	// https://documentation.mailgun.com/en/latest/user_manual.html#parsed-messages-parameters
 	if (!validateMailgun(All.opt.mail.mailgun, data.timestamp, data.token, data.signature)) {
 		return false;
@@ -69,15 +70,21 @@ exports.receive = function(site, data) {
 		email: AddressParser(data.sender).address
 	}).then(function(sender) {
 		return Promise.all(AddressParser(data.recipient).map(function(item) {
-			var parts = item.address.split('@').shift().split('.');
-			if (parts.length != 2 || parts[0] != site.id) return false;
+			var parts = item.address.split('@');
+			if (parts.pop() != mailDomain) return false;
+			parts = parts[0].split('.');
+			if (parts.length != 2) return false;
+			var siteId = parts[0];
 			var userId = parts[1];
-			console.log("Received mail to userId", userId, data.sender, data.from, data.subject);
-			return All.run('user.get', {id: userId}).then(function(user) {
+			console.info("Received mail", siteId, userId, data.sender, data.from, data.subject);
+			return Promise.all([
+				All.run('user.get', {id: userId}),
+				All.run('site.get', {id: siteId})
+			]).then(function([user, site]) {
 				return send({
 					from: {
 						name: site.data.domains[0],
-						address: `${site.id}.${sender.id}@${All.opt.mail.domain}`
+						address: `${site.id}.${sender.id}@${mailDomain}`
 					},
 					to: {
 						name: user.data.name || undefined,
@@ -114,7 +121,7 @@ exports.send = function(site, data) {
 		var from = defaultSender;
 		if (rows.length > 1) from = {
 			name: site.data.domains[0],
-			address: `${site.id}.${rows[1].id}@${All.opt.mail.domain}`
+			address: `${site.id}.${rows[1].id}@${mailDomain}`
 		};
 
 		var emailPage = pages.data[0];
