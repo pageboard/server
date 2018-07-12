@@ -68,8 +68,15 @@ exports.receive = function(data) {
 	if (!validateMailgun(All.opt.mail.mailgun, data.timestamp, data.token, data.signature)) {
 		return false;
 	}
+	var senders = data.sender || '';
+	if (data.from) senders += ', ' + data.from;
+	senders = AddressParser(senders).map(function(item) { return item.address; });
+	if (senders.length == 0) {
+		console.error('no senders', data.sender, data.from);
+		return false;
+	}
 	return All.run('user.get', {
-		email: AddressParser(data.sender).address
+		email: senders
 	}).then(function(sender) {
 		return Promise.all(AddressParser(data.recipient).map(function(item) {
 			var parts = item.address.split('@');
