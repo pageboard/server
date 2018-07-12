@@ -129,7 +129,7 @@ exports.send = function(site, data) {
 		var emailUrl = site.href + emailPage.data.url;
 
 		return got(emailUrl, {
-			query: Object.assign(data.query, {
+			query: Object.assign(data.query || {}, {
 				email: true
 			})
 		}).then(function(response) {
