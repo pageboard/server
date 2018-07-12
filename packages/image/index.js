@@ -7,6 +7,12 @@ var fs = {
 
 var BufferList = require('bl');
 var DataUri = require('datauri');
+var allowedParameters = {
+	rs: true,
+	ex: true,
+	q: true,
+	format: true
+};
 
 exports = module.exports = function(opt) {
 	sharp.simd(true);
@@ -33,8 +39,19 @@ function initFile(All) {
 		uploadDir = "." + uploadDir;
 		console.info("Uploaded images resizable by upload at", "/" + uploadDir);
 		All.app.get(`:url(/${uploadDir}/*)`, function(req, res, next) {
-			if (!req.query.rs && !req.query.ex && !req.query.q && !req.query.format) next('route');
-			else next();
+			var hasParam = false;
+			var wrongParam = false;
+			Object.keys(req.query).forEach(function(key) {
+				if (allowedParameters[key]) hasParam = true;
+				else wrongParam = true;
+			});
+			if (wrongParam) {
+				res.sendStatus(400);
+			} else if (hasParam) {
+				next();
+			} else {
+				next('route');
+			}
 		}, sharpie(All.opt.image));
 	}
 	return All.utils.which(opt.image.im).catch(function() {}).then(function(path) {
