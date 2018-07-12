@@ -69,14 +69,20 @@ exports.receive = function(site, data) {
 		email: AddressParser(data.sender).address
 	}).then(function(sender) {
 		return Promise.all(AddressParser(data.recipient).map(function(item) {
-			var parts = item.address.split('@').shift().split('_');
+			var parts = item.address.split('@').shift().split('.');
 			if (parts.length != 2 || parts[0] != site.id) return false;
 			var userId = parts[1];
 			console.log("Received mail to userId", userId, data.sender, data.from, data.subject);
 			return All.run('user.get', {id: userId}).then(function(user) {
 				return send({
-					from: `${site.id}_${sender.id}@${All.opt.mail.domain}`,
-					to: user.data.email,
+					from: {
+						name: site.data.domains[0],
+						address: `${site.id}.${sender.id}@${All.opt.mail.domain}`
+					},
+					to: {
+						name: user.data.name || undefined,
+						address: user.data.email
+					},
 					subject: data.subject,
 					html: data['stripped-html'],
 					text: data['stripped-text']
@@ -105,7 +111,11 @@ exports.send = function(site, data) {
 
 	return Promise.all(list).then(function(rows) {
 		var pages = rows[0];
-		var from = rows.length > 1 ? `${site.id}_${rows[1].id}@${All.opt.mail.domain}` : defaultSender;
+		var from = defaultSender;
+		if (rows.length > 1) from = {
+			name: site.data.domains[0],
+			address: `${site.id}.${rows[1].id}@${All.opt.mail.domain}`
+		};
 
 		var emailPage = pages.data[0];
 		if (!emailPage) throw new HttpError.NotFound("Page not found");
