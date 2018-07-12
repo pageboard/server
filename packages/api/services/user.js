@@ -43,10 +43,28 @@ exports.get.schema = {
 };
 
 exports.add = function(data) {
-	data = Object.assign({
-		type: 'user'
-	}, data);
-	return All.api.Block.query().insert(data);
+	return QueryUser(data).then(function(user) {
+		throw new HttpError.Conflict();
+	}).catch(function(err) {
+		if (err.status == 404) {
+			return All.api.Block.query().insert({
+				data: { email: data.email },
+				type: 'user'
+			});
+		} else {
+			throw err;
+		}
+	});
+};
+exports.add.schema = {
+	required: ['email'],
+	properties: {
+		email: {
+			type: 'string',
+			format: 'email',
+			transform: ['trim', 'toLowerCase']
+		}
+	}
 };
 
 exports.save = function(data) {
@@ -56,4 +74,4 @@ exports.save = function(data) {
 exports.del = function(data) {
 	return QueryUser(data).del();
 };
-
+exports.del.schema = exports.get.schema;
