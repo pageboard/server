@@ -6,7 +6,7 @@ const mailgunHashType = 'sha256';
 const mailgunSignatureEncoding = 'hex';
 
 module.exports = function validateMailgun(config, timestamp, token, signature) {
-	if (!config.api_key) {
+	if (!config.auth.api_key) {
 		console.warn("Cannot do mailgun validation without api_key");
 		return false;
 	}
@@ -34,7 +34,7 @@ module.exports = function validateMailgun(config, timestamp, token, signature) {
 		delete mailgunTokens[token];
 	}, mailgunExpirey + (5 * 1000));
 
-	var computed = crypto.createHmac(mailgunHashType, config.api_key)
+	var computed = crypto.createHmac(mailgunHashType, config.auth.api_key)
 		.update(new Buffer(timestamp + token, 'utf-8'))
 		.digest(mailgunSignatureEncoding);
 
