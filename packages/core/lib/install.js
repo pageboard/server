@@ -116,7 +116,9 @@ exports.clean = function(site, pkg, opt) {
 	return fs.readdir(rootSite).then(function(paths) {
 		return Promise.all(paths.map(function(path) {
 			path = Path.join(rootSite, path);
-			return fs.stat(path).then(stat => {stat, path});
+			return fs.stat(path).then(function(stat) {
+				return {stat, path};
+			});
 		})).then(function(stats) {
 			stats.sort(function(a, b) {
 				if (a.path == pkg.dir) return -1;
