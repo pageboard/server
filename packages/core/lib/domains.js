@@ -132,9 +132,10 @@ Domains.prototype.init = function(req, res, next) {
 			next(host._error);
 			return;
 		}
+		var path = req.path;
 
 		var errors = site.errors;
-		if (req.url.startsWith('/.api/')) {
+		if (path.startsWith('/.api/')) {
 			// api needs a real site instance and be able to toy with it
 			site = site.$clone();
 		} else {
@@ -143,7 +144,7 @@ Domains.prototype.init = function(req, res, next) {
 
 		req.site = site;
 
-		if (req.hostname != host.domains[0] && !req.path.startsWith('/.well-known/')) {
+		if (req.hostname != host.domains[0] && !path.startsWith('/.well-known/')) {
 			All.cache.tag('data-:site')(req, res, function() {
 				res.redirect(308, host.href +  req.url);
 			});
