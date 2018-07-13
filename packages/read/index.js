@@ -1,3 +1,5 @@
+var Path = require('path');
+
 module.exports = function(opt) {
 	return {
 		priority: 0,
@@ -13,8 +15,27 @@ function init(All) {
 		'*',
 		All.auth.restrict('*'),
 		All.cache.tag('site-:site', 'data-:site'),
+		optimize,
 		prerender(All.dom)
 	);
+}
+
+function optimize(req, res, next) {
+	var path = req.path;
+	if (path == '/.well-known/notfound') {
+		next();
+		return;
+	}
+	if (path.startsWith('/.')) {
+		res.sendStatus(404);
+		return;
+	}
+	var ext = Path.extname(path).substring(1);
+	if (ext && /^(html?|php\d?)$/.test(ext) == false) {
+		res.sendStatus(404);
+		return;
+	}
+	next();
 }
 
 function prerender(dom) {
