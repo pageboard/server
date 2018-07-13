@@ -32,7 +32,12 @@ Domains.prototype.init = function(req, res, next) {
 	var host = hosts[hostname];
 	if (!host) {
 		hosts[hostname] = host = {name: hostname};
-		portUpdate(host, req.get('Host'));
+		var hostHeader = req.get('Host');
+		if (!hostHeader) {
+			console.error(req.headers);
+			return next(new Error('Missing Host header'));
+		}
+		portUpdate(host, hostHeader);
 	}
 	if (!host.searching && !host._error) {
 		delete host._error;
@@ -281,7 +286,6 @@ Domains.prototype.error = function(site, err) {
 };
 
 function portUpdate(host, header) {
-	if (header == null) throw new Error(`Missing Host header for ${host.name}`);
 	var parts = header.split(':');
 	var port = parts.length == 2 ? parseInt(parts[1]) : null;
 	if (!isNaN(port)) host.port = port;
