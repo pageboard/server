@@ -25,7 +25,7 @@ exports.find = function(site, data) {
 	.joinRelation('parents', {alias: 'user'});
 	if (!data.id && !data.email) throw new HttpError.BadRequest("Missing id or email");
 	if (data.id) q.where('user.id', data.id);
-	else if (data.email) q.whereJsonText('user.data:email', data.email);
+	else if (data.email) q.whereJsonText('user.data:email', 'in', data.email);
 	return q;
 };
 Object.defineProperty(exports.find, 'schema', {
