@@ -4,6 +4,7 @@ var mkdirp = pify(require('mkdirp'));
 var semverRegex = require('semver-regex');
 var rimraf = pify(require('rimraf'));
 var debug = require('debug')('pageboard:core');
+var postinstall = require('postinstall');
 
 var fs = {
 	writeFile: pify(require('fs').writeFile),
@@ -170,12 +171,7 @@ function decideInstall(dataDir, site) {
 }
 
 function doInstall(site, pkg, opt) {
-	return mkdirp(pkg.dir).then(function() {
-		return fs.writeFile(pkg.path, JSON.stringify({
-			"private": true,
-			"dependencies": {} // npm will populate it for us
-		}));
-	}).then(function() {
+	return prepareDir(pkg).then(function() {
 		var version = site.data.version;
 		var module = site.data.module;
 		if (version != null) {
@@ -183,7 +179,7 @@ function doInstall(site, pkg, opt) {
 			else module += "@";
 			module += version;
 		}
-		console.info("install", site.id);
+		console.info("install", site.id, module, version);
 		var baseEnv = {
 			HOME: process.env.HOME,
 			PATH: process.env.PATH
@@ -194,6 +190,7 @@ function doInstall(site, pkg, opt) {
 		}
 		if (opt.core.installer == "yarn") {
 			return All.utils.spawn(opt.installerPath, [
+				"--ignore-scripts", // only postinstall scripts are allowed through hook
 				"--non-interactive", // yarn only
 				"--ignore-optional", // yarn
 				"--no-progress",
@@ -209,11 +206,13 @@ function doInstall(site, pkg, opt) {
 		} else {
 			return All.utils.spawn(opt.installerPath, [
 				"install",
+				"--ignore-scripts", // only postinstall scripts are allowed through hook
 				"--no-optional", // npm
 				"--no-progress",
 				"--production",
 				"--no-package-lock", // npm
 				"--silent",
+				"--no-audit",
 				"--save", module
 			], {
 				cwd: pkg.dir,
@@ -223,6 +222,8 @@ function doInstall(site, pkg, opt) {
 				})
 			});
 		}
+	}).then(function(out) {
+		if (out) debug(out);
 	}).catch(function(err) {
 		if (typeof err == "string") {
 			var installError = new Error(err);
@@ -231,8 +232,7 @@ function doInstall(site, pkg, opt) {
 			delete err.stack;
 		}
 		throw err;
-	}).then(function(out) {
-		if (out) debug(out);
+	}).then(function() {
 		return getPkg(pkg.dir).then(function(npkg) {
 			if (!npkg.name) {
 				var err = new Error("Installation error");
@@ -240,7 +240,21 @@ function doInstall(site, pkg, opt) {
 				throw err;
 			}
 			return npkg;
+		}).then(function(pkg) {
+			return runPostinstall(pkg.dir, pkg.name, opt).then(function(result) {
+				if (result) debug(result);
+				return pkg;
+			});
 		});
+	});
+}
+
+function prepareDir(pkg) {
+	return mkdirp(pkg.dir).then(function() {
+		return fs.writeFile(pkg.path, JSON.stringify({
+			"private": true,
+			"dependencies": {} // installation of main module populates it for us
+		}));
 	});
 }
 
@@ -290,5 +304,44 @@ function getPkg(pkgDir) {
 		return pkg;
 	}).catch(function() {
 		return pkg;
+	});
+}
+
+function getDependencies(root, name, list, deps) {
+	if (!deps) deps = {};
+	var dir = Path.join(root, 'node_modules', name);
+	if (deps[dir]) return;
+	return fs.readFile(Path.join(dir, 'package.json')).catch(function(err) {
+		// nested dep
+	}).then(function(buf) {
+		if (!buf || deps[dir]) return;
+		deps[dir] = true;
+		var pkg = JSON.parse(buf);
+		var pst = (pkg.scripts && pkg.scripts.postinstall || "").split(' ');
+		if (pst.includes("postinstall")) {
+			list.push({pkg, dir});
+		}
+		return Promise.all(Object.keys(pkg.dependencies || {}).map(function(name) {
+			return getDependencies(root, name, list, deps);
+		}));
+	});
+}
+
+function runPostinstall(dir, name, opt) {
+	var list = [];
+	return getDependencies(dir, name, list).then(function() {
+		return Promise.all(list.reverse().map(function({pkg, dir}) {
+			return postinstall.process(pkg.postinstall, {
+				cwd: dir,
+				allow: opt.postinstall || [
+					'link',
+					'copy',
+					'concat',
+					'js',
+					'css',
+					'browserify'
+				]
+			});
+		}));
 	});
 }
