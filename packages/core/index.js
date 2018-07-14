@@ -164,6 +164,7 @@ function install(site) {
 		return site;
 	}).catch(function(err) {
 		All.domains.error(site, err);
+		if (All.opt.env == "development") console.error(err);
 		throw err;
 	});
 }
