@@ -124,12 +124,13 @@ Domains.prototype.init = function(req, res, next) {
 	return p.then(function() {
 		if (!next) return;
 		var site = sites[host.id];
-		if (!host.id || !site) {
-			next(new HttpError.ServiceUnavailable(`Missing host.id or site for ${host.name}`));
-			return;
-		}
 		if (host._error) {
 			next(host._error);
+			return;
+		}
+		if (!host.id || !site) {
+			// this should never actually happen !
+			next(new HttpError.ServiceUnavailable(`Missing host.id or site for ${host.name}`));
 			return;
 		}
 		var path = req.path;
