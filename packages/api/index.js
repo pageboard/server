@@ -17,7 +17,12 @@ var ajvApiSettings = {
 	validateSchema: true,
 	ownProperties: true,
 	coerceTypes: 'array',
-	removeAdditional: false
+	removeAdditional: false,
+	formats: {
+		singleline: {
+			pattern: /^[^\n\r]*$/
+		}
+	}
 };
 var ajvApiWithDefaults = AjvKeywords(ajv(Object.assign({}, ajvApiSettings, {
 	useDefaults: true
@@ -69,7 +74,8 @@ function init(All) {
 				validateSchema: false,
 				ownProperties: true,
 				coerceTypes: 'array',
-				removeAdditional: false
+				removeAdditional: false,
+				formats: ajvApiSettings.formats
 			}
 		});
 	};
