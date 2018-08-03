@@ -19,7 +19,7 @@ function init(All) {
 	}, opt.scope);
 
 	return require('./lib/keygen')(All).then(function() {
-		var scope = upcacheScope(opt.scope);
+		var scope = getScope(opt.scope);
 		All.auth.restrict = scope.restrict.bind(scope);
 		All.auth.test = scope.test.bind(scope);
 		All.auth.cookie = scope.serializeBearer.bind(scope);
@@ -167,5 +167,32 @@ function isGranted(grants, settings) {
 	return grants.every(function(grant) {
 		return settings.data.grants.indexOf(grant) >= 0;
 	});
+}
+
+function getScope(scopeOpts) {
+	var scope = upcacheScope(scopeOpts);
+	scope.login = function(res, user, opts) {
+		if (res) {
+			opts = Object.assign({}, this.config, opts);
+		}
+		var bearer = this.sign(res.req, user, opts);
+		if (res) res.cookie('bearer', bearer, {
+			maxAge: opts.maxAge * 1000,
+			httpOnly: true,
+			sameSite: true,
+			secure: true,
+			path: '/'
+		});
+		return bearer;
+	};
+	scope.logout = function(res) {
+		res.clearCookie('bearer', {
+			httpOnly: true,
+			sameSite: true,
+			secure: true,
+			path: '/'
+		});
+	};
+	return scope;
 }
 
