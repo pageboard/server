@@ -31,8 +31,9 @@ exports.query = function(site, data) {
 	return All.run('block.get', site, {
 		id: data._id
 	}).then(function(parent) {
-		var fd = parent.data.query || {};
-		if (!fd.call) throw new HttpError.BadRequest("Missing query.call");
+		var fd = parent.data.query || parent.data || {};
+		var apiCall = fd.api || fd.call;
+		if (!apiCall) throw new HttpError.BadRequest("Missing data.api");
 		delete data._id;
 		var params = {};
 		// consts: destPath: val
@@ -59,7 +60,7 @@ exports.query = function(site, data) {
 			setVar(params, key, fd.consts[key]);
 		});
 
-		return All.run(fd.call, site, params);
+		return All.run(apiCall, site, params);
 	});
 };
 
