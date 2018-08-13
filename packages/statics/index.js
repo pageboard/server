@@ -118,7 +118,7 @@ exports.bundle = function(site, pkg, list, filename) {
 		}
 	}
 	var p = mkdirp(buildDir).then(function() {
-		if (version != '-') return fs.stat(buildPath).catch(function(err) {})
+		if (version != 'master') return fs.stat(buildPath).catch(function(err) {})
 		.then(function(stat) {
 			return !!stat;
 		});
