@@ -273,7 +273,8 @@ exports.search = function(site, data) {
 		var obj = {
 			offset: data.offset,
 			limit: data.limit,
-			total: 0
+			total: 0,
+			elements: site.$bundles.page.elements
 		};
 		if (results.rowCount == 0) {
 			obj.data = [];

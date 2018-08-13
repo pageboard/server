@@ -288,7 +288,7 @@ exports.find = function(site, data) {
 	return exports.search(site, data).then(function(obj) {
 		return {
 			data: obj.data.length == 1 ? obj.data[0] : null,
-			schemas: obj.schemas
+			elements: obj.elements
 		};
 	});
 };
