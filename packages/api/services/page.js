@@ -113,11 +113,10 @@ function QueryPageHref(site) {
 }
 
 exports.get = function(site, data) {
-	var pageTypes = Object.keys(site.$pages);
-	return QueryPage(site).whereIn('page.type', pageTypes)
+	return QueryPage(site).whereIn('page.type', site.$pagetypes)
 	.whereJsonText("page.data:url", data.url)
 	.select(
-		QueryPageHref(site).whereIn('page.type', pageTypes)
+		QueryPageHref(site).whereIn('page.type', site.$pagetypes)
 		.whereJsonText("page.data:url", data.url).as('hrefs')
 	)
 	.then(function(page) {
@@ -130,7 +129,6 @@ exports.get = function(site, data) {
 			return page;
 		}
 	}).then(function(page) {
-		page.site = site.data;
 		page.children = page.children.concat(page.standalones);
 		delete page.standalones;
 		if (page.data.url == null) return page;
@@ -146,19 +144,27 @@ exports.get = function(site, data) {
 				ref('block.data:title').as('title')
 			])
 		]).then(function(list) {
-			page.links = {};
-			page.links.up = list[0].map(redUrl);
+			var links = {};
+			var obj = {
+				data: page,
+				elements: site.$bundles[page.type].elements,
+				links: links,
+				site: site.data,
+				hrefs: page.hrefs
+			};
+			delete page.hrefs;
+			links.up = list[0].map(redUrl);
 			var siblings = list[1];
 			var position = siblings.findIndex(function(item) {
 				return item.url == pageUrl;
 			});
-			if (position > 0) page.links.prev = redUrl(siblings[position - 1]);
-			if (position < siblings.length - 1) page.links.next = redUrl(siblings[position + 1]);
+			if (position > 0) links.prev = redUrl(siblings[position - 1]);
+			if (position < siblings.length - 1) links.next = redUrl(siblings[position + 1]);
 			if (siblings.length > 1) {
-				page.links.first = redUrl(siblings[0]);
-				page.links.last = redUrl(siblings[siblings.length - 1]);
+				links.first = redUrl(siblings[0]);
+				links.last = redUrl(siblings[siblings.length - 1]);
 			}
-			return page;
+			return obj;
 		});
 	});
 };
@@ -276,9 +282,6 @@ exports.search = function(site, data) {
 			obj.data = result.rows;
 			obj.total = result.count;
 		}
-		obj.schemas = {
-			page: site.$schema('page')
-		};
 		return obj;
 	});
 };
@@ -353,7 +356,6 @@ exports.save = function(site, changes) {
 		update: changes.update.filter(b => b.type == "page")
 	};
 	pages.all = pages.add.concat(pages.update);
-	var pageTypes = Object.keys(site.$pages);
 
 	changes.add.forEach(function(b) {
 		stripHostname(site, b);
@@ -366,7 +368,8 @@ exports.save = function(site, changes) {
 	var allUrl = {};
 	return site.$relatedQuery('children')
 	.select('block.id', ref('block.data:url').as('url'))
-	.whereIn('block.type', pageTypes).whereNotNull(ref('block.data:url')).then(function(dbPages) {
+	.whereIn('block.type', site.$pagetypes)
+	.whereNotNull(ref('block.data:url')).then(function(dbPages) {
 		pages.all.forEach(function(page) {
 			if (!page.data.url || page.data.url.startsWith('/$/')) {
 				delete page.data.url;
@@ -489,7 +492,7 @@ function applyAdd(site, list) {
 
 function applyUpdate(site, list) {
 	return Promise.all(list.map(function(block) {
-		if (site.$pages[block.type] != null) {
+		if (site.$pagetypes.includes(block.type)) {
 			return updatePage(site, block);
 		} else {
 			// simpler path
@@ -502,8 +505,8 @@ function applyUpdate(site, list) {
 }
 
 function updatePage(site, page) {
-	var pageTypes = Object.keys(site.$pages);
-	return site.$relatedQuery('children').where('block.id', page.id).whereIn('block.type', pageTypes)
+	return site.$relatedQuery('children').where('block.id', page.id)
+	.whereIn('block.type', site.$pagetypes)
 	.select(ref('block.data:url').as('url')).first().throwIfNotFound().then(function(dbPage) {
 		var oldUrl = dbPage.url;
 		var newUrl = page.data.url;
@@ -536,7 +539,8 @@ function updatePage(site, page) {
 			return dbPage;
 		});
 	}).then(function(dbPage) {
-		return site.$relatedQuery('children').where('block.id', page.id).whereIn('block.type', pageTypes).patch(page);
+		return site.$relatedQuery('children').where('block.id', page.id)
+		.whereIn('block.type', site.$pagetypes).patch(page);
 	}).catch(function(err) {
 		console.error("cannot updatePage", err);
 		throw err;

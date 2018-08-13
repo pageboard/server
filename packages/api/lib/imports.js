@@ -54,10 +54,14 @@ exports.validate = function(site, pkg) {
 	return Promise.resolve().then(function() {
 		var eltsMap = pkg.eltsMap;
 		var pages = [];
+		site.$pagetypes = [];
 		Object.keys(eltsMap).forEach(function(key) {
 			var el = eltsMap[key];
 			if (!el.name) el.name = key;
-			if (el.group == "page") pages.push(el);
+			if (el.group == "page") {
+				pages.push(el);
+				site.$pagetypes.push(el.name);
+			}
 		});
 		site.$pages = {};
 		return Promise.all(pages.map(function(page) {
