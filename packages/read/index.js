@@ -46,7 +46,7 @@ function prerender(dom) {
 			settings.prepare.disable = true;
 		} else {
 			var scripts = req.site.$resources.map(function(src) {
-				return `<script src="${src}"></script>`;
+				return `<script src="${src}" defer></script>`;
 			});
 			settings.view = `<!DOCTYPE html>
 <html>
