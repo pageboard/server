@@ -3,7 +3,8 @@ var pify = require('util').promisify;
 var toSource = require('tosource');
 
 var fs = {
-	readFile: pify(require('fs').readFile)
+	readFile: pify(require('fs').readFile),
+	writeFile: pify(require('fs').writeFile)
 };
 var vm = require('vm');
 var debug = require('debug')('pageboard:imports');
@@ -63,34 +64,14 @@ exports.validate = function(site, pkg) {
 				site.$pagetypes.push(el.name);
 			}
 		});
-		site.$pages = {};
+		site.$bundles = {};
 		return Promise.all(pages.map(function(page) {
 			page = eltsMap[page.name] = Object.assign({}, page);
 			return bundle(site, pkg, page);
 		}));
 	}).then(function() {
-		Object.values(pkg.eltsMap).forEach(function(elt) {
-			if (elt.group != "page" && elt.name != "site") {
-				delete elt.stylesheets;
-				delete elt.scripts;
-			}
-		});
-		site.constructor = pkg.Block;
-		var eltsPages = {};
-		Object.keys(site.$pages).forEach(function(name) {
-			eltsPages[name] = Object.assign({}, pkg.eltsMap[name]);
-			delete eltsPages[name].scripts;
-			delete eltsPages[name].stylesheets;
-			delete eltsPages[name].resources;
-			delete eltsPages[name].render;
-			delete eltsPages[name].contents;
-		});
-		Object.keys(site.$pages).forEach(function(name) {
-			site.$pages[name] = {
-				source: toSource(Object.assign({}, eltsPages, site.$pages[name]))
-			};
-		});
 		site.$resources = pkg.eltsMap.site.resources;
+		site.constructor = pkg.Block;
 		delete pkg.eltsMap;
 		delete pkg.Block;
 	});
@@ -106,35 +87,60 @@ function sortPriority(list) {
 	});
 }
 
-function bundle(site, pkg, page) {
-	var list = listDependencies(site.id, pkg.eltsMap, page);
+function bundle(site, pkg, rootEl) {
+	var list = listDependencies(site.id, pkg.eltsMap, rootEl);
 	list.sort(function(a, b) {
 		return (a.priority || 0) - (b.priority || 0);
 	});
 	var scripts = filter(list, 'scripts');
 	var styles = filter(list, 'stylesheets');
+	var prefix = `${rootEl.name}-`;
 
-	var pageMap = {};
+	var eltsMap = {};
 	list.forEach(function(elt) {
-		pageMap[elt.name] = elt;
+		eltsMap[elt.name] = elt;
+		if (!elt.standalone) {
+			delete elt.scripts;
+			delete elt.stylesheets;
+		}
 	});
-	site.$pages[page.name] = pageMap;
+	site.$bundles[rootEl.name] = {};
+
+	var p;
 
 	if (site.data.env == "dev" || !pkg.dir || !site.href) {
-		page.scripts = scripts;
-		page.stylesheets = styles;
-		return Promise.resolve();
+		p = Promise.resolve();
+		rootEl.scripts = scripts;
+		rootEl.stylesheets = styles;
+	} else {
+		p = Promise.all([
+			All.statics.bundle(site, pkg, scripts, `${prefix}scripts.js`),
+			All.statics.bundle(site, pkg, styles, `${prefix}styles.css`)
+		]);
 	}
+	return p.then(function(both) {
+		if (both && both.length == 2) {
+			rootEl.scripts = both[1];
+			rootEl.stylesheets = both[2];
+		}
 
-	var prefix = page.name == "page" ? "" : `${page.name}-`;
+		var elsFile = `${prefix}elements.js`;
+		var version = site.data.version;
+		if (version == null) version = 'master';
+		var elsUrl = `/.files/${version}/_${elsFile}`;
+		var elsRuntime = All.statics.resolve(site.id, elsUrl);
 
-	return Promise.all([
-		All.statics.bundle(site, pkg, scripts, `${prefix}scripts.js`),
-		All.statics.bundle(site, pkg, styles, `${prefix}styles.css`)
-	]).then(function(both) {
-		page.scripts = both[0];
-		page.stylesheets = both[1];
+		return writeSource(elsRuntime, eltsMap).then(function() {
+			return All.statics.bundle(site, pkg, [elsUrl], elsFile);
+		}).then(function(paths) {
+			site.$bundles[rootEl.name].elements = paths[0];
+		});
 	});
+}
+
+function writeSource(path, obj) {
+	var str = 'Object.assign(Pageboard.elements, ' + toSource(obj) + ');';
+	return fs.writeFile(path, str);
 }
 
 function listDependencies(id, eltsMap, el, list=[], sieve={}) {

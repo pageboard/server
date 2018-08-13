@@ -97,7 +97,11 @@ exports.search = function(site, data) {
 			data: rows,
 			offset: data.offset,
 			limit: data.limit,
-			schemas: schemas
+			elements: Object.keys(schemas).reduce(function(list, name) {
+				var b = site.$bundles[name];
+				if (b && b.elements) list.push(b.elements);
+				return list;
+			}, [])
 		};
 		if (data.parents && data.parents.first) {
 			rows.forEach(function(row) {

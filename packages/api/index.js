@@ -101,23 +101,6 @@ function init(All) {
 
 	Object.assign(exports, imports);
 
-	All.app.get('/.api/elements.js',
-		All.cache.tag('app-:site').for(opt.env == "development" ? null : '1 month'),
-		function(req, res, next) {
-			var version = req.query.version;
-			if (version && req.site.version != version) {
-				console.warn(req.url, "does not match site version", req.site.version);
-			}
-			res.type('text/javascript');
-			var pageObj = req.site.$pages[req.query.type || 'page'];
-			if (!pageObj) {
-				res.sendStatus(400);
-			} else {
-				res.send('if (!window.Pageboard) Pageboard = {};\n' +
-				'Pageboard.elements = ' + pageObj.source);
-			}
-		}
-	);
 	All.app.get('/.api/services.js',
 		function(req, res, next) {
 			res.type('text/javascript');
