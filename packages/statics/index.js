@@ -99,7 +99,8 @@ function init(All) {
 
 exports.bundle = function(site, pkg, list, filename) {
 	if (list.length == 0) return [];
-	var installPath = Path.join(pkg.dir, filename);
+	var buildDir = Path.join(pkg.dir, "builds");
+	var buildPath = Path.join(buildDir, filename);
 	var opts = All.opt.statics;
 	var version = site.data.version;
 	if (version == null) version = 'master';
@@ -116,8 +117,8 @@ exports.bundle = function(site, pkg, list, filename) {
 			return site.$bundles[bfn].promise;
 		}
 	}
-	var p = Promise.resolve().then(function() {
-		if (version != '-') return fs.stat(installPath).catch(function(err) {})
+	var p = mkdirp(buildDir).then(function() {
+		if (version != '-') return fs.stat(buildPath).catch(function(err) {})
 		.then(function(stat) {
 			return !!stat;
 		});
@@ -140,13 +141,13 @@ exports.bundle = function(site, pkg, list, filename) {
 	}).then(function(copyFromRuntime) {
 		if (copyFromRuntime) {
 			return Promise.all([
-				fs.copyFile(output, installPath),
-				fs.copyFile(output + '.map', installPath + '.map').catch(function() {})
+				fs.copyFile(output, buildPath),
+				fs.copyFile(output + '.map', buildPath + '.map').catch(function() {})
 			]);
 		} else {
 			return Promise.all([
-				fs.copyFile(installPath, output),
-				fs.copyFile(installPath + '.map', output + '.map').catch(function() {})
+				fs.copyFile(buildPath, output),
+				fs.copyFile(buildPath + '.map', output + '.map').catch(function() {})
 			]);
 		}
 	}).then(function() {
