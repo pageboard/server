@@ -153,16 +153,13 @@ function listDependencies(id, eltsMap, el, list=[], sieve={}) {
 			Object.keys(eltsMap).forEach(function(key) {
 				var gel = eltsMap[key];
 				if (!gel.group) {
-					// not clear why not gel.render
-					if (!gel.render && (gel.stylesheets || gel.scripts)) {
+					// non-rendering elements
+					if (!gel.render && !gel.html && (gel.stylesheets || gel.scripts)) {
 						listDependencies(id, eltsMap, gel, list, sieve);
 					}
-					return;
 				} else if (gel.standalone) {
 					// prevent loops
-					return;
-				}
-				if (gel.group.split(" ").indexOf(word) >= 0) {
+				} else if (gel.group.split(" ").indexOf(word) >= 0) {
 					isGroup = true;
 					listDependencies(id, eltsMap, gel, list, sieve);
 				}
