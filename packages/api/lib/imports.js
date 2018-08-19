@@ -54,20 +54,20 @@ exports.install = function(site, pkg, All) {
 exports.validate = function(site, pkg) {
 	return Promise.resolve().then(function() {
 		var eltsMap = pkg.eltsMap;
-		var pages = [];
+		var standalones = [];
 		site.$pagetypes = [];
 		Object.keys(eltsMap).forEach(function(key) {
 			var el = eltsMap[key];
 			if (!el.name) el.name = key;
-			if (el.group == "page") {
-				pages.push(el);
-				site.$pagetypes.push(el.name);
+			if (el.standalone) {
+				standalones.push(el);
+				if (el.group == "page") site.$pagetypes.push(el.name);
 			}
 		});
 		site.$bundles = {};
-		return Promise.all(pages.map(function(page) {
-			page = eltsMap[page.name] = Object.assign({}, page);
-			return bundle(site, pkg, page);
+		return Promise.all(standalones.map(function(el) {
+			el = eltsMap[el.name] = Object.assign({}, el);
+			return bundle(site, pkg, el);
 		}));
 	}).then(function() {
 		site.$resources = pkg.eltsMap.site.resources;
@@ -153,11 +153,13 @@ function listDependencies(id, eltsMap, el, list=[], sieve={}) {
 			Object.keys(eltsMap).forEach(function(key) {
 				var gel = eltsMap[key];
 				if (!gel.group) {
+					// not clear why not gel.render
 					if (!gel.render && (gel.stylesheets || gel.scripts)) {
 						listDependencies(id, eltsMap, gel, list, sieve);
 					}
 					return;
-				} else if (gel.group == "page") {
+				} else if (gel.standalone) {
+					// prevent loops
 					return;
 				}
 				if (gel.group.split(" ").indexOf(word) >= 0) {
