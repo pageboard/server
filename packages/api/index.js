@@ -101,12 +101,6 @@ function init(All) {
 
 	Object.assign(exports, imports);
 
-	All.app.get('/.api/services.js',
-		function(req, res, next) {
-			res.type('text/javascript');
-			res.send('if (!window.Pageboard) Pageboard = {};\nPageboard.services = ' + JSON.stringify(All.services));
-		}
-	);
 	// api depends on site files
 	All.app.get('/.api/*', All.cache.tag('app-:site'));
 	All.app.use('/.api/*', All.auth.restrict('*'), All.cache.tag('data-:site'), bodyParserJson);

@@ -17,6 +17,7 @@ function init(All) {
 					type: 'write'
 				},
 				elements: req.site.$bundles.write.elements,
+				services: req.site.$services,
 				site: req.site.data
 			});
 		} else {

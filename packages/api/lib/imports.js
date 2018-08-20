@@ -68,7 +68,11 @@ exports.validate = function(site, pkg) {
 		return Promise.all(standalones.map(function(el) {
 			el = eltsMap[el.name] = Object.assign({}, el);
 			return bundle(site, pkg, el);
-		}));
+		})).then(function() {
+			return bundleSource(site, pkg, '', 'services', All.services).then(function(path) {
+				site.$services = path;
+			});
+		});
 	}).then(function() {
 		site.$resources = pkg.eltsMap.site.resources;
 		site.constructor = pkg.Block;
@@ -124,23 +128,26 @@ function bundle(site, pkg, rootEl) {
 			rootEl.stylesheets = both[2];
 		}
 
-		var elsFile = `${prefix}elements.js`;
-		var version = site.data.version;
-		if (version == null) version = 'master';
-		var elsUrl = `/.files/${version}/_${elsFile}`;
-		var elsRuntime = All.statics.resolve(site.id, elsUrl);
-
-		return writeSource(elsRuntime, eltsMap).then(function() {
-			return All.statics.bundle(site, pkg, [elsUrl], elsFile);
-		}).then(function(paths) {
-			site.$bundles[rootEl.name].elements = paths[0];
+		return bundleSource(site, pkg, prefix, 'elements', eltsMap).then(function(path) {
+			site.$bundles[rootEl.name].elements = path;
 		});
 	});
 }
 
-function writeSource(path, obj) {
-	var str = 'Object.assign(Pageboard.elements, ' + toSource(obj) + ');';
-	return fs.writeFile(path, str);
+function bundleSource(site, pkg, prefix, name, obj) {
+	var filename = `${prefix}${name}.js`;
+	var version = site.data.version;
+	if (version == null) version = 'master';
+	var fileurl = `/.files/${version}/_${filename}`;
+	var fileruntime = All.statics.resolve(site.id, fileurl);
+
+	var str = `Pageboard.${name} = Object.assign(Pageboard.${name} || {}, ${toSource(obj)});`;
+
+	return fs.writeFile(fileruntime, str).then(function() {
+		return All.statics.bundle(site, pkg, [fileurl], filename);
+	}).then(function(paths) {
+		return paths[0];
+	});
 }
 
 function listDependencies(id, eltsMap, el, list=[], sieve={}) {
