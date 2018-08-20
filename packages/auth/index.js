@@ -176,20 +176,22 @@ function getScope(scopeOpts) {
 			opts = Object.assign({}, this.config, opts);
 		}
 		var bearer = this.sign(res.req, user, opts);
+		var host = All.domains.hosts[res.req.hostname];
 		if (res) res.cookie('bearer', bearer, {
 			maxAge: opts.maxAge * 1000,
 			httpOnly: true,
 			sameSite: true,
-			secure: true,
+			secure: host && host.protocol == "https" || false,
 			path: '/'
 		});
 		return bearer;
 	};
 	scope.logout = function(res) {
+		var host = All.domains.hosts[res.req.hostname];
 		res.clearCookie('bearer', {
 			httpOnly: true,
 			sameSite: true,
-			secure: true,
+			secure: host && host.protocol == "https" || false,
 			path: '/'
 		});
 	};
