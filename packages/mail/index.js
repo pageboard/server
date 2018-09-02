@@ -160,15 +160,19 @@ exports.send = function(site, data) {
 	});
 };
 exports.send.schema = {
+	title: 'Send email',
 	required: ['url', 'to'],
 	properties: {
 		url: {
+			title: 'Address of mail page',
 			type: 'string'
 		},
 		query: {
+			title: 'Query params for mail page',
 			type: 'object'
 		},
 		to: {
+			title: 'Recipients emails',
 			type: 'array',
 			items: {
 				type: 'string',
