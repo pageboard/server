@@ -19,11 +19,10 @@
   "dependencies": {
     "debug": "^3.1.0",
     "mkdirp": "^0.5.1",
-    "postinstall-css": "^0.3.0",
-    "postinstall-js": "^0.3.4",
+    "postinstall-css": "^0.4.0",
+    "postinstall-js": "^0.4.0",
     "rimraf": "^2.6.2",
-    "serve-static": "^1.12.1",
-    "worker-nodes": "^1.6.1"
+    "serve-static": "^1.12.1"
   },
   "pageboard": true
 }
