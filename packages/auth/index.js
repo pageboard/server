@@ -97,6 +97,7 @@ exports.login = function(site, data) {
 Object.defineProperty(exports.login, 'schema', {
 	get: function() {
 		var schema = Object.assign({}, All.settings.find.schema);
+		schema.title = 'Send auth login';
 		schema.required = (schema.required || []).concat(['grants']);
 		schema.properties = Object.assign({
 			grants: {
