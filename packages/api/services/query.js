@@ -31,8 +31,8 @@ exports.query = function(site, data) {
 	return All.run('block.get', site, {
 		id: data._id
 	}).then(function(parent) {
-		var fd = parent.data.query || parent.data || {};
-		var apiCall = fd.api || fd.call;
+		var fd = parent.data.request || parent.data || {};
+		var apiCall = fd.method || fd.call;
 		if (!apiCall) throw new HttpError.BadRequest("Missing data.api");
 		delete data._id;
 		var params = {};

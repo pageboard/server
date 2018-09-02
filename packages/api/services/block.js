@@ -94,14 +94,9 @@ exports.search = function(site, data) {
 
 	return q.then(function(rows) {
 		var obj = {
-			data: rows,
+			items: rows,
 			offset: data.offset,
-			limit: data.limit,
-			elements: Object.keys(schemas).reduce(function(list, name) {
-				var b = site.$bundles[name];
-				if (b && b.elements) list.push(b.elements);
-				return list;
-			}, [])
+			limit: data.limit
 		};
 		if (data.parents && data.parents.first) {
 			rows.forEach(function(row) {
@@ -113,6 +108,7 @@ exports.search = function(site, data) {
 	});
 };
 exports.search.schema = {
+	title: 'Search blocks',
 	required: ['type'],
 	properties: {
 		text: {
@@ -285,10 +281,11 @@ function filterSub(q, data, schema) {
 exports.find = function(site, data) {
 	data.limit = 1;
 	data.offset = 0;
+	var meta = site.$standalones[data.type];
 	return exports.search(site, data).then(function(obj) {
 		return {
-			data: obj.data.length == 1 ? obj.data[0] : null,
-			elements: obj.elements
+			item: obj.items.length == 1 ? obj.items[0] : null,
+			meta: meta
 		};
 	});
 };
@@ -330,6 +327,7 @@ exports.add = function(site, data) {
 	});
 };
 exports.add.schema = {
+	title: 'Add a block',
 	properties: {
 		parent: {
 			type: 'string'
@@ -348,6 +346,7 @@ exports.save = function(site, data) {
 	});
 };
 exports.save.schema = {
+	title: 'Modify a block',
 	required: ['id', 'type'],
 	properties: {
 		id: {
@@ -368,6 +367,7 @@ exports.del = function(site, data) {
 		.delete();
 };
 exports.del.schema = {
+	title: 'Delete a block',
 	required: ['id', 'type'],
 	properties: {
 		id: {

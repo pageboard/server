@@ -13,11 +13,10 @@ function init(All) {
 	All.app.get('/.api/page', function(req, res, next) {
 		if (All.auth.test(req, 'webmaster') && req.query.develop != "write") {
 			res.send({
-				data: {
+				item: {
 					type: 'write'
 				},
-				elements: req.site.$bundles.write.elements,
-				services: req.site.$services,
+				meta: Object.assign({services: req.site.$services}, req.site.$standalones.write),
 				site: req.site.data
 			});
 		} else {
@@ -153,8 +152,8 @@ exports.get = function(site, data) {
 		]).then(function(list) {
 			var links = {};
 			var obj = {
-				data: page,
-				elements: site.$bundles[page.type].elements,
+				item: page,
+				meta: site.$standalones[page.type],
 				links: links,
 				site: site.data,
 				hrefs: page.hrefs
@@ -280,14 +279,13 @@ exports.search = function(site, data) {
 		var obj = {
 			offset: data.offset,
 			limit: data.limit,
-			total: 0,
-			elements: site.$bundles.page.elements
+			total: 0
 		};
 		if (results.rowCount == 0) {
-			obj.data = [];
+			obj.items = [];
 		} else {
 			var result = results.rows[0].result;
-			obj.data = result.rows;
+			obj.items = result.rows;
 			obj.total = result.count;
 		}
 		return obj;
@@ -295,6 +293,7 @@ exports.search = function(site, data) {
 };
 
 exports.search.schema = {
+	title: 'Search pages',
 	required: ['text'],
 	properties: {
 		text: {
@@ -314,15 +313,21 @@ exports.search.schema = {
 		additionalProperties: false
 	}
 };
+exports.search.external = true;
 
 exports.list = function(site, data) {
 	return listPages(site, data).then(function(pages) {
 		return {
-			data: pages
+			items: pages,
+			item: {
+				type: 'sitemap'
+			},
+			meta: site.$standalones.sitemap
 		};
 	});
 };
 exports.list.schema = {
+	title: 'Site map',
 	properties: {
 		parent: {
 			type: 'string'
@@ -344,6 +349,7 @@ exports.list.schema = {
 		}
 	}
 };
+exports.list.external = true;
 
 exports.save = function(site, changes) {
 	changes = Object.assign({

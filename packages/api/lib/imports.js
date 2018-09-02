@@ -64,7 +64,7 @@ exports.validate = function(site, pkg) {
 				if (el.group == "page") site.$pagetypes.push(el.name);
 			}
 		});
-		site.$bundles = {};
+		site.$standalones = {};
 		return Promise.all(standalones.map(function(el) {
 			el = eltsMap[el.name] = Object.assign({}, el);
 			return bundle(site, pkg, el);
@@ -108,7 +108,9 @@ function bundle(site, pkg, rootEl) {
 			delete elt.stylesheets;
 		}
 	});
-	site.$bundles[rootEl.name] = {};
+	var metaEl = site.$standalones[rootEl.name] = {
+		group: rootEl.group
+	};
 
 	var p;
 
@@ -129,7 +131,9 @@ function bundle(site, pkg, rootEl) {
 		}
 
 		return bundleSource(site, pkg, prefix, 'elements', eltsMap).then(function(path) {
-			site.$bundles[rootEl.name].elements = path;
+			metaEl.elements = path;
+			metaEl.scripts = rootEl.scripts;
+			metaEl.stylesheets = rootEl.stylesheets;
 		});
 	});
 }
