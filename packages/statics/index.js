@@ -12,13 +12,10 @@ var fs = {
 var mkdirp = pify(require('mkdirp'));
 var rimraf = pify(require('rimraf'));
 
-var WorkerNodes = require('worker-nodes');
-var workerOpts = {
-	minWorkers: 1,
-	maxWorkers: 1,
-	taskTimeout: 60 * 1000
+var bundlers = {
+	js: require('postinstall-js'),
+	css: require('postinstall-css')
 };
-var bundlers = {};
 
 var debug = require('debug')('pageboard:statics');
 
@@ -43,14 +40,6 @@ exports = module.exports = function(opt) {
 function init(All) {
 	var statics = All.opt.statics;
 	var app = All.app;
-	bundlers = {
-		js: new WorkerNodes(require.resolve('postinstall-js'), workerOpts),
-		css: new WorkerNodes(require.resolve('postinstall-css'), workerOpts)
-	};
-	process.on('exit', function() {
-		bundlers.js.terminate();
-		bundlers.css.terminate();
-	});
 
 	return mkdirp(statics.runtime).then(function() {
 		console.info(`Static directories are served from symlinks in ${statics.runtime}`);
@@ -100,6 +89,7 @@ function init(All) {
 exports.bundle = function(site, pkg, list, filename) {
 	if (list.length == 0) return [];
 	var buildDir = Path.join(pkg.dir, "builds");
+	var cacheDir = Path.join(pkg.dir, "cache");
 	var buildPath = Path.join(buildDir, filename);
 	var opts = All.opt.statics;
 	var version = site.data.version;
@@ -110,14 +100,7 @@ exports.bundle = function(site, pkg, list, filename) {
 	var outUrl = `/.files/${version}/${filename}`;
 	var output = urlToPath(opts, site.id, outUrl);
 
-	if (!site.$bundles) site.$bundles = {};
-	var hash = inputs.join('\n');
-	for (var bfn in site.$bundles) {
-		if (site.$bundles[bfn].hash == hash) {
-			return site.$bundles[bfn].promise;
-		}
-	}
-	var p = mkdirp(buildDir).then(function() {
+	return Promise.all([mkdirp(buildDir), mkdirp(cacheDir)]).then(function() {
 		if (version != 'master') return fs.stat(buildPath).catch(function(err) {})
 		.then(function(stat) {
 			return !!stat;
@@ -126,10 +109,10 @@ exports.bundle = function(site, pkg, list, filename) {
 		if (exists) return;
 		var ext = Path.extname(filename).substring(1);
 		if (ext != "js" && ext != "css") throw new Error("Bundles only .js or .css extensions");
-		return bundlers[ext].call(inputs, output, {
+		return bundlers[ext](inputs, output, {
 			minify: site.data.env != "dev",
-			builtinClasses: true,
-			browsers: opts.browsers
+			browsers: opts.browsers,
+			cacheDir: cacheDir
 		}).catch(function(err) {
 			delete err.input;
 			delete err.source;
@@ -153,11 +136,6 @@ exports.bundle = function(site, pkg, list, filename) {
 	}).then(function() {
 		return [outUrl];
 	});
-	site.$bundles[outUrl] = {
-		hash: hash,
-		promise: p
-	};
-	return p;
 };
 
 function urlToPath(opts, id, url) {
