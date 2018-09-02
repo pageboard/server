@@ -126,8 +126,8 @@ function bundle(site, pkg, rootEl) {
 	}
 	return p.then(function(both) {
 		if (both && both.length == 2) {
-			rootEl.scripts = both[1];
-			rootEl.stylesheets = both[2];
+			rootEl.scripts = both[0];
+			rootEl.stylesheets = both[1];
 		}
 
 		return bundleSource(site, pkg, prefix, 'elements', eltsMap).then(function(path) {
