@@ -111,7 +111,7 @@ Domains.prototype.init = function(req, res, next) {
 		p = new Promise(function(resolve) {
 			setTimeout(resolve, host.parked ? 0 : 2000);
 		}).then(function() {
-			if (host.isWaiting && !req.path.startsWith('/.')) {
+			if (host.isWaiting && !req.path.startsWith('/.') && All.opt.env != "development") {
 				next = null;
 				res.type('html').sendStatus(503);
 			} else {
