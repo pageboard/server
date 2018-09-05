@@ -20,6 +20,7 @@ function init(All) {
 				site: req.site.data
 			});
 		} else {
+			delete req.query.develop;
 			All.run('page.get', req.site, req.query).then(function(page) {
 				res.send(page);
 			}).catch(next);
