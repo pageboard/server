@@ -67,6 +67,7 @@ exports.subscribe = function(site, data) {
 };
 
 exports.subscribe.schema = {
+	$action: 'write',
 	required: ['id', 'email', 'settings', 'reservation'],
 	properties: {
 		id: {
@@ -137,6 +138,7 @@ exports.unsubscribe = function(site, data) {
 
 };
 exports.unsubscribe.schema = {
+	$action: 'write',
 	type:'object'
 };
 exports.unsubscribe.external = true;

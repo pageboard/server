@@ -10,6 +10,7 @@ exports.get = function(site, data) {
 	.where('settings.id', data.id).first().throwIfNotFound().select();
 };
 exports.get.schema = {
+	$action: 'read',
 	required: ['id'],
 	properties: {
 		id: {
@@ -61,6 +62,7 @@ exports.save = function(site, data) {
 Object.defineProperty(exports.save, 'schema', {
 	get: function() {
 		var schema = Object.assign({}, All.user.get.schema);
+		schema.$action = 'save';
 		schema.properties = Object.assign({
 			data: {
 				type: 'object'

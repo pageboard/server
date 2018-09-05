@@ -35,6 +35,7 @@ exports.get = function(site, data) {
 };
 
 exports.get.schema = {
+	$action: 'read',
 	required: ['url'],
 	properties: {
 		url: {
@@ -88,6 +89,7 @@ exports.search = function(site, data) {
 };
 
 exports.search.schema = {
+	$action: 'read',
 	properties: {
 		type: {
 			type: 'array',
@@ -176,6 +178,7 @@ exports.add = function(site, data) {
 };
 
 exports.add.schema = {
+	$action: 'add',
 	required: ['url'],
 	properties: {
 		url: {
@@ -198,6 +201,7 @@ exports.save = function(site, data) {
 };
 
 exports.save.schema = {
+	$action: 'save',
 	required: ['url', 'title'],
 	properties: {
 		url: {
@@ -222,6 +226,7 @@ exports.del = function(site, data) {
 };
 
 exports.del.schema = {
+	$action: 'del',
 	required: ['url'],
 	properties: {
 		url: {
@@ -323,6 +328,7 @@ exports.reinspect = function(data) {
 	});
 };
 exports.reinspect.schema = {
+	$action: 'write',
 	required: ['type'],
 	get properties() {
 		return Object.assign({}, All.api.Href.jsonSchema.properties, {

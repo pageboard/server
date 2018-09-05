@@ -24,6 +24,7 @@ exports.get = function(data) {
 	return QueryUser(data);
 };
 exports.get.schema = {
+	$action: 'read',
 	anyOf: [{
 		required: ['email']
 	}, {
@@ -61,6 +62,7 @@ exports.add = function(data) {
 	});
 };
 exports.add.schema = {
+	$action: 'add',
 	required: ['email'],
 	properties: {
 		email: {
@@ -78,4 +80,10 @@ exports.save = function(data) {
 exports.del = function(data) {
 	return QueryUser(data).del();
 };
-exports.del.schema = exports.get.schema;
+Object.defineProperty(exports.del, 'schema', {
+	get: function() {
+		var schema = Object.assign({}, exports.get.schema);
+		schema.$action = 'del';
+		return schema;
+	}
+});

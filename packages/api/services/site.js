@@ -43,6 +43,7 @@ exports.get = function(data) {
 };
 
 exports.get.schema = {
+	$action: 'read',
 	properties: {
 		id: {
 			type: 'string'
@@ -87,6 +88,7 @@ exports.search = function(data) {
 	});
 };
 exports.search.schema = {
+	$action: 'read',
 	required: ['email'],
 	properties: {
 		email: {
@@ -127,6 +129,7 @@ exports.add = function(data) {
 };
 
 exports.add.schema = {
+	$action: 'add',
 	required: ['id', 'data'],
 	properties: {
 		id: {
@@ -155,6 +158,7 @@ exports.save = function(data) {
 	});
 };
 exports.save.schema = {
+	$action: 'save',
 	required: ['id', 'data'],
 	properties: {
 		id: {
@@ -172,6 +176,7 @@ exports.del = function(data) {
 	return QuerySite(data).del();
 };
 exports.del.schema = {
+	$action: 'del',
 	required: ['id'],
 	properties: {
 		id: {

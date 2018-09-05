@@ -32,6 +32,7 @@ exports.get = function(site, data) {
 	return q.first().throwIfNotFound();
 };
 exports.get.schema = {
+	$action: 'read',
 	required: ['id'],
 	properties: {
 		id: {
@@ -109,6 +110,7 @@ exports.search = function(site, data) {
 };
 exports.search.schema = {
 	title: 'Search blocks',
+	$action: 'read',
 	required: ['type'],
 	properties: {
 		text: {
@@ -290,7 +292,9 @@ exports.find = function(site, data) {
 	});
 };
 exports.find.schema = {
-	required: ['id', 'type'],
+	title: 'Find one block',
+	$action: 'read',
+	required: ['id', 'type'], // TODO allow find with same filters as search
 	properties: {
 		id: {
 			type: 'string'
@@ -347,6 +351,7 @@ exports.save = function(site, data) {
 };
 exports.save.schema = {
 	title: 'Modify a block',
+	$action: 'save',
 	required: ['id', 'type'],
 	properties: {
 		id: {
@@ -368,6 +373,7 @@ exports.del = function(site, data) {
 };
 exports.del.schema = {
 	title: 'Delete a block',
+	$action: 'del',
 	required: ['id', 'type'],
 	properties: {
 		id: {

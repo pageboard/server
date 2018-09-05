@@ -175,6 +175,7 @@ exports.get = function(site, data) {
 	});
 };
 exports.get.schema = {
+	$action: 'read',
 	required: ['url'],
 	properties: {
 		url: {
@@ -294,6 +295,7 @@ exports.search = function(site, data) {
 
 exports.search.schema = {
 	title: 'Search pages',
+	$action: 'read',
 	required: ['text'],
 	properties: {
 		text: {
@@ -328,6 +330,7 @@ exports.list = function(site, data) {
 };
 exports.list.schema = {
 	title: 'Site map',
+	$action: 'read',
 	properties: {
 		parent: {
 			type: 'string'
@@ -443,6 +446,7 @@ exports.save = function(site, changes) {
 	});
 };
 exports.save.schema = {
+	$action: 'save',
 	properties: {
 		add: {
 			type: 'array',
@@ -586,6 +590,7 @@ exports.add = function(site, data) {
 	});
 };
 exports.add.schema = {
+	$action: 'add',
 	properties: {
 		data: {
 			type: 'object'
