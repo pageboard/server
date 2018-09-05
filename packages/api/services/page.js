@@ -181,7 +181,8 @@ exports.get.schema = {
 		url: {
 			type: 'string'
 		}
-	}
+	},
+	additionalProperties: false
 };
 
 function redUrl(obj) {
@@ -311,9 +312,9 @@ exports.search.schema = {
 			type: 'integer',
 			minimum: 0,
 			default: 0
-		},
-		additionalProperties: false
-	}
+		}
+	},
+	additionalProperties: false
 };
 exports.search.external = true;
 
@@ -350,7 +351,8 @@ exports.list.schema = {
 			},
 			default: ['page']
 		}
-	}
+	},
+	additionalProperties: false
 };
 exports.list.external = true;
 
@@ -472,7 +474,8 @@ exports.save.schema = {
 		unrelate: {
 			type: 'object'
 		}
-	}
+	},
+	additionalProperties: false
 };
 
 function stripHostname(site, block) {

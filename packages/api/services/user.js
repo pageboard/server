@@ -70,7 +70,8 @@ exports.add.schema = {
 			format: 'email',
 			transform: ['trim', 'toLowerCase']
 		}
-	}
+	},
+	additionalProperties: false
 };
 
 exports.save = function(data) {

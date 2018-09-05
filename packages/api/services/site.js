@@ -112,7 +112,8 @@ exports.search.schema = {
 			minimum: 0,
 			default: 0
 		}
-	}
+	},
+	additionalProperties: false
 };
 
 exports.add = function(data) {
