@@ -98,6 +98,7 @@ Object.defineProperty(exports.login, 'schema', {
 	get: function() {
 		var schema = Object.assign({}, All.settings.find.schema);
 		schema.title = 'Send auth login';
+		schema.$action = 'write';
 		schema.required = (schema.required || []).concat(['grants']);
 		schema.properties = Object.assign({
 			grants: {
@@ -149,6 +150,7 @@ exports.validate = function(site, data) {
 	});
 };
 exports.validate.schema = {
+	$action: 'write',
 	required: ['id', 'hash'],
 	properties: {
 		id: {
