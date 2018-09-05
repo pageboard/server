@@ -209,7 +209,7 @@ function findHrefs(schema, list, root) {
 	Object.keys(schema.properties).forEach(function(key) {
 		var prop = schema.properties[key];
 		if (root) key = `${root}.${key}`;
-		if (prop.input && prop.input.name == "href") {
+		if (prop.$helper && prop.$helper.name == "href") {
 			list.push(key);
 		} else {
 			findHrefs(prop, list, key);
