@@ -138,7 +138,17 @@ exports.get = function(site, data) {
 	}).then(function(page) {
 		page.children = page.children.concat(page.standalones);
 		delete page.standalones;
-		if (page.data.url == null) return page;
+		var links = {};
+		var obj = {
+			item: page,
+			meta: site.$standalones[page.type],
+			links: links,
+			site: site.data,
+			hrefs: page.hrefs
+		};
+		delete page.hrefs;
+		if (page.data.url == null) return obj;
+
 		var pageUrl = page.data.url || data.url;
 		return Promise.all([
 			getParents(site, pageUrl),
@@ -151,15 +161,6 @@ exports.get = function(site, data) {
 				ref('block.data:title').as('title')
 			])
 		]).then(function(list) {
-			var links = {};
-			var obj = {
-				item: page,
-				meta: site.$standalones[page.type],
-				links: links,
-				site: site.data,
-				hrefs: page.hrefs
-			};
-			delete page.hrefs;
 			links.up = list[0].map(redUrl);
 			var siblings = list[1];
 			var position = siblings.findIndex(function(item) {
