@@ -9,6 +9,7 @@ var bodyParserJson = require('body-parser').json();
 
 var dba = require('./lib/dba');
 var imports = require('./lib/imports');
+var utils = require('./lib/utils');
 
 
 var ajvApiSettings = {
@@ -98,6 +99,11 @@ function init(All) {
 	exports.seed = dba.seed.bind(null, knexInst, opt.seeds);
 	exports.dump = dba.dump.bind(null, dbOpt.connection, opt);
 	exports.gc = dba.gc;
+
+	Object.keys(utils).forEach(function(key) {
+		if (All.utils[key]) throw new Error(`Cannot reassign All.utils.${key}`);
+		All.utils[key] = utils[key];
+	});
 
 	Object.assign(exports, imports);
 
