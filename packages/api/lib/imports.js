@@ -92,7 +92,7 @@ function sortPriority(list) {
 }
 
 function bundle(site, pkg, rootEl) {
-	var list = listDependencies(site.id, pkg.eltsMap, rootEl);
+	var list = listDependencies(rootEl.group, pkg.eltsMap, rootEl);
 	list.sort(function(a, b) {
 		return (a.priority || 0) - (b.priority || 0);
 	});
@@ -102,11 +102,12 @@ function bundle(site, pkg, rootEl) {
 
 	var eltsMap = {};
 	list.forEach(function(elt) {
-		eltsMap[elt.name] = elt;
 		if (!elt.standalone) {
+			elt = Object.assign({}, elt);
 			delete elt.scripts;
 			delete elt.stylesheets;
 		}
+		eltsMap[elt.name] = elt;
 	});
 	var metaEl = site.$standalones[rootEl.name] = {
 		group: rootEl.group
@@ -154,7 +155,7 @@ function bundleSource(site, pkg, prefix, name, obj) {
 	});
 }
 
-function listDependencies(id, eltsMap, el, list=[], sieve={}) {
+function listDependencies(rootGroup, eltsMap, el, list=[], sieve={}) {
 	var word;
 	if (typeof el == "string") {
 		word = el;
@@ -165,14 +166,14 @@ function listDependencies(id, eltsMap, el, list=[], sieve={}) {
 				var gel = eltsMap[key];
 				if (!gel.group) {
 					// non-rendering elements
-					if (!gel.render && !gel.html && (gel.stylesheets || gel.scripts)) {
-						listDependencies(id, eltsMap, gel, list, sieve);
+					if (rootGroup == "page" && !gel.render && !gel.html && (gel.stylesheets || gel.scripts)) {
+						listDependencies(rootGroup, eltsMap, gel, list, sieve);
 					}
 				} else if (gel.standalone) {
 					// prevent loops
 				} else if (gel.group.split(" ").indexOf(word) >= 0) {
 					isGroup = true;
-					listDependencies(id, eltsMap, gel, list, sieve);
+					listDependencies(rootGroup, eltsMap, gel, list, sieve);
 				}
 			});
 			if (!isGroup) console.error("Cannot find element");
@@ -191,7 +192,7 @@ function listDependencies(id, eltsMap, el, list=[], sieve={}) {
 		spec.split(/\W+/).filter(x => !!x).forEach(function(word) {
 			if (word == "text" || word == "page") return;
 			if (!sieve[word]) {
-				listDependencies(id, eltsMap, word, list, sieve);
+				listDependencies(rootGroup, eltsMap, word, list, sieve);
 			}
 		});
 	});
