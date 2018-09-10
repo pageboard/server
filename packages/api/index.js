@@ -20,9 +20,9 @@ var ajvApiSettings = {
 	coerceTypes: 'array',
 	removeAdditional: false,
 	formats: {
-		singleline: {
-			pattern: /^[^\n\r]*$/
-		}
+		singleline: /^[^\n\r]*$/,
+		pathname: /^(\/[\w-.]*)+$/,
+		id: /^\w+$/
 	}
 };
 var ajvApiWithDefaults = AjvKeywords(ajv(Object.assign({}, ajvApiSettings, {
