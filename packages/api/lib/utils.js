@@ -20,8 +20,9 @@ function mergeParameters(params, obj) {
 				valcb: function(val, what) {
 					var path = what.scope.path.slice();
 					var last = path.pop();
-					var parent = what.get(what.data, path);
+					var parent = what.expr.get(what.data, path);
 					delete parent[last];
+					return val;
 				}
 			});
 			if (nstr != str) params[key] = nstr;
