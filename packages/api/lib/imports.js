@@ -265,7 +265,7 @@ function loadFromFile(buf, elts, names, context) {
 	});
 	var sandbox = {
 		Pageboard: {
-			elements: elts
+			elements: new Proxy(elts, new MapProxy(context))
 		}
 	};
 	script.runInNewContext(sandbox, {
@@ -297,13 +297,34 @@ function loadFromFile(buf, elts, names, context) {
 	}
 }
 
+class MapProxy {
+	constructor(context) {
+		this.context = context;
+	}
+	set(obj, key, val) {
+		if (obj.hasOwnProperty(key)) {
+			if (key == "user") {
+				console.error("Modifying user element is not allowed");
+				return false;
+			}
+			console.error("Assign, not set", key, "in", this.context.path);
+			Object.assign(obj[key], val);
+			return false;
+		}
+		return Reflect.set(obj, key, val);
+	}
+}
+
 class EltProxy {
 	constructor(name, context) {
 		this.name = name;
 		this.context = context;
 	}
 	set(elt, key, val) {
-		if (this.name == "user") return false; // changing user is forbidden
+		if (this.name == "user") {
+			console.error("Modifying user element is not allowed");
+			return false;
+		}
 		if (key == "scripts" || key == "stylesheets" || key == "resources") {
 			val = new Proxy(absolutePaths(val, this.context), new ArrProxy(this.context));
 		}
