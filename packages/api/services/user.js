@@ -33,7 +33,8 @@ exports.get.schema = {
 	properties: {
 		id: {
 			type: 'string',
-			minLength: 1
+			minLength: 1,
+			format: 'id'
 		},
 		email: {
 			type: 'array',

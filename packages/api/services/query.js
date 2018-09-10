@@ -39,7 +39,8 @@ exports.query.schema = {
 	required: ['id'],
 	properties: {
 		id: {
-			type: 'string'
+			type: 'string',
+			format: 'id'
 		},
 		query: {
 			type: 'object'

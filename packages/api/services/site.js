@@ -46,7 +46,8 @@ exports.get.schema = {
 	$action: 'read',
 	properties: {
 		id: {
-			type: 'string'
+			type: 'string',
+			format: 'id'
 		},
 		domain: {
 			type: 'string'
@@ -98,7 +99,8 @@ exports.search.schema = {
 		grants: {
 			type: 'array',
 			items: {
-				type: 'string'
+				type: 'string',
+				format: 'id'
 			}
 		},
 		limit: {
@@ -134,7 +136,8 @@ exports.add.schema = {
 	required: ['id', 'data'],
 	properties: {
 		id: {
-			type: 'string'
+			type: 'string',
+			format: 'id'
 		},
 		data: {
 			type: 'object'
@@ -163,7 +166,8 @@ exports.save.schema = {
 	required: ['id', 'data'],
 	properties: {
 		id: {
-			type: 'string'
+			type: 'string',
+			format: 'id'
 		},
 		data: {
 			type: 'object',
@@ -181,7 +185,8 @@ exports.del.schema = {
 	required: ['id'],
 	properties: {
 		id: {
-			type: 'string'
+			type: 'string',
+			format: 'id'
 		}
 	},
 	additionalProperties: false

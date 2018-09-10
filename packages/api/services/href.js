@@ -94,7 +94,8 @@ exports.search.schema = {
 		type: {
 			type: 'array',
 			items: {
-				type: 'string'
+				type: 'string',
+				format: 'id'
 			}
 		},
 		maxSize: {
@@ -113,7 +114,8 @@ exports.search.schema = {
 			type: 'string'
 		},
 		text: {
-			type: 'string'
+			type: 'string',
+			format: 'singleline'
 		},
 		limit: {
 			type: 'integer',
@@ -208,7 +210,8 @@ exports.save.schema = {
 			type: 'string'
 		},
 		title: {
-			type: 'string'
+			type: 'string',
+			format: 'singleline'
 		}
 	},
 	additionalProperties: false
@@ -333,7 +336,8 @@ exports.reinspect.schema = {
 	get properties() {
 		return Object.assign({}, All.api.Href.jsonSchema.properties, {
 			site: {
-				type: 'string'
+				type: 'string',
+				format: 'id'
 			}
 		});
 	},

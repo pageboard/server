@@ -306,15 +306,19 @@ exports.search.schema = {
 	required: ['text'],
 	properties: {
 		text: {
-			type: 'string'
+			title: 'Search text',
+			type: 'string',
+			format: 'singleline'
 		},
 		limit: {
+			title: 'Limit',
 			type: 'integer',
 			minimum: 0,
 			maximum: 50,
 			default: 10
 		},
 		offset: {
+			title: 'Offset',
 			type: 'integer',
 			minimum: 0,
 			default: 0
@@ -340,7 +344,8 @@ exports.list.schema = {
 	$action: 'read',
 	properties: {
 		parent: {
-			type: 'string'
+			type: 'string',
+			format: 'id'
 		},
 		url: {
 			type: 'string'
@@ -353,7 +358,8 @@ exports.list.schema = {
 		type: {
 			type: 'array',
 			items: {
-				type: 'string'
+				type: 'string',
+				format: 'id'
 			},
 			default: ['page']
 		}
@@ -471,7 +477,8 @@ exports.save.schema = {
 		remove: {
 			type: 'array',
 			items: {
-				type: 'string'
+				type: 'string',
+				format: 'id'
 			}
 		},
 		relate: {

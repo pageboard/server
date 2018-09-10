@@ -71,7 +71,8 @@ exports.subscribe.schema = {
 	required: ['id', 'email', 'settings', 'reservation'],
 	properties: {
 		id: {
-			type: 'string'
+			type: 'string',
+			format: 'id'
 		},
 		email: {
 			type: 'string',

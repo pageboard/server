@@ -36,10 +36,12 @@ exports.get.schema = {
 	required: ['id'],
 	properties: {
 		id: {
-			type: 'string'
+			type: 'string',
+			format: 'id'
 		},
 		type: {
-			type: 'string'
+			type: 'string',
+			format: 'id'
 		},
 		standalone: {
 			type: 'boolean',
@@ -113,131 +115,199 @@ exports.search.schema = {
 	$action: 'read',
 	required: ['type'],
 	properties: {
-		text: {
-			type: ['null', 'string']
-		},
 		parent: {
-			type: 'string'
+			title: 'Parent id',
+			anyOf: [{
+				type: "null"
+			}, {
+				type: "string",
+				format: 'id'
+			}]
 		},
 		child: {
+			title: 'Filter using child values ? No this object holds filter for a child that is INNER JOINED: TODO: replace this field by a boolean "inner join" on children field',
 			type: 'object',
-		},
-		parents: {
-			type: 'object',
-			required: ['type'],
-			additionalProperties: false,
-			properties: {
-				first: {
-					type: 'boolean',
-					default: false
-				},
-				type: {
-					type: 'string',
-					not: { // TODO permissions should be managed dynamically
-						oneOf: [{
-							const: "user"
-						}, {
-							const: "site"
-						}]
-					}
-				},
-				text: {
-					type: ['null', 'string']
-				},
-				data: {
-					type: 'object'
-				},
-				order: {
-					type: 'array',
-					items: {
-						type: 'string'
-					}
-				},
-				limit: {
-					type: 'integer',
-					minimum: 0,
-					maximum: 100,
-					default: 10
-				},
-				offset: {
-					type: 'integer',
-					minimum: 0,
-					default: 0
-				}
-			}
 		},
 		id: {
-			type: 'string'
+			title: 'Block id',
+			anyOf: [{
+				type: "null"
+			}, {
+				type: "string",
+				format: 'id'
+			}]
 		},
 		type: {
+			title: 'Type',
 			type: 'string',
+			format: 'id',
 			not: { // TODO permissions should be managed dynamically
 				oneOf: [{
 					const: "user"
 				}, {
 					const: "site"
 				}]
+			},
+			$helper: {
+				name: 'element',
+				standalone: true
 			}
 		},
+		text: {
+			title: 'Search text',
+			anyOf: [{
+				type: "null"
+			}, {
+				type: "string",
+				format: "singleline"
+			}]
+		},
 		data: {
+			title: 'Filters',
 			type: 'object'
 		},
 		order: {
+			title: 'Sort by',
 			type: 'array',
 			items: {
-				type: 'string'
+				type: 'string',
+				format: 'singleline'
 			}
 		},
 		limit: {
+			title: 'Limit',
 			type: 'integer',
 			minimum: 0,
 			maximum: 100,
 			default: 10
 		},
 		offset: {
+			title: 'Offset',
 			type: 'integer',
 			minimum: 0,
 			default: 0
 		},
-		children: {
+		parents: {
+			title: 'Parents',
 			type: 'object',
 			required: ['type'],
 			additionalProperties: false,
 			properties: {
+				first: {
+					title: 'Single',
+					type: 'boolean',
+					default: false
+				},
 				type: {
+					title: 'Type',
 					type: 'string',
+					format: 'id',
 					not: { // TODO permissions should be managed dynamically
 						oneOf: [{
 							const: "user"
 						}, {
 							const: "site"
 						}]
+					},
+					$helper: {
+						name: 'element',
+						standalone: true
 					}
 				},
 				text: {
-					type: ['null', 'string']
+					title: 'Search text',
+					anyOf: [{
+						type: "null"
+					}, {
+						type: "string",
+						format: "singleline"
+					}]
 				},
 				data: {
+					title: 'Filters',
 					type: 'object'
 				},
 				order: {
+					title: 'Sort by',
 					type: 'array',
 					items: {
-						type: 'string'
+						type: 'string',
+						format: 'singleline'
 					}
 				},
 				limit: {
+					title: 'Limit',
+					type: 'integer',
+					minimum: 0,
+					maximum: 100,
+					default: 10
+				},
+				offset: {
+					title: 'Offset',
+					type: 'integer',
+					minimum: 0,
+					default: 0
+				}
+			}
+		},
+		children: {
+			title: 'Children',
+			type: 'object',
+			required: ['type'],
+			additionalProperties: false,
+			properties: {
+				type: {
+					title: 'Element',
+					type: 'string',
+					format: 'id',
+					not: { // TODO permissions should be managed dynamically
+						oneOf: [{
+							const: "user"
+						}, {
+							const: "site"
+						}]
+					},
+					$helper: {
+						name: 'element',
+						standalone: true
+					}
+				},
+				text: {
+					title: 'Search text',
+					anyOf: [{
+						type: "null"
+					}, {
+						type: "string",
+						format: "singleline"
+					}]
+				},
+				data: {
+					title: 'Filters',
+					type: 'object'
+				},
+				order: {
+					title: 'Sort by',
+					type: 'array',
+					items: {
+						type: 'string',
+						format: "singleline"
+					}
+				},
+				limit: {
+					title: 'Limit',
 					type: 'integer',
 					minimum: 0,
 					maximum: 50,
 					default: 10
 				},
 				offset: {
+					title: 'Offset',
 					type: 'integer',
 					minimum: 0,
 					default: 0
 				},
 				count: {
+					title: 'Get count',
 					type: 'boolean',
 					default: false
 				}
@@ -297,10 +367,12 @@ exports.find.schema = {
 	required: ['id', 'type'], // TODO allow find with same filters as search
 	properties: {
 		id: {
-			type: 'string'
+			type: 'string',
+			format: 'id'
 		},
 		type: {
 			type: 'string',
+			format: 'id',
 			not: { // TODO permissions should be managed dynamically
 				oneOf: [{
 					const: "user"
@@ -334,7 +406,8 @@ exports.add.schema = {
 	title: 'Add a block',
 	properties: {
 		parent: {
-			type: 'string'
+			type: 'string',
+			format: 'id'
 		}
 	},
 	additionalProperties: true
@@ -355,10 +428,12 @@ exports.save.schema = {
 	required: ['id', 'type'],
 	properties: {
 		id: {
-			type: 'string'
+			type: 'string',
+			format: 'id'
 		},
 		type: {
-			type: 'string'
+			type: 'string',
+			format: 'id'
 		}
 	},
 	additionalProperties: true
@@ -377,12 +452,14 @@ exports.del.schema = {
 	required: ['id', 'type'],
 	properties: {
 		id: {
-			type: 'string'
+			type: 'string',
+			format: 'id'
 		},
 		type: {
 			type: 'array',
 			items: {
 				type: 'string',
+				format: 'id',
 				not: { // TODO permissions should be managed dynamically
 					oneOf: [{
 						const: "user"
