@@ -22,7 +22,7 @@ var ajvApiSettings = {
 	formats: {
 		singleline: /^[^\n\r]*$/,
 		pathname: /^(\/[\w-.]*)+$/,
-		id: /^\w+$/
+		id: /^[\w-]+$/
 	}
 };
 var ajvApiWithDefaults = AjvKeywords(ajv(Object.assign({}, ajvApiSettings, {
