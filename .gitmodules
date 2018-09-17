@@ -1,0 +1,36 @@
+[submodule "repositories/api"]
+	path = repositories/api
+	url = git@github.com:pageboard/api.git
+[submodule "repositories/auth"]
+	path = repositories/auth
+	url = git@github.com:pageboard/auth.git
+[submodule "repositories/cache"]
+	path = repositories/cache
+	url = git@github.com:pageboard/cache.git
+[submodule "repositories/core"]
+	path = repositories/core
+	url = git@github.com:pageboard/core.git
+[submodule "repositories/github-webhook"]
+	path = repositories/github-webhook
+	url = git@github.com:pageboard/github-webhook.git
+[submodule "repositories/image"]
+	path = repositories/image
+	url = git@github.com:pageboard/image.git
+[submodule "repositories/inspector"]
+	path = repositories/inspector
+	url = git@github.com:pageboard/inspector.git
+[submodule "repositories/mail"]
+	path = repositories/mail
+	url = git@github.com:pageboard/mail.git
+[submodule "repositories/prerender"]
+	path = repositories/prerender
+	url = git@github.com:pageboard/prerender.git
+[submodule "repositories/read"]
+	path = repositories/read
+	url = git@github.com:pageboard/read.git
+[submodule "repositories/statics"]
+	path = repositories/statics
+	url = git@github.com:pageboard/statics.git
+[submodule "repositories/upload"]
+	path = repositories/upload
+	url = git@github.com:pageboard/upload.git
