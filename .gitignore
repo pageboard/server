@@ -36,10 +36,6 @@ jspm_packages
 # Optional REPL history
 .node_repl_history
 
-# no submodules for now
-/.gitmodules
-/repositories/*
-
 # pageboard upload dir
 /uploads
 /dumps
