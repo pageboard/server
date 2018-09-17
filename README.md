@@ -15,6 +15,12 @@ all of which are trivial to install on a debian or fedora operating system.
 The server module requires more tools (iptables, nginx, memcached, upcache).
 
 
+dev install
+-----------
+
+Install submodules:
+npm run submodules
+
 modules
 -------
 

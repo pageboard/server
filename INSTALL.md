@@ -71,3 +71,8 @@ An example:
 pageboard --site=mysiteid page.search text=test
 ```
 
+Loopback setup for multiple domains
+-----------------------------------
+
+Create a file /etc/NetworkManager/dnsmasq.d/localdomain.conf containing
+address=/localhost.localdomain/127.0.0.1
