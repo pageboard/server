@@ -1,36 +1,60 @@
-[submodule "repositories/api"]
-	path = repositories/api
+[submodule "modules-server/api"]
+	path = modules-server/api
 	url = git@github.com:pageboard/api.git
-[submodule "repositories/auth"]
-	path = repositories/auth
+[submodule "modules-server/auth"]
+	path = modules-server/auth
 	url = git@github.com:pageboard/auth.git
-[submodule "repositories/cache"]
-	path = repositories/cache
+[submodule "modules-server/cache"]
+	path = modules-server/cache
 	url = git@github.com:pageboard/cache.git
-[submodule "repositories/core"]
-	path = repositories/core
+[submodule "modules-server/core"]
+	path = modules-server/core
 	url = git@github.com:pageboard/core.git
-[submodule "repositories/github-webhook"]
-	path = repositories/github-webhook
+[submodule "modules-server/github-webhook"]
+	path = modules-server/github-webhook
 	url = git@github.com:pageboard/github-webhook.git
-[submodule "repositories/image"]
-	path = repositories/image
+[submodule "modules-server/image"]
+	path = modules-server/image
 	url = git@github.com:pageboard/image.git
-[submodule "repositories/inspector"]
-	path = repositories/inspector
+[submodule "modules-server/inspector"]
+	path = modules-server/inspector
 	url = git@github.com:pageboard/inspector.git
-[submodule "repositories/mail"]
-	path = repositories/mail
+[submodule "modules-server/mail"]
+	path = modules-server/mail
 	url = git@github.com:pageboard/mail.git
-[submodule "repositories/prerender"]
-	path = repositories/prerender
+[submodule "modules-server/prerender"]
+	path = modules-server/prerender
 	url = git@github.com:pageboard/prerender.git
-[submodule "repositories/read"]
-	path = repositories/read
+[submodule "modules-server/read"]
+	path = modules-server/read
 	url = git@github.com:pageboard/read.git
-[submodule "repositories/statics"]
-	path = repositories/statics
+[submodule "modules-server/statics"]
+	path = modules-server/statics
 	url = git@github.com:pageboard/statics.git
-[submodule "repositories/upload"]
-	path = repositories/upload
+[submodule "modules-server/upload"]
+	path = modules-server/upload
 	url = git@github.com:pageboard/upload.git
+[submodule "modules-client/elements"]
+	path = modules-client/elements
+	url = git@github.com:pageboard/elements.git
+[submodule "modules-client/elements-gallery"]
+	path = modules-client/elements-gallery
+	url = git@github.com:pageboard/elements-gallery
+[submodule "modules-client/elements-google"]
+	path = modules-client/elements-google
+	url = git@github.com:pageboard/elements-google
+[submodule "modules-client/elements-mail"]
+	path = modules-client/elements-mail
+	url = git@github.com:pageboard/elements-mail
+[submodule "modules-client/elements-semantic-ui"]
+	path = modules-client/elements-semantic-ui
+	url = git@github.com:pageboard/elements-semantic-ui
+[submodule "modules-client/elements-write"]
+	path = modules-client/elements-write
+	url = git@github.com:pageboard/elements-write
+[submodule "modules-client/pagecut"]
+	path = modules-client/pagecut
+	url = git@github.com:pageboard/pagecut
+[submodule "modules-client/elements-calendar"]
+	path = modules-client/elements-calendar
+	url = git@github.com:pageboard/elements-calendar
