@@ -1,20 +1,19 @@
 
-destDir := node_modules/@pageboard
+nodeModules := node_modules/@pageboard
+modules := $(wildcard ./modules/*)
+links := $(patsubst ./modules/%,$(nodeModules)/%,$(modules))
 
-serverModules := $(wildcard ./modules-server/*)
-serverLinks := $(patsubst ./modules-server/%,$(destDir)/%,$(serverModules))
+all: $(nodeModules) $(links)
 
-clientModules := $(wildcard ./modules-client/*)
-clientLinks := $(patsubst ./modules-client/%,$(destDir)/%,$(clientModules))
-
-all: node_modules/@pageboard $(clientLinks) $(serverLinks)
-
-node_modules/@pageboard:
+$(nodeModules):
 	mkdir -p $@
 
-$(destDir)/%: modules-server/%
+$(nodeModules)/%: modules/%
 	ln -s ../../$< $@
 
-$(destDir)/%: modules-client/%
-	ln -s ../../$< $@
+clean:
+	rm $(nodeModules)/*
+
+install:
+	npm install --prod
 

@@ -35,18 +35,5 @@
     "@pageboard/read": "^0.2.2",
     "@pageboard/statics": "^0.2.1",
     "@pageboard/upload": "^0.1.0"
-  },
-  "devDependencies": {
-    "@pageboard/datetime-entry": "file:modules-client/datetime-entry",
-    "@pageboard/elements": "file:modules-client/elements",
-    "@pageboard/elements-calendar": "file:modules-client/elements-calendar",
-    "@pageboard/elements-gallery": "file:modules-client/elements-gallery",
-    "@pageboard/elements-mail": "file:modules-client/elements-mail",
-    "@pageboard/elements-google": "file:modules-client/elements-google",
-    "@pageboard/elements-semantic-ui": "file:modules-client/elements-semantic-ui",
-    "@pageboard/elements-write": "file:modules-client/elements-write",
-    "@pageboard/flickity": "file:modules-client/flickity",
-    "@pageboard/pagecut": "file:modules-client/pagecut",
-    "@pageboard/stickybits": "file:modules-client/stickybits"
   }
 }
