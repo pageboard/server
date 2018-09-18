@@ -1,5 +1,3 @@
-const URL = require('url');
-
 exports = module.exports = function(opt) {
 	return {
 		name: 'form',
@@ -14,7 +12,7 @@ function init(All) {
 	All.app.post("/.api/form/:id", function(req, res, next) {
 		All.run('form.submit', req.site, {
 			id: req.params.id,
-			query: All.utils.unflatten(URL.parse(req.headers.referer, true).query),
+			query: All.utils.unflatten(req.query),
 			body: All.utils.unflatten(req.body)
 		}).then(function(data) {
 			res.json(data);

@@ -1,5 +1,3 @@
-const URL = require('url');
-
 exports = module.exports = function(opt) {
 	return {
 		name: 'search',
@@ -11,7 +9,7 @@ function init(All) {
 	All.app.get("/.api/query/:id", function(req, res, next) {
 		All.run('search.query', req.site, {
 			id: req.params.id,
-			query: All.utils.unflatten(URL.parse(req.headers.referer, true).query)
+			query: All.utils.unflatten(req.query)
 		}).then(function(data) {
 			res.json(data);
 		}).catch(next);
