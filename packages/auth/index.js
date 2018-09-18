@@ -105,7 +105,8 @@ Object.defineProperty(exports.login, 'schema', {
 				type: 'array',
 				uniqueItems: true,
 				items: {
-					type: 'string'
+					type: 'string',
+					format: 'id'
 				}
 			},
 			url: {
@@ -113,9 +114,9 @@ Object.defineProperty(exports.login, 'schema', {
 					type: 'null'
 				}, {
 					type: 'string',
-					pattern: "^(/[a-zA-Z0-9-.]*)+$" // notice the absence of underscore
+					format: 'pathname'
 				}],
-				input: {
+				$helper: {
 					name: 'href',
 					filter: {
 						type: ["link"]
@@ -155,11 +156,13 @@ exports.validate.schema = {
 	properties: {
 		id: {
 			type: 'string',
-			minLength: 1
+			minLength: 1,
+			format: 'id'
 		},
 		hash: {
 			type: 'string',
-			minLength: 1
+			minLength: 1,
+			format: 'id'
 		}
 	}
 };
