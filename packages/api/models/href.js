@@ -34,7 +34,7 @@ Href.jsonSchema = {
 				format: 'uri'
 			}, {
 				type: "string",
-				pattern: "^(\/[a-zA-Z0-9-._]*)+$"
+				format: 'pathname'
 			}]
 		},
 		type: {
@@ -44,7 +44,15 @@ Href.jsonSchema = {
 			type: 'string'
 		},
 		icon: {
-			anyOf: [{type: "null"}, {type: "string"}]
+			anyOf: [{
+				type: "null"
+			}, {
+				type: 'string',
+				format: 'uri'
+			}, {
+				type: "string",
+				format: 'pathname'
+			}]
 		},
 		site: {
 			type: 'string'

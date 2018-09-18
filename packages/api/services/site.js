@@ -50,7 +50,8 @@ exports.get.schema = {
 			format: 'id'
 		},
 		domain: {
-			type: 'string'
+			type: 'string',
+			format: 'hostname'
 		}
 	},
 	additionalProperties: false,

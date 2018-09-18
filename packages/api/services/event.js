@@ -87,7 +87,7 @@ exports.subscribe.schema = {
 				format: "uri"
 			}, {
 				type: "string",
-				pattern: "^(/[\\w-.]*)+$"
+				format: "pathname"
 			}],
 		},
 		settings: {

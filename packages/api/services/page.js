@@ -181,7 +181,8 @@ exports.get.schema = {
 	required: ['url'],
 	properties: {
 		url: {
-			type: 'string'
+			type: 'string',
+			format: 'pathname'
 		}
 	},
 	additionalProperties: false
@@ -348,7 +349,8 @@ exports.list.schema = {
 			format: 'id'
 		},
 		url: {
-			type: 'string'
+			type: 'string',
+			format: 'pathname'
 		},
 		drafts: {
 			title: 'Show pages that have no url',

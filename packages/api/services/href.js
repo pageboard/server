@@ -39,7 +39,8 @@ exports.get.schema = {
 	required: ['url'],
 	properties: {
 		url: {
-			type: 'string'
+			type: 'string',
+			format: 'uri'
 		}
 	},
 	additionalProperties: false
@@ -111,7 +112,13 @@ exports.search.schema = {
 			minimum: 0
 		},
 		url: {
-			type: 'string'
+			anyOf: [{
+				type: 'string',
+				format: 'uri'
+			}, {
+				type: "string",
+				format: 'pathname'
+			}]
 		},
 		text: {
 			type: 'string',
@@ -184,7 +191,13 @@ exports.add.schema = {
 	required: ['url'],
 	properties: {
 		url: {
-			type: 'string'
+			anyOf: [{
+				type: 'string',
+				format: 'uri'
+			}, {
+				type: "string",
+				format: 'pathname'
+			}]
 		}
 	},
 	additionalProperties: false
@@ -207,7 +220,13 @@ exports.save.schema = {
 	required: ['url', 'title'],
 	properties: {
 		url: {
-			type: 'string'
+			anyOf: [{
+				type: 'string',
+				format: 'uri'
+			}, {
+				type: "string",
+				format: 'pathname'
+			}]
 		},
 		title: {
 			type: 'string',
@@ -233,7 +252,13 @@ exports.del.schema = {
 	required: ['url'],
 	properties: {
 		url: {
-			type: 'string'
+			anyOf: [{
+				type: 'string',
+				format: 'uri'
+			}, {
+				type: "string",
+				format: 'pathname'
+			}]
 		}
 	},
 	additionalProperties: false

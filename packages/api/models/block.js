@@ -54,10 +54,11 @@ Block.jsonSchema = {
 	properties: {
 		id: {
 			type: 'string',
-			pattern: '^[\\w-]+$'
+			format: 'id'
 		},
 		type: {
-			type: 'string'
+			type: 'string',
+			format: 'id'
 		},
 		data: {
 			type: 'object',
@@ -82,7 +83,7 @@ Block.jsonSchema = {
 				type: 'array',
 				items: {
 					type: 'string',
-					pattern: '^\\w+$'
+					format: 'id'
 				},
 				uniqueItems: true
 			}]
