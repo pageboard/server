@@ -45,6 +45,7 @@
     "@pageboard/elements-google": "file:modules-client/elements-google",
     "@pageboard/elements-semantic-ui": "file:modules-client/elements-semantic-ui",
     "@pageboard/elements-write": "file:modules-client/elements-write",
+    "@pageboard/flickity": "file:modules-client/flickity",
     "@pageboard/pagecut": "file:modules-client/pagecut",
     "@pageboard/stickybits": "file:modules-client/stickybits"
   }
