@@ -166,7 +166,8 @@ exports.send.schema = {
 	properties: {
 		url: {
 			title: 'Address of mail page',
-			type: 'string'
+			type: 'string',
+			format: 'pathname' // TODO add $helper to select mail pages
 		},
 		query: {
 			title: 'Query params for mail page',
