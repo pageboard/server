@@ -14,14 +14,14 @@
   },
   "repository": {
     "type": "git",
-    "url": "git+https://github.com/pageboard/pageboard.git"
+    "url": "git+https://github.com/pageboard/server.git"
   },
   "author": "Jérémy Lal <kapouer@melix.org>",
   "license": "MIT",
   "bugs": {
-    "url": "https://github.com/pageboard/pageboard/issues"
+    "url": "https://github.com/pageboard/server/issues"
   },
-  "homepage": "https://github.com/pageboard/pageboard#readme",
+  "homepage": "https://github.com/pageboard/server#readme",
   "dependencies": {
     "@pageboard/api": "^0.5.4",
     "@pageboard/auth": "^0.1.0",
