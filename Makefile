@@ -1,18 +1,18 @@
 
-nodeModules := node_modules/@pageboard
-modules := $(wildcard ./modules/*)
-links := $(patsubst ./modules/%,$(nodeModules)/%,$(modules))
+modules := node_modules/@pageboard
+packages := $(wildcard ./packages/*)
+links := $(patsubst ./packages/%,$(modules)/%,$(packages))
 
-all: $(nodeModules) $(links)
+all: $(modules) $(links) install
 
-$(nodeModules):
+$(modules):
 	mkdir -p $@
 
-$(nodeModules)/%: modules/%
+$(modules)/%: packages/%
 	ln -s ../../$< $@
 
 clean:
-	rm $(nodeModules)/*
+	rm $(modules)/*
 
 install:
 	npm install --prod

@@ -1,36 +1,36 @@
-[submodule "modules/api"]
-	path = modules/api
+[submodule "packages/api"]
+	path = packages/api
 	url = git@github.com:pageboard/api.git
-[submodule "modules/auth"]
-	path = modules/auth
+[submodule "packages/auth"]
+	path = packages/auth
 	url = git@github.com:pageboard/auth.git
-[submodule "modules/cache"]
-	path = modules/cache
+[submodule "packages/cache"]
+	path = packages/cache
 	url = git@github.com:pageboard/cache.git
-[submodule "modules/core"]
-	path = modules/core
+[submodule "packages/core"]
+	path = packages/core
 	url = git@github.com:pageboard/core.git
-[submodule "modules/github-webhook"]
-	path = modules/github-webhook
+[submodule "packages/github-webhook"]
+	path = packages/github-webhook
 	url = git@github.com:pageboard/github-webhook.git
-[submodule "modules/image"]
-	path = modules/image
+[submodule "packages/image"]
+	path = packages/image
 	url = git@github.com:pageboard/image.git
-[submodule "modules/inspector"]
-	path = modules/inspector
+[submodule "packages/inspector"]
+	path = packages/inspector
 	url = git@github.com:pageboard/inspector.git
-[submodule "modules/mail"]
-	path = modules/mail
+[submodule "packages/mail"]
+	path = packages/mail
 	url = git@github.com:pageboard/mail.git
-[submodule "modules/prerender"]
-	path = modules/prerender
+[submodule "packages/prerender"]
+	path = packages/prerender
 	url = git@github.com:pageboard/prerender.git
-[submodule "modules/read"]
-	path = modules/read
+[submodule "packages/read"]
+	path = packages/read
 	url = git@github.com:pageboard/read.git
-[submodule "modules/statics"]
-	path = modules/statics
+[submodule "packages/statics"]
+	path = packages/statics
 	url = git@github.com:pageboard/statics.git
-[submodule "modules/upload"]
-	path = modules/upload
+[submodule "packages/upload"]
+	path = packages/upload
 	url = git@github.com:pageboard/upload.git
