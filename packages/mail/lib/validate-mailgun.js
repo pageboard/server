@@ -10,7 +10,6 @@ module.exports = function validateMailgun(config, timestamp, token, signature) {
 		console.warn("Cannot do mailgun validation without api_key");
 		return false;
 	}
-	var actual;
 	var adjustedTimestamp = parseInt(timestamp, 10) * 1000;
 	var fresh = (Math.abs(Date.now() - adjustedTimestamp) < mailgunExpirey);
 
@@ -35,8 +34,8 @@ module.exports = function validateMailgun(config, timestamp, token, signature) {
 	}, mailgunExpirey + (5 * 1000));
 
 	var computed = crypto.createHmac(mailgunHashType, config.auth.api_key)
-		.update(new Buffer(timestamp + token, 'utf-8'))
-		.digest(mailgunSignatureEncoding);
+	.update(new Buffer(timestamp + token, 'utf-8'))
+	.digest(mailgunSignatureEncoding);
 
 	return crypto.timingSafeEqual(Buffer.from(signature), Buffer.from(computed));
 };

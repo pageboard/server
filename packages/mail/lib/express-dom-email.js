@@ -7,7 +7,7 @@ module.exports = function(mw, settings, request, response) {
 };
 
 function mailPlugin(page, settings, request, response) {
-	 page.when('idle', function() {
+	page.when('idle', function() {
 		return page.run(function(done) {
 			done(null, {
 				errors: document.errors && document.errors.length ? document.errors : null,
@@ -25,5 +25,5 @@ function mailPlugin(page, settings, request, response) {
 			response.status(500);
 		});
 	});
-};
+}
 
