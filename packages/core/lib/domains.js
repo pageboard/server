@@ -25,7 +25,6 @@ so adding an IP to pageboard and pointing a host to that IP needs a restart)
 */
 Domains.prototype.init = function(req, res, next) {
 	var All = this.All;
-	var self = this;
 	var sites = this.sites;
 	var hosts = this.hosts;
 	var hostname = req.hostname;
@@ -96,7 +95,7 @@ Domains.prototype.init = function(req, res, next) {
 	if (!host.waiting && !host._error) {
 		doWait(host);
 	}
-
+	var p;
 	if (req.path == "/.well-known/upcache") {
 		if (host.finalize) {
 			host.finalize();
@@ -314,7 +313,6 @@ function hostUpdate(host, name) {
 
 function errorObject(site, err) {
 	var std = err.toString();
-	var stop = false;
 	var errObj = {
 		name: err.name,
 		message: err.message

@@ -96,7 +96,7 @@ exports.init = function(opt) {
 			});
 		})).then(function(modules) {
 			opt.plugins = modules.filter(x => !!x);
-			var plugin;
+			var plugin, module;
 			while (opt.plugins.length) {
 				module = opt.plugins.shift();
 				try {
@@ -144,10 +144,6 @@ function install(site) {
 	All.domains.promote(site);
 	All.domains.hold(site);
 
-	var config = {
-		directories: [],
-		elements: []
-	};
 	return Install.install(site, All.opt).then(function(pkg) {
 		return All.api.install(site, pkg, All).then(function() {
 			return All.statics.install(site, pkg, All).then(function() {

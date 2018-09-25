@@ -222,8 +222,6 @@ function doInstall(site, pkg, opt) {
 				})
 			});
 		}
-	}).then(function(out) {
-		if (out) debug(out);
 	}).catch(function(err) {
 		if (typeof err == "string") {
 			var installError = new Error(err);
@@ -232,7 +230,8 @@ function doInstall(site, pkg, opt) {
 			delete err.stack;
 		}
 		throw err;
-	}).then(function() {
+	}).then(function(out) {
+		if (out) debug(out);
 		return getPkg(pkg.dir).then(function(npkg) {
 			if (!npkg.name) {
 				var err = new Error("Installation error");
