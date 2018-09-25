@@ -30,8 +30,8 @@ function init(All) {
 
 exports.get = function(site, data) {
 	return All.api.Href.query(site.trx).select('href._id')
-		.whereSite(site.id)
-		.where('href.url', data.url).first();
+	.whereSite(site.id)
+	.where('href.url', data.url).first();
 };
 
 exports.get.schema = {
@@ -141,7 +141,6 @@ exports.search.schema = {
 
 exports.add = function(site, data) {
 	var Href = All.api.Href;
-	var Block = All.api.Block;
 
 	var url = data.url;
 	var objUrl = URL.parse(url);
@@ -180,7 +179,7 @@ exports.add = function(site, data) {
 				return site.$relatedQuery('hrefs').insert(result).returning(Href.columns);
 			} else {
 				return site.$relatedQuery('hrefs').patchObject(result).where('_id', href._id)
-					.first().returning(Href.columns);
+				.first().returning(Href.columns);
 			}
 		});
 	});

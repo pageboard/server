@@ -15,7 +15,7 @@ function init(All) {
 		}).catch(next);
 	});
 	All.app.post("/.api/query", function(req, res, next) {
-		throw new HttpError.NotImplemented();
+		next(new HttpError.NotImplemented());
 	});
 }
 

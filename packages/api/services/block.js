@@ -1,7 +1,7 @@
 var ref = require('objection').ref;
 var raw = require('objection').raw;
 
-exports = module.exports = function(opt) {
+exports = module.exports = function() {
 	return {
 		name: 'block',
 		service: init
@@ -22,9 +22,9 @@ function init(All) {
 
 exports.get = function(site, data) {
 	var q = site.$relatedQuery('children').select()
-		.where('block.id', data.id);
+	.where('block.id', data.id);
 	if (data.type) q.where('block.type', data.type);
-	if (data.standalone) q.eager(`[children(childrenFilter)]`, {
+	if (data.standalone) q.eager('[children(childrenFilter)]', {
 		childrenFilter: function(query) {
 			return query.select().where('block.standalone', false);
 		}
@@ -86,7 +86,7 @@ exports.search = function(site, data) {
 			delete data.children.offset;
 			var qc = site.$relatedQuery('children').alias('children');
 			whereSub(qc, data.children, schemas[data.children.type], 'children');
-			qc.joinRelation('parents', {alias: 'parents'}).where('parents._id', ref('block._id'))
+			qc.joinRelation('parents', {alias: 'parents'}).where('parents._id', ref('block._id'));
 			q.select(All.api.Block.query().count().from(qc.as('sub')).as('childrenCount'));
 		} else q.eager('[children(childrenFilter)]', {
 			childrenFilter: function(query) {
@@ -442,9 +442,9 @@ exports.save.external = true;
 
 exports.del = function(site, data) {
 	return site.$relatedQuery('children')
-		.where('block.id', data.id)
-		.whereIn('block.type', data.type)
-		.delete();
+	.where('block.id', data.id)
+	.whereIn('block.type', data.type)
+	.delete();
 };
 exports.del.schema = {
 	title: 'Delete a block',

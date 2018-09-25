@@ -193,7 +193,7 @@ Block.extendSchema = function extendSchema(name, schemas) {
 		return schema.$id;
 	};
 	return DomainBlock;
-}
+};
 
 function stringProperties(obj) {
 	var props = {};
@@ -235,8 +235,8 @@ Block.genId = function(length) {
 Block.QueryBuilder = class BlockQueryBuilder extends common.QueryBuilder {
 	whereSite(siteId) {
 		return this.joinRelation('parents')
-			.where('parents.type', 'site')
-			.where('parents.id', siteId);
+		.where('parents.type', 'site')
+		.where('parents.id', siteId);
 	}
 };
 

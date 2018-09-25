@@ -68,7 +68,7 @@ exports.search = function(data) {
 	.joinRelation('children', {alias: 'settings'})
 	.where('settings.type', 'settings');
 	if (data.grants) q.where(function(builder) {
-		data.grants.forEach(function(grant, i) {
+		data.grants.forEach(function(grant) {
 			builder.orWhereJsonSupersetOf('settings.data:grants', [grant]);
 		});
 	});

@@ -33,7 +33,7 @@ exports.up = function(knex) {
 	.createTable('href', function(table) {
 		table.increments('_id').primary();
 		table.integer('_parent_id').notNullable().unsigned()
-			.references('_id').inTable('block').onDelete('CASCADE');
+		.references('_id').inTable('block').onDelete('CASCADE');
 		table.string('url').notNullable();
 		table.boolean('visible').notNullable().defaultTo(true);
 		table.string('mime').notNullable().index();
@@ -57,8 +57,8 @@ exports.up = function(knex) {
 
 exports.down = function(knex) {
 	return knex.schema
-		.dropTableIfExists('href')
-		.dropTableIfExists('relation')
-		.dropTableIfExists('block');
+	.dropTableIfExists('href')
+	.dropTableIfExists('relation')
+	.dropTableIfExists('block');
 };
 

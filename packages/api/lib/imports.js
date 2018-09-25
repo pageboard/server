@@ -190,7 +190,7 @@ function listDependencies(rootGroup, eltsMap, el, list=[], sieve={}) {
 		var spec = typeof val == "string" ? val : val.spec;
 		if (!spec) return;
 		spec.split(/\W+/).filter(x => !!x).forEach(function(word) {
-			if (word == "text" || word == "page") return;
+			if (word == "text" || word == "page") return;
 			if (!sieve[word]) {
 				listDependencies(rootGroup, eltsMap, word, list, sieve);
 			}
@@ -337,7 +337,7 @@ class ArrProxy {
 		this.context = context;
 	}
 	set(arr, key, val) {
-		if (typeof key == "integer" && val != null) {
+		if (typeof key == "number" && val != null) {
 			val = absolutePaths(val, this.context);
 			if (val.length == 1) val = val[0];
 			else throw new Error(`Cannot set ${this.context}.${key} with ${val}`);

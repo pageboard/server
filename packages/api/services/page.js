@@ -27,7 +27,6 @@ function init(All) {
 		}
 	});
 	All.app.get('/.api/pages', function(req, res, next) {
-		var data = req.query;
 		if (All.auth.test(req, 'webmaster')) {
 			req.query.drafts = true; // TODO replace by proper permission management
 			req.query.type = ['page', 'mail'];
@@ -56,14 +55,14 @@ function init(All) {
 		All.run('page.robots', req.site).then(function(txt) {
 			res.type('text/plain');
 			res.send(txt);
-		});
+		}).catch(next);
 	});
 
 	All.app.get('/.api/sitemap.txt', function(req, res, next) {
 		All.run('page.list', req.site, {}).then(function(obj) {
 			res.type('text/plain');
 			res.send(obj.data.map(page => req.site.href + page.data.url).join('\n'));
-		});
+		}).catch(next);
 	});
 }
 
@@ -131,7 +130,7 @@ exports.get = function(site, data) {
 			return QueryPage(site).where('page.type', 'notfound').throwIfNotFound()
 			.select(
 				QueryPageHref(site).where('page.type', 'notfound').as('hrefs')
-			)
+			);
 		} else {
 			return page;
 		}
@@ -224,7 +223,7 @@ function listPages(site, data) {
 		q.whereJsonText('block.data:url', '~', `^${data.parent}/[^/]+$`)
 		.orderBy(ref('block.data:index'));
 	} else if (data.url) {
-		q.whereJsonText('block.data:url', 'LIKE', `${data.url || ''}%`);
+		q.whereJsonText('block.data:url', 'LIKE', `${data.url || ''}%`);
 	} else {
 		// just return all pages for the sitemap
 	}

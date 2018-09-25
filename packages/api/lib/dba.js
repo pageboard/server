@@ -40,7 +40,7 @@ exports.dump = function(conn, opt) {
 exports.knexConfig = function(config) {
 	if (!process.env.HOME) process.env.HOME = require('passwd-user').sync(process.getuid()).homedir;
 	var dbOpts = Object.assign({}, {
-		url: `postgres://localhost/${opt.name}`
+		url: `postgres://localhost/${config.name}`
 	}, config.database);
 	delete dbOpts.dump;
 	var parsed = require('url').parse(dbOpts.url, true);

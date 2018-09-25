@@ -26,7 +26,7 @@ exports.submit = function(site, data) {
 	}).then(function(form) {
 		var fd = form.data || {};
 		if (!fd.method) throw new HttpError.BadRequest("Missing method");
-		var params = mergeParameters(fd.parameters, {
+		var params = All.utils.mergeParameters(fd.parameters, {
 			$query: data.query,
 			$body: data.body
 		});
