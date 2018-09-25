@@ -5,7 +5,6 @@ var fs = {
 	rename: pify(require('fs').rename)
 };
 
-var BufferList = require('bl');
 var DataUri = require('datauri');
 var allowedParameters = {
 	rs: true,
