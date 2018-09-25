@@ -37,9 +37,8 @@ module.exports = function(opt) {
 
 	return {
 		priority: -Infinity,
-		view: init
+		view: function() {}
 	};
 };
 
-function init(All) {};
 
