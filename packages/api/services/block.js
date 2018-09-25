@@ -475,7 +475,8 @@ exports.del.schema = {
 exports.del.external = true;
 
 exports.gc = function(days) {
-	return raw(`DELETE FROM block USING (
+	// this might prove useless
+	return All.api.Block.raw(`DELETE FROM block USING (
 		SELECT count(relation.child_id), b._id FROM block AS b
 			LEFT OUTER JOIN relation ON (relation.child_id = b._id)
 			LEFT JOIN block AS p ON (p._id = relation.parent_id AND p.type='site')
