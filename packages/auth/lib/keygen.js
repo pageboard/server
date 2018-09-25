@@ -14,7 +14,7 @@ module.exports = function(All) {
 		// generate private/public keys and store in keysPath
 		return sshKeygen(All.opt.scope.keysize).then(function(obj) {
 			return fs.writeFile(keysPath, JSON.stringify(obj)).then(function() {
-				return fs.chmod(keysPath, 0600);
+				return fs.chmod(keysPath, 0o600);
 			}).then(function() {
 				return obj;
 			});

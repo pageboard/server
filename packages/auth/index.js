@@ -12,6 +12,7 @@ exports = module.exports = function(opt) {
 // validate: process activation link and return bearer in cookie
 
 function init(All) {
+	var opt = All.opt;
 	opt.scope = Object.assign({
 		maxAge: 60 * 60 * 24 * 31,
 		userProperty: 'user',
