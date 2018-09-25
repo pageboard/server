@@ -48,14 +48,14 @@ function init(All) {
 			function(req, res, next) {
 				var url = req.url;
 				switch(req.params.dir) {
-					case ".uploads":
-						req.url = "/uploads/" + req.site.id + url.substring(9);
-						All.cache.for(statics.nocache ? null : '1 year')(req, res, next);
-						break;
-					case ".files":
-						req.url = "/files/" + req.site.id + url.substring(7);
-						All.cache.tag('app-:site').for(statics.nocache ? null : '1 year')(req, res, next);
-						break;
+				case ".uploads":
+					req.url = "/uploads/" + req.site.id + url.substring(9);
+					All.cache.for(statics.nocache ? null : '1 year')(req, res, next);
+					break;
+				case ".files":
+					req.url = "/files/" + req.site.id + url.substring(7);
+					All.cache.tag('app-:site').for(statics.nocache ? null : '1 year')(req, res, next);
+					break;
 				}
 				debug("Static url", url, "rewritten to", req.url);
 			},
