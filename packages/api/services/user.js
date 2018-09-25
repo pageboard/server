@@ -37,6 +37,7 @@ exports.get.schema = {
 			format: 'id'
 		},
 		email: {
+			title: 'User email',
 			type: 'array',
 			items: {
 				type: 'string',
