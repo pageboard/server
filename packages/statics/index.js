@@ -10,7 +10,6 @@ var fs = {
 };
 
 var mkdirp = pify(require('mkdirp'));
-var rimraf = pify(require('rimraf'));
 
 var bundlers = {
 	js: require('postinstall-js'),
