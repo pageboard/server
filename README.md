@@ -1,5 +1,5 @@
-pageboard -- website editor
-===========================
+pageboard server modules
+========================
 
 install
 -------
@@ -10,16 +10,18 @@ Besides `npm install pageboard`:
 - webkitgtk 2.20 (for prerender)
 - vips 8.6 (for image)
 
-all of which are trivial to install on a debian or fedora operating system.
+All of which are some apt or dnf away on debian or fedora operating systems.
 
-The server module requires more tools (iptables, nginx, memcached, upcache).
+New sites built to run within pageboard should depend on client modules, which
+are maintained in the `@pageboard/client` module.
 
+Pageboard also works best when served behind `@pageboard/proxy`.
 
 dev install
 -----------
 
-Install submodules:
-npm run submodules
+First checkout all git submodules using `git submodules update`,
+then install them and link them in node_modules using `make`.
 
 modules
 -------
@@ -53,13 +55,16 @@ modules
   - auth.validate: validates that url and sets a jsonwebtoken in cookie
 
 * cache  
-  Configure routes for tagging and scoping. See `server` below.
+  Tag and scope-based directives for the proxy. Also sets peremption headers.
 
 * statics  
   Mounts and symlinks static files directories declared by pageboard modules.
 
 * image  
   Image thumbnailer and resizer/converter using sharpie -> sharp -> vips.
+
+* github-webhook  
+  Listens to github json payloads /.api/github and deploy accordingly.
 
 * upload  
   deals with files uploads
@@ -74,40 +79,9 @@ modules
   - mail.send (internal api)
 
 * read  
-  the core bootstraping scripts for page rendering, uses `pagecut` for
-  DOM output.
-
-* write  
-  the client libraries for edition, uses `pagecut` for block edition.
-  
-* pagecut  
-  The core editor module, uses `prosemirror` to drive HTML wysiwyg editing.
+  bootstraps a page that uses @pageboard/client elements modules.
 
 * prerender  
   serves prerendered web pages, also used by mail and pdf modules.
   Uses `express-dom`.
 
-* pdf  
-  renders a web page to pdf using prerender module.
-
-* server  
-  the nginx/upcache/memcached system for highly-efficient userland caching
-  and automatic SSL registration to letsencrypt (uses lua and resty modules)
-
-* github-webhook  
-  Allows continuous deployment of the module for each domain.
-
-* polyfill  
-  Installs polyfills required by other elements.
-  
-* elements-semantic-ui  
-  The main set of elements.
-  
-* elements-gallery  
-  portfolio/carousel combos.
-  
-* elements-google  
-  Widgets installation (translate).
-
-* site-semantic-ui  
-  the default module for new domains, can be replaced by a custom npm-installable module.
