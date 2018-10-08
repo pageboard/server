@@ -398,6 +398,7 @@ exports.save = function(site, changes) {
 	// this also effectively prevents removing a page and adding a new page
 	// with the same url as the one removed
 	var allUrl = {};
+	var returning = {};
 	return site.$relatedQuery('children')
 	.select('block.id', ref('block.data:url').as('url'))
 	.whereIn('block.type', site.$pagetypes)
@@ -427,10 +428,11 @@ exports.save = function(site, changes) {
 			return applyAdd(site, changes.add);
 		}).then(function() {
 			return applyUpdate(site, changes.update);
-		}).then(function() {
+		}).then(function(list) {
+			returning.update = list;
 			return applyRelate(site, changes.relate);
 		});
-	}).then(function() {
+	}).then(function(parts) {
 		return Promise.all(pages.update.map(function(child) {
 			if (!child.data.url) return;
 			return All.href.save(site, {
@@ -456,8 +458,7 @@ exports.save = function(site, changes) {
 			});
 		}));
 	}).then(function() {
-		// TODO return saved time stamp
-		return {};
+		return returning;
 	});
 };
 exports.save.schema = {
@@ -532,8 +533,14 @@ function applyUpdate(site, list) {
 		} else {
 			// simpler path
 			return site.$relatedQuery('children')
-			.where('block.id', block.id).patch(block).then(function(count) {
-				if (count == 0) throw new Error(`Block not found for update ${block.id}`);
+			.where('block.id', block.id)
+			.where(raw("date_trunc('milliseconds', block.updated_at)"), block.updated_at)
+			.patch(block)
+			.returning('id, updated_at')
+			.first()
+			.then(function(part) {
+				if (!part) throw new HttpError.Conflict(`Please refresh page before saving`);
+				return part;
 			});
 		}
 	}));
@@ -575,7 +582,15 @@ function updatePage(site, page) {
 		});
 	}).then(function(dbPage) {
 		return site.$relatedQuery('children').where('block.id', page.id)
-		.whereIn('block.type', site.$pagetypes).patch(page);
+		.whereIn('block.type', site.$pagetypes)
+		.where(raw("date_trunc('milliseconds', block.updated_at)"), page.updated_at)
+		.patch(page)
+		.returning('id, updated_at')
+		.first()
+		.then(function(part) {
+			if (!part) throw new HttpError.Conflict(`Please refresh page before saving`);
+			return part;
+		});
 	}).catch(function(err) {
 		console.error("cannot updatePage", err);
 		throw err;
