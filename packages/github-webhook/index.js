@@ -47,6 +47,8 @@ function init(All) {
 				} else {
 					console.warn("Nothing to deploy", site.data.env, event, ref);
 				}
+			} else {
+				throw new HttpError.BadRequest(`Unknown module "${payload.repository.full_name}"`);
 			}
 			res.sendStatus(200);
 		}).catch(next).then(function() {
