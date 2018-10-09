@@ -18,7 +18,7 @@ function init(All) {
 			if (event == "ping") {
 				return res.sendStatus(200);
 			}
-			if (event != "push") {
+			if (event != "push" && event != "create") {
 				return next(new HttpError.BadRequest("Unsupported event"));
 			}
 
@@ -44,6 +44,8 @@ function init(All) {
 				if (version) {
 					site.data.version = version;
 					save = true;
+				} else {
+					console.warn("Nothing to deploy", site.data.env, event, ref);
 				}
 			}
 			res.sendStatus(200);
