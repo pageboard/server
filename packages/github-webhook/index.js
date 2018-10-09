@@ -33,9 +33,9 @@ function init(All) {
 
 			var payload = req.body;
 			var module = site.data.module;
+			var version;
 			if (module && module == payload.repository.full_name) {
 				var ref = payload.ref;
-				var version;
 				if (ref && ref.startsWith('refs/tags/')) {
 					version = ref.substring('refs/tags/'.length);
 				} else if (site.data.env != "production") {
@@ -50,7 +50,9 @@ function init(All) {
 			} else {
 				throw new HttpError.BadRequest(`Unknown module "${payload.repository.full_name}"`);
 			}
-			res.sendStatus(200);
+			res.status(200);
+			if (save) res.send(`Saving version ${version}`);
+			else res.send('Nothing to do');
 		}).catch(next).then(function() {
 			if (save) return All.site.save(site).catch(function(err) {
 				console.error("Could not deploy site", site.data.version, err);
