@@ -61,7 +61,7 @@ function init(All) {
 	All.app.get('/.api/sitemap.txt', function(req, res, next) {
 		All.run('page.list', req.site, {}).then(function(obj) {
 			res.type('text/plain');
-			res.send(obj.data.map(page => req.site.href + page.data.url).join('\n'));
+			res.send(obj.items.map(page => req.site.href + page.data.url).join('\n'));
 		}).catch(next);
 	});
 }
