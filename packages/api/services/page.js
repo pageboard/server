@@ -540,7 +540,7 @@ function applyUpdate(site, list) {
 			.where('block.id', block.id)
 			.where(raw("date_trunc('milliseconds', block.updated_at)"), block.updated_at)
 			.patch(block)
-			.returning('id, updated_at')
+			.returning('id', 'updated_at')
 			.first()
 			.then(function(part) {
 				if (!part) throw new HttpError.Conflict(`Please refresh page before saving`);
@@ -589,7 +589,7 @@ function updatePage(site, page) {
 		.whereIn('block.type', site.$pagetypes)
 		.where(raw("date_trunc('milliseconds', block.updated_at)"), page.updated_at)
 		.patch(page)
-		.returning('id, updated_at')
+		.returning('id', 'updated_at')
 		.first()
 		.then(function(part) {
 			if (!part) throw new HttpError.Conflict(`Please refresh page before saving`);
