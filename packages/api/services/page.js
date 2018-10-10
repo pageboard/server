@@ -218,6 +218,10 @@ function listPages(site, data) {
 	.whereIn('block.type', data.type);
 	if (!data.drafts) {
 		q.whereNotNull(ref('block.data:url'));
+		q.where(function() {
+			this.whereNull(ref('block.data:nositemap'))
+			.orWhereNot(ref('block.data:nositemap'), true);
+		});
 	}
 	if (data.parent) {
 		q.whereJsonText('block.data:url', '~', `^${data.parent}/[^/]+$`)
