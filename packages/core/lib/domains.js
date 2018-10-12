@@ -162,7 +162,7 @@ Domains.prototype.init = function(req, res, next) {
 Domains.prototype.check = function(host, req) {
 	var fam = 4;
 	var localhost4 = "127.0.0.1";
-	var localhost6 = "::1";
+	// var localhost6 = "::1";
 	var ip = req.get('X-Forwarded-By');
 	if (ip) {
 		if (isIPv6(ip)) fam = 6;
