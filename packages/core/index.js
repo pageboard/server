@@ -280,7 +280,10 @@ function createApp(All) {
 	app.use(All.domains.init);
 	app.use(function(req, res, next) {
 		if (req.path == "/.well-known/pageboard") {
-			res.type("json").send({errors: req.site.errors});
+			res.type("json").send({
+				errors: req.site.errors,
+				server: req.site.data.server || 'stable'
+			});
 		} else {
 			res.setHeader('X-XSS-Protection','1;mode=block');
 			res.setHeader('X-Frame-Options', 'SAMEORIGIN');
