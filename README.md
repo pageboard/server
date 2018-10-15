@@ -1,6 +1,8 @@
 pageboard server modules
 ========================
 
+[bug reports and features requests for server modules must go here](https://github.com/pageboard/server/issues)
+
 install
 -------
 
