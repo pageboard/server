@@ -139,7 +139,9 @@ exports.send = function(site, data) {
 		return got(emailUrl, {
 			query: Object.assign(data.query || {}, {
 				email: true
-			})
+			}),
+			retry: 0,
+			timeout: 10000
 		}).then(function(response) {
 			return JSON.parse(response.body);
 		}).then(function(obj) {
