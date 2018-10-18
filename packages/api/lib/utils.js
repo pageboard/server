@@ -11,24 +11,26 @@ exports.unflatten = function(query) {
 
 exports.mergeParameters = mergeParameters;
 
-function mergeParameters(params, obj) {
-	if (params) Object.keys(params).forEach(function(key) {
-		var val = params[key];
+function mergeParameters(params, obj, ret) {
+	if (!ret) ret = {};
+	Object.keys(params).forEach(function(key) {
+		var val = ret[key] = params[key];
 		if (typeof val == "string") {
-			var str = `[${val}]`;
-			var nstr = matchdom(str, obj, {'||': function(val, what) {
+			matchdom(`[${val}]`, obj, {'||': function(val, what) {
 				var path = what.scope.path.slice();
-				var last = path.pop();
-				var parent = what.expr.get(what.data, path);
-				delete parent[last];
+				if (path[0] == "$query" || path[0] == "$body") {
+					var last = path.pop();
+					var parent = what.expr.get(what.data, path);
+					delete parent[last];
+					ret[key] = val;
+				}
 				return val;
 			}});
-			if (nstr != str) params[key] = nstr;
 		} else if (typeof val == "object") {
-			mergeParameters(val, obj);
+			ret[key] = {};
+			mergeParameters(val, obj, ret[key]);
 		}
 	});
-	else params = {};
-	return params;
+	return ret;
 }
 
