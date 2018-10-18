@@ -25,8 +25,8 @@ exports.submit = function(site, data) {
 		id: data.id
 	}).then(function(form) {
 		var fd = form.data || {};
-		if (!fd.method) throw new HttpError.BadRequest("Missing method");
-		var params = All.utils.mergeParameters(fd.parameters, {
+		if (!fd.request.method) throw new HttpError.BadRequest("Missing method");
+		var params = All.utils.mergeParameters(fd.request.parameters, {
 			$query: data.query,
 			$body: data.body
 		});
@@ -34,7 +34,7 @@ exports.submit = function(site, data) {
 			if (Object.keys(data.body).length > 0) params.data = data.body;
 			params.type = fd.type;
 		}
-		return All.run(fd.method, site, params);
+		return All.run(fd.request.method, site, params);
 	});
 };
 
