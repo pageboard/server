@@ -132,7 +132,7 @@ exports.send = function(site, data) {
 			address: `${site.id}.${rows[1].id}@${mailDomain}`
 		};
 
-		var emailPage = pages.data[0];
+		var emailPage = pages.items[0];
 		if (!emailPage) throw new HttpError.NotFound("Page not found");
 		var emailUrl = site.href + emailPage.data.url;
 
