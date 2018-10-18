@@ -103,6 +103,7 @@ Object.defineProperty(exports.login, 'schema', {
 		schema.required = (schema.required || []).concat(['grants']);
 		schema.properties = Object.assign({
 			grants: {
+				title: 'Grants',
 				type: 'array',
 				uniqueItems: true,
 				items: {
@@ -111,6 +112,7 @@ Object.defineProperty(exports.login, 'schema', {
 				}
 			},
 			url: {
+				title: 'Mail page',
 				anyOf: [{
 					type: 'null'
 				}, {
@@ -118,10 +120,8 @@ Object.defineProperty(exports.login, 'schema', {
 					format: 'pathname'
 				}],
 				$helper: {
-					name: 'href',
-					filter: {
-						type: ["link"]
-					}
+					name: 'page',
+					type: 'mail'
 				}
 			}
 		}, schema.properties);
