@@ -8,7 +8,6 @@ exports = module.exports = function(opt) {
 };
 
 function init(All) {
-	var opt = All.opt;
 	console.info("Setting up /.api/github webhook");
 	All.app.post('/.api/github', function(req, res, next) {
 		var site = req.site;
@@ -25,7 +24,6 @@ function init(All) {
 			var secret = site.data['github-webhook-secret'];
 			if (secret) {
 				var sign = req.get('X-Github-Signature');
-				var delivery = req.get('X-Github-Delivery');
 				if (sign && sign != signBlob(secret, req._body)) {
 					throw new HttpError.Forbidden("Invalid Signature");
 				}
