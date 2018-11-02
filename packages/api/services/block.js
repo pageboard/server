@@ -178,7 +178,7 @@ exports.search.schema = {
 			title: 'Limit',
 			type: 'integer',
 			minimum: 0,
-			maximum: 100,
+			maximum: 1000,
 			default: 10
 		},
 		offset: {
@@ -239,7 +239,7 @@ exports.search.schema = {
 					title: 'Limit',
 					type: 'integer',
 					minimum: 0,
-					maximum: 100,
+					maximum: 1000,
 					default: 10
 				},
 				offset: {
@@ -297,7 +297,7 @@ exports.search.schema = {
 					title: 'Limit',
 					type: 'integer',
 					minimum: 0,
-					maximum: 50,
+					maximum: 1000,
 					default: 10
 				},
 				offset: {
