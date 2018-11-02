@@ -34,8 +34,8 @@ function init(All) {
 			var version;
 			if (module && module == payload.repository.full_name) {
 				var ref = payload.ref;
-				if (ref && ref.startsWith('refs/tags/')) {
-					version = ref.substring('refs/tags/'.length);
+				if (payload.ref_type == "tag" && ref) {
+					version = ref;
 				} else if (site.data.env != "production") {
 					version = payload.after;
 				}
