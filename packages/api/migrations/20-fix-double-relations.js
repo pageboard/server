@@ -6,10 +6,15 @@ exports.up = function(knex) {
 	`).then(function(list) {
 		var ids = [];
 		var couples = {};
+		console.info("Deleting these relations");
 		list.rows.forEach(function(row) {
 			var pair = `${row.parent_id}-${row.child_id}`;
-			if (couples[pair]) ids.push(row.id);
-			else couples[pair] = true;
+			if (couples[pair]) {
+				console.info(row);
+				ids.push(row.id);
+			}	else {
+				couples[pair] = true;
+			}
 		});
 		return knex.schema.raw(`
 			DELETE FROM relation WHERE id IN (${ids.join(',')})
