@@ -17,18 +17,18 @@
   },
   "homepage": "https://github.com/pageboard/api#readme",
   "dependencies": {
-    "ajv": "^6.5.4",
+    "ajv": "^6.5.5",
     "ajv-keywords": "^3.2.0",
     "body-parser": "^1.18.3",
     "debug": "^2.6.8",
     "flat": "^4.1.0",
     "knex": "^0.15.2",
     "lodash.merge": "^4.6.1",
-    "matchdom": "^4.2.0",
+    "matchdom": "^4.4.1",
     "node-schedule": "^1.3.0",
-    "objection": "^1.3.0",
+    "objection": "^1.4.0",
     "passwd-user": "^2.1.0",
-    "pg": "^7.5.0",
+    "pg": "^7.6.1",
     "tosource": "^1.0.0"
   },
   "pageboard": true
