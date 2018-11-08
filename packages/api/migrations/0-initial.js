@@ -34,11 +34,11 @@ exports.up = function(knex) {
 		table.increments('_id').primary();
 		table.integer('_parent_id').notNullable().unsigned()
 		.references('_id').inTable('block').onDelete('CASCADE');
-		table.string('url').notNullable();
+		table.string('url', 1024).notNullable();
 		table.boolean('visible').notNullable().defaultTo(true);
 		table.string('mime').notNullable().index();
 		table.string('type').notNullable();
-		table.string('title').notNullable();
+		table.text('title').notNullable();
 		table.string('icon');
 		table.string('site').notNullable();
 		table.string('pathname').notNullable();
