@@ -45,41 +45,45 @@ function init(All) {
 
 			// site.data.module keeps the repository, branch|commit|tag|semver:range that should be installed
 			// site.data.version tracks the *actual* successfully installed commit|tag|version
+			var msg = 'Nothing to do';
+			var stop = false;
 			if (mod.branch && refs.branch) {
 				if (refs.branch != mod.branch) {
-					throw new Error(`Site module restricted to branch "${mod.branch}"`);
+					msg = `Site module restricted to branch "${mod.branch}"`;
+					stop = true;
 				}
 			}
-			if (refs.version) {
+			if (!stop && refs.version) {
 				if (mod.range && semver.satisfies(refs.version, mod.range) == false) {
-					throw new Error(`Site module restricted to version "${mod.range}"`);
-				} else {
+					msg = `Site module restricted to version "${mod.range}"`;
+					stop = true;
+				} else if (!version) {
 					version = refs.version;
 				}
 			}
-			if (refs.tag) {
+			if (!stop && refs.tag) {
 				if (mod.tag && refs.tag != mod.tag) {
-					throw new Error(`Site module restricted to tag "${mod.tag}"`);
+					msg = `Site module restricted to tag "${mod.tag}"`;
+					stop = true;
 				} else if (!version) {
 					version = refs.tag;
 				}
 			}
-			if (refs.commit) {
+			if (!stop && refs.commit) {
 				if (mod.commit && refs.commit != mod.commit) {
-					throw new Error(`Site module restricted to commit "${mod.commit}"`);
+					msg = `Site module restricted to commit "${mod.commit}"`;
+					stop = true;
 				} else if (!version && site.data.env != "production") {
 					version = refs.commit;
 				}
 			}
-			res.status(200);
-			if (version != null) {
+			if (version != null && !stop) {
 				site.data.version = version;
-				res.send(`Saving version ${version}`);
-			} else {
-				res.send("Nothing to do");
+				msg = `Saving version ${version}`;
 			}
+			res.status(200).send(msg);
 		}).catch(function(err) {
-			res.status(400).send(`Deployment refused ${err.message}`);
+			next(err);
 			throw err;
 		}).then(function() {
 			if (version != null) return All.site.save(site).then(function() {
@@ -93,7 +97,6 @@ function init(All) {
 				});
 			});
 		}).catch(function(err) {
-			console.error(site.id, site.data.module, err);
 			if (pusher) All.mail.to({
 				to: {
 					name: pusher.name,
@@ -103,6 +106,7 @@ function init(All) {
 				text: `An error occurred while deploying from repository:
 					${err.message}`
 			});
+			else console.error(site.id, site.data.module, err);
 		});
 	});
 }
