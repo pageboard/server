@@ -88,8 +88,8 @@ function init(All) {
 						name: pusher.name,
 						address: pusher.email
 					},
-					subject: `Pageboard deployed ${site.data.module} ${site.data.version}`,
-					text: `The changes are immediately available from\n${req.site.href}`
+					subject: `Pageboard deployed ${site.data.module} to ${req.site.href}`,
+					text: `The version ${site.data.version} is immediately available at\n${req.site.href}`
 				});
 			});
 		}).catch(function(err) {
@@ -99,7 +99,7 @@ function init(All) {
 					name: pusher.name,
 					address: pusher.email
 				},
-				subject: `Pageboard error deploying site ${site.data.module}`,
+				subject: `Pageboard error deploying ${site.data.module} to ${req.site.href}`,
 				text: `An error occurred while deploying from repository:
 					${err.message}`
 			});
