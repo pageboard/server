@@ -175,8 +175,12 @@ function doInstall(site, pkg, opt) {
 		var version = site.data.version;
 		var module = site.data.module;
 		if (version != null) {
-			if (module.indexOf('/') > 0 && !module.startsWith('@')) module += "#";
-			else module += "@";
+			if (module.indexOf('/') > 0 && !module.startsWith('@')) {
+				module = module.split('#').shift();
+				module += "#";
+			} else {
+				module += "@";
+			}
 			module += version;
 		}
 		console.info("install", site.id, module, version);
