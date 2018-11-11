@@ -84,7 +84,10 @@ function init(All) {
 		}).then(function() {
 			if (version != null) return All.site.save(site).then(function() {
 				if (pusher) All.mail.to({
-					to: pusher,
+					to: {
+						name: pusher.name,
+						address: pusher.email
+					},
 					subject: `Pageboard deployed ${site.data.module} ${site.data.version}`,
 					text: `The changes are immediately available from\n${req.site.href}`
 				});
@@ -92,7 +95,10 @@ function init(All) {
 		}).catch(function(err) {
 			console.error(site.id, site.data.module, err);
 			if (pusher) All.mail.to({
-				to: pusher,
+				to: {
+					name: pusher.name,
+					address: pusher.email
+				},
 				subject: `Pageboard error deploying site ${site.data.module}`,
 				text: `An error occurred while deploying from repository:
 					${err.message}`
