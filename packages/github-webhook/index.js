@@ -79,7 +79,7 @@ function init(All) {
 				res.send("Nothing to do");
 			}
 		}).catch(function(err) {
-			next(err);
+			res.status(400).send(`Deployment refused ${err.message}`);
 			throw err;
 		}).then(function() {
 			if (version != null) return All.site.save(site).then(function() {
