@@ -54,15 +54,6 @@ exports = module.exports = function(opt) {
 	};
 };
 
-function send(mail) {
-	return new Promise(function(resolve, reject) {
-		mailer.sendMail(mail, function (err, info) {
-			if (err) reject(err);
-			else resolve(info);
-		});
-	});
-}
-
 exports.receive = function(data) {
 	// https://documentation.mailgun.com/en/latest/user_manual.html#parsed-messages-parameters
 	if (!validateMailgun(All.opt.mail.mailgun, data.timestamp, data.token, data.signature)) {
@@ -89,7 +80,7 @@ exports.receive = function(data) {
 				All.run('user.get', {id: userId}),
 				All.run('site.get', {id: siteId})
 			]).then(function([user, site]) {
-				return send({
+				return exports.to({
 					from: {
 						name: site.data.domains[0],
 						address: `${site.id}.${sender.id}@${mailDomain}`
@@ -113,6 +104,43 @@ exports.receive = function(data) {
 		if (err.status == 404) return false;
 		else throw err;
 	});
+};
+
+exports.to = function(data) {
+	return mailer.sendMail(data);
+};
+exports.to.schema = {
+	$action: 'write',
+	required: ['subject', 'to', 'text'],
+	properties: {
+		subject: {
+			title: 'Subject',
+			type: 'string'
+		},
+		text: {
+			title: 'Text body',
+			type: 'string'
+		},
+		html: {
+			title: 'HTML body',
+			type: 'string'
+		},
+		from: {
+			title: 'Sender email',
+			type: 'string',
+			format: 'email',
+			transform: ['trim']
+		},
+		to: {
+			title: 'Recipients emails',
+			type: 'array',
+			items: {
+				type: 'string',
+				format: 'email',
+				transform: ['trim']
+			}
+		}
+	}
 };
 
 exports.send = function(site, data) {
@@ -157,7 +185,7 @@ exports.send = function(site, data) {
 //					contentType: 'text/plain' // optional
 //				}]
 			};
-			return send(mail);
+			return exports.to(mail);
 		});
 	});
 };
