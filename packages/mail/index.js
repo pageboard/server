@@ -107,6 +107,7 @@ exports.receive = function(data) {
 };
 
 exports.to = function(data) {
+	if (!data.from) data.from = defaultSender;
 	return mailer.sendMail(data);
 };
 exports.to.schema = {
