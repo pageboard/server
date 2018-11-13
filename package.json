@@ -19,7 +19,7 @@
   },
   "homepage": "https://github.com/pageboard/server#readme",
   "dependencies": {
-    "@pageboard/api": "^0.5.4",
+    "@pageboard/api": "0.6.x",
     "@pageboard/auth": "^0.1.0",
     "@pageboard/cache": "^0.2.3",
     "@pageboard/core": "^0.3.4",
