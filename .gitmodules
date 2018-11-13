@@ -1,6 +1,3 @@
-[submodule "packages/prerender"]
-	path = packages/prerender
-	url = git@github.com:pageboard/prerender.git
 [submodule "packages/upload"]
 	path = packages/upload
 	url = git@github.com:pageboard/upload.git
