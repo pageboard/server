@@ -183,7 +183,7 @@ function doInstall(site, pkg, opt) {
 			}
 			module += version;
 		}
-		console.info("install", site.id, module, version);
+		console.info("install", site.id, site.data.module, site.data.version);
 		var baseEnv = {
 			HOME: process.env.HOME,
 			PATH: process.env.PATH
