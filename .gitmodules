@@ -13,9 +13,6 @@
 [submodule "packages/prerender"]
 	path = packages/prerender
 	url = git@github.com:pageboard/prerender.git
-[submodule "packages/read"]
-	path = packages/read
-	url = git@github.com:pageboard/read.git
 [submodule "packages/statics"]
 	path = packages/statics
 	url = git@github.com:pageboard/statics.git
