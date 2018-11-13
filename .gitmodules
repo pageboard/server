@@ -1,6 +1,3 @@
-[submodule "packages/github-webhook"]
-	path = packages/github-webhook
-	url = git@github.com:pageboard/github-webhook.git
 [submodule "packages/inspector"]
 	path = packages/inspector
 	url = git@github.com:pageboard/inspector.git
