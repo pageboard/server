@@ -24,7 +24,7 @@
     "flat": "^4.1.0",
     "knex": "^0.15.2",
     "lodash.merge": "^4.6.1",
-    "matchdom": "^4.4.1",
+    "matchdom": "^4.4.2",
     "node-schedule": "^1.3.0",
     "objection": "^1.4.0",
     "passwd-user": "^2.1.0",
