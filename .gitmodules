@@ -1,9 +1,6 @@
 [submodule "packages/auth"]
 	path = packages/auth
 	url = git@github.com:pageboard/auth.git
-[submodule "packages/core"]
-	path = packages/core
-	url = git@github.com:pageboard/core.git
 [submodule "packages/github-webhook"]
 	path = packages/github-webhook
 	url = git@github.com:pageboard/github-webhook.git
