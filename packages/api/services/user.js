@@ -50,7 +50,9 @@ exports.get.schema = {
 };
 
 exports.add = function(data) {
-	return QueryUser(data).then(function(user) {
+	return QueryUser({
+		email: [data.email]
+	}).then(function(user) {
 		throw new HttpError.Conflict();
 	}).catch(function(err) {
 		if (err.status == 404) {
