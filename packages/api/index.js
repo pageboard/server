@@ -109,7 +109,14 @@ function init(All) {
 
 	// api depends on site files
 	All.app.get('/.api/*', All.cache.tag('app-:site'));
-	All.app.use('/.api/*', All.auth.restrict('*'), All.cache.tag('data-:site'), bodyParserJson);
+	All.app.use('/.api/*',
+		// varies on any permission
+		All.auth.restrict('*'),
+		// invalid site by site
+		All.cache.tag('data-:site'),
+		// parse json bodies
+		bodyParserJson
+	);
 }
 
 exports.check = function(fun, data) {
