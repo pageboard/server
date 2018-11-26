@@ -430,10 +430,11 @@ exports.save = function(site, changes) {
 			return applyRemove(site, changes.remove);
 		}).then(function() {
 			return applyAdd(site, changes.add);
-		}).then(function() {
+		}).then(function(list) {
+			returning.update = list || [];
 			return applyUpdate(site, changes.update);
 		}).then(function(list) {
-			returning.update = list;
+			returning.update = returning.update.concat(list);
 			return applyRelate(site, changes.relate);
 		});
 	}).then(function(parts) {
@@ -527,13 +528,22 @@ function applyRemove(site, list) {
 function applyAdd(site, list) {
 	if (!list.length) return;
 	// this relates site to inserted children
-	return site.$relatedQuery('children').insert(list);
+	return site.$relatedQuery('children').insert(list).returning('*').then(function(rows) {
+		return rows.map(function(row) {
+			return {
+				id: row.id,
+				updated_at: row.updated_at
+			};
+		});
+	});
 }
 
 function applyUpdate(site, list) {
 	return Promise.all(list.map(function(block) {
 		if (site.$pagetypes.includes(block.type)) {
 			return updatePage(site, block);
+		} else if (!block.updated_at) {
+			throw new HttpError.BadRequest(`Block is missing 'updated_at' ${block.id}`);
 		} else {
 			// simpler path
 			return site.$relatedQuery('children')
