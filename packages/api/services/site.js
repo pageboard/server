@@ -54,7 +54,6 @@ exports.get.schema = {
 			format: 'hostname'
 		}
 	},
-	additionalProperties: false,
 	anyOf: [{
 		required: ['id']
 	}, {
@@ -115,8 +114,7 @@ exports.search.schema = {
 			minimum: 0,
 			default: 0
 		}
-	},
-	additionalProperties: false
+	}
 };
 
 exports.add = function(data) {
@@ -143,8 +141,7 @@ exports.add.schema = {
 		data: {
 			type: 'object'
 		}
-	},
-	additionalProperties: false
+	}
 };
 
 exports.save = function(data) {
@@ -174,8 +171,7 @@ exports.save.schema = {
 			type: 'object',
 			default: {}
 		}
-	},
-	additionalProperties: false
+	}
 };
 
 exports.del = function(data) {
@@ -189,7 +185,6 @@ exports.del.schema = {
 			type: 'string',
 			format: 'id'
 		}
-	},
-	additionalProperties: false
+	}
 };
 

@@ -47,8 +47,7 @@ exports.get.schema = {
 			type: 'boolean',
 			default: false
 		}
-	},
-	additionalProperties: false
+	}
 };
 
 exports.search = function(site, data) {
@@ -191,7 +190,6 @@ exports.search.schema = {
 			title: 'Parents',
 			type: 'object',
 			required: ['type'],
-			additionalProperties: false,
 			properties: {
 				first: {
 					title: 'Single',
@@ -254,7 +252,6 @@ exports.search.schema = {
 			title: 'Children',
 			type: 'object',
 			required: ['type'],
-			additionalProperties: false,
 			properties: {
 				type: {
 					title: 'Element',
@@ -313,8 +310,7 @@ exports.search.schema = {
 				}
 			}
 		}
-	},
-	additionalProperties: false
+	}
 };
 exports.search.external = true;
 
@@ -384,8 +380,7 @@ exports.find.schema = {
 		children: exports.search.schema.properties.children,
 		parent: exports.search.schema.properties.parent,
 		parents: exports.search.schema.properties.parents
-	},
-	additionalProperties: false
+	}
 };
 exports.find.external = true;
 
@@ -410,7 +405,7 @@ exports.add.schema = {
 			format: 'id'
 		}
 	},
-	additionalProperties: true
+	additionalProperties: true // WARNING disables api validation
 };
 exports.add.external = true;
 
@@ -436,7 +431,7 @@ exports.save.schema = {
 			format: 'id'
 		}
 	},
-	additionalProperties: true
+	additionalProperties: true // WARNING disables api validation
 };
 exports.save.external = true;
 
@@ -469,8 +464,7 @@ exports.del.schema = {
 				}
 			}
 		}
-	},
-	additionalProperties: false
+	}
 };
 exports.del.external = true;
 

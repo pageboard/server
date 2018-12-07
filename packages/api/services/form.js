@@ -52,7 +52,6 @@ exports.submit.schema = {
 		body: {
 			type: 'object'
 		}
-	},
-	additionalProperties: false
+	}
 };
 

@@ -84,8 +84,7 @@ Href.jsonSchema = {
 				}
 			}
 		}
-	},
-	additionalProperties: false
+	}
 };
 
 Href.columns = Object.keys(Href.jsonSchema.properties);

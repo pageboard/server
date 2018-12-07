@@ -183,8 +183,7 @@ exports.get.schema = {
 			type: 'string',
 			format: 'pathname'
 		}
-	},
-	additionalProperties: false
+	}
 };
 
 function redUrl(obj) {
@@ -327,8 +326,7 @@ exports.search.schema = {
 			minimum: 0,
 			default: 0
 		}
-	},
-	additionalProperties: false
+	}
 };
 exports.search.external = true;
 
@@ -368,8 +366,7 @@ exports.list.schema = {
 			},
 			default: ['page']
 		}
-	},
-	additionalProperties: false
+	}
 };
 exports.list.external = true;
 
@@ -494,8 +491,7 @@ exports.save.schema = {
 		unrelate: {
 			type: 'object'
 		}
-	},
-	additionalProperties: false
+	}
 };
 
 function stripHostname(site, block) {
@@ -641,8 +637,7 @@ exports.add.schema = {
 		data: {
 			type: 'object'
 		}
-	},
-	additionalProperties: false
+	}
 };
 
 exports.del = function(site, data) {

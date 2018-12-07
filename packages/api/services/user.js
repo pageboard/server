@@ -45,8 +45,7 @@ exports.get.schema = {
 				transform: ['trim', 'toLowerCase']
 			}
 		}
-	},
-	additionalProperties: false
+	}
 };
 
 exports.add = function(data) {
@@ -74,8 +73,7 @@ exports.add.schema = {
 			format: 'email',
 			transform: ['trim', 'toLowerCase']
 		}
-	},
-	additionalProperties: false
+	}
 };
 
 exports.save = function(data) {

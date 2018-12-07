@@ -42,8 +42,7 @@ exports.get.schema = {
 			type: 'string',
 			format: 'uri'
 		}
-	},
-	additionalProperties: false
+	}
 };
 
 exports.search = function(site, data) {
@@ -135,8 +134,7 @@ exports.search.schema = {
 			minimum: 0,
 			default: 0
 		}
-	},
-	additionalProperties: false
+	}
 };
 
 exports.add = function(site, data) {
@@ -198,8 +196,7 @@ exports.add.schema = {
 				format: 'pathname'
 			}]
 		}
-	},
-	additionalProperties: false
+	}
 };
 
 exports.save = function(site, data) {
@@ -231,8 +228,7 @@ exports.save.schema = {
 			type: 'string',
 			format: 'singleline'
 		}
-	},
-	additionalProperties: false
+	}
 };
 
 exports.del = function(site, data) {
@@ -259,8 +255,7 @@ exports.del.schema = {
 				format: 'pathname'
 			}]
 		}
-	},
-	additionalProperties: false
+	}
 };
 
 exports.gc = function(days) {

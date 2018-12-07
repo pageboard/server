@@ -75,7 +75,7 @@ function init(All) {
 				validateSchema: false,
 				ownProperties: true,
 				coerceTypes: 'array',
-				removeAdditional: false,
+				removeAdditional: "all",
 				formats: ajvApiSettings.formats
 			}
 		});
@@ -120,7 +120,7 @@ function init(All) {
 }
 
 exports.check = function(fun, data) {
-	if (!fun.schema) return data;
+	if (!fun.schema || fun.schema.additionalProperties) return data;
 	if (!fun.validate) {
 		if (fun.schema.defaults === false) {
 			fun.validate = ajvApiWithNoDefaults.compile(fun.schema);

@@ -88,8 +88,7 @@ Block.jsonSchema = {
 				uniqueItems: true
 			}]
 		}
-	},
-	additionalProperties: false
+	}
 };
 
 // _id is removed in $formatJson
@@ -141,7 +140,6 @@ Block.extendSchema = function extendSchema(name, schemas) {
 	if (name != null) schema.$id += `/${name}`;
 	var blockProps = schema.properties;
 	delete schema.properties;
-	delete schema.additionalProperties;
 
 	schema.select = {
 		"$data": '0/type'
@@ -170,15 +168,12 @@ Block.extendSchema = function extendSchema(name, schemas) {
 			properties: Object.assign({}, blockProps, standProp, {
 				data: Object.assign({}, blockProps.data, {
 					properties: element.properties,
-					additionalProperties: false,
 					required: element.required || []
 				}),
 				content: Object.assign({}, blockProps.content, {
-					properties: stringProperties(element.contents || {}),
-					additionalProperties: false
+					properties: stringProperties(element.contents || {})
 				})
-			}),
-			additionalProperties: false
+			})
 		};
 	});
 	var DomainBlock = class extends Block {};
