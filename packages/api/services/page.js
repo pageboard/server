@@ -29,9 +29,11 @@ function init(All) {
 	All.app.get('/.api/pages', function(req, res, next) {
 		if (All.auth.test(req, 'webmaster')) {
 			req.query.drafts = true; // TODO replace by proper permission management
-			req.query.type = ['page', 'mail'];
+			if (!req.query.type) req.query.type = ['page', 'mail'];
 		}
-		All.run('page.list', req.site, req.query).then(function(obj) {
+
+		var action = req.query.text != null ? 'page.search' : 'page.list';
+		All.run(action, req.site, req.query).then(function(obj) {
 			res.send(obj);
 		}).catch(next);
 	});
@@ -152,8 +154,7 @@ exports.get = function(site, data) {
 		return Promise.all([
 			getParents(site, pageUrl),
 			listPages(site, {
-				parent: pageUrl.split('/').slice(0, -1).join('/') || '/',
-				type: ['page']
+				parent: pageUrl.split('/').slice(0, -1).join('/') || '/'
 			}).clearSelect().select([
 				ref('block.data:url').as('url'),
 				ref('block.data:redirect').as('redirect'),
@@ -214,7 +215,7 @@ function listPages(site, data) {
 	var q = site.$relatedQuery('children')
 	.select()
 	.omit(['content'])
-	.whereIn('block.type', data.type);
+	.whereIn('block.type', data.type || ['page']);
 	if (!data.drafts) {
 		q.whereNotNull(ref('block.data:url'));
 		q.where(function() {
@@ -230,14 +231,16 @@ function listPages(site, data) {
 	} else {
 		// just return all pages for the sitemap
 	}
-	return q.orderBy(ref('block.data:url'));
+	if (data.limit) q.limit(data.limit);
+	if (data.offset) q.offset(data.offset);
+	return q.orderBy(ref('block.data:url'), 'block.updated_at DESC');
 }
 
 exports.search = function(site, data) {
-	var text = data.text.split(/\W+/)
-	.filter(x => !!x)
-	.map(x => x + ':*')
-	.join(' <-> ');
+	var drafts = '';
+	if (!data.drafts) {
+		drafts = `AND (page.data->'nositemap' IS NULL OR (page.data->'nositemap')::BOOLEAN IS NOT TRUE)`;
+	}
 
 	var q = All.api.Block.raw(`SELECT json_build_object(
 		'count', count,
@@ -276,13 +279,15 @@ exports.search = function(site, data) {
 				AND rs.parent_id = site._id AND block._id = rs.child_id
 				AND block.type NOT IN ('site', 'user', 'page', 'query', 'form')
 				AND rp.child_id = block._id AND page._id = rp.parent_id
-				AND page.type = 'page'
+				${drafts}
+				AND page.type IN (${data.type.map(_ => '?').join(',')})
 				AND search.query @@ block.tsv
 		) AS results
-		GROUP BY id, title, url, updated_at ORDER BY rank DESC OFFSET ? LIMIT ?
+		GROUP BY id, title, url, updated_at ORDER BY rank DESC, updated_at DESC OFFSET ? LIMIT ?
 	) AS foo GROUP BY count`, [
-		text,
+		data.text,
 		site.id,
+		...data.type,
 		data.offset,
 		data.limit
 	]);
@@ -325,6 +330,19 @@ exports.search.schema = {
 			type: 'integer',
 			minimum: 0,
 			default: 0
+		},
+		drafts: {
+			title: 'Show pages that are not in sitemap',
+			type: 'boolean',
+			default: false
+		},
+		type: {
+			type: 'array',
+			items: {
+				type: 'string',
+				format: 'id'
+			},
+			default: ['page']
 		}
 	}
 };
@@ -353,8 +371,19 @@ exports.list.schema = {
 			type: 'string',
 			format: 'pathname'
 		},
+		limit: {
+			title: 'Limit',
+			type: 'integer',
+			minimum: 0
+		},
+		offset: {
+			title: 'Offset',
+			type: 'integer',
+			minimum: 0,
+			default: 0
+		},
 		drafts: {
-			title: 'Show pages that have no url',
+			title: 'Show pages that are not in sitemap',
 			type: 'boolean',
 			default: false
 		},
