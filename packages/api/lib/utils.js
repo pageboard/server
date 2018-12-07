@@ -34,3 +34,7 @@ function mergeParameters(params, obj, ret) {
 	return ret;
 }
 
+
+exports.merge = function(str, obj) {
+	return matchdom(str, obj);
+};
