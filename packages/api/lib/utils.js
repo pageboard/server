@@ -5,7 +5,7 @@ var flat = require('flat');
 exports.unflatten = function(query) {
 	return flat.unflatten(query, {
 		object: true,
-		maxDepth: 10
+		maxDepth: 8
 	});
 };
 
