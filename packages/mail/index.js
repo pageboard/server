@@ -2,6 +2,7 @@ var NodeMailer = require('nodemailer');
 var AddressParser = require('nodemailer/lib/addressparser');
 var Mailgun = require('nodemailer-mailgun-transport');
 var got = require('got');
+var URL = require('url');
 
 // TODO https://nodemailer.com/dkim/
 // TODO https://postmarkapp.com/blog/differences-in-delivery-between-transactional-and-bulk-email
@@ -145,9 +146,10 @@ exports.to.schema = {
 };
 
 exports.send = function(site, data) {
+	var urlObj = URL.parse(data.url, true);
 	var list = [All.run('block.search', site, {
 		type: 'mail',
-		data: {url: data.url}
+		data: {url: urlObj.pathname}
 	})];
 	if (data.from) list.push(All.run('user.get', {
 		email: data.from
@@ -166,7 +168,7 @@ exports.send = function(site, data) {
 		var emailUrl = site.href + emailPage.data.url;
 
 		return got(emailUrl, {
-			query: Object.assign(data.query || {}, {
+			query: Object.assign(urlObj.query, {
 				email: true
 			}),
 			retry: 0,
@@ -196,13 +198,15 @@ exports.send.schema = {
 	required: ['url', 'to'],
 	properties: {
 		url: {
-			title: 'Address of mail page',
-			type: 'string',
-			format: 'pathname' // TODO add $helper to select mail pages
-		},
-		query: {
-			title: 'Query params for mail page',
-			type: 'object'
+			title: 'Mail page',
+			type: "string",
+			format: "uri-reference",
+			$helper: {
+				name: 'page',
+				title: 'Query',
+				description: 'Values can be [$query.xxx]',
+				query: true
+			}
 		},
 		to: {
 			title: 'Recipients emails',
