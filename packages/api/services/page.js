@@ -14,7 +14,8 @@ function init(All) {
 		if (All.auth.test(req, 'webmaster') && req.query.develop != "write") {
 			res.send({
 				item: {
-					type: 'write'
+					type: 'write',
+					data: {}
 				},
 				meta: Object.assign({services: req.site.$services}, req.site.$standalones.write),
 				site: req.site.data
