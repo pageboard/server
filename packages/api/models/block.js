@@ -64,6 +64,10 @@ Block.jsonSchema = {
 			type: 'object',
 			default: {}
 		},
+		expr: {
+			type: 'object',
+			nullable: true
+		},
 		content: {
 			type: 'object',
 			default: {}

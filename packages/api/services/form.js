@@ -25,16 +25,20 @@ exports.submit = function(site, data) {
 		id: data.id
 	}).then(function(form) {
 		var fd = form.data || {};
-		if (!fd.request.method) throw new HttpError.BadRequest("Missing method");
-		var params = All.utils.mergeParameters(fd.request.parameters, {
-			$query: data.query,
-			$body: data.body
-		});
+		var method = fd.request.method;
+		if (!method) throw new HttpError.BadRequest("Missing method");
+		var params = fd.request.parameters || {};
+		if (form.expr) {
+			params = All.utils.mergeObjects(params, (All.utils.mergeParameters(form.expr, {
+				$query: data.query,
+				$body: data.body
+			}).request || {}).parameters);
+		}
 		if (fd.type) {
 			if (Object.keys(data.body).length > 0) params.data = data.body;
 			params.type = fd.type;
 		}
-		return All.run(fd.request.method, site, params);
+		return All.run(method, site, params);
 	});
 };
 

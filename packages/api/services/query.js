@@ -25,9 +25,12 @@ exports.query = function(site, data) {
 	}).then(function(parent) {
 		var fd = parent.data || {};
 		if (!fd.method) throw new HttpError.BadRequest("Missing method");
-		var params = All.utils.mergeParameters(fd.parameters, {
-			$query: data.query
-		});
+		var params = fd.parameters || {};
+		if (parent.expr) {
+			params = All.utils.mergeObjects(params, All.utils.mergeParameters(parent.expr, {
+				$query: data.query
+			}).parameters);
+		}
 		return All.run(fd.method, site, params);
 	});
 };
