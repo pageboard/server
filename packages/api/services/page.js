@@ -248,10 +248,10 @@ exports.search = function(site, data) {
 		'rows', json_agg(
 			json_build_object(
 				'id', id,
+				'updated_at', updated_at,
 				'data', json_build_object(
 					'title', title,
 					'url', url,
-					'updated_at', updated_at,
 					'headlines', headlines,
 					'rank', rank
 				)
