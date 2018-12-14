@@ -141,7 +141,7 @@ exports.search.schema = {
 					const: "site"
 				}]
 			},
-			$helper: {
+			$filter: {
 				name: 'element',
 				standalone: true
 			}
@@ -198,7 +198,7 @@ exports.search.schema = {
 							const: "site"
 						}]
 					},
-					$helper: {
+					$filter: {
 						name: 'element',
 						standalone: true
 					}
@@ -252,7 +252,7 @@ exports.search.schema = {
 							const: "site"
 						}]
 					},
-					$helper: {
+					$filter: {
 						name: 'element',
 						standalone: true
 					}
