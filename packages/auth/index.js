@@ -113,12 +113,9 @@ Object.defineProperty(exports.login, 'schema', {
 			},
 			url: {
 				title: 'Mail page',
-				anyOf: [{
-					type: 'null'
-				}, {
-					type: 'string',
-					format: 'pathname'
-				}],
+				type: 'string',
+				format: 'pathname',
+				nullable: true,
 				$helper: {
 					name: 'page',
 					type: 'mail'

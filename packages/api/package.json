@@ -17,7 +17,7 @@
   },
   "homepage": "https://github.com/pageboard/api#readme",
   "dependencies": {
-    "ajv": "^6.5.5",
+    "ajv": "^6.6.1",
     "ajv-keywords": "^3.2.0",
     "body-parser": "^1.18.3",
     "debug": "^2.6.8",

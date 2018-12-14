@@ -80,9 +80,8 @@ exports.subscribe.schema = {
 		},
 		url: {
 			title: 'email page template',
+			nullable: true,
 			anyOf: [{
-				type: "null"
-			}, {
 				type: "string",
 				format: "uri"
 			}, {

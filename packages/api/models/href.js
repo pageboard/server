@@ -44,9 +44,8 @@ Href.jsonSchema = {
 			type: 'string'
 		},
 		icon: {
+			nullable: true,
 			anyOf: [{
-				type: "null"
-			}, {
 				type: 'string',
 				format: 'uri'
 			}, {
@@ -61,26 +60,32 @@ Href.jsonSchema = {
 			type: 'string'
 		},
 		lang: {
-			anyOf: [{type: "null"}, {type: "string"}]
+			nullable: true,
+			type: "string"
 		},
 		preview: {
-			anyOf: [{type: "null"}, {type: "string"}]
+			nullable: true,
+			type: "string"
 		},
 		meta: {
 			type: 'object',
 			default: {},
 			properties: {
 				size: {
-					anyOf: [{type: "null"}, {type: "integer"}]
+					nullable: true,
+					type: "integer"
 				},
 				width: {
-					anyOf: [{type: "null"}, {type: "integer"}]
+					nullable: true,
+					type: "integer"
 				},
 				height: {
-					anyOf: [{type: "null"}, {type: "integer"}]
+					nullable: true,
+					type: "integer"
 				},
 				duration: {
-					anyOf: [{type: "null"}, {type: "integer"}]
+					nullable: true,
+					type: "integer"
 				}
 			}
 		}

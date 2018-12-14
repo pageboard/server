@@ -116,12 +116,9 @@ exports.search.schema = {
 	properties: {
 		parent: {
 			title: 'Parent id',
-			anyOf: [{
-				type: "null"
-			}, {
-				type: "string",
-				format: 'id'
-			}]
+			nullable: true,
+			type: "string",
+			format: 'id'
 		},
 		child: {
 			title: 'Filter using child values ? No this object holds filter for a child that is INNER JOINED: TODO: replace this field by a boolean "inner join" on children field',
@@ -129,12 +126,9 @@ exports.search.schema = {
 		},
 		id: {
 			title: 'Block id',
-			anyOf: [{
-				type: "null"
-			}, {
-				type: "string",
-				format: 'id'
-			}]
+			nullable: true,
+			type: "string",
+			format: 'id'
 		},
 		type: {
 			title: 'Type',
@@ -154,12 +148,9 @@ exports.search.schema = {
 		},
 		text: {
 			title: 'Search text',
-			anyOf: [{
-				type: "null"
-			}, {
-				type: "string",
-				format: "singleline"
-			}]
+			nullable: true,
+			type: "string",
+			format: "singleline"
 		},
 		data: {
 			title: 'Filters',
@@ -214,12 +205,9 @@ exports.search.schema = {
 				},
 				text: {
 					title: 'Search text',
-					anyOf: [{
-						type: "null"
-					}, {
-						type: "string",
-						format: "singleline"
-					}]
+					nullable: true,
+					type: "string",
+					format: "singleline"
 				},
 				data: {
 					title: 'Filters',
@@ -271,12 +259,9 @@ exports.search.schema = {
 				},
 				text: {
 					title: 'Search text',
-					anyOf: [{
-						type: "null"
-					}, {
-						type: "string",
-						format: "singleline"
-					}]
+					nullable: true,
+					type: "string",
+					format: "singleline"
 				},
 				data: {
 					title: 'Filters',

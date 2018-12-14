@@ -19,6 +19,7 @@ var ajvApiSettings = {
 	ownProperties: true,
 	coerceTypes: 'array',
 	removeAdditional: false,
+	nullable: true,
 	formats: {
 		singleline: /^[^\n\r]*$/,
 		pathname: /^(\/[\w-.]*)+$/,
@@ -76,6 +77,7 @@ function init(All) {
 				ownProperties: true,
 				coerceTypes: 'array',
 				removeAdditional: "all",
+				nullable: true,
 				formats: ajvApiSettings.formats
 			}
 		});

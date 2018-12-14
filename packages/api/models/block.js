@@ -77,16 +77,13 @@ Block.jsonSchema = {
 			type: 'string'
 		},
 		locks: {
-			anyOf: [{
-				type: 'null'
-			}, {
-				type: 'array',
-				items: {
-					type: 'string',
-					format: 'id'
-				},
-				uniqueItems: true
-			}]
+			type: 'array',
+			nullable: true,
+			items: {
+				type: 'string',
+				format: 'id'
+			},
+			uniqueItems: true
 		}
 	}
 };
