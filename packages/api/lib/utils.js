@@ -38,6 +38,22 @@ function mergeParameters(params, obj, ret) {
 	return ret;
 }
 
+exports.mergeObjects = mergeObjects;
+
+function mergeObjects(data, expr) {
+	var copy = Object.assign({}, data);
+	if (expr != null) Object.keys(expr).forEach(function(key) {
+		var val = expr[key];
+		if (val == null) return;
+		else if (typeof val == "object") {
+			copy[key] = mergeObjects(copy[key], val);
+		} else {
+			copy[key] = val;
+		}
+	});
+	return copy;
+}
+
 
 exports.merge = function(str, obj) {
 	return matchdom(str, obj);
