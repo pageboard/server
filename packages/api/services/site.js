@@ -1,5 +1,3 @@
-var ref = require('objection').ref;
-var raw = require('objection').raw;
 var lodashMerge = require('lodash.merge');
 
 exports = module.exports = function(opt) {
