@@ -1,4 +1,3 @@
-var objection = require('objection');
 var common = require('./common');
 var Model = common.Model;
 
@@ -27,7 +26,7 @@ class Block extends Model {
 	}
 
 	$schema(type) {
-		return this.constructor.schema(type);
+		return this.constructor.schema(type || this.type);
 	}
 
 	get $source() {
