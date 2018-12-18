@@ -1,4 +1,5 @@
 var objection = require('objection');
+var DbErrors = require('objection-db-errors').DbErrors;
 var ref = objection.ref;
 var Model = objection.Model;
 var QueryBuilder = objection.QueryBuilder;
@@ -27,7 +28,7 @@ var InstanceUpdateOperation = require(
 	)
 );
 
-exports.Model = class CommonModel extends Model {
+exports.Model = class CommonModel extends DbErrors(Model) {
 	$query(trx) {
 		if (this.trx && !trx) trx = this.trx;
 		return super.$query(trx).patchObjectOperationFactory(() => {
