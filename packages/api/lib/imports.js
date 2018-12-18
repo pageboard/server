@@ -273,7 +273,7 @@ function loadFromFile(buf, elts, names, context) {
 		timeout: 1000
 	});
 
-	var arrProxy = new ArrProxy(context);
+	ArrProxy.create(context);
 	var elt;
 	for (var name in elts) {
 		elt = elts[name];
@@ -303,8 +303,8 @@ class MapProxy {
 	}
 	set(obj, key, val) {
 		if (obj.hasOwnProperty(key)) {
-			if (key == "user") {
-				console.error("Modifying user element is not allowed");
+			if (key == "user" || key == "priv") {
+				console.error(`Modifying ${key} element is not allowed`);
 				return false;
 			}
 			console.error("Assign, not set", key, "in", this.context.path);
@@ -321,8 +321,8 @@ class EltProxy {
 		this.context = context;
 	}
 	set(elt, key, val) {
-		if (this.name == "user") {
-			console.error("Modifying user element is not allowed");
+		if (this.name == "user" || this.name == "priv") {
+			console.error(`Modifying ${this.name} element properties is not allowed`);
 			return false;
 		}
 		if (key == "scripts" || key == "stylesheets" || key == "resources") {
@@ -333,6 +333,9 @@ class EltProxy {
 }
 
 class ArrProxy {
+	static create(context) {
+		return new this(context);
+	}
 	constructor(context) {
 		this.context = context;
 	}
