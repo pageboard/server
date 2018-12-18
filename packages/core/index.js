@@ -75,7 +75,6 @@ exports.init = function(opt) {
 	};
 	All.utils.spawn = require('spawn-please');
 	All.utils.which = pify(require('which'));
-	All.run = run.bind(All);
 	All.install = install.bind(All);
 	All.domains = new Domains(All);
 	All.app = createApp(All);
@@ -335,62 +334,6 @@ function viewsError(err, req, res, next) {
 	if (All.opt.env == "development" || code >= 500) console.error(err);
 	res.sendStatus(code);
 //	res.redirect(req.app.settings.errorLocation + '?code=' + code);
-}
-
-function run(apiStr) {
-	var args = Array.prototype.slice.call(arguments, 1);
-	return Promise.resolve().then(function() {
-		var api = apiStr.split('.');
-		var modName = api[0];
-		var funName = api[1];
-		var mod = this[modName];
-		if (!mod) throw new HttpError.BadRequest(`Unknown api module ${modName}`);
-		var fun = mod[funName];
-		if (!fun) throw new HttpError.BadRequest(`Unknown api method ${funName}`);
-		if (args.length != fun.length) {
-			throw new HttpError.BadRequest(`Api method ${funName} expected ${fun.length} arguments, and got ${args.length} arguments`);
-		}
-		var data = args[args.length - 1] || {};
-		try {
-			args[args.length - 1] = this.api.check(fun, data);
-		} catch(err) {
-			console.error(`run ${apiStr} ${JSON.stringify(data)}`);
-			throw err;
-		}
-		// start a transaction on set trx object on site
-		var site = args.length == 2 ? args[0] : null;
-		var hadTrx = false;
-		return Promise.resolve().then(function() {
-			if (!site) {
-				return;
-			}
-			if (site.trx) {
-				hadTrx = true;
-				return;
-			}
-			return All.api.transaction().then(function(trx) {
-				site.trx = trx;
-			});
-		}).then(function() {
-			return fun.apply(mod, args);
-		}).then(function(obj) {
-			if (!hadTrx && site) {
-				return site.trx.commit().then(function() {
-					return obj;
-				});
-			}
-			return obj;
-		}).catch(function(err) {
-			if (!hadTrx && site) {
-				return site.trx.rollback().then(function() {
-					throw err;
-				});
-			} else {
-				throw err;
-			}
-
-		});
-	}.bind(this));
 }
 
 function initDumps(All) {
