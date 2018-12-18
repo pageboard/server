@@ -10,6 +10,7 @@ var bodyParserJson = require('body-parser').json();
 var dba = require('./lib/dba');
 var imports = require('./lib/imports');
 var utils = require('./lib/utils');
+var common = require('./models/common');
 
 
 var ajvApiSettings = {
@@ -64,7 +65,7 @@ function init(All) {
 	var dbOpt = dba.knexConfig(opt);
 	var knexInst = knex(dbOpt);
 
-	objection.Model.createValidator = function() {
+	common.Model.createValidator = function() {
 		return new objection.AjvValidator({
 			onCreateAjv: function(ajv) {
 				ajv.addMetaSchema(ajvMetaSchema);
@@ -82,7 +83,7 @@ function init(All) {
 			}
 		});
 	};
-	objection.Model.knex(knexInst);
+	common.Model.knex(knexInst);
 
 	var models = {};
 	opt.models.forEach(function(path) {
