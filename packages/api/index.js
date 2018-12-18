@@ -199,3 +199,74 @@ All.run = function(apiStr) {
 	});
 };
 
+All.send = function(res, obj) {
+	if (obj.cookies) {
+		var host = All.domains.hosts[res.req.hostname];
+		var cookieParams = {
+			httpOnly: true,
+			sameSite: true,
+			secure: host && host.protocol == "https" || false,
+			path: '/'
+		};
+		Object.keys(obj.cookies).forEach(function(key) {
+			var cookie = obj.cookies[key];
+			var val = cookie.value;
+			var maxAge = cookie.maxAge;
+
+			if (val == null || maxAge == 0) res.clearCookie(key, cookieParams);
+			else res.cookie(key, val, Object.assign({}, cookieParams, {
+				maxAge: maxAge
+			}));
+		});
+		delete obj.cookies;
+	}
+	All.filter(res, obj);
+	res.json(obj);
+};
+
+All.filter = function(res, obj) {
+	var site = res.req.site;
+	var scopes = (res.req.user || {}).scopes || {};
+	if (obj.item) obj.item = unlockItem(site, scopes, obj.item);
+	if (obj.items) obj.items = obj.items.filter(function(item) {
+		return unlockItem(site, scopes, item);
+	});
+};
+
+function unlockItem(site, scopes, item) {
+	if (!item.type) return item;
+	if (item.children) {
+		item.children = item.children.filter(function(item) {
+			return unlockItem(site, scopes, item);
+		});
+	}
+	var schema = site.$schema(item.type);
+	var $locks = schema.$locks;
+	var locks = item.locks;
+	if (!locks && !$locks) return item;
+	if (typeof locks != "object") locks = { '*': locks };
+	if (typeof $locks != "object") $locks = { '*': $locks };
+	locks = Object.assign({}, locks, $locks);
+	if (locked(locks['*'], scopes)) return;
+	delete locks['*'];
+	Object.keys(locks).forEach(function(path) {
+		var list = locks[path];
+		path = path.split('.');
+		path.reduce(function(obj, val, index) {
+			if (obj == null) return;
+			if (index == path.length - 1) {
+				if (locked(list, scopes)) delete obj[val];
+			}
+			return obj[val];
+		}, item);
+	});
+	return item;
+}
+
+function locked(locks, scopes) {
+	if (locks == null) return false;
+	if (typeof locks == "string") locks = [locks];
+	return !locks.some(function(lock) {
+		return scopes[lock];
+	});
+}
