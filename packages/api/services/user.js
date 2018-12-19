@@ -49,19 +49,18 @@ exports.get.schema = {
 };
 
 exports.add = function(data) {
-	return QueryUser({
-		email: [data.email]
-	}).then(function(user) {
-		throw new HttpError.Conflict();
-	}).catch(function(err) {
-		if (err.status == 404) {
-			return All.api.Block.query().insert({
+	return All.api.transaction(function(trx) {
+		return QueryUser({
+			email: [data.email]
+		}).transacting(trx).then(function(user) {
+			return user;
+		}).catch(function(err) {
+			if (err.status != 404) throw err;
+			return All.api.Block.query(trx).insert({
 				data: { email: data.email },
 				type: 'user'
-			});
-		} else {
-			throw err;
-		}
+			}).returning('id');
+		});
 	});
 };
 exports.add.schema = {
