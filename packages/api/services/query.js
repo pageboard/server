@@ -11,7 +11,7 @@ function init(All) {
 			id: req.params.id,
 			query: All.utils.unflatten(req.query)
 		}).then(function(data) {
-			res.json(data);
+			All.send(data);
 		}).catch(next);
 	});
 	All.app.post("/.api/query", function(req, res, next) {
@@ -22,16 +22,12 @@ function init(All) {
 exports.query = function(site, data) {
 	return All.run('block.get', site, {
 		id: data.id
-	}).then(function(parent) {
-		var fd = parent.data || {};
-		if (!fd.method) throw new HttpError.BadRequest("Missing method");
-		var params = fd.parameters || {};
-		if (parent.expr) {
-			params = All.utils.mergeObjects(params, All.utils.mergeParameters(parent.expr, {
-				$query: data.query
-			}).parameters);
-		}
-		return All.run(fd.method, site, params);
+	}).then(function(form) {
+		var fd = form.data || {};
+		var method = fd.action.method;
+		if (!method) throw new HttpError.BadRequest("Missing method");
+		var params = All.utils.mergeObjects(data.query, fd.action.parameters);
+		return All.run(method, site, params);
 	});
 };
 

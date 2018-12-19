@@ -22,8 +22,8 @@ function init(All) {
 			});
 		} else {
 			delete req.query.develop;
-			All.run('page.get', req.site, req.query).then(function(page) {
-				res.send(page);
+			All.run('page.get', req.site, req.query).then(function(data) {
+				All.send(res, data);
 			}).catch(next);
 		}
 	});
@@ -35,7 +35,7 @@ function init(All) {
 
 		var action = req.query.text != null ? 'page.search' : 'page.list';
 		All.run(action, req.site, req.query).then(function(obj) {
-			res.send(obj);
+			All.send(res, obj);
 		}).catch(next);
 	});
 	All.app.post('/.api/page', All.auth.restrict('webmaster'), function(req, res, next) {
@@ -64,6 +64,7 @@ function init(All) {
 	All.app.get('/.well-known/sitemap.txt', function(req, res, next) {
 		All.run('page.list', req.site, {}).then(function(obj) {
 			res.type('text/plain');
+			All.filter(res, obj);
 			res.send(obj.items.map(page => req.site.href + page.data.url).join('\n'));
 		}).catch(next);
 	});

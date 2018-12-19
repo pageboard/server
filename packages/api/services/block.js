@@ -15,7 +15,7 @@ function init(All) {
 			return next(new HttpError.BadRequest("Cannot request that type"));
 		}
 		All.run('block.get', req.site, req.query).then(function(data) {
-			res.json(data);
+			All.send(res, data);
 		}).catch(next);
 	});
 }

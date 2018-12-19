@@ -12,10 +12,9 @@ function init(All) {
 	All.app.post("/.api/form/:id", function(req, res, next) {
 		All.run('form.submit', req.site, {
 			id: req.params.id,
-			query: All.utils.unflatten(req.query),
 			body: All.utils.unflatten(req.body)
 		}).then(function(data) {
-			res.json(data);
+			All.send(res, data);
 		}).catch(next);
 	});
 }
@@ -25,15 +24,9 @@ exports.submit = function(site, data) {
 		id: data.id
 	}).then(function(form) {
 		var fd = form.data || {};
-		var method = fd.request.method;
+		var method = fd.action.method;
 		if (!method) throw new HttpError.BadRequest("Missing method");
-		var params = fd.request.parameters || {};
-		if (form.expr) {
-			params = All.utils.mergeObjects(params, (All.utils.mergeParameters(form.expr, {
-				$query: data.query,
-				$body: data.body
-			}).request || {}).parameters);
-		}
+		var params = All.utils.mergeObjects(data.body, fd.action.parameters);
 		if (fd.type) {
 			if (Object.keys(data.body).length > 0) params.data = data.body;
 			params.type = fd.type;
