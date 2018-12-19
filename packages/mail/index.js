@@ -169,7 +169,7 @@ exports.send = function(site, data) {
 
 		return got(emailUrl, {
 			query: Object.assign(urlObj.query, {
-				email: true
+				$email: true
 			}),
 			retry: 0,
 			timeout: 10000

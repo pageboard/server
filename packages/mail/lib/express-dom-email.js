@@ -1,5 +1,5 @@
 module.exports = function(mw, settings, request, response) {
-	if (request.query.email === undefined) return;
+	if (request.query.$email === undefined) return;
 	settings.load.plugins = [
 		All.dom.plugins.prerender,
 		mailPlugin
@@ -9,11 +9,12 @@ module.exports = function(mw, settings, request, response) {
 function mailPlugin(page, settings, request, response) {
 	page.when('idle', function() {
 		return page.run(function(done) {
+			var doc = document;
 			done(null, {
-				errors: document.errors && document.errors.length ? document.errors : null,
-				title: document.title,
-				text: document.text,
-				html: document.html
+				errors: doc.errors && doc.errors.length ? doc.errors : null,
+				title: doc.title,
+				text: doc.text,
+				html: doc.html
 			});
 		}).then(function(obj) {
 			if (obj.errors) console.error(obj.errors);
