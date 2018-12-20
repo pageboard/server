@@ -91,7 +91,7 @@ exports.init = function(opt) {
 	}).then(function() {
 		return Promise.all(Object.keys(opt.dependencies).map(function(module) {
 			return pkgup(resolvePkg(module)).then(function(pkgPath) {
-				return Install.config(Path.dirname(pkgPath), All.opt.name, module, All.opt);
+				return Install.config(Path.dirname(pkgPath), "pageboard", module, All.opt);
 			});
 		})).then(function(modules) {
 			opt.plugins = modules.filter(x => !!x);
