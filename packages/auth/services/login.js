@@ -64,9 +64,9 @@ exports.send = function(site, data) {
 				address: data.email
 			},
 			subject: `Verification token: ${token}`,
-			text: `This token is needed to complete an action you made on a Pageboard site.
-It is valid for 10 minutes.
-Token: ${token}`
+			text: `This message is sent from
+${site.href}
+and can be safely ignored.`
 		}).then(function() {
 			return {};
 		});
