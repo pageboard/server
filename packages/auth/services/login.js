@@ -26,26 +26,32 @@ function init(All) {
 	});
 }
 
-function userPriv(data, trx) {
-	return All.user.add(data).then(function(user) {
-		return user.$relatedQuery('children', trx).alias('privs')
-		.where('privs.type', 'priv')
-		.first().throwIfNotFound().select().catch(function(err) {
-			if (err.statusCode != 404) throw err;
-			return user.$relatedQuery('children', trx).insert([{
-				type: 'priv',
-				data: {
-					otp: {
-						secret: otp.generateSecret()
-					}
+function userPriv(user, trx) {
+	return user.$relatedQuery('children', trx).alias('privs')
+	.where('privs.type', 'priv')
+	.first().throwIfNotFound().select().catch(function(err) {
+		if (err.statusCode != 404) throw err;
+		return user.$relatedQuery('children', trx).insert({
+			type: 'priv',
+			data: {
+				otp: {
+					secret: otp.generateSecret()
 				}
-			}]).returning('*');
-		});
+			}
+		}).returning('*');
 	});
 }
 
 exports.send = function(site, data) {
-	return userPriv({email: data.email}).then(function(priv) {
+	return Promise.resolve().then(function() {
+		if (data.register) {
+			return All.user.add({email: data.email});
+		} else {
+			return All.user.get({email: [data.email]});
+		}
+	}).then(function(user) {
+		return userPriv(user);
+	}).then(function(priv) {
 		return otp.generate(priv.data.otp.secret);
 	}).then(function(token) {
 		var lang = data.lang;
@@ -61,6 +67,8 @@ exports.send = function(site, data) {
 			text: `This token is needed to complete an action you made on a Pageboard site.
 It is valid for 10 minutes.
 Token: ${token}`
+		}).then(function() {
+			return {};
 		});
 	});
 };
@@ -70,9 +78,15 @@ exports.send.schema = {
 	required: ['email'],
 	properties: {
 		email: {
-			title: 'User email',
+			title: 'Email',
 			type: 'string',
 			format: 'email'
+		},
+		register: {
+			title: 'Register',
+			description: 'Allow unknown email',
+			type: 'boolean',
+			default: false
 		},
 		lang: {
 			title: 'Language',
@@ -87,20 +101,22 @@ exports.send.external = true;
 
 function verifyToken(email, token) {
 	return All.api.transaction(function(trx) {
-		return userPriv({email: email}, trx).then(function(priv) {
-			if (priv.data.otp.checked_at) {
-				var at = Date.parse(priv.data.otp.checked_at);
-				// allow max 3 attempts per otp lifespan
-				if (Date.now() - at < otp.options.step * 1000 / 3) {
-					throw new HttpError.TooManyRequests();
+		return All.user.get({email: [email]}).then(function(user) {
+			return userPriv(user, trx).then(function(priv) {
+				var tries = (priv.data.otp.tries || 0) + 1;
+				if (tries >= 3) {
+					var at = Date.parse(priv.data.otp.checked_at);
+					if (!isNaN(at) && Date.now() - at < 1000 * otp.options.step / 2) {
+						throw new HttpError.TooManyRequests();
+					}
 				}
-			}
-			return priv.$query(trx).patchObject({
-				'data.otp.checked_at': new Date().toISOString()
-			}).then(function() {
-				if (!otp.check(token, priv.data.otp.secret)) {
-					throw new HttpError.BadRequest("Bad token");
-				}
+				var verified = otp.check(token, priv.data.otp.secret);
+				return priv.$query(trx).patch({
+					'data:otp.checked_at': new Date().toISOString(),
+					'data:otp.tries': verified ? 0 : tries
+				}).then(function() {
+					return verified;
+				});
 			});
 		});
 	});
@@ -116,7 +132,8 @@ function isGranted(grants, settings) {
 }
 
 exports.grant = function(site, data) {
-	return verifyToken(data.email, data.token).then(function() {
+	return verifyToken(data.email, data.token).then(function(verified) {
+		if (!verified) throw new HttpError.BadRequest("Bad token");
 		return All.run('settings.find', site, {
 			email: data.email
 		}).then(function(settings) {
@@ -149,7 +166,7 @@ exports.grant.schema = {
 	required: ['email', 'token', 'grants'],
 	properties: {
 		email: {
-			title: 'User email',
+			title: 'Email',
 			type: 'string',
 			format: 'email'
 		},
