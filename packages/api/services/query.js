@@ -11,7 +11,7 @@ function init(All) {
 			id: req.params.id,
 			query: All.utils.unflatten(req.query)
 		}).then(function(data) {
-			All.send(data);
+			All.send(res, data);
 		}).catch(next);
 	});
 	All.app.post("/.api/query", function(req, res, next) {
