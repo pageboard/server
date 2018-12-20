@@ -43,12 +43,22 @@ These services expose get, add, save, del functions.
 Permissions
 -----------
 
-A user have grants, and blocks have permissions.
-- add
-- save
-- del
-- read
+login.grant can grant scopes to a requester by sending him a jwt cookie.
+Elements have `$locks` property (a map)
+blocks have `locks` property (a map).
 
+If locks maps the '*' to something, it locks the whole block.
+Otherwise keys are paths to block properties that must be locked.
+
+The values are arrays (a string becomes [str]).
+
+No locks means readable to everyone.
+Empty locks list [] means forbidden for everyone.
+
+Otherwise the requester must have one scope listed in the locks list.
+
+
+See also auth module.
 
 Debug
 -----
