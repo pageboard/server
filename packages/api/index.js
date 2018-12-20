@@ -240,7 +240,7 @@ function unlockItem(site, scopes, item) {
 			return unlockItem(site, scopes, item);
 		});
 	}
-	var schema = site.$schema(item.type);
+	var schema = site.$schema(item.type) || {}; // old types might not have schema
 	var $locks = schema.$locks;
 	var locks = item.locks;
 	if (!locks && !$locks) return item;
