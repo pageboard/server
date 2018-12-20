@@ -310,9 +310,8 @@ function whereSub(q, data, schema, alias = 'block') {
 		q.whereObject({data: data.data}, schema, alias);
 	}
 	if (data.text) {
-		var text = data.text.split(/\W+/).filter(x => !!x).map(x => x + ':*').join(' <-> ');
 		q.from(raw([
-			raw("to_tsquery('unaccent', ?) AS query", [text]),
+			raw("websearch_to_tsquery('unaccent', ?) AS query", [data.text]),
 			alias
 		]));
 		q.whereRaw(`query @@ ${alias}.tsv`);

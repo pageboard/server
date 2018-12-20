@@ -275,7 +275,7 @@ exports.search = function(site, data) {
 				block,
 				relation AS rp,
 				block AS page,
-				(SELECT to_tsquery('unaccent', ?) AS query) AS search
+				(SELECT websearch_to_tsquery('unaccent', ?) AS query) AS search
 			WHERE
 				site.type = 'site' AND site.id = ?
 				AND rs.parent_id = site._id AND block._id = rs.child_id
