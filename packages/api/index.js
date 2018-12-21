@@ -220,8 +220,12 @@ All.send = function(res, obj) {
 		});
 		delete obj.cookies;
 	}
-	All.filter(res, obj);
-	res.json(obj);
+	if (obj.location) {
+		res.redirect(obj.location);
+	} else {
+		All.filter(res, obj);
+		res.json(obj);
+	}
 };
 
 All.filter = function(res, obj) {
