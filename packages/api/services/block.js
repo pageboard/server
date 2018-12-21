@@ -145,7 +145,8 @@ exports.search.schema = {
 			},
 			$filter: {
 				name: 'element',
-				standalone: true
+				standalone: true,
+				contentless: true
 			}
 		},
 		text: {
@@ -182,7 +183,6 @@ exports.search.schema = {
 		parents: {
 			title: 'Parents',
 			type: 'object',
-			required: ['type'],
 			properties: {
 				first: {
 					title: 'Single',
@@ -200,9 +200,11 @@ exports.search.schema = {
 							const: "site"
 						}]
 					},
+					nullable: true,
 					$filter: {
 						name: 'element',
-						standalone: true
+						standalone: true,
+						contentless: true
 					}
 				},
 				text: {
@@ -241,7 +243,6 @@ exports.search.schema = {
 		children: {
 			title: 'Children',
 			type: 'object',
-			required: ['type'],
 			properties: {
 				type: {
 					title: 'Element',
@@ -254,9 +255,11 @@ exports.search.schema = {
 							const: "site"
 						}]
 					},
+					nullable: true,
 					$filter: {
 						name: 'element',
-						standalone: true
+						standalone: true,
+						contentless: true
 					}
 				},
 				text: {
