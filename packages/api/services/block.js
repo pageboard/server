@@ -55,11 +55,13 @@ exports.search = function(site, data) {
 	if (data.type) {
 		schemas[data.type] = site.$schema(data.type);
 	}
-	if (data.parents && data.parents.type) {
-		schemas[data.parents.type] = site.$schema(data.parents.type);
+	var parents = data.parents && data.parents.type ? data.parents : null;
+	if (parents) {
+		schemas[parents.type] = site.$schema(parents.type);
 	}
-	if (data.children && data.children.type) {
-		schemas[data.children.type] = site.$schema(data.children.type);
+	var children = data.children && data.children.type ? data.children : null;
+	if (children) {
+		schemas[children.type] = site.$schema(children.type);
 	}
 	var q = site.$relatedQuery('children');
 	if (data.parent) {
@@ -71,25 +73,25 @@ exports.search = function(site, data) {
 	}
 
 	filterSub(q, data, schemas[data.type]);
-
-	if (data.parents) q.eager('[parents(parentsFilter)]', {
+	if (parents) q.eager('[parents(parentsFilter)]', {
 		parentsFilter: function(query) {
-			filterSub(query, data.parents, schemas[data.parents.type]);
+			filterSub(query, parents, schemas[parents.type]);
 		}
 	});
 
-	if (data.children) {
-		if (data.children.count) {
-			delete data.children.count;
-			delete data.children.limit;
-			delete data.children.offset;
+	if (children) {
+		if (children.count) {
+			delete children.count;
+			delete children.limit;
+			delete children.offset;
 			var qc = site.$relatedQuery('children').alias('children');
-			whereSub(qc, data.children, schemas[data.children.type], 'children');
-			qc.joinRelation('parents', {alias: 'parents'}).where('parents._id', ref('block._id'));
+			whereSub(qc, children, schemas[children.type], 'children');
+			qc.joinRelation('parents', {alias: 'parents'})
+			.where('parents._id', ref('block._id'));
 			q.select(All.api.Block.query().count().from(qc.as('sub')).as('childrenCount'));
 		} else q.eager('[children(childrenFilter)]', {
 			childrenFilter: function(query) {
-				filterSub(query, data.children, schemas[data.children.type]);
+				filterSub(query, children, schemas[children.type]);
 			}
 		});
 	}
@@ -100,7 +102,7 @@ exports.search = function(site, data) {
 			offset: data.offset,
 			limit: data.limit
 		};
-		if (data.parents && data.parents.first) {
+		if (parents && parents.first) {
 			rows.forEach(function(row) {
 				row.parent = row.parents[0];
 				delete row.parents;
