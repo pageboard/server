@@ -1,4 +1,5 @@
 var otp = require('otplib').authenticator;
+var URL = require('url');
 
 // validity of token: 10 minutes
 // accept previous token in case it has been generated just before the end of validity
@@ -16,12 +17,16 @@ exports = module.exports = function(opt) {
 
 function init(All) {
 	All.app.get("/.api/login", function(req, res, next) {
-		var type = req.query.type;
-		if (!type || ['user', 'site', 'page'].indexOf(type) >= 0) {
-			return next(new HttpError.BadRequest("Cannot request that type"));
-		}
-		All.run('block.get', req.site, req.query).then(function(data) {
-			res.json(data);
+		All.run('login.grant', req.site, req.query).then(function(data) {
+			data.location = "back";
+			All.send(res, data);
+		}).catch(next);
+	});
+
+	All.app.get("/.api/logout", function(req, res, next) {
+		All.run('login.clear', req.site, req.query).then(function(data) {
+			data.location = "back";
+			All.send(res, data);
 		}).catch(next);
 	});
 }
@@ -42,32 +47,40 @@ function userPriv(user, trx) {
 	});
 }
 
-exports.send = function(site, data) {
+function generate(email, register) {
 	return Promise.resolve().then(function() {
-		if (data.register) {
-			return All.user.add({email: data.email});
+		if (register) {
+			return All.user.add({email: email});
 		} else {
-			return All.user.get({email: [data.email]});
+			return All.user.get({email: [email]});
 		}
 	}).then(function(user) {
 		return userPriv(user);
 	}).then(function(priv) {
 		return otp.generate(priv.data.otp.secret);
-	}).then(function(token) {
+	});
+}
+
+exports.send = function(site, data) {
+	if (!site.href) {
+		return "login.send requires a hostname. Use login.link";
+	}
+	return generate(data.email, data.register).then(function(token) {
 		var lang = data.lang;
 		if (lang != "en") {
 			console.warn("Unsupported lang", lang);
 			lang = "en";
 		}
-		return All.mail.to({
+		var mail = {
 			to: {
 				address: data.email
-			},
-			subject: `Verification token: ${token}`,
-			text: `This message is sent from
+			}
+		};
+		mail.subject = `Verification token: ${token}`;
+		mail.text = `This message is sent from
 ${site.href}
-and can be safely ignored.`
-		}).then(function() {
+and can be safely ignored.`;
+		return All.mail.to(mail).then(function() {
 			return {};
 		});
 	});
@@ -188,6 +201,46 @@ exports.grant.schema = {
 };
 
 exports.grant.external = true;
+
+exports.link = function(site, data) {
+	return generate(data.email, data.register).then(function(token) {
+		return URL.format({
+			pathname: "/.api/login",
+			query: {
+				email: data.email,
+				grants: 'webmaster',
+				token: token
+			}
+		});
+	});
+};
+exports.link.schema = {
+	title: 'Internal login link',
+	$action: 'write',
+	required: ['email', 'grants'],
+	properties: {
+		email: {
+			title: 'Email',
+			type: 'string',
+			format: 'email'
+		},
+		grants: {
+			title: 'Grants',
+			type: 'array',
+			uniqueItems: true,
+			items: {
+				type: 'string',
+				format: 'id'
+			}
+		},
+		register: {
+			title: 'Register',
+			description: 'Allow unknown email',
+			type: 'boolean',
+			default: false
+		}
+	}
+};
 
 
 exports.clear = function(site, data) {
