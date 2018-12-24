@@ -123,7 +123,7 @@ exports.search.schema = {
 			format: 'id'
 		},
 		child: {
-			title: 'Filter using child values ? No this object holds filter for a child that is INNER JOINED: TODO: replace this field by a boolean "inner join" on children field',
+			title: 'Select by child',
 			type: 'object',
 		},
 		id: {
