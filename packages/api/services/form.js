@@ -26,7 +26,11 @@ exports.submit = function(site, data) {
 		var fd = form.data || {};
 		var method = fd.action.method;
 		if (!method) throw new HttpError.BadRequest("Missing method");
-		var params = All.utils.mergeObjects(data.body, fd.action.parameters);
+		var expr = form.expr;
+		if (expr) expr = (expr.action || {}).parameters;
+		// mergeParameters consumes body
+		var params = All.utils.mergeParameters(expr, {$body: data.body});
+		params = All.utils.mergeObjects(params, fd.action.parameters);
 		if (fd.type) {
 			if (Object.keys(data.body).length > 0) params.data = data.body;
 			params.type = fd.type;

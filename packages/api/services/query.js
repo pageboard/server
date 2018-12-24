@@ -26,7 +26,11 @@ exports.query = function(site, data) {
 		var fd = form.data || {};
 		var method = fd.action.method;
 		if (!method) throw new HttpError.BadRequest("Missing method");
-		var params = All.utils.mergeObjects(data.query, fd.action.parameters);
+		var expr = form.expr;
+		if (expr) expr = (expr.action || {}).parameters;
+		// mergeParameters consumes query
+		var params = All.utils.mergeParameters(expr, {$query: data.query});
+		params = All.utils.mergeObjects(params, fd.action.parameters);
 		return All.run(method, site, params);
 	});
 };
