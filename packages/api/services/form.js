@@ -12,7 +12,9 @@ function init(All) {
 	All.app.post("/.api/form/:id", function(req, res, next) {
 		All.run('form.submit', req.site, {
 			id: req.params.id,
-			body: All.utils.unflatten(req.body)
+			query: All.utils.unflatten(req.query),
+			body: All.utils.unflatten(req.body),
+			user: req.user
 		}).then(function(data) {
 			All.send(res, data);
 		}).catch(next);
@@ -26,16 +28,22 @@ exports.submit = function(site, data) {
 		var fd = form.data || {};
 		var method = fd.action.method;
 		if (!method) throw new HttpError.BadRequest("Missing method");
-		var expr = form.expr;
-		if (expr) expr = (expr.action || {}).parameters;
-		// mergeParameters consumes body
-		var params = All.utils.mergeParameters(expr, {$body: data.body});
+		// build parameters
+		var expr = ((form.expr || {}).action || {}).parameters || {};
+		var params = All.utils.mergeParameters(expr, {
+			$query: data.query,
+			$user: data.user
+		});
 		params = All.utils.mergeObjects(params, fd.action.parameters);
-		if (fd.type) {
-			if (Object.keys(data.body).length > 0) params.data = data.body;
-			params.type = fd.type;
+
+		// build body
+		var body = data.body;
+		if (params.type && Object.keys(body).length > 0) {
+			body = {data: body};
 		}
-		return All.run(method, site, params);
+		body = All.utils.mergeObjects(body, params);
+
+		return All.run(method, site, body);
 	});
 };
 

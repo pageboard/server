@@ -9,7 +9,8 @@ function init(All) {
 	All.app.get("/.api/query/:id", function(req, res, next) {
 		All.run('search.query', req.site, {
 			id: req.params.id,
-			query: All.utils.unflatten(req.query)
+			query: All.utils.unflatten(req.query),
+			user: req.user
 		}).then(function(data) {
 			All.send(res, data);
 		}).catch(next);
@@ -26,10 +27,12 @@ exports.query = function(site, data) {
 		var fd = form.data || {};
 		var method = fd.action.method;
 		if (!method) throw new HttpError.BadRequest("Missing method");
-		var expr = form.expr;
-		if (expr) expr = (expr.action || {}).parameters;
-		// mergeParameters consumes query
-		var params = All.utils.mergeParameters(expr, {$query: data.query});
+		// build parameters
+		var expr = ((form.expr || {}).action || {}).parameters || {};
+		var params = All.utils.mergeParameters(expr, {
+			$query: data.query,
+			$user: data.user
+		});
 		params = All.utils.mergeObjects(params, fd.action.parameters);
 		return All.run(method, site, params);
 	});
