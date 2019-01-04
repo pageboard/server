@@ -357,27 +357,42 @@ delete exports.find.schema.properties.offset;
 exports.find.external = true;
 
 exports.add = function(site, data) {
-	var id = data.parent;
-	delete data.parent;
+	var parents = data.parents;
+	delete data.parents;
 	return site.$relatedQuery('children').insert(data).then(function(child) {
-		if (!id) return child;
-		return site.$relatedQuery('children').where('block.id', id)
-		.first().throwIfNotFound().then(function(parent) {
-			return parent.$relatedQuery('children', site.trx).relate(child).then(function() {
-				return child;
-			});
+		if (parents.length == 0) return child;
+		return site.$relatedQuery('children')
+		.whereIn('block.id', parents).then(function(ids) {
+			return child.$relatedQuery('parents', site.trx).relate(ids);
 		});
 	});
 };
 exports.add.schema = {
 	title: 'Add a block',
+	$action: 'add',
+	required: ['parents', 'type'],
 	properties: {
-		parent: {
+		type: {
+			title: 'type',
 			type: 'string',
-			format: 'id'
+			format: 'id',
+			$filter: {
+				name: 'element',
+				standalone: true,
+				contentless: true
+			}
+		},
+		parents: { // updated by element filter
+			title: 'parents',
+			type: 'array',
+			$filter: 'relation'
+		},
+		data: { // updated by element filter
+			title: 'data',
+			type: 'object',
+			nullable: true
 		}
-	},
-	additionalProperties: true // WARNING disables api validation
+	}
 };
 exports.add.external = true;
 
