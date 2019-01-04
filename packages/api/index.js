@@ -220,6 +220,9 @@ All.send = function(res, obj) {
 		});
 		delete obj.cookies;
 	}
+	if (res.req.user) {
+		obj.grants = res.req.user.scopes;
+	}
 	if (obj.location) {
 		res.redirect(obj.location);
 	} else {
