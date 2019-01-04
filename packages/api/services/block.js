@@ -410,15 +410,26 @@ exports.save.schema = {
 	required: ['id', 'type'],
 	properties: {
 		id: {
+			title: 'id',
 			type: 'string',
 			format: 'id'
 		},
 		type: {
+			title: 'type',
 			type: 'string',
-			format: 'id'
+			format: 'id',
+			$filter: {
+				name: 'element',
+				standalone: true,
+				contentless: true
+			}
+		},
+		data: {
+			title: 'data',
+			type: 'object',
+			nullable: true
 		}
-	},
-	additionalProperties: true // WARNING disables api validation
+	}
 };
 exports.save.external = true;
 
@@ -434,21 +445,18 @@ exports.del.schema = {
 	required: ['id', 'type'],
 	properties: {
 		id: {
+			title: 'id',
 			type: 'string',
 			format: 'id'
 		},
 		type: {
-			type: 'array',
-			items: {
-				type: 'string',
-				format: 'id',
-				not: { // TODO permissions should be managed dynamically
-					oneOf: [{
-						const: "user"
-					}, {
-						const: "site"
-					}]
-				}
+			title: 'type',
+			type: 'string',
+			format: 'id',
+			$filter: {
+				name: 'element',
+				standalone: true,
+				contentless: true
 			}
 		}
 	}
