@@ -349,28 +349,11 @@ exports.find = function(site, data) {
 exports.find.schema = {
 	title: 'Find one block',
 	$action: 'read',
-	required: ['id', 'type'], // TODO allow find with same filters as search
-	properties: {
-		id: {
-			type: 'string',
-			format: 'id'
-		},
-		type: {
-			type: 'string',
-			format: 'id',
-			not: { // TODO permissions should be managed dynamically
-				oneOf: [{
-					const: "user"
-				}, {
-					const: "site"
-				}]
-			}
-		},
-		children: exports.search.schema.properties.children,
-		parent: exports.search.schema.properties.parent,
-		parents: exports.search.schema.properties.parents
-	}
+	required: ['type'],
+	properties: Object.assign({}, exports.search.schema.properties)
 };
+delete exports.find.schema.properties.limit;
+delete exports.find.schema.properties.offset;
 exports.find.external = true;
 
 exports.add = function(site, data) {
