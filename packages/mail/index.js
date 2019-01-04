@@ -205,7 +205,8 @@ exports.send.schema = {
 				name: 'page',
 				title: 'Query',
 				description: 'Values can be [$query.xxx]',
-				query: true
+				query: true,
+				type: 'mail'
 			}
 		},
 		to: {
