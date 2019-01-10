@@ -154,11 +154,16 @@ exports.send = function(site, data) {
 	if (data.from) list.push(All.run('user.get', {
 		email: data.from
 	}));
+	list.push(Promise.all(data.to.map(function(id) {
+		return All.run('settings.get', site, {id: id}).then(function(settings) {
+			return settings.user.data.email;
+		});
+	})));
 
 	return Promise.all(list).then(function(rows) {
 		var pages = rows[0];
 		var from = defaultSender;
-		if (rows.length > 1) from = {
+		if (data.from) from = {
 			name: site.data.domains[0],
 			address: `${site.id}.${rows[1].id}@${mailDomain}`
 		};
@@ -178,7 +183,7 @@ exports.send = function(site, data) {
 		}).then(function(obj) {
 			var mail = {
 				from: from,
-				to: data.to,
+				to: rows.slice(-1).pop(),
 				subject: obj.title,
 				html: obj.html,
 				text: obj.text,
@@ -210,12 +215,11 @@ exports.send.schema = {
 			}
 		},
 		to: {
-			title: 'Recipients emails',
+			title: 'Recipients settings.id',
 			type: 'array',
 			items: {
 				type: 'string',
-				format: 'email',
-				transform: ['trim', 'toLowerCase']
+				format: 'id'
 			}
 		}
 	}
