@@ -161,7 +161,7 @@ exports.add = function(site, data) {
 			return {
 				mime: 'text/html; charset=utf-8',
 				type: 'link',
-				title: pageBlock.data.title,
+				title: pageBlock.data && pageBlock.data.title || "",
 				site: null,
 				pathname: objUrl.pathname,
 				url: objUrl.path
