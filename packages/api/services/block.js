@@ -98,10 +98,16 @@ exports.search = function(site, data) {
 	}
 
 	return q.then(function(rows) {
+		var metas = [];
+		Object.keys(schemas).forEach(function(type) {
+			var meta = site.$standalones[type];
+			if (meta) metas.push(meta);
+		});
 		var obj = {
 			items: rows,
 			offset: data.offset,
-			limit: data.limit
+			limit: data.limit,
+			metas: metas
 		};
 		if (parents && parents.first) {
 			rows.forEach(function(row) {
@@ -339,11 +345,10 @@ function filterSub(q, data, schema) {
 exports.find = function(site, data) {
 	data.limit = 1;
 	data.offset = 0;
-	var meta = site.$standalones[data.type];
 	return exports.search(site, data).then(function(obj) {
 		return {
-			item: obj.items.length == 1 ? obj.items[0] : null,
-			meta: meta
+			item: obj.items[0],
+			metas: obj.metas
 		};
 	});
 };
