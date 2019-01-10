@@ -368,8 +368,12 @@ exports.add = function(site, data) {
 	return site.$relatedQuery('children').insert(data).then(function(child) {
 		if (parents.length == 0) return child;
 		return site.$relatedQuery('children')
-		.whereIn('block.id', parents).then(function(ids) {
+		.whereIn(['block.id', 'block.type'], parents.map(function(item) {
+			return [item.id, item.type];
+		})).then(function(ids) {
 			return child.$relatedQuery('parents', site.trx).relate(ids);
+		}).then(function() {
+			return child;
 		});
 	});
 };
