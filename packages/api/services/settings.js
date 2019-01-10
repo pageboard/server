@@ -5,9 +5,17 @@ exports = module.exports = function(opt) {
 };
 
 exports.get = function(site, data) {
-	return site.$relatedQuery('children').alias('settings')
-	.where('settings.type', 'settings')
-	.where('settings.id', data.id).first().throwIfNotFound().select();
+	return site.$relatedQuery('children')
+	.where('block.type', 'settings')
+	.where('block.id', data.id).first().throwIfNotFound().select()
+	.eager('[parents(userFilter) as user]', {
+		userFilter: function(query) {
+			query.select().where('type', 'user');
+		}
+	}).then(function(settings) {
+		settings.user = settings.user[0];
+		return settings;
+	});
 };
 exports.get.schema = {
 	$action: 'read',
@@ -24,7 +32,7 @@ exports.get.schema = {
 exports.find = function(site, data) {
 	var q = site.$relatedQuery('children').alias('settings')
 	.where('settings.type', 'settings').first().throwIfNotFound().select()
-	.joinRelation('parents', {alias: 'user'});
+	.joinRelation('parents', {alias: 'user'}).where('user.type', 'user');
 	if (!data.id && !data.email) throw new HttpError.BadRequest("Missing id or email");
 	if (data.id) q.where('user.id', data.id);
 	else if (data.email) q.whereJsonText('user.data:email', 'in', data.email);
@@ -37,7 +45,7 @@ Object.defineProperty(exports.find, 'schema', {
 });
 
 exports.save = function(site, data) {
-	return exports.find(site, data).then(function(settings) {
+	return All.run('settings.find', site, data).then(function(settings) {
 		return settings.$query(site.trx).patchObject({data: data.data}).then(function() {
 			return settings;
 		});
