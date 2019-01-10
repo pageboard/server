@@ -331,9 +331,9 @@ function whereSub(q, data, schema, alias = 'block') {
 	}
 }
 
-function filterSub(q, data, schema) {
+function filterSub(q, data, schema, alias) {
 	q.select();
-	whereSub(q, data, schema);
+	whereSub(q, data, schema, alias);
 	if (data.order) data.order.forEach(function(order) {
 		var {col, dir} = parseOrder('block', order);
 		q.orderBy(col, dir);
