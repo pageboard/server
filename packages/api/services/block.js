@@ -346,6 +346,9 @@ exports.find = function(site, data) {
 	data.limit = 1;
 	data.offset = 0;
 	return exports.search(site, data).then(function(obj) {
+		if (obj.items.length == 0) {
+			throw new HttpError.NotFound("Block not found");
+		}
 		return {
 			item: obj.items[0],
 			metas: obj.metas
