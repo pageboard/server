@@ -11,15 +11,14 @@ exports.unflatten = function(query) {
 
 exports.mergeParameters = mergeParameters;
 
-function mergeParameters(params, obj, ret) {
+function mergeParameters(params, obj) {
 	// consumed obj parameters are removed from obj
 	// this is useful for populating a block with matchdom expressions
 	// that merge variables but remove them as they are merged.
 	// it is avoidable, especially with the new template variables,
 	// the block data could be properly scoped and not mixed with request parameters.
-	if (!ret) ret = {};
-	Object.keys(params).forEach(function(key) {
-		var val = ret[key] = params[key];
+	var ret = Array.isArray(params) ? [] : {};
+	Object.entries(params).forEach(function([key, val]) {
 		if (typeof val == "string") {
 			ret[key] = matchdom(val, obj, {'||': function(val, what) {
 				var path = what.scope.path.slice();
@@ -32,8 +31,9 @@ function mergeParameters(params, obj, ret) {
 				return val;
 			}});
 		} else if (typeof val == "object") {
-			ret[key] = {};
-			mergeParameters(val, obj, ret[key]);
+			ret[key] = mergeParameters(val, obj);
+		} else {
+			ret[key] = val;
 		}
 	});
 	return ret;
@@ -42,9 +42,9 @@ function mergeParameters(params, obj, ret) {
 exports.mergeObjects = mergeObjects;
 
 function mergeObjects(data, expr) {
-	var copy = Object.assign({}, data);
-	if (expr != null) Object.keys(expr).forEach(function(key) {
-		var val = expr[key];
+	if (data == null) return expr;
+	var copy = Array.isArray(data) ? data.slice() : Object.assign({}, data);
+	if (expr != null) Object.entries(expr).forEach(function([key, val]) {
 		if (val == null) return;
 		else if (typeof val == "object") {
 			copy[key] = mergeObjects(copy[key], val);
