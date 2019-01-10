@@ -47,18 +47,12 @@ exports.subscribe = function(site, data) {
 			}
 			return All.run(blockMeth, site, resa).then(function(resa) {
 				if (!data.url) return resa; // can't send confirmation email
-				var event = eventDate.parent;
 				return All.run('mail.send', site, {
 					url: data.url,
 					to: pSettings.id,
 					query: {
-						title: event.data.title,
-						venue: event.data.venue,
-						begin: eventDate.data.slot.start,
-						end: eventDate.data.slot.end,
-						seats: resa.data.seats,
-						name: resa.data.name,
-						groups: event.data.groupsOnly
+						date: eventDate.id,
+						reservation: resa.id
 					}
 				});
 			});
