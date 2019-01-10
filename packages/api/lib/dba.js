@@ -64,6 +64,9 @@ exports.knexConfig = function(config) {
 		obj.debug = dbOpts.debug;
 		delete dbOpts.debug;
 	}
+	if (config.env == "development") {
+		obj.asyncStackTraces = true;
+	}
 	Object.assign(conn, dbOpts);
 	return obj;
 };
