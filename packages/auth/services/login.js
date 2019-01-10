@@ -86,11 +86,22 @@ exports.send = function(site, data) {
 				address: data.email
 			}
 		};
-		mail.subject = `Verification token: ${token}`;
-		mail.text = `This message is sent from
+		if (site.lang == "fr") {
+			mail.subject = `Code de vérification: ${token}`;
+			mail.text = `${token}
+Ce message est envoyé depuis
 ${site.href}
-and can be safely ignored.`;
-		return All.mail.to(mail).then(function() {
+et peut être ignoré.`;
+		} else {
+			mail.subject = `Verification token: ${token}`;
+			mail.text = `${token}
+This message is sent from
+${site.href}
+and can be ignored.`;
+		}
+		return p.then(function() {
+			return All.mail.to(mail);
+		}).then(function() {
 			return {};
 		});
 	});
