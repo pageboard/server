@@ -652,11 +652,11 @@ function applyRelate(site, obj) {
 
 exports.add = function(site, data) {
 	var emptyPage = {};
-	return site.prototype.$beforeInsert.call(emptyPage).then(function() {
+	return site.constructor.prototype.$beforeInsert.call(emptyPage).then(function() {
 		return exports.save(site, {
 			add: [{
 				id: emptyPage.id,
-				type: 'page',
+				type: data.type,
 				data: data.data
 			}]
 		});
@@ -665,6 +665,10 @@ exports.add = function(site, data) {
 exports.add.schema = {
 	$action: 'add',
 	properties: {
+		type: {
+			'enum': ["page", "mail"],
+			default: "page"
+		},
 		data: {
 			type: 'object'
 		}
