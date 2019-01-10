@@ -66,10 +66,20 @@ exports.send = function(site, data) {
 		return "login.send requires a hostname. Use login.link";
 	}
 	return generate(data.email, data.register).then(function(token) {
-		var lang = data.lang;
-		if (lang != "en") {
-			console.warn("Unsupported lang", lang);
-			lang = "en";
+		var p = Promise.resolve();
+		var settings = data.settings;
+		if (settings) {
+			if (settings.grants) {
+				// hard-wire protection against change of grants
+				console.warn("generate with default settings should not set settings.grants");
+				delete settings.grants;
+			}
+			p = p.then(function() {
+				return All.settings.save(site, {
+					email: data.email,
+					data: settings
+				});
+			});
 		}
 		var mail = {
 			to: {
@@ -101,11 +111,10 @@ exports.send.schema = {
 			type: 'boolean',
 			default: false
 		},
-		lang: {
-			title: 'Language',
-			type: 'string',
-			format: 'singleline',
-			default: 'en'
+		settings: {
+			title: 'Settings',
+			description: 'Default user settings',
+			type: 'object'
 		}
 	}
 };
