@@ -135,13 +135,18 @@ function verifyToken(email, token) {
 	});
 }
 
-function isGranted(grants, settings) {
-	if (!grants.length) return false;
-	var userGrants = settings.data && settings.data.grants;
-	if (!userGrants || userGrants.length == 0) return false;
-	return grants.every(function(grant) {
-		return userGrants.indexOf(grant) >= 0;
-	});
+function allowScopes(requestedGrants, ownGrants) {
+	if (!requestedGrants.length) return {};
+	var scopes = {};
+	if (!requestedGrants.every(function(grant) {
+		if (grant == "user" || ownGrants.includes(grant)) {
+			scopes[grant] = true;
+			return true;
+		} else {
+			return false;
+		}
+	})) return false;
+	else return scopes;
 }
 
 exports.grant = function(site, data) {
@@ -150,19 +155,17 @@ exports.grant = function(site, data) {
 		return All.run('settings.find', site, {
 			email: data.email
 		}).then(function(settings) {
-			if (!isGranted(data.grants, settings)) {
+			var scopes = allowScopes(data.grants, settings.data && settings.data.grants || []);
+			if (!scopes) {
 				throw new HttpError.Forbidden("Insufficient grants");
 			}
-			var keys = {};
-			settings.data.grants.forEach(function(grant) {
-				keys[grant] = true;
-			});
 			return {
+				item: settings,
 				cookies: {
 					bearer: {
 						value: All.auth.sign(site, {
 							id: settings.id,
-							scopes: keys
+							scopes: scopes
 						}, All.opt.scope),
 						maxAge: All.opt.scope.maxAge * 1000
 					}
