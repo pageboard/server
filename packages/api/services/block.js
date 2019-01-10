@@ -65,7 +65,8 @@ exports.search = function(site, data) {
 	}
 	var q = site.$relatedQuery('children');
 	if (data.parent) {
-		q.joinRelation('parents', {alias: 'parent'}).where('parent.id', data.parent);
+		q.joinRelation('parents', {alias: 'parent'})
+		.whereObject(data.parent, schemas[data.parent.type], 'parent');
 	}
 	if (data.child) {
 		q.joinRelation('children', {alias: 'child'})
@@ -73,7 +74,7 @@ exports.search = function(site, data) {
 	}
 
 	filterSub(q, data, schemas[data.type]);
-	if (parents) q.eager('[parents(parentsFilter)]', {
+	if (parents) q.eager('[parents(parentsFilter) as parents]', {
 		parentsFilter: function(query) {
 			filterSub(query, parents, schemas[parents.type]);
 		}
@@ -89,7 +90,7 @@ exports.search = function(site, data) {
 			qc.joinRelation('parents', {alias: 'parents'})
 			.where('parents._id', ref('block._id'));
 			q.select(All.api.Block.query().count().from(qc.as('sub')).as('childrenCount'));
-		} else q.eager('[children(childrenFilter)]', {
+		} else q.eager('[children(childrenFilter) as children]', {
 			childrenFilter: function(query) {
 				filterSub(query, children, schemas[children.type]);
 			}
@@ -117,13 +118,13 @@ exports.search.schema = {
 	required: ['type'],
 	properties: {
 		parent: {
-			title: 'Parent id',
-			nullable: true,
-			type: "string",
-			format: 'id'
+			title: 'Select by parent',
+			description: 'search blocks only having these parents',
+			type: "object"
 		},
 		child: {
 			title: 'Select by child',
+			description: 'search blocks only having these children',
 			type: 'object',
 		},
 		id: {
