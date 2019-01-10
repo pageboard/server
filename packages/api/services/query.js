@@ -47,7 +47,12 @@ exports.query.schema = {
 			format: 'id'
 		},
 		query: {
-			type: 'object'
+			type: 'object',
+			nullable: true
+		},
+		user: {
+			type: 'object',
+			nullable: true
 		}
 	},
 	additionalProperties: false

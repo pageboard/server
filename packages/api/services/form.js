@@ -56,10 +56,16 @@ exports.submit.schema = {
 			format: 'id'
 		},
 		query: {
-			type: 'object'
+			type: 'object',
+			nullable: true
+		},
+		user: {
+			type: 'object',
+			nullable: true
 		},
 		body: {
-			type: 'object'
+			type: 'object',
+			nullable: true
 		}
 	}
 };
