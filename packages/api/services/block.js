@@ -72,13 +72,10 @@ exports.search = function(site, data) {
 		q.joinRelation('children', {alias: 'child'})
 		.whereObject(data.child, schemas[data.children.type], 'child');
 	}
+	var eagers = [];
 
 	filterSub(q, data, schemas[data.type]);
-	if (parents) q.eager('[parents(parentsFilter) as parents]', {
-		parentsFilter: function(query) {
-			filterSub(query, parents, schemas[parents.type]);
-		}
-	});
+	if (parents) eagers.push('parents(parentsFilter) as parents');
 
 	if (children) {
 		if (children.count) {
@@ -90,12 +87,18 @@ exports.search = function(site, data) {
 			qc.joinRelation('parents', {alias: 'parents'})
 			.where('parents._id', ref('block._id'));
 			q.select(All.api.Block.query().count().from(qc.as('sub')).as('childrenCount'));
-		} else q.eager('[children(childrenFilter) as children]', {
-			childrenFilter: function(query) {
-				filterSub(query, children, schemas[children.type]);
-			}
-		});
+		} else {
+			eagers.push('children(childrenFilter) as children');
+		}
 	}
+	if (eagers.length) q.eager(`[${eagers.join(',')}]`, {
+		parentsFilter: function(query) {
+			filterSub(query, parents, schemas[parents.type]);
+		},
+		childrenFilter: function(query) {
+			filterSub(query, children, schemas[children.type]);
+		}
+	});
 
 	return q.then(function(rows) {
 		var metas = [];
@@ -109,10 +112,16 @@ exports.search = function(site, data) {
 			limit: data.limit,
 			metas: metas
 		};
-		if (parents && parents.first) {
+		if (parents && parents.first || children && children.first) {
 			rows.forEach(function(row) {
-				row.parent = row.parents[0];
-				delete row.parents;
+				if (parents && parents.first) {
+					if (row.parents && row.parents.length) row.parent = row.parents[0];
+					delete row.parents;
+				}
+				if (children && children.first) {
+					if (row.children && row.children.length) row.child = row.children[0];
+					delete row.children;
+				}
 			});
 		}
 		return obj;
@@ -251,8 +260,13 @@ exports.search.schema = {
 			title: 'Children',
 			type: 'object',
 			properties: {
+				first: {
+					title: 'Single',
+					type: 'boolean',
+					default: false
+				},
 				type: {
-					title: 'Element',
+					title: 'Type',
 					type: 'string',
 					format: 'id',
 					not: { // TODO permissions should be managed dynamically
