@@ -171,7 +171,7 @@ function listDependencies(rootGroup, eltsMap, el, list=[], sieve={}) {
 					}
 				} else if (gel.standalone) {
 					// prevent loops
-				} else if (gel.group.split(" ").indexOf(word) >= 0) {
+				} else if (gel.group.split(" ").includes(word)) {
 					isGroup = true;
 					listDependencies(rootGroup, eltsMap, gel, list, sieve);
 				}
@@ -182,8 +182,11 @@ function listDependencies(rootGroup, eltsMap, el, list=[], sieve={}) {
 	if (!el || sieve[el.name]) return list;
 	list.push(el);
 	sieve[el.name] = true;
-	if (!el.contents) return list;
 	var contents = el.contents;
+	if (!contents) {
+		if (el.standalone) contents = el.group;
+		else return list;
+	}
 	if (typeof contents == "string") contents = {content: contents};
 	Object.keys(contents).forEach(function(key) {
 		var val = contents[key];
