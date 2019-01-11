@@ -382,11 +382,16 @@ function whereSub(q, data, schema, alias = 'block') {
 function filterSub(q, data, schema, alias) {
 	q.select();
 	whereSub(q, data, schema, alias);
-	if (data.order) data.order.forEach(function(order) {
+
+	var orders = data.order || [];
+	orders.push("updated_at");
+	var seen = {};
+	orders.forEach(function(order) {
 		var {col, dir} = parseOrder('block', order);
+		if (seen[col.column]) return;
+		seen[col.column] = true;
 		q.orderBy(col, dir);
 	});
-	q.orderBy('block.updated_at', 'asc');
 	q.offset(data.offset).limit(data.limit);
 }
 
