@@ -1,3 +1,5 @@
+const URL = require('url');
+
 exports = module.exports = function(opt) {
 	return {
 		name: 'event',
@@ -12,29 +14,26 @@ exports.subscribe = function(site, data) {
 		parents: {type: 'event', first: true}
 	})).then(function(result) {
 		var eventDate = result.item;
-		var maxSeats = eventDate.data.seats || eventDate.parent.data.seats || 0;
-		var total = data.reservation.seats + (eventDate.data.reservations || 0);
-		if (maxSeats > 0 && total > maxSeats) {
-			throw new HttpError.BadRequest("Cannot reserve that much seats");
-		}
-		return eventDate.$query().patch({
-			'data:reservations': total
-		}).then(function() {
-			return eventDate;
-		});
-	}).then(function(eventDate) {
 		// add event_reservation block with two parents: settings and event_date
 		return All.run('block.search', site, {
 			type: 'event_reservation',
-			parent: {
-				id: data.parents.map(x => x.id)
+			parents: {
+				items: data.parents
 			}
 		}).then(function(obj) {
+			var maxSeats = eventDate.data.seats || eventDate.parent.data.seats || 0;
+			var total = eventDate.data.reservations || 0;
+
 			var blockMeth, resa;
 			if (obj.items.length == 1) {
 				resa = obj.items[0];
-				Object.assign(resa.data, data.reservation);
+				total += -resa.data.seats;
 				blockMeth = 'block.save';
+				resa = {
+					id: resa.id,
+					type: 'event_reservation',
+					data: data.reservation
+				};
 			} else if (obj.items.length == 0) {
 				blockMeth = 'block.add';
 				resa = {
@@ -45,15 +44,26 @@ exports.subscribe = function(site, data) {
 			} else {
 				throw new Error("Two reservations using the same login");
 			}
+			total += resa.data.seats;
+			if (isNaN(total)) throw new HttpError.BadRequest("Cannot reserve no seats");
+			if (maxSeats > 0 && total > maxSeats) {
+				throw new HttpError.BadRequest("Cannot reserve that much seats");
+			}
+
 			return All.run(blockMeth, site, resa).then(function(resa) {
-				if (!data.url) return resa; // can't send confirmation email
-				return All.run('mail.send', site, {
-					url: data.url,
-					to: pSettings.id,
-					query: {
+				return eventDate.$query(site.trx).patch({
+					'data:reservations': total
+				}).then(function() {
+					if (!data.url) return resa; // can't send confirmation email
+					var urlObj = URL.parse(data.url, true);
+					Object.assign(urlObj.query, {
 						date: eventDate.id,
 						reservation: resa.id
-					}
+					});
+					return All.run('mail.send', site, {
+						url: URL.format(urlObj),
+						to: pSettings.id
+					});
 				});
 			});
 		});
