@@ -55,18 +55,34 @@ exports.search = function(site, data) {
 	if (data.type) {
 		schemas[data.type] = site.$schema(data.type);
 	}
-	var parents = data.parents && data.parents.type ? data.parents : null;
-	if (parents) {
+
+	var parents = data.parents;
+	if (parents.type) {
 		schemas[parents.type] = site.$schema(parents.type);
+	} else if (parents.id) {
+		// ok
+	} else {
+		parents = null;
 	}
-	var children = data.children && data.children.type ? data.children : null;
-	if (children) {
+	var children = data.children;
+	if (children.type) {
 		schemas[children.type] = site.$schema(children.type);
+	} else if (children.id) {
+		// ok
+	} else {
+		children = null;
 	}
+
 	var q = site.$relatedQuery('children');
 	if (data.parent) {
-		q.joinRelation('parents', {alias: 'parent'})
-		.whereObject(data.parent, schemas[data.parent.type], 'parent');
+		q.joinRelation('parents', {alias: 'parent'});
+		if (data.parent.items) {
+			data.parent.items.forEach(function(item) {
+				q.whereObject(item, schemas[item.type], 'parent');
+			});
+		} else {
+			q.whereObject(data.parent, schemas[data.parent.type], 'parent');
+		}
 	}
 	if (data.child) {
 		q.joinRelation('children', {alias: 'child'})
@@ -143,13 +159,16 @@ exports.search.schema = {
 			type: 'object',
 		},
 		id: {
-			title: 'Block id',
-			nullable: true,
-			type: "string",
-			format: 'id'
+			title: 'Select by id',
+			anyOf: [{ /* because nullable does not have priority */
+				type: 'null'
+			}, {
+				type: "string",
+				format: 'id'
+			}]
 		},
 		type: {
-			title: 'Type',
+			title: 'Select by type',
 			type: 'string',
 			format: 'id',
 			not: { // TODO permissions should be managed dynamically
@@ -172,7 +191,7 @@ exports.search.schema = {
 			format: "singleline"
 		},
 		data: {
-			title: 'Filters',
+			title: 'Filter by data',
 			type: 'object'
 		},
 		order: {
@@ -205,8 +224,17 @@ exports.search.schema = {
 					type: 'boolean',
 					default: false
 				},
+				id: {
+					title: 'Select by id',
+					anyOf: [{ /* because nullable does not have priority */
+						type: 'null'
+					}, {
+						type: "string",
+						format: 'id'
+					}]
+				},
 				type: {
-					title: 'Type',
+					title: 'Select by type',
 					type: 'string',
 					format: 'id',
 					not: { // TODO permissions should be managed dynamically
@@ -230,7 +258,7 @@ exports.search.schema = {
 					format: "singleline"
 				},
 				data: {
-					title: 'Filters',
+					title: 'Filter by data',
 					type: 'object'
 				},
 				order: {
@@ -265,8 +293,17 @@ exports.search.schema = {
 					type: 'boolean',
 					default: false
 				},
+				id: {
+					title: 'Select by id',
+					anyOf: [{ /* because nullable does not have priority */
+						type: 'null'
+					}, {
+						type: "string",
+						format: 'id'
+					}]
+				},
 				type: {
-					title: 'Type',
+					title: 'Select by type',
 					type: 'string',
 					format: 'id',
 					not: { // TODO permissions should be managed dynamically
@@ -290,7 +327,7 @@ exports.search.schema = {
 					format: "singleline"
 				},
 				data: {
-					title: 'Filters',
+					title: 'Filter by data',
 					type: 'object'
 				},
 				order: {
@@ -425,9 +462,9 @@ exports.add.external = true;
 
 exports.save = function(site, data) {
 	return exports.get(site, data).forUpdate().then(function(block) {
-		return site.$relatedQuery('children').patchObject(data)
-		.where('block.id', block.id).then(function(count) {
-			if (count == 0) throw new Error(`Block not found for update ${data.id}`);
+		return block.$query(site.trx).patchObject({type: block.type, data: data.data}).then(function() {
+			if (!block) throw new Error(`Block not found for update ${data.id}`);
+			return block;
 		});
 	});
 };
