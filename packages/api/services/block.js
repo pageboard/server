@@ -373,10 +373,7 @@ function whereSub(q, data, schema, alias = 'block') {
 		q.whereObject({data: data.data}, schema, alias);
 	}
 	if (data.text) {
-		q.from(raw([
-			raw("websearch_to_tsquery('unaccent', ?) AS query", [data.text]),
-			alias
-		]));
+		q.from(raw("websearch_to_tsquery('unaccent', ?) AS query, ??", [data.text, alias]));
 		q.whereRaw(`query @@ ${alias}.tsv`);
 		q.orderByRaw(`ts_rank(${alias}.tsv, query) DESC`);
 	}
