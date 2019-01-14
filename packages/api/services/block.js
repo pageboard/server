@@ -74,7 +74,7 @@ exports.search = function(site, data) {
 	}
 
 	var q = site.$relatedQuery('children');
-	if (data.parent) {
+	if (data.parent && Object.keys(data.parent).length) {
 		q.joinRelation('parents', {alias: 'parent'});
 		if (data.parent.items) {
 			data.parent.items.forEach(function(item) {
@@ -84,7 +84,7 @@ exports.search = function(site, data) {
 			q.whereObject(data.parent, schemas[data.parent.type], 'parent');
 		}
 	}
-	if (data.child) {
+	if (data.child && Object.keys(data.child).length) {
 		q.joinRelation('children', {alias: 'child'})
 		.whereObject(data.child, schemas[data.children.type], 'child');
 	}
