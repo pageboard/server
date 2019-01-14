@@ -503,7 +503,7 @@ exports.save.external = true;
 exports.del = function(site, data) {
 	return site.$relatedQuery('children')
 	.where('block.id', data.id)
-	.whereIn('block.type', data.type)
+	.where('block.type', data.type)
 	.delete();
 };
 exports.del.schema = {
