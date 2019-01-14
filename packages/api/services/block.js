@@ -420,7 +420,7 @@ delete exports.find.schema.properties.offset;
 exports.find.external = true;
 
 exports.add = function(site, data) {
-	var parents = data.parents;
+	var parents = data.parents || [];
 	delete data.parents;
 	return site.$relatedQuery('children').insert(data).then(function(child) {
 		if (parents.length == 0) return child;
@@ -437,7 +437,7 @@ exports.add = function(site, data) {
 exports.add.schema = {
 	title: 'Add a block',
 	$action: 'add',
-	required: ['parents', 'type'],
+	required: ['type'],
 	properties: {
 		type: {
 			title: 'type',
