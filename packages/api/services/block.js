@@ -95,11 +95,12 @@ exports.search = function(site, data) {
 
 	if (children) {
 		if (children.count) {
-			delete children.count;
-			delete children.limit;
-			delete children.offset;
+			var qchildren = Object.assign({}, children);
+			delete qchildren.count;
+			delete qchildren.limit;
+			delete qchildren.offset;
 			var qc = site.$relatedQuery('children').alias('children');
-			whereSub(qc, children, schemas[children.type], 'children');
+			whereSub(qc, qchildren, schemas[children.type], 'children');
 			qc.joinRelation('parents', {alias: 'parents'})
 			.where('parents._id', ref('block._id'));
 			q.select(All.api.Block.query().count().from(qc.as('sub')).as('childrenCount'));
