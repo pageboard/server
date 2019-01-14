@@ -40,6 +40,11 @@ exports.submit = function(site, data) {
 		var body = data.body;
 		if (params.type && Object.keys(body).length > 0) {
 			body = {data: body};
+			if (body.data.id) {
+				// because this is so expected
+				body.id = body.data.id;
+				delete body.data.id;
+			}
 		}
 		body = All.utils.mergeObjects(body, params);
 
