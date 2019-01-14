@@ -20,7 +20,7 @@ function mergeParameters(params, obj) {
 	var ret = Array.isArray(params) ? [] : {};
 	Object.entries(params).forEach(function([key, val]) {
 		if (typeof val == "string") {
-			ret[key] = matchdom(val, obj, {'||': function(val, what) {
+			val = matchdom(val, obj, {'||': function(val, what) {
 				var path = what.scope.path.slice();
 				if (path[0] == "$query" || path[0] == "$body" || path[0] == "$response") {
 					var last = path.pop();
@@ -30,6 +30,7 @@ function mergeParameters(params, obj) {
 				}
 				return val;
 			}});
+			if (val != null) ret[key] = val;
 		} else if (typeof val == "object") {
 			ret[key] = mergeParameters(val, obj);
 		} else {
