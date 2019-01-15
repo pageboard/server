@@ -9,7 +9,7 @@ exports = module.exports = function(opt) {
 
 exports.subscribe = function(site, data) {
 	var [pSettings, pDate] = data.parents;
-	if (pSettings.type != "settings") throw new Error("Wrong parents, expected settings, date");
+	if (pSettings.type != "settings") throw new Error("Wrong parents, expected settings, event_date");
 	return All.run('block.find', site, Object.assign({}, pDate, {
 		parents: {type: 'event', first: true}
 	})).then(function(result) {
