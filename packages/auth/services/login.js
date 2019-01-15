@@ -84,7 +84,7 @@ exports.send = function(site, data) {
 		var mail = {
 			from: {
 				address: `help@${All.opt.mail.domain}`,
-				name: site.title
+				name: site.data.title
 			},
 			to: {
 				address: data.email
