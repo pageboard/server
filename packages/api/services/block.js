@@ -72,9 +72,10 @@ exports.search = function(site, data) {
 	} else {
 		children = null;
 	}
-
+	var valid = false;
 	var q = site.$relatedQuery('children');
 	if (data.parent && Object.keys(data.parent).length) {
+		valid = true;
 		q.joinRelation('parents', {alias: 'parent'});
 		if (data.parent.items) {
 			data.parent.items.forEach(function(item) {
@@ -90,7 +91,8 @@ exports.search = function(site, data) {
 	}
 	var eagers = [];
 
-	filterSub(q, data, schemas[data.type]);
+	valid = filterSub(q, data, schemas[data.type]) || valid;
+	if (!valid) throw new HttpError.BadRequest("Insufficient search parameters");
 	if (parents) eagers.push('parents(parentsFilter) as parents');
 
 	if (children) {
@@ -364,25 +366,32 @@ exports.search.schema = {
 exports.search.external = true;
 
 function whereSub(q, data, schema, alias = 'block') {
+	var valid = false;
 	if (data.type) {
 		q.where(`${alias}.type`, data.type);
+	} else {
+		q.whereNot(`${alias}.type`, 'site');
 	}
 	if (data.id) {
+		valid = true;
 		q.where(`${alias}.id`, data.id);
 	}
-	if (data.data) {
+	if (data.data && Object.keys(data.data).length > 0) {
+		valid = true;
 		q.whereObject({data: data.data}, schema, alias);
 	}
 	if (data.text) {
+		valid = true;
 		q.from(raw("websearch_to_tsquery('unaccent', ?) AS query, ??", [data.text, alias]));
 		q.whereRaw(`query @@ ${alias}.tsv`);
 		q.orderByRaw(`ts_rank(${alias}.tsv, query) DESC`);
 	}
+	return valid;
 }
 
 function filterSub(q, data, schema, alias) {
 	q.select();
-	whereSub(q, data, schema, alias);
+	var valid = whereSub(q, data, schema, alias);
 
 	var orders = data.order || [];
 	orders.push("updated_at");
@@ -394,6 +403,7 @@ function filterSub(q, data, schema, alias) {
 		q.orderBy(col, dir);
 	});
 	q.offset(data.offset).limit(data.limit);
+	return valid;
 }
 
 exports.find = function(site, data) {
