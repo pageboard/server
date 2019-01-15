@@ -422,14 +422,6 @@ exports.find.external = true;
 exports.add = function(site, data) {
 	var parents = data.parents || [];
 	delete data.parents;
-	// repair parents
-	var schema = site.$schema(data.type);
-	var items = schema && schema.parents && schema.parents.items;
-	if (items && items.length == parents.length) {
-		parents.forEach(function(parent, i) {
-			if (!parent.type) parent.type = items[i].properties.type.const;
-		});
-	}
 
 	return site.$relatedQuery('children').insert(data).then(function(child) {
 		if (parents.length == 0) return child;
