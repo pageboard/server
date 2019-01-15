@@ -90,14 +90,15 @@ exports.send = function(site, data) {
 				address: data.email
 			}
 		};
+		var prefix = site.title ? site.title + ' - ' : '';
 		if (site.lang == "fr") {
-			mail.subject = `Code de vérification: ${token}`;
+			mail.subject = `${prefix}code de vérification: ${token}`;
 			mail.text = `${token}
 Ce message est envoyé depuis
 ${site.href}
 et peut être ignoré.`;
 		} else {
-			mail.subject = `Verification token: ${token}`;
+			mail.subject = `${prefix}Verification token: ${token}`;
 			mail.text = `${token}
 This message is sent from
 ${site.href}
