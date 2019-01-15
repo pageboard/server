@@ -60,9 +60,12 @@ exports.subscribe = function(site, data) {
 						date: eventDate.id,
 						reservation: resa.id
 					});
-					return All.run('mail.send', site, {
-						url: URL.format(urlObj),
-						to: pSettings.id
+					return site.trx.commit().then(function() {
+						delete site.trx;
+						return All.run('mail.send', site, {
+							url: URL.format(urlObj),
+							to: pSettings.id
+						});
 					});
 				});
 			});
