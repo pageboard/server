@@ -180,6 +180,7 @@ exports.grant = function(site, data) {
 				throw new HttpError.Forbidden("Insufficient grants");
 			}
 			return {
+				grants: scopes,
 				item: settings,
 				cookies: {
 					bearer: {
