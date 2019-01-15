@@ -90,8 +90,8 @@ exports.send = function(site, data) {
 				address: data.email
 			}
 		};
-		var prefix = site.title ? site.title + ' - ' : '';
-		if (site.lang == "fr") {
+		var prefix = site.data.title ? site.data.title + ' - ' : '';
+		if (site.data.lang == "fr") {
 			mail.subject = `${prefix}code de vérification: ${token}`;
 			mail.text = `${token}
 Ce message est envoyé depuis
