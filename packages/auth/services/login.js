@@ -82,6 +82,10 @@ exports.send = function(site, data) {
 			});
 		}
 		var mail = {
+			from: {
+				address: `help@${All.opt.mail.domain}`,
+				name: site.data.domains[0]
+			},
 			to: {
 				address: data.email
 			}
