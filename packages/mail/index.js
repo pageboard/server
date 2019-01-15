@@ -83,7 +83,7 @@ exports.receive = function(data) {
 			]).then(function([user, site]) {
 				return exports.to({
 					from: {
-						name: site.data.domains[0],
+						name: site.data.title,
 						address: `${site.id}.${sender.id}@${mailDomain}`
 					},
 					to: {
@@ -164,7 +164,7 @@ exports.send = function(site, data) {
 		var pages = rows[0];
 		var from = defaultSender;
 		if (data.from) from = {
-			name: site.data.domains[0],
+			name: site.data.title,
 			address: `${site.id}.${rows[1].id}@${mailDomain}`
 		};
 
