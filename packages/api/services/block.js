@@ -427,6 +427,7 @@ exports.add = function(site, data) {
 		if (parents.length == 0) return child;
 		return site.$relatedQuery('children')
 		.whereIn(['block.id', 'block.type'], parents.map(function(item) {
+			if (!item.type || !item.id) throw new HttpError.BadRequest("Parents must have id, type");
 			return [item.id, item.type];
 		})).then(function(ids) {
 			return child.$relatedQuery('parents', site.trx).relate(ids);
