@@ -181,14 +181,14 @@ All.run = function(apiStr) {
 		}).then(function() {
 			return fun.apply(mod, args);
 		}).then(function(obj) {
-			if (!hadTrx && site) {
+			if (!hadTrx && site && site.trx) {
 				return site.trx.commit().then(function() {
 					return obj;
 				});
 			}
 			return obj;
 		}).catch(function(err) {
-			if (!hadTrx && site) {
+			if (!hadTrx && site && site.trx) {
 				return site.trx.rollback().then(function() {
 					throw err;
 				});
