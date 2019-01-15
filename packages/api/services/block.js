@@ -56,7 +56,7 @@ exports.search = function(site, data) {
 		schemas[data.type] = site.$schema(data.type);
 	}
 
-	var parents = data.parents;
+	var parents = data.parents || {};
 	if (parents.type) {
 		schemas[parents.type] = site.$schema(parents.type);
 	} else if (parents.id) {
@@ -64,7 +64,7 @@ exports.search = function(site, data) {
 	} else {
 		parents = null;
 	}
-	var children = data.children;
+	var children = data.children || {};
 	if (children.type) {
 		schemas[children.type] = site.$schema(children.type);
 	} else if (children.id) {
