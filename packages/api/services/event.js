@@ -17,8 +17,8 @@ exports.subscribe = function(site, data) {
 		// add event_reservation block with two parents: settings and event_date
 		return All.run('block.search', site, {
 			type: 'event_reservation',
-			parents: {
-				items: data.parents
+			parent: {
+				parents: data.parents // because search data.parents is for eager join, not relation
 			}
 		}).then(function(obj) {
 			var maxSeats = eventDate.data.seats || eventDate.parent.data.seats || 0;
