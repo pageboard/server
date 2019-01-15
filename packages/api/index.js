@@ -220,7 +220,11 @@ All.send = function(res, obj) {
 		});
 		delete obj.cookies;
 	}
-	obj.grants = (res.req.user || {}).scopes || {};
+	if (!obj.grants) {
+		// because req.user is not set on the request setting the cookie
+		// do not overwrite grants set by auth.login
+		obj.grants = (res.req.user || {}).scopes || {};
+	}
 	if (obj.location) {
 		res.redirect(obj.location);
 	} else {
