@@ -112,7 +112,7 @@ function init(All) {
 }
 
 function getRefs(pay) {
-	if (!pay.ref && !pay.after) return;
+	if (!pay.ref && !pay.after || pay.deleted) return;
 	const obj = {
 		tag: (/refs\/tags\/(.+)/.exec(pay.ref) || []).pop(),
 		branch: (/refs\/heads\/(.+)/.exec(pay.base_ref || pay.ref) || []).pop(),
