@@ -352,12 +352,19 @@ exports.search.external = true;
 
 exports.list = function(site, data) {
 	return listPages(site, data).then(function(pages) {
+		var els = {};
+		site.$pagetypes.forEach(function(type) {
+			var schema = site.$schema(type);
+			els[type] = schema;
+		});
 		return {
 			items: pages,
 			item: {
 				type: 'sitemap'
 			},
-			meta: site.$standalones.sitemap
+			meta: {
+				elements: els
+			}
 		};
 	});
 };
