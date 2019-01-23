@@ -132,7 +132,7 @@ function bundle(site, pkg, rootEl) {
 		}
 
 		return bundleSource(site, pkg, prefix, 'elements', eltsMap).then(function(path) {
-			metaEl.elements = path;
+			metaEl.bundle = path;
 			metaEl.scripts = rootEl.scripts;
 			metaEl.stylesheets = rootEl.stylesheets;
 		});
