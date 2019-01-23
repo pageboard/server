@@ -380,6 +380,8 @@ exports.search.external = true;
 function whereSub(q, data, schema, alias = 'block') {
 	var valid = false;
 	if (data.type) {
+		var stand = schema && schema.properties.standalone;
+		valid = stand && stand.const === true || valid;
 		q.where(`${alias}.type`, data.type);
 	} else {
 		q.whereNot(`${alias}.type`, 'site');
