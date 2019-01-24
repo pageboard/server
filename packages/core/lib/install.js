@@ -45,6 +45,11 @@ exports.config = function(moduleDir, id, module, config) {
 		} else if (modOpts === true) {
 			modOpts = {};
 		}
+		if (meta.name && meta.version != null) {
+			// this is used for app-level cache tag
+			if (!config.versions) config.versions = {};
+			config.versions[meta.name] = meta.version || "*";
+		}
 
 		var dstDir = id != 'pageboard' ? Path.join('/', '.files', id, module) : '/.' + id;
 		var directories = modOpts.directories || [];
