@@ -134,8 +134,8 @@ exports.search = function(site, data) {
 	return q.then(function(rows) {
 		var metas = [];
 		Object.keys(schemas).forEach(function(type) {
-			var meta = site.$standalones[type] && !site.$pagetypes[type];
-			if (meta) metas.push(meta);
+			var meta = site.$standalones[type];
+			if (meta && !site.$pagetypes[type]) metas.push(meta);
 		});
 		var obj = {
 			items: rows,
