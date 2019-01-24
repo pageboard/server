@@ -582,6 +582,7 @@ function applyUpdate(site, list) {
 			// simpler path
 			return site.$relatedQuery('children')
 			.where('block.id', block.id)
+			.where('block.type', block.type)
 			.where(raw("date_trunc('milliseconds', block.updated_at)"), block.updated_at)
 			.patch(block)
 			.returning('id', 'updated_at')
@@ -596,7 +597,7 @@ function applyUpdate(site, list) {
 
 function updatePage(site, page) {
 	return site.$relatedQuery('children').where('block.id', page.id)
-	.whereIn('block.type', site.$pagetypes)
+	.whereIn('block.type', page.type ? [page.type] : site.$pagetypes)
 	.select(ref('block.data:url').as('url')).first().throwIfNotFound().then(function(dbPage) {
 		var oldUrl = dbPage.url;
 		var newUrl = page.data.url;
@@ -630,7 +631,6 @@ function updatePage(site, page) {
 		});
 	}).then(function(dbPage) {
 		return site.$relatedQuery('children').where('block.id', page.id)
-		.whereIn('block.type', site.$pagetypes)
 		.where(raw("date_trunc('milliseconds', block.updated_at)"), page.updated_at)
 		.patch(page)
 		.returning('id', 'updated_at')
