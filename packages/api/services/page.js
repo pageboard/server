@@ -658,14 +658,9 @@ function applyRelate(site, obj) {
 }
 
 exports.add = function(site, data) {
-	var emptyPage = {};
-	return site.constructor.prototype.$beforeInsert.call(emptyPage).then(function() {
+	return site.constructor.prototype.$beforeInsert.call(data).then(function() {
 		return exports.save(site, {
-			add: [{
-				id: emptyPage.id,
-				type: data.type,
-				data: data.data
-			}]
+			add: [data]
 		});
 	});
 };
