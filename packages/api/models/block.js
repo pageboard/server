@@ -158,7 +158,8 @@ Block.extendSchema = function extendSchema(name, schemas) {
 		if (hrefsList.length) hrefs[type] = hrefsList;
 		var standProp = element.standalone ? {
 			standalone: {
-				const: true
+				const: true,
+				default: true
 			}
 		} : {};
 		schema.selectCases[type] = {
