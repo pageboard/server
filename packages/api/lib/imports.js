@@ -74,7 +74,9 @@ exports.validate = function(site, pkg) {
 			});
 		});
 	}).then(function() {
+		site.$scripts = pkg.eltsMap.site.scripts;
 		site.$resources = pkg.eltsMap.site.resources;
+		site.$stylesheets = pkg.eltsMap.site.stylesheets;
 		site.constructor = pkg.Block;
 		delete pkg.eltsMap;
 		delete pkg.Block;
