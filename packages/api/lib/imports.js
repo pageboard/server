@@ -184,7 +184,7 @@ function listDependencies(rootGroup, eltsMap, el, list=[], sieve={}) {
 	sieve[el.name] = true;
 	var contents = el.contents;
 	if (!contents) {
-		if (el.standalone) contents = el.group;
+		if (el.standalone && el.group) contents = el.group;
 		else return list;
 	}
 	if (typeof contents == "string") contents = {content: contents};
@@ -251,6 +251,10 @@ function absolutePaths(list, file) {
 	if (!list) return [];
 	if (typeof list == "string") list = [list];
 	return list.map(function(path) {
+		if (path == null) {
+			console.warn("null path in", file);
+			return;
+		}
 		if (path.startsWith('/') || /^(http|https|data):/.test(path)) {
 			return path;
 		}
