@@ -182,16 +182,24 @@ All.run = function(apiStr) {
 			return fun.apply(mod, args);
 		}).then(function(obj) {
 			if (!hadTrx && site && site.trx) {
-				return site.trx.commit().then(function() {
-					return obj;
-				});
+				try {
+					return site.trx.commit().then(function() {
+						return obj;
+					});
+				} catch(ex) {
+					console.trace("bad trx.commit at", apiStr, ex);
+				}
 			}
 			return obj;
 		}).catch(function(err) {
 			if (!hadTrx && site && site.trx) {
-				return site.trx.rollback().then(function() {
-					throw err;
-				});
+				try {
+					return site.trx.rollback().then(function() {
+						throw err;
+					});
+				} catch(ex) {
+					console.trace("bad trx.rollback at", apiStr, ex);
+				}
 			} else {
 				throw err;
 			}
