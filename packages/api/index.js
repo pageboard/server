@@ -176,6 +176,7 @@ All.run = function(apiStr) {
 				return;
 			}
 			return exports.transaction().then(function(trx) {
+				site = args[0] = site.$clone();
 				site.trx = trx;
 			});
 		}).then(function() {

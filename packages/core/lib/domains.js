@@ -135,13 +135,7 @@ Domains.prototype.init = function(req, res, next) {
 		var path = req.path;
 
 		var errors = site.errors;
-		if (path.startsWith('/.api/')) {
-			// api needs a real site instance and be able to toy with it
-			site = site.$clone();
-		} else {
-			// others don't
-		}
-
+		// calls to api use All.run which does site.$clone() to avoid concurrency issues
 		req.site = site;
 
 		if (req.hostname != host.domains[0] && !path.startsWith('/.well-known/')) {
