@@ -212,26 +212,9 @@ Domains.prototype.check = function(host, req) {
 Domains.prototype.promote = function(site) {
 	var cur = this.sites[site.id] || {};
 	cur.errors = [];
-	var href = site.href || cur.href;
-	Object.defineProperty(site, 'href', {
-		enumerable: false,
-		configurable: true,
-		writable: true,
-		value: href
-	});
-	var hostname = site.hostname || cur.hostname || site.data.domain;
-	Object.defineProperty(site, 'hostname', {
-		enumerable: false,
-		configurable: true,
-		writable: true,
-		value: hostname
-	});
-	Object.defineProperty(site, 'errors', {
-		enumerable: false,
-		configurable: true,
-		writable: true,
-		value: cur.errors
-	});
+	site.href = site.href || cur.href;
+	site.hostname = site.hostname || cur.hostname || site.data.domain;
+	site.errors = cur.errors;
 };
 
 Domains.prototype.replace = function(site) {
