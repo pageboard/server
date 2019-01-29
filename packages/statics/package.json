@@ -8,14 +8,14 @@
   },
   "repository": {
     "type": "git",
-    "url": "git+https://github.com/pageboard/statics.git"
+    "url": "git+https://github.com/pageboard/server.git"
   },
   "author": "Jérémy Lal <kapouer@melix.org>",
   "license": "MIT",
   "bugs": {
-    "url": "https://github.com/pageboard/statics/issues"
+    "url": "https://github.com/pageboard/server/issues"
   },
-  "homepage": "https://github.com/pageboard/statics#readme",
+  "homepage": "https://github.com/pageboard/server#readme",
   "dependencies": {
     "debug": "^3.1.0",
     "mkdirp": "^0.5.1",

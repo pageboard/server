@@ -8,14 +8,14 @@
   },
   "repository": {
     "type": "git",
-    "url": "git+https://github.com/pageboard/auth.git"
+    "url": "git+https://github.com/pageboard/server.git"
   },
   "author": "Jérémy Lal <kapouer@melix.org>",
   "license": "MIT",
   "bugs": {
-    "url": "https://github.com/pageboard/auth/issues"
+    "url": "https://github.com/pageboard/server/issues"
   },
-  "homepage": "https://github.com/pageboard/auth#readme",
+  "homepage": "https://github.com/pageboard/server#readme",
   "dependencies": {
     "otplib": "^10.0.1",
     "spawn-please": "^0.3.0",

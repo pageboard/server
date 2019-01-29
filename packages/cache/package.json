@@ -8,14 +8,14 @@
   },
   "repository": {
     "type": "git",
-    "url": "git+https://github.com/pageboard/cache.git"
+    "url": "git+https://github.com/pageboard/server.git"
   },
   "author": "Jérémy Lal <kapouer@melix.org>",
   "license": "MIT",
   "bugs": {
-    "url": "https://github.com/pageboard/cache/issues"
+    "url": "https://github.com/pageboard/server/issues"
   },
-  "homepage": "https://github.com/pageboard/cache#readme",
+  "homepage": "https://github.com/pageboard/server#readme",
   "dependencies": {
     "fast-json-stable-stringify": "^2.0.0",
     "glob": "^7.1.2",
