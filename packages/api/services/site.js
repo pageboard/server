@@ -121,8 +121,14 @@ exports.add = function(data) {
 	}).catch(function(err) {
 		data.type = 'site';
 		data.children = [{
-			type: 'notfound',
-			standalone: true
+			standalone: true, // this might not be needed
+			type: 'page',
+			data: {
+				title: '404',
+				url: '/.well-known/404',
+				noindex: true,
+				nositemap: true
+			}
 		}];
 		return All.api.Block.query().insertGraph(data);
 	});

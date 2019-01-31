@@ -15,33 +15,18 @@ function init(All) {
 		'*',
 		All.auth.restrict('*'),
 		All.cache.tag('site-:site', 'data-:site'),
-		optimize,
 		prerender(All.dom)
 	);
 }
 
-function optimize(req, res, next) {
-	var path = req.path;
-	if (path == '/.well-known/notfound') {
-		next();
-		return;
-	}
-	if (path.startsWith('/.')) {
-		res.sendStatus(404);
-		return;
-	}
-	var ext = Path.extname(path).substring(1);
-	if (ext && /^(html?|php\d?)$/.test(ext) == false) {
-		res.sendStatus(404);
-		return;
-	}
-	next();
-}
-
 function prerender(dom) {
 	return dom(function(mw, settings, req, res) {
-		if (req.path != '/.well-known/notfound' && /^(\/[a-zA-Z0-9-]*|(\/[a-zA-Z0-9-]+)+)$/.test(req.path) == false) {
-			settings.view = req.site.href + '/.well-known/notfound';
+		var el = req.site.$schema('page');
+		var pattern = el && el.properties.data && el.properties.data.properties.url.pattern;
+		if (!pattern) throw new Error("Missing page element missing schema for data.url.pattern");
+		var urlRegex = new RegExp(pattern);
+		if (urlRegex.test(req.path) == false) {
+			settings.view = req.site.href + '/.well-known/404';
 			settings.load.disable = true;
 			settings.prepare.disable = true;
 		} else {

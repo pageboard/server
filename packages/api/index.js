@@ -234,6 +234,10 @@ All.send = function(res, obj) {
 		// do not overwrite grants set by auth.login
 		obj.grants = (res.req.user || {}).scopes || {};
 	}
+	if (obj.status) {
+		res.status(obj.status);
+		delete obj.status;
+	}
 	if (obj.location) {
 		res.redirect(obj.location);
 	} else {
@@ -258,11 +262,12 @@ All.filter = function(site, scopes, obj) {
 All.isLocked = isLocked;
 All.unlock = unlock;
 
-function isLocked(locks, scopes) {
+function isLocked(locks, scopes, site) {
 	if (locks == null) return false;
 	if (typeof locks == "string") locks = [locks];
 	if (locks.length == 0) return false;
 	if (!scopes) scopes = {};
+	if (site && scopes.webmaster) return false;
 	return !locks.some(function(lock) {
 		return scopes[lock];
 	});
@@ -285,7 +290,7 @@ function unlock(site, scopes, item, action) {
 	};
 	if (typeof $lock != "object") $lock = { '*': $lock };
 	locks = Object.assign({}, locks, $lock);
-	if (isLocked(locks['*'], scopes)) return;
+	if (isLocked(locks['*'], scopes, site)) return;
 	delete locks['*'];
 	Object.keys(locks).forEach(function(path) {
 		var list = locks[path];
@@ -293,7 +298,7 @@ function unlock(site, scopes, item, action) {
 		path.reduce(function(obj, val, index) {
 			if (obj == null) return;
 			if (index == path.length - 1) {
-				if (isLocked(list, scopes)) delete obj[val];
+				if (isLocked(list, scopes, site)) delete obj[val];
 			}
 			return obj[val];
 		}, item);

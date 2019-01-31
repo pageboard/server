@@ -22,7 +22,10 @@ function init(All) {
 			});
 		} else {
 			delete req.query.develop;
-			All.run('page.get', req.site, req.query).then(function(data) {
+			All.run('page.get', req.site, {
+				url: req.query.url,
+				user: req.user || {}
+			}).then(function(data) {
 				All.send(res, data);
 			}).catch(next);
 		}
@@ -125,18 +128,34 @@ function QueryPageHref(site) {
 }
 
 exports.get = function(site, data) {
+	var obj = {
+		status: 200,
+		site: site.data
+	};
 	return QueryPage(site).whereIn('page.type', site.$pagetypes)
 	.whereJsonText("page.data:url", data.url)
 	.select(
 		QueryPageHref(site).whereIn('page.type', site.$pagetypes)
 		.whereJsonText("page.data:url", data.url).as('hrefs')
-	)
-	.then(function(page) {
+	).then(function(page) {
 		if (!page) {
-			return QueryPage(site).where('page.type', 'notfound').throwIfNotFound()
+			obj.status = 404;
+		} else if (All.isLocked((page.lock || {}).read, data.user.scopes)) {
+			obj.status = 401;
+		}
+		if (obj.status != 200) {
+			var statusUrl = `/.well-known/${obj.status}`;
+			return QueryPage(site)
+			.where('page.type', 'page')
+			.whereJsonText("page.data:url", statusUrl)
 			.select(
-				QueryPageHref(site).where('page.type', 'notfound').as('hrefs')
-			);
+				QueryPageHref(site)
+				.where('page.type', 'page')
+				.whereJsonText("page.data:url", statusUrl).as('hrefs')
+			).then(function(page) {
+				if (!page) throw new HttpError[obj.status]();
+				return page;
+			});
 		} else {
 			return page;
 		}
@@ -144,13 +163,13 @@ exports.get = function(site, data) {
 		page.children = page.children.concat(page.standalones);
 		delete page.standalones;
 		var links = {};
-		var obj = {
+		Object.assign(obj, {
 			item: page,
 			meta: site.$standalones[page.type],
 			links: links,
-			site: site.data,
 			hrefs: page.hrefs
-		};
+		});
+
 		delete page.hrefs;
 		if (page.data.url == null) return obj;
 
@@ -445,7 +464,7 @@ exports.save = function(site, changes) {
 	.whereIn('block.type', site.$pagetypes)
 	.whereNotNull(ref('block.data:url')).then(function(dbPages) {
 		pages.all.forEach(function(page) {
-			if (!page.data.url || page.data.url.startsWith('/$/')) {
+			if (!page.data.url) {
 				delete page.data.url;
 			} else if (allUrl[page.data.url]) {
 				throw new HttpError.BadRequest("Two pages with same url");
@@ -476,7 +495,7 @@ exports.save = function(site, changes) {
 		});
 	}).then(function(parts) {
 		return Promise.all(pages.update.map(function(child) {
-			if (!child.data.url) return;
+			if (!child.data.url || child.data.url.startsWith('/.')) return;
 			return All.href.save(site, {
 				url: child.data.url,
 				title: child.data.title
@@ -491,7 +510,7 @@ exports.save = function(site, changes) {
 		}));
 	}).then(function() {
 		return Promise.all(pages.add.map(function(child) {
-			if (!child.data.url) return;
+			if (!child.data.url || child.data.url.startsWith('/.')) return;
 			// problem: added pages are not saved here
 			return All.href.add(site, {
 				url: child.data.url

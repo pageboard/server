@@ -222,8 +222,19 @@ exports.grant.schema = {
 			type: 'array',
 			uniqueItems: true,
 			items: {
-				type: 'string',
-				format: 'id'
+				anyOf: [{
+					const: 'webmaster',
+					title: 'Webmaster',
+					description: 'site developer'
+				}, {
+					const: 'writer',
+					title: 'Writer',
+					description: 'content editor'
+				}, {
+					const: 'user',
+					title: 'User',
+					description: 'public user'
+				}]
 			}
 		}
 	}
