@@ -14,7 +14,7 @@ function init(All) {
 			id: req.params.id,
 			query: All.utils.unflatten(req.query),
 			body: All.utils.unflatten(req.body),
-			user: req.user
+			user: req.user || {}
 		}).then(function(data) {
 			All.send(res, data);
 		}).catch(next);
@@ -25,6 +25,9 @@ exports.submit = function(site, data) {
 	return All.run('block.get', site, {
 		id: data.id
 	}).then(function(form) {
+		if (All.isLocked((form.lock || {}).write, data.user.scopes)) {
+			throw HttpError.Unauthorized("Check user permissions");
+		}
 		var fd = form.data || {};
 		var method = fd.action.method;
 		if (!method) throw new HttpError.BadRequest("Missing method");

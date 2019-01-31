@@ -237,35 +237,55 @@ All.send = function(res, obj) {
 	if (obj.location) {
 		res.redirect(obj.location);
 	} else {
-		All.filter(res, obj);
+		All.filter(res.req.site, (res.req.user || {}).scopes, obj);
 		res.json(obj);
 	}
 };
 
-All.filter = function(res, obj) {
-	var site = res.req.site;
-	var scopes = (res.req.user || {}).scopes || {};
-	if (obj.item) obj.item = unlockItem(site, scopes, obj.item);
+All.filter = function(site, scopes, obj) {
+	if (!obj.item && !obj.items) {
+		return unlock(site, scopes, obj);
+	}
+	if (obj.item) {
+		var item = unlock(site, scopes, obj.item, 'read');
+		if (!item) throw new HttpError.Unauthorized("Insufficient permissions");
+	}
 	if (obj.items) obj.items = obj.items.filter(function(item) {
-		return unlockItem(site, scopes, item);
+		return unlock(site, scopes, item, 'read');
 	});
 };
 
-function unlockItem(site, scopes, item) {
+All.isLocked = isLocked;
+All.unlock = unlock;
+
+function isLocked(locks, scopes) {
+	if (locks == null) return false;
+	if (typeof locks == "string") locks = [locks];
+	if (locks.length == 0) return false;
+	if (!scopes) scopes = {};
+	return !locks.some(function(lock) {
+		return scopes[lock];
+	});
+}
+
+function unlock(site, scopes, item, action) {
 	if (!item.type) return item;
 	if (item.children) {
 		item.children = item.children.filter(function(item) {
-			return unlockItem(site, scopes, item);
+			return unlock(site, scopes, item, action);
 		});
 	}
 	var schema = site.$schema(item.type) || {}; // old types might not have schema
-	var $locks = schema.$locks;
-	var locks = item.locks;
-	if (!locks && !$locks) return item;
-	if (typeof locks != "object") locks = { '*': locks };
-	if (typeof $locks != "object") $locks = { '*': $locks };
-	locks = Object.assign({}, locks, $locks);
-	if (locked(locks['*'], scopes)) return;
+	var $lock = schema.$lock || {};
+	var lock = (item.lock || {})[action] || [];
+
+	if (Object.keys($lock).length == 0 && lock.length == 0) return item;
+	var locks = {
+		'*': lock
+	};
+	if (typeof $lock != "object") $lock = { '*': $lock };
+	locks = Object.assign({}, locks, $lock);
+	if (isLocked(locks['*'], scopes)) return;
 	delete locks['*'];
 	Object.keys(locks).forEach(function(path) {
 		var list = locks[path];
@@ -273,7 +293,7 @@ function unlockItem(site, scopes, item) {
 		path.reduce(function(obj, val, index) {
 			if (obj == null) return;
 			if (index == path.length - 1) {
-				if (locked(list, scopes)) delete obj[val];
+				if (isLocked(list, scopes)) delete obj[val];
 			}
 			return obj[val];
 		}, item);
@@ -281,10 +301,4 @@ function unlockItem(site, scopes, item) {
 	return item;
 }
 
-function locked(locks, scopes) {
-	if (locks == null) return false;
-	if (typeof locks == "string") locks = [locks];
-	return !locks.some(function(lock) {
-		return scopes[lock];
-	});
-}
+

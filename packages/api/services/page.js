@@ -29,7 +29,9 @@ function init(All) {
 	});
 	All.app.get('/.api/pages', function(req, res, next) {
 		if (All.auth.test(req, 'webmaster')) {
-			req.query.drafts = true; // TODO replace by proper permission management
+			// webmaster want to see those anyway
+			// this must not be confused with page.lock
+			req.query.drafts = true;
 			if (!req.query.type) req.query.type = ['page', 'mail'];
 		}
 
@@ -64,7 +66,7 @@ function init(All) {
 	All.app.get('/.well-known/sitemap.txt', function(req, res, next) {
 		All.run('page.list', req.site, {}).then(function(obj) {
 			res.type('text/plain');
-			All.filter(res, obj);
+			obj = All.filter(req.site, (req.user || {}).scopes, obj);
 			res.send(obj.items.map(page => req.site.href + page.data.url).join('\n'));
 		}).catch(next);
 	});

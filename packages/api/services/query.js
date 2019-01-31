@@ -10,7 +10,7 @@ function init(All) {
 		All.run('search.query', req.site, {
 			id: req.params.id,
 			query: All.utils.unflatten(req.query),
-			user: req.user
+			user: req.user || {}
 		}).then(function(data) {
 			All.send(res, data);
 		}).catch(next);
@@ -24,6 +24,10 @@ exports.query = function(site, data) {
 	return All.run('block.get', site, {
 		id: data.id
 	}).then(function(form) {
+		if (All.isLocked((form.lock || {}).read, data.user.scopes)) {
+			throw HttpError.Unauthorized("Check user permissions");
+		}
+		if (!form) throw HttpError.Unauthorized("Check user permissions");
 		var fd = form.data || {};
 		var method = fd.action.method;
 		if (!method) throw new HttpError.BadRequest("Missing method");
