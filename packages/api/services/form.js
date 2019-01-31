@@ -25,7 +25,7 @@ exports.submit = function(site, data) {
 	return All.run('block.get', site, {
 		id: data.id
 	}).then(function(form) {
-		if (All.isLocked((form.lock || {}).write, data.user.scopes)) {
+		if (All.isLocked(site, data.user.scopes, (form.lock || {}).write)) {
 			throw HttpError.Unauthorized("Check user permissions");
 		}
 		var fd = form.data || {};

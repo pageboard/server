@@ -140,7 +140,7 @@ exports.get = function(site, data) {
 	).then(function(page) {
 		if (!page) {
 			obj.status = 404;
-		} else if (All.isLocked((page.lock || {}).read, data.user.scopes)) {
+		} else if (All.isLocked(site, data.user.scopes, (page.lock || {}).read)) {
 			obj.status = 401;
 		}
 		if (obj.status != 200) {

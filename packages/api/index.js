@@ -262,14 +262,19 @@ All.filter = function(site, scopes, obj) {
 All.isLocked = isLocked;
 All.unlock = unlock;
 
-function isLocked(locks, scopes, site) {
+function isLocked(site, scopes, locks) {
 	if (locks == null) return false;
 	if (typeof locks == "string") locks = [locks];
 	if (locks.length == 0) return false;
 	if (!scopes) scopes = {};
-	if (site && scopes.webmaster) return false;
+	var maxIndex = -1;
+	Object.keys(scopes).forEach(function(scope) {
+		maxIndex = Math.max(site.$grants[scope] || maxIndex);
+	});
+
 	return !locks.some(function(lock) {
-		return scopes[lock];
+		var lockIndex = site.$grants[lock] || -1;
+		return lockIndex < maxIndex || scopes[lock];
 	});
 }
 
@@ -290,7 +295,7 @@ function unlock(site, scopes, item, action) {
 	};
 	if (typeof $lock != "object") $lock = { '*': $lock };
 	locks = Object.assign({}, locks, $lock);
-	if (isLocked(locks['*'], scopes, site)) return;
+	if (isLocked(site, scopes, locks['*'])) return;
 	delete locks['*'];
 	Object.keys(locks).forEach(function(path) {
 		var list = locks[path];
@@ -298,7 +303,7 @@ function unlock(site, scopes, item, action) {
 		path.reduce(function(obj, val, index) {
 			if (obj == null) return;
 			if (index == path.length - 1) {
-				if (isLocked(list, scopes, site)) delete obj[val];
+				if (isLocked(site, scopes, list)) delete obj[val];
 			}
 			return obj[val];
 		}, item);
