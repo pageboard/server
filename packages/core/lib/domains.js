@@ -138,7 +138,9 @@ Domains.prototype.init = function(req, res, next) {
 		// calls to api use All.run which does site.$clone() to avoid concurrency issues
 		req.site = site;
 
-		if (req.hostname != host.domains[0] && !path.startsWith('/.well-known/')) {
+		if (req.hostname != host.domains[0] && (
+			!path.startsWith('/.well-known/') || /^.well-known\/\d{3}$/.test(path)
+		)) {
 			All.cache.tag('data-:site')(req, res, function() {
 				res.redirect(308, host.href +  req.url);
 			});
