@@ -79,14 +79,28 @@ Block.jsonSchema = {
 			format: 'date-time',
 			type: 'string'
 		},
-		locks: {
-			type: 'array',
-			nullable: true,
-			items: {
-				type: 'string',
-				format: 'id'
-			},
-			uniqueItems: true
+		lock: {
+			type: 'object',
+			properties: {
+				read: {
+					type: 'array',
+					nullable: true,
+					items: {
+						type: 'string',
+						format: 'id'
+					},
+					uniqueItems: true
+				},
+				write: {
+					type: 'array',
+					nullable: true,
+					items: {
+						type: 'string',
+						format: 'id'
+					},
+					uniqueItems: true
+				}
+			}
 		}
 	}
 };
@@ -163,7 +177,7 @@ Block.extendSchema = function extendSchema(name, schemas) {
 			}
 		} : {};
 		schema.selectCases[type] = {
-			$locks: element.$locks,
+			$lock: element.$lock,
 			parents: element.parents,
 			properties: Object.assign({}, blockProps, standProp, {
 				data: Object.assign({}, blockProps.data, {
