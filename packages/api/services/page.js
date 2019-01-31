@@ -374,7 +374,7 @@ exports.list.schema = {
 	properties: {
 		parent: {
 			type: 'string',
-			format: 'id'
+			format: 'pathname'
 		},
 		url: {
 			type: 'string',
