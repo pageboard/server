@@ -180,7 +180,9 @@ exports.grant = function(site, data) {
 		return All.run('settings.find', site, {
 			email: data.email
 		}).then(function(settings) {
-			var scopes = allowScopes(data.grants, settings.data && settings.data.grants || []);
+			var userGrants = settings.data && settings.data.grants || [];
+			if (userGrants.length == 0) userGrants.push('user'); // the minimum grant
+			var scopes = allowScopes(data.grants, userGrants);
 			if (!scopes) {
 				throw new HttpError.Forbidden("Insufficient grants");
 			}
