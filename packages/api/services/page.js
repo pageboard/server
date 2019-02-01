@@ -238,7 +238,8 @@ function listPages(site, data) {
 	var q = site.$relatedQuery('children')
 	.select()
 	.omit(['content'])
-	.whereIn('block.type', data.type || ['page']);
+	.whereIn('block.type', data.type || ['page'])
+	.where('block.standalone', true);
 	if (!data.drafts) {
 		q.whereNotNull(ref('block.data:url'));
 		q.where(function() {
