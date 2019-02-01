@@ -69,18 +69,16 @@ exports.send = function(site, data) {
 		var p = Promise.resolve();
 		var settings = data.settings;
 		if (settings) {
-			if (settings.grants) {
-				// hard-wire protection against change of grants
-				console.warn("generate with default settings should not set settings.grants");
-				delete settings.grants;
-			}
-			p = p.then(function() {
-				return All.settings.save(site, {
-					email: data.email,
-					data: settings
-				});
+			delete settings.grants;
+			p = All.settings.save(site, {
+				email: data.email,
+				data: settings
 			});
 		}
+		return p.then(function() {
+			return token;
+		});
+	}).then(function(token) {
 		var mail = {
 			from: {
 				address: `help@${All.opt.mail.domain}`,
@@ -104,9 +102,7 @@ This message is sent from
 ${site.href}
 and can be ignored.`;
 		}
-		return p.then(function() {
-			return All.mail.to(mail);
-		}).then(function() {
+		return All.mail.to(mail).then(function() {
 			return {};
 		});
 	});
