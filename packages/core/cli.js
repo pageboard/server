@@ -1,5 +1,8 @@
 #!/usr/bin/env node
 
+const {Readable} = require('stream');
+const logger = new (require('./lib/logger'))();
+
 var pkgOpt = {};
 if (process.env.APPNAME) pkgOpt.name = process.env.APPNAME;
 
@@ -24,41 +27,52 @@ pageboard.init(config).then(function(All) {
 		console.error("Cannot process arguments", All.opt._);
 		process.exit(1);
 	}
-	if (All.opt._.length == 1) {
-		var command = All.opt._[0];
-		var args = [command];
-		return Promise.resolve().then(function() {
-			if (config.data !== undefined && typeof config.data.data == "string") {
-				try {
-					config.data.data = JSON.parse(config.data.data);
-				} catch(ex) {
-					console.error(ex);
-				}
-			}
-			if (All.opt.site) {
-				return All.site.get({id: All.opt.site}).select('_id').then(function(site) {
-					return All.install(site).then(function(site) {
-						args.push(site);
-						if (config.data !== undefined) args.push(config.data);
-					});
-				});
-			} else {
-				if (config.data !== undefined) args.push(config.data);
-			}
-		}).then(function() {
-			return All.run.apply(All, args).catch(function(err) {
-				console.error(err);
-				process.exit(1);
-			});
-		}).then(function(results) {
-			console.log(JSON.stringify(results, null, ' '));
-			console.info(`${command} done.`);
-			process.exit();
-		});
-	} else {
+	if (All.opt._.length != 1) {
+		logger.flush(true);
 		return pageboard.start(All);
 	}
+
+	var command = All.opt._[0];
+	var args = [command];
+	return Promise.resolve().then(function() {
+		if (config.data !== undefined && typeof config.data.data == "string") {
+			try {
+				config.data.data = JSON.parse(config.data.data);
+			} catch(ex) {
+				console.error(ex);
+			}
+		}
+		if (All.opt.site) {
+			return All.site.get({id: All.opt.site}).select('_id').then(function(site) {
+				return All.install(site).then(function(site) {
+					args.push(site);
+					if (config.data !== undefined) args.push(config.data);
+				});
+			});
+		} else {
+			if (config.data !== undefined) args.push(config.data);
+		}
+	}).then(function() {
+		return All.run.apply(All, args).catch(function(err) {
+			console.error(err);
+			process.exit(1);
+		});
+	}).then(function(results) {
+		logger.clear(true);
+		if (results instanceof Readable) {
+			results.pipe(process.stdout);
+			results.once('end', function() {
+				results.unpipe(process.stdout);
+				process.exit();
+			});
+		} else {
+			console.log(JSON.stringify(results, null, ' '));
+			process.exit();
+		}
+	});
 }).catch(function(err) {
 	console.error(err);
+	process.exit(1);
 });
+
 
