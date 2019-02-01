@@ -1,4 +1,5 @@
 var lodashMerge = require('lodash.merge');
+var stream = require('stream');
 
 exports = module.exports = function(opt) {
 	return {
@@ -186,6 +187,50 @@ exports.del.schema = {
 	required: ['id'],
 	properties: {
 		id: {
+			type: 'string',
+			format: 'id'
+		}
+	}
+};
+
+exports.export = function(data) {
+	return exports.get(data).eager(`[children(ones)]`, {
+		ones: function(builder) {
+			return builder.select('_id').where('standalone', true);
+		}
+	}).then(function(site) {
+		var children = site.children;
+		delete site.children;
+		var out = new stream.PassThrough();
+		out.write('{"site": ');
+		out.write(JSON.stringify(site));
+		out.write(',\n"standalones": [');
+		var last = children.length - 1;
+		children.reduce(function(p, child, i) {
+			return p.then(function() {
+				return All.api.Block.query().select().omit(['tsv', '_id']).where('_id', child._id)
+				.eager('children(notones)', {
+					notones: function(builder) {
+						return builder.select().omit(['tsv', '_id']).where('standalone', false);
+					}
+				}).then(function(standalone) {
+					out.write(JSON.stringify(standalone));
+					if (i != last) out.write(',');
+				});
+			});
+		}, Promise.resolve()).then(function() {
+			out.write(']}');
+			out.end();
+		});
+		return out;
+	});
+};
+exports.export.schema = {
+	$action: 'read',
+	required: ['id'],
+	properties: {
+		id: {
+			title: 'Site id',
 			type: 'string',
 			format: 'id'
 		}
