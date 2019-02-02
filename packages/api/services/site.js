@@ -1,5 +1,6 @@
 var lodashMerge = require('lodash.merge');
-var stream = require('stream');
+const {PassThrough} = require('stream');
+const {createReadStream} = require('fs');
 
 exports = module.exports = function(opt) {
 	return {
@@ -201,7 +202,7 @@ exports.export = function(data) {
 	}).then(function(site) {
 		var children = site.children;
 		delete site.children;
-		var out = new stream.PassThrough();
+		var out = new PassThrough();
 		out.write('{"site": ');
 		out.write(JSON.stringify(site));
 		out.write(',\n"standalones": [');
