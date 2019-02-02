@@ -208,7 +208,7 @@ exports.export = function(data) {
 		var last = children.length - 1;
 		children.reduce(function(p, child, i) {
 			return p.then(function() {
-				return All.api.Block.query().select().omit(['tsv', '_id']).where('_id', child._id)
+				return All.api.Block.query().select().omit(['tsv', '_id']).first().where('_id', child._id)
 				.eager('children(notones)', {
 					notones: function(builder) {
 						return builder.select().omit(['tsv', '_id']).where('standalone', false);
