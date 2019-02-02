@@ -12,7 +12,7 @@ exports.up = function(knex) {
 		table.timestamps(true, true); // created_at, updated_at, useTimestamps, defaultToNow
 	})
 	.createTable('relation', function (table) {
-		table.increments('id').primary();
+		table.primary('parent_id', 'child_id');
 		table.integer('parent_id').notNullable()
 		.unsigned().references('_id').inTable('block').onDelete('CASCADE');
 		table.integer('child_id').notNullable()
