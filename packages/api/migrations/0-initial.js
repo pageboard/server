@@ -13,9 +13,9 @@ exports.up = function(knex) {
 	})
 	.createTable('relation', function (table) {
 		table.primary('parent_id', 'child_id');
-		table.integer('parent_id').notNullable()
+		table.integer('parent_id').notNullable().index()
 		.unsigned().references('_id').inTable('block').onDelete('CASCADE');
-		table.integer('child_id').notNullable()
+		table.integer('child_id').notNullable().index()
 		.unsigned().references('_id').inTable('block').onDelete('CASCADE');
 	})
 	.raw(
