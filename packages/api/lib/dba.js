@@ -74,6 +74,7 @@ exports.knexConfig = function(config) {
 
 var gcJob;
 exports.gc = function(All) {
+/*
 	var opts = All.opt.gc;
 	if (!opts) opts = All.opt.gc = {};
 	var blockDays = parseInt(opts.block);
@@ -105,4 +106,5 @@ exports.gc = function(All) {
 			});
 		}));
 	});
+*/
 };
