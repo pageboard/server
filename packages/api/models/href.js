@@ -44,13 +44,14 @@ Href.jsonSchema = {
 			type: 'string'
 		},
 		icon: {
-			nullable: true,
 			anyOf: [{
 				type: 'string',
-				format: 'uri'
+				format: 'uri',
+				nullable: true
 			}, {
 				type: "string",
-				format: 'pathname'
+				format: 'pathname',
+				nullable: true
 			}]
 		},
 		site: {
@@ -85,7 +86,8 @@ Href.jsonSchema = {
 				},
 				duration: {
 					nullable: true,
-					type: "integer"
+					type: "string",
+					format: "time"
 				}
 			}
 		}
