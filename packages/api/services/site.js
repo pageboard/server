@@ -1,4 +1,5 @@
 var lodashMerge = require('lodash.merge');
+const {ref} = require('objection');
 const {PassThrough} = require('stream');
 const {createReadStream} = require('fs');
 
@@ -181,7 +182,39 @@ exports.save.schema = {
 };
 
 exports.del = function(data) {
-	return QuerySite(data).del();
+	var Block = All.api.Block;
+	return All.api.transaction(function(trx) {
+		var result = {};
+		return Block.query(trx).where('type', 'site').select('_id').where('id', data.id)
+		.first().throwIfNotFound().then(function(site) {
+			return Promise.all([
+				Block.query(trx).whereIn(
+					'_id',
+					Block.query(trx)
+					.where('block._id', site._id)
+					.joinRelation('children.children', {alias: 'c'})
+					.select('c._id')
+				).del()
+				.then(function(count) {
+					result.blocks = count;
+					return Block.query(trx).whereIn(
+						'_id',
+						Block.query(trx)
+						.where('block._id', site._id)
+						.joinRelation('children', {alias: 'c'})
+						.select('c._id')
+					).del();
+				}).then(function(count) {
+					result.standalones = count;
+					return site.$query(trx).del().then(function(count) {
+						result.site = count;
+						return result;
+					});
+				}),
+				All.api.Href.query(trx).where('_parent_id', site._id).del()
+			]);
+		});
+	});
 };
 exports.del.schema = {
 	$action: 'del',
@@ -194,10 +227,11 @@ exports.del.schema = {
 	}
 };
 
+// export all data but files
 exports.export = function(data) {
-	return exports.get(data).eager(`[children(ones)]`, {
-		ones: function(builder) {
-			return builder.select('_id').where('standalone', true);
+	return exports.get(data).eager(`[children(lones)]`, {
+		lones: function(builder) {
+			return builder.select('_id').where('standalone', true).orderByRaw("data->>'url' IS NOT NULL");
 		}
 	}).then(function(site) {
 		var children = site.children;
@@ -209,19 +243,68 @@ exports.export = function(data) {
 		var last = children.length - 1;
 		children.reduce(function(p, child, i) {
 			return p.then(function() {
-				return All.api.Block.query().select().omit(['tsv', '_id']).first().where('_id', child._id)
-				.eager('children(notones)', {
-					notones: function(builder) {
+				return All.api.Block.query()
+				.select().omit(['tsv', '_id'])
+				.first().where('_id', child._id)
+				.eager('[children(notlones) as children,children(lones) as standalones]', {
+					notlones: function(builder) {
 						return builder.select().omit(['tsv', '_id']).where('standalone', false);
+					},
+					lones: function(builder) {
+						return builder.select('block.id').where('standalone', true);
 					}
-				}).then(function(standalone) {
-					out.write(JSON.stringify(standalone));
+				}).then(function(lone) {
+					if (lone.standalones.length > 0) {
+						if (!lone.data || !lone.data.url) {
+							console.warn("standalone block without url has standalone children", lone);
+							delete lone.standalones;
+						}
+					} else {
+						delete lone.standalones;
+					}
+					out.write(JSON.stringify(lone));
 					if (i != last) out.write(',');
 				});
 			});
 		}, Promise.resolve()).then(function() {
-			out.write(']}');
-			out.end();
+			out.write('],\n"hrefs": [');
+			return All.api.Href.query().select()
+			.omit(['tsv', '_id', '_parent_id']).whereSite(site.id).then(function(hrefs) {
+				var last = hrefs.length - 1;
+				hrefs.forEach(function(href, i) {
+					out.write(JSON.stringify(href));
+					if (i != last) out.write(',');
+				});
+			});
+		}).then(function() {
+			// TODO extend to any non-standalone block that is child of user or settings
+			// TODO fix calendar so that reservations are made against a user, not against its settings
+			out.write('],\n"settings": [');
+			return site.$relatedQuery('children').where('block.type', 'settings')
+			.select().eager('parents(user) as user', {
+				user: function(builder) {
+					return builder.select(
+						ref('data:email').castText().as('email')
+					).where('block.type', 'user');
+				}
+			}).joinRelation('parents', {alias: 'site'})
+			.where('site.type', 'site').then(function(settings) {
+				var last = settings.length - 1;
+				settings.forEach(function(setting, i) {
+					var user = setting.user;
+					delete setting.user;
+					if (user.length == 0) return;
+					user = user[0];
+					if (!user.email) return;
+					setting._email = user.email;
+					out.write(JSON.stringify(setting));
+					if (i != last) out.write(',');
+				});
+			});
+		}).then(function() {
+			out.end(']}');
+		}).catch(function(err) {
+			out.emit('error', err);
 		});
 		return out;
 	});
@@ -238,3 +321,172 @@ exports.export.schema = {
 	}
 };
 
+// import all data but files
+exports.import = function(data) {
+	var Block = All.api.Block;
+	return All.api.transaction(function(trx) {
+		var p = Promise.resolve();
+		const fstream = createReadStream(data.file);
+		const pstream = new PassThrough({
+			objectMode: true,
+			highWaterMark: 1
+		});
+		var site;
+		var standalones = {};
+		var oldmap = {};
+		pstream.on('data', function(obj) {
+			p = p.then(function() {
+				if (obj.site) {
+					obj.site.id = data.id;
+					return Block.query(trx).insert(obj.site).returning('*').then(function(copy) {
+						site = copy;
+					});
+				} else if (obj.lone) {
+					var lone = obj.lone;
+					var map = {};
+					return Promise.all([
+						Block.genId().then(function(id) {
+							var old = lone.id;
+							lone.id = id;
+							oldmap[old] = id;
+							map[id] = new RegExp(`block-id="${old}"`, 'g');
+						})
+					].concat(lone.children.map(function(child) {
+						return Block.genId().then(function(id) {
+							var old = child.id;
+							child.id = id;
+							map[id] = new RegExp(`block-id="${old}"`, 'g');
+						});
+					}))).then(function() {
+						lone['#id'] = "#lone";
+						var lones = lone.standalones;
+						var lonesRefs = [];
+						if (lones) {
+							delete lone.standalones;
+							lones.forEach(function(rlone) {
+								// relate lone to rlone
+								var id = oldmap[rlone.id];
+								if (!id) {
+									throw new Error("unknown standalone " + rlone.id);
+								}
+								map[id] = new RegExp(`block-id="${rlone.id}"`, 'g');
+								var _id = standalones[id];
+								if (!_id) {
+									console.error(rlone, id);
+									throw new Error("standalone not yet inserted " + rlone.id);
+								}
+								lonesRefs.push({
+									"#dbRef": _id
+								});
+							});
+						}
+						lone.children.forEach(function(child) {
+							replaceContent(map, child);
+							child.parents = [{
+								"#dbRef": site._id
+							}, {
+								"#ref": "#lone"
+							}];
+						});
+						lone.children = lone.children.concat(lonesRefs);
+						replaceContent(map, lone);
+					}).then(function() {
+						return site.$relatedQuery('children', trx).insertGraph(lone).then(function(obj) {
+							standalones[lone.id] = obj._id;
+						});
+					});
+				} else if (obj.href) {
+					var href = obj.href;
+					if (href.pathname) {
+						href.pathname = href.pathname.replace(/\/uploads\/[^/]+\//, `/uploads/${site.id}/`);
+					}
+					return site.$relatedQuery('hrefs', trx).insert(href).catch(function(err) {
+						console.error(err, href);
+						throw err;
+					});
+				} else if (obj.setting) {
+					var setting = obj.setting;
+					return Block.query(trx)
+					.whereJsonText('data:email', setting._email)
+					.where('type', 'user').first().then(function(user) {
+						delete setting._email;
+						if (!user) return;
+						return Block.genId().then(function(id) {
+							setting.id = id;
+							setting.parents = [{'#dbRef': user._id}];
+							return site.$relatedQuery('children', trx).insertGraph(setting);
+						});
+					});
+				}
+			});
+		});
+
+		const jstream = require('oboe')(fstream);
+		jstream.node('!.site', function(data) {
+			pstream.write({site: data});
+		});
+		jstream.node('!.standalones[*]', function(data) {
+			pstream.write({lone: data});
+		});
+		jstream.node('!.hrefs[*]', function(data) {
+			pstream.write({href: data});
+		});
+		jstream.node('!.settings[*]', function(data) {
+			pstream.write({setting: data});
+		});
+		jstream.on('end', function() {
+			pstream.end();
+		});
+		jstream.on('fail', function(failObj) {
+			pstream.emit('error', failObj);
+		});
+
+		var q = new Promise(function(resolve, reject) {
+			pstream.on('error', function(err) {
+				reject(err);
+			});
+			pstream.on('finish', function() {
+				resolve();
+			});
+		});
+		return q.then(function() {
+			return p;
+		});
+	});
+};
+exports.import.schema = {
+	$action: 'write',
+	required: ['id'],
+	properties: {
+		id: {
+			type: 'string',
+			format: 'id'
+		},
+		file: {
+			type: 'string'
+		}
+	}
+};
+
+function replaceContent(map, block) {
+	if (!block.content) return;
+	if (typeof block.content != "object") {
+		console.error(block);
+		throw new Error("content not object");
+	}
+	Object.entries(block.content).forEach(function([key,str]) {
+		if (!str) return;
+		for (var id in map) {
+			str = str.replace(map[id], `block-id="${id}"`);
+		}
+		block.content[key] = str;
+	});
+}
+
+exports.gc = function() {
+	// deletes all blocks that belong to no site
+	return All.api.Href.raw(`DELETE FROM block
+WHERE block.type NOT IN ('site', 'user') AND NOT EXISTS (SELECT c._id FROM block c, relation r, block p
+WHERE c._id = block._id AND r.child_id = c._id AND p._id = r.parent_id AND p.type IN ('site', 'user')
+GROUP BY c._id HAVING count(*) >= 1)`);
+};
