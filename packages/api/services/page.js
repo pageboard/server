@@ -173,11 +173,10 @@ exports.get = function(site, data) {
 		delete page.hrefs;
 		if (page.data.url == null) return obj;
 
-		var pageUrl = page.data.url || data.url;
 		return Promise.all([
-			getParents(site, pageUrl),
+			getParents(site, data.url),
 			listPages(site, {
-				parent: pageUrl.split('/').slice(0, -1).join('/') || '/'
+				parent: data.url.split('/').slice(0, -1).join('/') || '/'
 			}).clearSelect().select([
 				ref('block.data:url').as('url'),
 				ref('block.data:redirect').as('redirect'),
@@ -187,7 +186,7 @@ exports.get = function(site, data) {
 			links.up = list[0].map(redUrl);
 			var siblings = list[1];
 			var position = siblings.findIndex(function(item) {
-				return item.url == pageUrl;
+				return item.url == data.url;
 			});
 			if (position > 0) links.prev = redUrl(siblings[position - 1]);
 			if (position < siblings.length - 1) links.next = redUrl(siblings[position + 1]);
