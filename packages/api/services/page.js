@@ -205,6 +205,10 @@ exports.get.schema = {
 		url: {
 			type: 'string',
 			format: 'pathname'
+		},
+		user: {
+			type: 'object',
+			nullable: true
 		}
 	}
 };
