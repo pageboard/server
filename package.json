@@ -23,6 +23,7 @@
     "@pageboard/auth": "0.6.x",
     "@pageboard/cache": "0.6.x",
     "@pageboard/core": "0.6.x",
+    "@pageboard/feed": "0.6.x",
     "@pageboard/github-webhook": "0.6.x",
     "@pageboard/image": "0.6.x",
     "@pageboard/inspector": "0.6.x",

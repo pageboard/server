@@ -251,7 +251,9 @@ function listPages(site, data) {
 		});
 	}
 	if (data.parent) {
-		q.whereJsonText('block.data:url', '~', `^${data.parent}/[^/]+$`)
+		var regexp = data.home ? `^${data.parent}(/[^/]+)?$` : `^${data.parent}/[^/]+$`;
+		if (data.home) q.orderByRaw("block.data->>'url' = ? DESC", data.parent);
+		q.whereJsonText('block.data:url', '~', regexp)
 		.orderBy(ref('block.data:index'));
 	} else if (data.url) {
 		q.whereJsonText('block.data:url', 'LIKE', `${data.url || ''}%`);
@@ -378,19 +380,25 @@ exports.search.external = true;
 exports.list = function(site, data) {
 	return listPages(site, data).then(function(pages) {
 		var els = {};
-		site.$pagetypes.forEach(function(type) {
-			var schema = site.$schema(type);
-			els[type] = schema;
-		});
-		return {
-			items: pages,
-			item: {
-				type: 'sitemap'
-			},
-			meta: {
-				elements: els
-			}
+		var obj = {
+			items: pages
 		};
+		if (data.home) {
+			obj.item = pages.shift();
+			if (obj.item && obj.item.data.url != data.parent) delete obj.item;
+		} else {
+			site.$pagetypes.forEach(function(type) {
+				var schema = site.$schema(type);
+				els[type] = schema;
+			});
+			obj.item = {
+				type: 'sitemap'
+			};
+			obj.meta = {
+				elements: els
+			};
+		}
+		return obj;
 	});
 };
 exports.list.schema = {
@@ -398,8 +406,14 @@ exports.list.schema = {
 	$action: 'read',
 	properties: {
 		parent: {
+			title: 'Root pathname',
 			type: 'string',
 			format: 'pathname'
+		},
+		home: {
+			title: 'Returns root as first item',
+			type: 'boolean',
+			default: false
 		},
 		url: {
 			type: 'string',
