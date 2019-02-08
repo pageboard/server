@@ -5,15 +5,19 @@ exports = module.exports = function(opt) {
 		priority: -9, // because default prerendering happens at 0
 		name: 'feed',
 		view: function(All) {
-			All.app.get(/^(\/[a-zA-Z0-9-]*|(\/[a-zA-Z0-9-]+)+)\.rss$/, function(req, res, next) {
-				All.run('feed.get', req.site, {
-					url: req.params[0],
-					query: req.query
-				}).then(function(xml) {
-					res.type("application/xml");
-					res.send(xml);
-				}).catch(next);
-			});
+			All.app.get(
+				/^(\/[a-zA-Z0-9-]*|(\/[a-zA-Z0-9-]+)+)\.rss$/,
+				All.auth.restrict('*'),	All.cache.tag('data-:site'),
+				function(req, res, next) {
+					All.run('feed.get', req.site, {
+						url: req.params[0],
+						query: req.query
+					}).then(function(xml) {
+						res.type("application/xml");
+						res.send(xml);
+					}).catch(next);
+				}
+			);
 		}
 	};
 };
