@@ -78,20 +78,10 @@ exports.validate = function(site, pkg) {
 		site.$resources = pkg.eltsMap.site.resources;
 		site.$stylesheets = pkg.eltsMap.site.stylesheets;
 		site.constructor = pkg.Block;
-		site.$grants = prepareGrants(pkg.Block);
 		delete pkg.eltsMap;
 		delete pkg.Block;
 	});
 };
-
-function prepareGrants(DomainBlock) {
-	var grants = {};
-	var list = DomainBlock.schema('settings.data.grants').items.anyOf || [];
-	list.forEach(function(grant, i) {
-		grants[grant.const] = grant.$level;
-	});
-	return grants;
-}
 
 function sortPriority(list) {
 	list.sort(function(a, b) {

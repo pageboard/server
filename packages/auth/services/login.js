@@ -156,20 +156,6 @@ function verifyToken(email, token) {
 	});
 }
 
-function allowScopes(requestedGrants, ownGrants) {
-	if (!requestedGrants.length) return {};
-	var scopes = {};
-	if (!requestedGrants.every(function(grant) {
-		if (grant == "user" || ownGrants.includes(grant)) {
-			scopes[grant] = true;
-			return true;
-		} else {
-			return false;
-		}
-	})) return false;
-	else return scopes;
-}
-
 exports.grant = function(site, data) {
 	return verifyToken(data.email, data.token).then(function(verified) {
 		if (!verified) throw new HttpError.BadRequest("Bad token");
@@ -178,10 +164,11 @@ exports.grant = function(site, data) {
 		}).then(function(settings) {
 			var userGrants = settings.data && settings.data.grants || [];
 			if (userGrants.length == 0) userGrants.push('user'); // the minimum grant
-			var scopes = allowScopes(data.grants, userGrants);
-			if (!scopes) {
-				throw new HttpError.Forbidden("Insufficient grants");
+			if (All.auth.locked(site, userGrants, [data.grant])) {
+				throw new HttpError.Forbidden("User has insufficient grants");
 			}
+			var scopes = {};
+			scopes[data.grant] = true;
 			return {
 				grants: scopes,
 				item: settings,
@@ -203,7 +190,7 @@ exports.grant.schema = {
 	title: 'Grant',
 	description: 'Sets cookie with grants',
 	$action: 'write',
-	required: ['email', 'token', 'grants'],
+	required: ['email', 'token', 'grant'],
 	properties: {
 		email: {
 			title: 'Email',
@@ -215,24 +202,14 @@ exports.grant.schema = {
 			type: 'string',
 			pattern: '\\d{6}'
 		},
-		grants: {
-			title: 'Grants',
-			type: 'array',
-			uniqueItems: true,
-			items: {
-				anyOf: [{
-					const: 'webmaster',
-					title: 'Webmaster',
-					description: 'site developer'
-				}, {
-					const: 'writer',
-					title: 'Writer',
-					description: 'content editor'
-				}, {
-					const: 'user',
-					title: 'User',
-					description: 'public user'
-				}]
+		grant: {
+			title: 'Grant',
+			type: 'string',
+			format: 'id',
+			$filter: {
+				name: 'schema',
+				from: 'settings.properties.grants.items.anyOf',
+				to: 'anyOf'
 			}
 		}
 	}
@@ -246,7 +223,7 @@ exports.link = function(site, data) {
 			pathname: "/.api/login",
 			query: {
 				email: data.email,
-				grants: 'webmaster',
+				grant: 'webmaster',
 				token: token
 			}
 		});
@@ -255,21 +232,17 @@ exports.link = function(site, data) {
 exports.link.schema = {
 	title: 'Internal login link',
 	$action: 'write',
-	required: ['email', 'grants'],
+	required: ['email', 'grant'],
 	properties: {
 		email: {
 			title: 'Email',
 			type: 'string',
 			format: 'email'
 		},
-		grants: {
-			title: 'Grants',
-			type: 'array',
-			uniqueItems: true,
-			items: {
-				type: 'string',
-				format: 'id'
-			}
+		grant: {
+			title: 'Grant',
+			type: 'string',
+			format: 'id'
 		},
 		register: {
 			title: 'Register',

@@ -241,74 +241,9 @@ All.send = function(res, obj) {
 	if (obj.location) {
 		res.redirect(obj.location);
 	} else {
-		All.filter(res.req.site, (res.req.user || {}).scopes, obj);
+		All.auth.filterResponse(res.req.site, (res.req.user || {}).scopes, obj);
 		res.json(obj);
 	}
 };
-
-All.filter = function(site, scopes, obj) {
-	if (!obj.item && !obj.items) {
-		return unlock(site, scopes, obj);
-	}
-	if (obj.item) {
-		var item = unlock(site, scopes, obj.item, 'read');
-		if (!item) throw new HttpError.Unauthorized("Insufficient permissions");
-	}
-	if (obj.items) obj.items = obj.items.filter(function(item) {
-		return unlock(site, scopes, item, 'read');
-	});
-};
-
-All.isLocked = isLocked;
-All.unlock = unlock;
-
-function isLocked(site, scopes, locks) {
-	if (locks == null) return false;
-	if (typeof locks == "string") locks = [locks];
-	if (locks.length == 0) return false;
-	if (!scopes) scopes = {};
-	var maxIndex = -1;
-	Object.keys(scopes).forEach(function(scope) {
-		maxIndex = Math.max(site.$grants[scope] || maxIndex);
-	});
-
-	return !locks.some(function(lock) {
-		var lockIndex = site.$grants[lock] || -1;
-		return lockIndex < maxIndex || scopes[lock];
-	});
-}
-
-function unlock(site, scopes, item, action) {
-	if (!item.type) return item;
-	if (item.children) {
-		item.children = item.children.filter(function(item) {
-			return unlock(site, scopes, item, action);
-		});
-	}
-	var schema = site.$schema(item.type) || {}; // old types might not have schema
-	var $lock = schema.$lock || {};
-	var lock = (item.lock || {})[action] || [];
-
-	if (Object.keys($lock).length == 0 && lock.length == 0) return item;
-	var locks = {
-		'*': lock
-	};
-	if (typeof $lock != "object") $lock = { '*': $lock };
-	locks = Object.assign({}, locks, $lock);
-	if (isLocked(site, scopes, locks['*'])) return;
-	delete locks['*'];
-	Object.keys(locks).forEach(function(path) {
-		var list = locks[path];
-		path = path.split('.');
-		path.reduce(function(obj, val, index) {
-			if (obj == null) return;
-			if (index == path.length - 1) {
-				if (isLocked(site, scopes, list)) delete obj[val];
-			}
-			return obj[val];
-		}, item);
-	});
-	return item;
-}
 
 

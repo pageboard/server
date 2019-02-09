@@ -24,7 +24,7 @@ exports.query = function(site, data) {
 	return All.run('block.get', site, {
 		id: data.id
 	}).then(function(form) {
-		if (All.isLocked(site, data.user.scopes, (form.lock || {}).read)) {
+		if (All.auth.locked(site, Object.keys(data.user.scopes || {}), (form.lock || {}).read)) {
 			throw HttpError.Unauthorized("Check user permissions");
 		}
 		if (!form) throw HttpError.Unauthorized("Check user permissions");

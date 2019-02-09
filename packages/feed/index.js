@@ -30,7 +30,7 @@ exports.get = function(site, data) {
 	}).then(function(obj) {
 		var home = obj.item;
 		if (!home || home.data.url != data.url) throw new HttpError.NotFound("No feed");
-		All.filter(site, (data.user || {}).scopes, obj);
+		All.auth.filterResponse(site, (data.user || {}).scopes, obj);
 		return Feed(site, obj.item, obj.items).rss2(); // atom1 json1
 	});
 };

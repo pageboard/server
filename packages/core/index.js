@@ -149,6 +149,8 @@ function install(site) {
 				return All.api.validate(site, pkg);
 			});
 		}).then(function() {
+			return All.auth.install(site);
+		}).then(function() {
 			return All.cache.install(site);
 		}).then(function() {
 			return Install.clean(site, pkg, All.opt);
