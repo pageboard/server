@@ -7,7 +7,7 @@ exports = module.exports = function(opt) {
 		view: function(All) {
 			All.app.get(
 				/^(\/[a-zA-Z0-9-]*|(\/[a-zA-Z0-9-]+)+)\.rss$/,
-				All.auth.restrict('*'),	All.cache.tag('data-:site'),
+				All.auth.restrict('*'),	All.cache.tag('data-:site').for('1 day'),
 				function(req, res, next) {
 					All.run('feed.get', req.site, {
 						url: req.params[0],
