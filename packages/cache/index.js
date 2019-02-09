@@ -5,7 +5,6 @@ var fs = {
 	writeFile: pify(require('fs').writeFile),
 	statSync: pify(require('fs').statSync)
 };
-var Glob = require('glob').Glob;
 var Path = require('path');
 var Stringify = require('fast-json-stable-stringify');
 var crypto = require('crypto');
