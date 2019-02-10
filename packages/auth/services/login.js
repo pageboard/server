@@ -208,8 +208,7 @@ exports.grant.schema = {
 			format: 'id',
 			$filter: {
 				name: 'schema',
-				from: 'settings.properties.grants.items.anyOf',
-				to: 'anyOf'
+				path: 'settings.properties.grants.items'
 			}
 		}
 	}
