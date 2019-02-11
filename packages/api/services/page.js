@@ -11,7 +11,11 @@ exports = module.exports = function(opt) {
 
 function init(All) {
 	All.app.get('/.api/page', function(req, res, next) {
-		if (All.auth.test(req, 'webmaster') && req.query.develop != "write") {
+		// FIXME
+		// THIS IS CATASTROPHIC as it varies the cache with the 301 redirection to the version
+		// without develop parameter
+		var isWebmaster = !All.auth.locked(req.site, Object.keys((req.user || {}).scopes || {}), ['webmaster']);
+		if (isWebmaster && req.query.develop != "write") {
 			All.send(res, {
 				item: {
 					type: 'write',
@@ -31,7 +35,8 @@ function init(All) {
 		}
 	});
 	All.app.get('/.api/pages', function(req, res, next) {
-		if (All.auth.test(req, 'webmaster')) {
+		var isWebmaster = !All.auth.locked(req.site, Object.keys((req.user || {}).scopes || {}), ['webmaster']);
+		if (isWebmaster) {
 			// webmaster want to see those anyway
 			// this must not be confused with page.lock
 			req.query.drafts = true;

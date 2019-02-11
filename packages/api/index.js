@@ -113,8 +113,6 @@ function init(All) {
 	// api depends on site files
 	All.app.get('/.api/*', All.cache.tag('app-:site'));
 	All.app.use('/.api/*',
-		// varies on any permission
-		All.auth.restrict('*'),
 		// invalid site by site
 		All.cache.tag('data-:site'),
 		// parse json bodies

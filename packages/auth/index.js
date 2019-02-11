@@ -26,7 +26,6 @@ function init(All) {
 		var scope = upcacheScope(opt.scope);
 
 		All.auth.restrict = scope.restrict.bind(scope);
-		All.auth.test = scope.test.bind(scope);
 		All.auth.sign = scope.sign.bind(scope);
 
 		All.app.use(All.auth.restrict('*'));
