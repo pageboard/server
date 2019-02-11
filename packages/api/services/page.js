@@ -132,6 +132,8 @@ exports.get = function(site, data) {
 		status: 200,
 		site: site.data
 	};
+	var wkp = /^\/\.well-known\/(\d{3})$/.exec(data.url);
+	if (wkp) obj.status = parseInt(wkp[1]);
 	return QueryPage(site).whereIn('page.type', site.$pagetypes)
 	.whereJsonText("page.data:url", data.url)
 	.select(
