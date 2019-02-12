@@ -92,6 +92,15 @@ function filter(site, scopes, item, action) {
 			return filter(site, scopes, item, action);
 		});
 	}
+	if (item.parents) {
+		item.parents = item.parents.filter(function(item) {
+			return filter(site, scopes, item, action);
+		});
+	}
+	if (item.parent) {
+		item.parent = filter(site, scopes, item.parent, action);
+		if (!item.parent) return;
+	}
 	var schema = site.$schema(item.type) || {}; // old types might not have schema
 	var $lock = schema.$lock || {};
 	var lock = (item.lock || {})[action] || [];
