@@ -491,7 +491,12 @@ exports.add.external = true;
 
 exports.save = function(site, data) {
 	return exports.get(site, data).forUpdate().then(function(block) {
-		return block.$query(site.trx).patchObject({type: block.type, data: data.data}).then(function() {
+		var obj ={
+			type: block.type,
+			data: data.data
+		};
+		if (data.lock) obj.lock = data.lock;
+		return block.$query(site.trx).patchObject(obj).then(function() {
 			if (!block) throw new Error(`Block not found for update ${data.id}`);
 			return block;
 		});
