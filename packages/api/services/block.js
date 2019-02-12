@@ -478,6 +478,7 @@ exports.add.schema = {
 		parents: { // updated by element filter
 			title: 'parents',
 			type: 'array',
+			nullable: true,
 			$filter: 'relation'
 		},
 		data: { // updated by element filter
