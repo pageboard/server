@@ -527,6 +527,9 @@ exports.save.schema = {
 			title: 'data',
 			type: 'object',
 			nullable: true
+		},
+		get lock() {
+			return All.api.Block.jsonSchema.properties.lock;
 		}
 	}
 };
