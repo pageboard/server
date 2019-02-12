@@ -42,12 +42,21 @@ exports.submit = function(site, data) {
 		// build body
 		var body = data.body;
 		if (params.type && Object.keys(body).length > 0) {
-			body = {data: body};
-			if (body.data.id) {
-				// because this is so expected
-				body.id = body.data.id;
-				delete body.data.id;
-			}
+			var el = site.$schema(params.type);
+			if (!el) throw new HttpError.BadRequest("Unknown element type " + params.type);
+			var newBody = {data: {}};
+			Object.keys((el.properties.data || {}).properties || {}).forEach(function(key) {
+				var val = body[key];
+				if (val !== undefined) {
+					newBody.data[key] = val;
+					delete body[key];
+				}
+			});
+			Object.keys(el.properties).forEach(function(key) {
+				var val = body[key];
+				if (val !== undefined) newBody[key] = val;
+			});
+			body = newBody;
 		}
 		body = All.utils.mergeObjects(body, params);
 
