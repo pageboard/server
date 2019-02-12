@@ -259,4 +259,5 @@ class InstancePatchObjectOperation extends InstanceUpdateOperation {
 }
 
 InstancePatchObjectOperation.prototype.onBuildKnex = PatchObjectOperation.prototype.onBuildKnex;
+InstancePatchObjectOperation.prototype.convertFieldExpressionsToRaw = PatchObjectOperation.prototype.convertFieldExpressionsToRaw;
 
