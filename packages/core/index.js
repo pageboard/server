@@ -12,7 +12,6 @@ var xdg = require('xdg-basedir');
 var resolvePkg = require('resolve-pkg');
 var pkgup = require('pkg-up');
 var debug = require('debug')('pageboard:core');
-var csp = require('content-security-policy-builder');
 var http = require('http');
 
 var Domains = require('./lib/domains');
@@ -268,16 +267,6 @@ function createApp(All) {
 	app.set("env", opt.env);
 	app.disable('x-powered-by');
 	app.enable('trust proxy');
-	var cspDefault = ["'self'", 'https:'];
-	var cspHeader = csp({
-		directives: {
-			defaultSrc: cspDefault,
-			scriptSrc: cspDefault.concat(["'unsafe-eval'"]),
-			styleSrc: cspDefault.concat(["'unsafe-inline'"]),
-			fontSrc: cspDefault.concat(["data:"]),
-			imgSrc: cspDefault.concat(["data:"])
-		}
-	});
 	app.use(All.domains.init);
 	app.use(function(req, res, next) {
 		if (req.path == "/.well-known/pageboard") {
@@ -289,7 +278,6 @@ function createApp(All) {
 			res.setHeader('X-XSS-Protection','1;mode=block');
 			res.setHeader('X-Frame-Options', 'SAMEORIGIN');
 			res.setHeader('X-Content-Type-Options', 'nosniff');
-			res.setHeader('Content-Security-Policy', cspHeader);
 			next();
 		}
 	});
