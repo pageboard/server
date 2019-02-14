@@ -18,7 +18,7 @@ var UpdateOperation = require(
 		'..',
 		'queryBuilder/operations/UpdateOperation'
 	)
-);
+).UpdateOperation;
 
 var InstanceUpdateOperation = require(
 	require('path').join(
@@ -26,7 +26,7 @@ var InstanceUpdateOperation = require(
 		'..',
 		'queryBuilder/operations/InstanceUpdateOperation'
 	)
-);
+).InstanceUpdateOperation;
 
 exports.Model = class CommonModel extends DbErrors(Model) {
 	$query(trx) {
