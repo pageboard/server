@@ -14,7 +14,7 @@ function init(All) {
 		// FIXME
 		// THIS IS CATASTROPHIC as it varies the cache with the 301 redirection to the version
 		// without develop parameter
-		var isWebmaster = !All.auth.locked(req.site, Object.keys((req.user || {}).scopes || {}), ['webmaster']);
+		var isWebmaster = !All.auth.locked(req.site, req.user, ['webmaster']);
 		if (isWebmaster && req.query.develop != "write") {
 			All.send(res, {
 				item: {
@@ -26,16 +26,15 @@ function init(All) {
 			});
 		} else {
 			delete req.query.develop;
-			All.run('page.get', req.site, {
-				url: req.query.url,
-				user: req.user || {}
+			All.run('page.get', req.site, req.user, {
+				url: req.query.url
 			}).then(function(data) {
 				All.send(res, data);
 			}).catch(next);
 		}
 	});
 	All.app.get('/.api/pages', function(req, res, next) {
-		var isWebmaster = !All.auth.locked(req.site, Object.keys((req.user || {}).scopes || {}), ['webmaster']);
+		var isWebmaster = !All.auth.locked(req.site, req.user, ['webmaster']);
 		if (isWebmaster) {
 			// webmaster want to see those anyway
 			// this must not be confused with page.lock
@@ -74,7 +73,7 @@ function init(All) {
 	All.app.get('/.well-known/sitemap.txt', function(req, res, next) {
 		All.run('page.list', req.site, {}).then(function(obj) {
 			res.type('text/plain');
-			All.filter(req.site, (req.user || {}).scopes, obj);
+			All.filter(req.site, req.user, obj);
 			res.send(obj.items.map(page => req.site.href + page.data.url).join('\n'));
 		}).catch(next);
 	});
@@ -132,7 +131,7 @@ function QueryPageHref(site) {
 	});
 }
 
-exports.get = function(site, data) {
+exports.get = function(site, user, data) {
 	var obj = {
 		status: 200,
 		site: site.data
@@ -147,7 +146,7 @@ exports.get = function(site, data) {
 	).then(function(page) {
 		if (!page) {
 			obj.status = 404;
-		} else if (All.auth.locked(site, Object.keys((data.user || {}).scopes || {}), (page.lock || {}).read)) {
+		} else if (All.auth.locked(site, user, (page.lock || {}).read)) {
 			obj.status = 401;
 		}
 		if (obj.status != 200) {

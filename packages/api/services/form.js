@@ -10,22 +10,21 @@ function init(All) {
 		next(new HttpError.MethodNotAllowed("Only post allowed"));
 	});
 	All.app.post("/.api/form/:id", function(req, res, next) {
-		All.run('form.submit', req.site, {
+		All.run('form.submit', req.site, req.user, {
 			id: req.params.id,
 			query: All.utils.unflatten(req.query),
-			body: All.utils.unflatten(req.body),
-			user: req.user || {}
+			body: All.utils.unflatten(req.body)
 		}).then(function(data) {
 			All.send(res, data);
 		}).catch(next);
 	});
 }
 
-exports.submit = function(site, data) {
+exports.submit = function(site, user, data) {
 	return All.run('block.get', site, {
 		id: data.id
 	}).then(function(form) {
-		if (All.auth.locked(site, Object.keys(data.user.scopes || {}), (form.lock || {}).write)) {
+		if (All.auth.locked(site, user, (form.lock || {}).write)) {
 			throw HttpError.Unauthorized("Check user permissions");
 		}
 		var fd = form.data || {};
@@ -35,7 +34,7 @@ exports.submit = function(site, data) {
 		var expr = ((form.expr || {}).action || {}).parameters || {};
 		var params = All.utils.mergeParameters(expr, {
 			$query: data.query,
-			$user: data.user
+			$user: user
 		});
 		params = All.utils.mergeObjects(params, fd.action.parameters);
 
@@ -60,7 +59,7 @@ exports.submit = function(site, data) {
 		}
 		body = All.utils.mergeObjects(body, params);
 
-		return All.run(method, site, body);
+		return All.run(method, site, user, body);
 	});
 };
 
@@ -73,10 +72,6 @@ exports.submit.schema = {
 			format: 'id'
 		},
 		query: {
-			type: 'object',
-			nullable: true
-		},
-		user: {
 			type: 'object',
 			nullable: true
 		},

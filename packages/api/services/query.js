@@ -7,10 +7,9 @@ exports = module.exports = function(opt) {
 
 function init(All) {
 	All.app.get("/.api/query/:id", function(req, res, next) {
-		All.run('search.query', req.site, {
+		All.run('search.query', req.site, req.user, {
 			id: req.params.id,
-			query: All.utils.unflatten(req.query),
-			user: req.user || {}
+			query: All.utils.unflatten(req.query)
 		}).then(function(data) {
 			All.send(res, data);
 		}).catch(next);
@@ -20,11 +19,11 @@ function init(All) {
 	});
 }
 
-exports.query = function(site, data) {
+exports.query = function(site, user, data) {
 	return All.run('block.get', site, {
 		id: data.id
 	}).then(function(form) {
-		if (All.auth.locked(site, Object.keys(data.user.scopes || {}), (form.lock || {}).read)) {
+		if (All.auth.locked(site, user, (form.lock || {}).read)) {
 			throw HttpError.Unauthorized("Check user permissions");
 		}
 		if (!form) throw HttpError.Unauthorized("Check user permissions");
@@ -35,10 +34,10 @@ exports.query = function(site, data) {
 		var expr = ((form.expr || {}).action || {}).parameters || {};
 		var params = All.utils.mergeParameters(expr, {
 			$query: data.query,
-			$user: data.user
+			$user: user
 		});
 		params = All.utils.mergeObjects(params, fd.action.parameters);
-		return All.run(method, site, params);
+		return All.run(method, site, user, params);
 	});
 };
 
@@ -51,10 +50,6 @@ exports.query.schema = {
 			format: 'id'
 		},
 		query: {
-			type: 'object',
-			nullable: true
-		},
-		user: {
 			type: 'object',
 			nullable: true
 		}

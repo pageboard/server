@@ -443,7 +443,7 @@ delete exports.find.schema.properties.limit;
 delete exports.find.schema.properties.offset;
 exports.find.external = true;
 
-exports.add = function(site, data) {
+exports.add = function(site, user, data) {
 	var parents = data.parents || [];
 	delete data.parents;
 
@@ -490,7 +490,7 @@ exports.add.schema = {
 };
 exports.add.external = true;
 
-exports.save = function(site, data) {
+exports.save = function(site, user, data) {
 	return exports.get(site, data).forUpdate().then(function(block) {
 		var obj ={
 			type: block.type,

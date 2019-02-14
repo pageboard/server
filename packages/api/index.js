@@ -152,8 +152,12 @@ All.run = function(apiStr) {
 		if (!mod) throw new HttpError.BadRequest(`Unknown api module ${modName}`);
 		var fun = mod[funName];
 		if (!fun) throw new HttpError.BadRequest(`Unknown api method ${funName}`);
-		if (args.length != fun.length) {
-			throw new HttpError.BadRequest(`Api method ${funName} expected ${fun.length} arguments, and got ${args.length} arguments`);
+		if (args.length < fun.length) {
+			throw new HttpError.BadRequest(`Api method ${funName} expected ${fun.length} arguments, and only got ${args.length} arguments`);
+		}
+		if (args.length == fun.length + 1 && args.length == 3) {
+			// drop user arg
+			args.splice(1, 1);
 		}
 		var data = args[args.length - 1] || {};
 		try {
@@ -163,7 +167,7 @@ All.run = function(apiStr) {
 			throw err;
 		}
 		// start a transaction on set trx object on site
-		var site = args.length == 2 ? args[0] : null;
+		var site = args.length >= 2 ? args[0] : null;
 		var hadTrx = false;
 		return Promise.resolve().then(function() {
 			if (!site) {
@@ -207,8 +211,9 @@ All.run = function(apiStr) {
 };
 
 All.send = function(res, obj) {
+	var req = res.req;
 	if (obj.cookies) {
-		var host = All.domains.hosts[res.req.hostname];
+		var host = All.domains.hosts[req.hostname];
 		var cookieParams = {
 			httpOnly: true,
 			sameSite: true,
@@ -230,7 +235,7 @@ All.send = function(res, obj) {
 	if (!obj.grants) {
 		// because req.user is not set on the request setting the cookie
 		// do not overwrite grants set by auth.login
-		obj.grants = (res.req.user || {}).scopes || {};
+		obj.grants = (req.user || {}).scopes || {};
 	}
 	if (obj.status) {
 		res.status(obj.status);
@@ -239,7 +244,7 @@ All.send = function(res, obj) {
 	if (obj.location) {
 		res.redirect(obj.location);
 	} else {
-		All.auth.filterResponse(res.req.site, (res.req.user || {}).scopes, obj);
+		All.auth.filterResponse(req.site, req.user, obj);
 		res.json(obj);
 	}
 };

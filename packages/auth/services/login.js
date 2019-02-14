@@ -164,7 +164,11 @@ exports.grant = function(site, data) {
 		}).then(function(settings) {
 			var userGrants = settings.data && settings.data.grants || [];
 			if (userGrants.length == 0) userGrants.push('user'); // the minimum grant
-			if (All.auth.locked(site, userGrants, [data.grant])) {
+			var userScopes = {};
+			userGrants.forEach(function(g) {
+				userScopes[g] = true;
+			});
+			if (All.auth.locked(site, {scopes: userScopes}, [data.grant])) {
 				throw new HttpError.Forbidden("User has insufficient grants");
 			}
 			var scopes = {};

@@ -66,12 +66,13 @@ function grantsLevels(DomainBlock) {
 	return grants;
 }
 
-function locked(site, grants, locks) {
+function locked(site, user, locks) {
 	if (locks == null) return false;
 	if (typeof locks == "string") locks = [locks];
 	if (locks.length == 0) return false;
+	if (!user) return true;
+	var grants = Object.keys(user.scopes || {});
 	var scopes = {};
-	if (!grants) grants = [];
 	var minLevel = Infinity;
 	grants.forEach(function(grant) {
 		scopes[grant] = true;
@@ -84,21 +85,20 @@ function locked(site, grants, locks) {
 	});
 }
 
-function filter(site, scopes, item, action) {
-	var grants = Object.keys(scopes || {});
+function filter(site, user, item, action) {
 	if (!item.type) return item;
 	if (item.children) {
 		item.children = item.children.filter(function(item) {
-			return filter(site, scopes, item, action);
+			return filter(site, user, item, action);
 		});
 	}
 	if (item.parents) {
 		item.parents = item.parents.filter(function(item) {
-			return filter(site, scopes, item, action);
+			return filter(site, user, item, action);
 		});
 	}
 	if (item.parent) {
-		item.parent = filter(site, scopes, item.parent, action);
+		item.parent = filter(site, user, item.parent, action);
 		if (!item.parent) return;
 	}
 	var schema = site.$schema(item.type) || {}; // old types might not have schema
@@ -111,7 +111,7 @@ function filter(site, scopes, item, action) {
 	};
 	if (typeof $lock != "object") $lock = { '*': $lock };
 	locks = Object.assign({}, locks, $lock);
-	if (locked(site, grants, locks['*'])) return;
+	if (locked(site, user, locks['*'])) return;
 	delete locks['*'];
 	Object.keys(locks).forEach(function(path) {
 		var list = locks[path];
@@ -119,7 +119,7 @@ function filter(site, scopes, item, action) {
 		path.reduce(function(obj, val, index) {
 			if (obj == null) return;
 			if (index == path.length - 1) {
-				if (locked(site, grants, list)) delete obj[val];
+				if (locked(site, user, list)) delete obj[val];
 			}
 			return obj[val];
 		}, item);
