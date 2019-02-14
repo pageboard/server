@@ -1,3 +1,5 @@
+const Path = require('path');
+
 module.exports = function(opt) {
 	return {
 		priority: 0,
@@ -23,7 +25,12 @@ function prerender(dom) {
 		var pattern = el && el.properties.data && el.properties.data.properties.url.pattern;
 		if (!pattern) throw new Error("Missing page element missing schema for data.url.pattern");
 		var urlRegex = new RegExp(pattern);
-		if (urlRegex.test(req.path) == false) {
+		var path = req.path;
+		var ext = Path.extname(path).substring(1);
+		if (ext && (All.opt.extnames || []).includes(ext)) {
+			path = path.slice(0, -ext.length - 1);
+		}
+		if (urlRegex.test(path) == false) {
 			settings.view = req.site.href + '/.well-known/404';
 			settings.load.disable = true;
 			settings.prepare.disable = true;

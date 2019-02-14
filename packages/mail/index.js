@@ -50,6 +50,7 @@ exports = module.exports = function(opt) {
 					else res.sendStatus(200);
 				}).catch(next);
 			});
+			All.opt.extnames.push('mail');
 			All.dom.settings.helpers.unshift(mailPlugin);
 		}
 	};
@@ -172,10 +173,8 @@ exports.send = function(site, data) {
 		if (!emailPage) throw new HttpError.NotFound("Page not found");
 		var emailUrl = site.href + emailPage.data.url;
 
-		return got(emailUrl, {
-			query: Object.assign(urlObj.query, {
-				$email: true
-			}),
+		return got(emailUrl + ".mail", {
+			query: urlObj.query,
 			retry: 0,
 			timeout: 10000
 		}).then(function(response) {

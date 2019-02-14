@@ -52,7 +52,8 @@ exports.config = function(pkgOpt) {
 			installer: "npm",  // or yarn
 			listen: 3000,
 			log: ':method :status :time :size :site:url'
-		}
+		},
+		extnames: []
 	});
 	symlinkDir(opt, 'sites');
 	symlinkDir(opt, 'uploads');
