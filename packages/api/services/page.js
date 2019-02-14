@@ -98,25 +98,17 @@ function QueryPage(site) {
 	});
 }
 
-function QueryPageHref(site) {
+function QueryPageHref(site, url) {
 	var hrefs = site.$model.hrefs;
-	return site.$model.query(site.trx).alias('site').where('site._id', site._id)
-	.joinRelation('children', {alias: 'page'}).clearSelect()
-	.first()
-	.select(
+	return All.api.Href.query(site.trx).select(
 		site.$raw(`jsonb_object_agg(
 			href.url,
 			jsonb_set(href.meta, '{mime}', to_jsonb(href.mime))
 		) AS hrefs`)
 	)
-	.join('relation AS r', {
-		'r.parent_id': 'page._id'
-	})
-	.join('block AS b', {
-		'b._id': 'r.child_id'
-	})
-	.where('b.standalone', false)
-	.join('href', function() {
+	.joinRelation('parent', {alias: 'site'})
+	.where('site._id', site._id)
+	.join('block as b', function() {
 		Object.keys(hrefs).forEach(function(type) {
 			this.orOn(function() {
 				this.on('b.type', site.$lit(type));
@@ -128,7 +120,20 @@ function QueryPageHref(site) {
 				});
 			});
 		}, this);
-	});
+	})
+	.where('b.standalone', false)
+	.join('relation AS r', {
+		'r.child_id': 'b._id'
+	})
+	.join('block AS page', {
+		'page._id': 'r.parent_id'
+	})
+	.whereIn('page.type', site.$pagetypes)
+	.whereJsonText('page.data:url', url)
+	.join('relation as rp', {
+		'rp.child_id': 'page._id'
+	})
+	.where('rp.parent_id', site._id);
 }
 
 exports.get = function(site, user, data) {
@@ -141,8 +146,7 @@ exports.get = function(site, user, data) {
 	return QueryPage(site).whereIn('page.type', site.$pagetypes)
 	.whereJsonText("page.data:url", data.url)
 	.select(
-		QueryPageHref(site).whereIn('page.type', site.$pagetypes)
-		.whereJsonText("page.data:url", data.url).as('hrefs')
+		QueryPageHref(site, data.url).as('hrefs')
 	).then(function(page) {
 		if (!page) {
 			obj.status = 404;
@@ -155,9 +159,7 @@ exports.get = function(site, user, data) {
 			.where('page.type', 'page')
 			.whereJsonText("page.data:url", statusUrl)
 			.select(
-				QueryPageHref(site)
-				.where('page.type', 'page')
-				.whereJsonText("page.data:url", statusUrl).as('hrefs')
+				QueryPageHref(site, statusUrl).as('hrefs')
 			).then(function(page) {
 				if (!page) throw new HttpError[obj.status]();
 				return page;
