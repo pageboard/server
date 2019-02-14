@@ -7,7 +7,7 @@ exports = module.exports = function(opt) {
 	};
 };
 
-exports.subscribe = function(site, data) {
+exports.subscribe = function(site, user, data) {
 	var [pSettings, pDate] = data.parents;
 	if (pSettings.type != "settings") throw new Error("Wrong parents, expected settings, event_date");
 	return All.run('block.find', site, Object.assign({}, pDate, {
@@ -50,7 +50,7 @@ exports.subscribe = function(site, data) {
 				throw new HttpError.BadRequest("Cannot reserve that much seats");
 			}
 
-			return All.run(blockMeth, site, resa).then(function(resa) {
+			return All.run(blockMeth, site, user, resa).then(function(resa) {
 				return eventDate.$query(site.trx).patch({
 					'data:reservations': total
 				}).then(function() {
