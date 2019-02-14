@@ -1,5 +1,5 @@
 module.exports = function(mw, settings, request, response) {
-	if (request.query.$email === undefined) return;
+	if (request.path.endsWith('.mail') == false) return;
 	settings.load.plugins = [
 		All.dom.plugins.prerender,
 		mailPlugin
