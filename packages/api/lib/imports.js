@@ -316,7 +316,7 @@ class MapProxy {
 				console.error(`Modifying ${key} element is not allowed`);
 				return false;
 			}
-			console.error("Assign, not set", key, "in", this.context.path);
+			console.error("Please avoid setting", key, "in", this.context.path, " - using Object.assign instead");
 			Object.assign(obj[key], val);
 			return false;
 		}
