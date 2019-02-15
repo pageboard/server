@@ -1,3 +1,5 @@
+var ref = require('objection').ref;
+
 exports = module.exports = function(opt) {
 	return {
 		name: 'settings'
@@ -31,7 +33,7 @@ exports.get.schema = {
 
 exports.find = function(site, data) {
 	var q = site.$relatedQuery('children').alias('settings')
-	.where('settings.type', 'settings').first().throwIfNotFound().select()
+	.where('settings.type', 'settings').first().throwIfNotFound().select().select(ref('user.data:email').as('email'))
 	.joinRelation('parents', {alias: 'user'}).where('user.type', 'user');
 	if (!data.id && !data.email) throw new HttpError.BadRequest("Missing id or email");
 	if (data.id) q.where('user.id', data.id);
