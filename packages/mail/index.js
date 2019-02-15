@@ -2,7 +2,6 @@ var NodeMailer = require('nodemailer');
 var AddressParser = require('nodemailer/lib/addressparser');
 var Mailgun = require('nodemailer-mailgun-transport');
 var got = require('got');
-var URL = require('url');
 
 // TODO https://nodemailer.com/dkim/
 // TODO https://postmarkapp.com/blog/differences-in-delivery-between-transactional-and-bulk-email
@@ -68,28 +67,23 @@ exports.receive = function(data) {
 		console.error('no senders', data.sender, data.from);
 		return false;
 	}
-	return All.run('user.get', {
-		email: senders
-	}).then(function(sender) {
-		return Promise.all(AddressParser(data.recipient).map(function(item) {
-			var parts = item.address.split('@');
-			if (parts.pop() != mailDomain) return false;
-			parts = parts[0].split('.');
-			if (parts.length != 2) return false;
-			var siteId = parts[0];
-			var userId = parts[1];
-			return Promise.all([
-				All.run('user.get', {id: userId}),
-				All.run('site.get', {id: siteId})
-			]).then(function([user, site]) {
+	return Promise.all(AddressParser(data.recipient).map(function(item) {
+		var parts = item.address.split('@');
+		if (parts.pop() != mailDomain) return false;
+		parts = parts[0].split('.');
+		if (parts.length != 2) return false;
+		return All.run('site.get', {id: parts[0]}).then(function(site) {
+			return Promise.all(All.run('settings.find', site, {
+				email: senders
+			}), All.run('settings.get', site, {id: parts[1]})).then(function([sender, settings]) {
 				return exports.to({
 					from: {
 						name: site.data.title,
 						address: `${site.id}.${sender.id}@${mailDomain}`
 					},
 					to: {
-						name: user.data.name || undefined,
-						address: user.data.email
+						name: settings.data.name || undefined,
+						address: settings.user.data.email
 					},
 					subject: data.subject,
 					html: data['stripped-html'],
@@ -99,8 +93,8 @@ exports.receive = function(data) {
 				if (err.status == 404) return false;
 				else throw err;
 			});
-		}));
-	}).then(function(arr) {
+		});
+	})).then(function(arr) {
 		return arr.some(ok => !!ok);
 	}).catch(function(err) {
 		if (err.status == 404) return false;
@@ -147,34 +141,38 @@ exports.to.schema = {
 };
 
 exports.send = function(site, data) {
-	var urlObj = URL.parse(data.url, true);
-	var list = [All.run('block.search', site, {
+	var list = [All.run('block.find', site, {
 		type: 'mail',
-		data: {url: urlObj.pathname}
+		data: {url: data.url}
 	})];
-	if (data.from) list.push(All.run('user.get', {
-		email: data.from
-	}));
-	list.push(Promise.all(data.to.map(function(id) {
-		return All.run('settings.get', site, {id: id}).then(function(settings) {
+	if (data.from) {
+		var p;
+		if (data.from.indexOf('@') > 0) p = All.run('settings.find', site, {email: data.from});
+		else p = All.run('settings.get', site, {id: data.from});
+		list.push(p.then(function(settings) {
+			return settings.id;
+		}));
+	}
+	list.push(Promise.all(data.to.map(function(to) {
+		if (to.indexOf('@') > 0) return All.run('settings.find', site, {email:to}).then(function(settings) {
+			return settings.email;
+		});
+		else return All.run('settings.get', site, {id:to}).then(function(settings) {
 			return settings.user.data.email;
 		});
 	})));
 
 	return Promise.all(list).then(function(rows) {
-		var pages = rows[0];
+		var emailPage = rows[0].item;
 		var from = defaultSender;
 		if (data.from) from = {
 			name: site.data.title,
-			address: `${site.id}.${rows[1].id}@${mailDomain}`
+			address: `${site.id}.${rows[1]}@${mailDomain}`
 		};
-
-		var emailPage = pages.items[0];
-		if (!emailPage) throw new HttpError.NotFound("Page not found");
 		var emailUrl = site.href + emailPage.data.url;
 
 		return got(emailUrl + ".mail", {
-			query: urlObj.query,
+			query: data.body,
 			retry: 0,
 			timeout: 10000
 		}).then(function(response) {
@@ -204,22 +202,38 @@ exports.send.schema = {
 		url: {
 			title: 'Mail page',
 			type: "string",
-			format: "uri-reference",
+			format: "pathname",
 			$helper: {
 				name: 'page',
-				title: 'Query',
-				description: 'Values can be [$query.xxx]',
-				query: true,
 				type: 'mail'
 			}
 		},
-		to: {
-			title: 'Recipients settings.id',
-			type: 'array',
-			items: {
+		from: {
+			title: 'Sender',
+			description: 'settings.id or email',
+			anyOf: [{
 				type: 'string',
 				format: 'id'
-			}
+			}, {
+				type: 'string',
+				format: 'email'
+			}]
+		},
+		to: {
+			title: 'Recipients',
+			description: 'list of settings.id or email',
+			type: 'array',
+			items: {anyOf: [{
+				type: 'string',
+				format: 'id'
+			}, {
+				type: 'string',
+				format: 'email'
+			}]}
+		},
+		body: {
+			title: 'Body',
+			type: 'object'
 		}
 	}
 };
