@@ -73,7 +73,7 @@ function init(All) {
 	All.app.get('/.well-known/sitemap.txt', function(req, res, next) {
 		All.run('page.list', req.site, {}).then(function(obj) {
 			res.type('text/plain');
-			All.filter(req.site, req.user, obj);
+			All.auth.filter(req.site, req.user, obj);
 			res.send(obj.items.map(page => req.site.href + page.data.url).join('\n'));
 		}).catch(next);
 	});
