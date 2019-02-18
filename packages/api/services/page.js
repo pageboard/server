@@ -48,17 +48,17 @@ function init(All) {
 		}).catch(next);
 	});
 	All.app.post('/.api/page', All.auth.restrict('webmaster'), function(req, res, next) {
-		All.run('page.add', req.site, req.body).then(function(page) {
+		All.run('page.add', req.site, req.user, req.body).then(function(page) {
 			res.send(page);
 		}).catch(next);
 	});
 	All.app.put('/.api/page', All.auth.restrict('webmaster'), function(req, res, next) {
-		All.run('page.save', req.site, req.body).then(function(page) {
+		All.run('page.save', req.site, req.user, req.body).then(function(page) {
 			res.send(page);
 		}).catch(next);
 	});
 	All.app.delete('/.api/page', All.auth.restrict('webmaster'), function(req, res, next) {
-		All.run('page.del', req.site, req.query).then(function(page) {
+		All.run('page.del', req.site, req.user, req.query).then(function(page) {
 			res.send(page);
 		}).catch(next);
 	});
@@ -455,7 +455,7 @@ exports.list.schema = {
 };
 exports.list.external = true;
 
-exports.save = function(site, changes) {
+exports.save = function(site, user, changes) {
 	changes = Object.assign({
 		// blocks removed from their standalone parent (grouped by parent)
 		unrelate: {},
@@ -508,25 +508,25 @@ exports.save = function(site, changes) {
 	}).then(function() {
 		// FIXME use site.$model.hrefs to track the blocks with href when saving,
 		// and check all new/changed href have matching row in href table
-		return applyUnrelate(site, changes.unrelate).then(function() {
-			return applyRemove(site, changes.remove);
+		return applyUnrelate(site, user, changes.unrelate).then(function() {
+			return applyRemove(site, user, changes.remove);
 		}).then(function() {
-			return applyAdd(site, changes.add);
+			return applyAdd(site, user, changes.add);
 		}).then(function(list) {
 			returning.update = list || [];
-			return applyUpdate(site, changes.update);
+			return applyUpdate(site, user, changes.update);
 		}).then(function(list) {
 			returning.update = returning.update.concat(list);
-			return applyRelate(site, changes.relate);
+			return applyRelate(site, user, changes.relate);
 		});
 	}).then(function(parts) {
 		return Promise.all(pages.update.map(function(child) {
 			if (!child.data.url || child.data.url.startsWith('/.')) return;
-			return All.href.save(site, {
+			return All.href.save(site, user, {
 				url: child.data.url,
 				title: child.data.title
 			}).catch(function(err) {
-				if (err.statusCode == 404) return All.href.add(site, {
+				if (err.statusCode == 404) return All.href.add(site, user, {
 					url: child.data.url
 				}).catch(function(err) {
 					console.error(err);
@@ -538,7 +538,7 @@ exports.save = function(site, changes) {
 		return Promise.all(pages.add.map(function(child) {
 			if (!child.data.url || child.data.url.startsWith('/.')) return;
 			// problem: added pages are not saved here
-			return All.href.add(site, {
+			return All.href.add(site, user, {
 				url: child.data.url
 			}).catch(function(err) {
 				console.error(err);
@@ -589,7 +589,7 @@ function stripHostname(site, block) {
 	}
 }
 
-function applyUnrelate(site, obj) {
+function applyUnrelate(site, user, obj) {
 	return Promise.all(Object.keys(obj).map(function(parentId) {
 		return site.$relatedQuery('children').where('block.id', parentId)
 		.first().throwIfNotFound().then(function(parent) {
@@ -600,13 +600,13 @@ function applyUnrelate(site, obj) {
 	}));
 }
 
-function applyRemove(site, list) {
+function applyRemove(site, user, list) {
 	if (!list.length) return;
 	return site.$relatedQuery('children').delete()
 	.whereIn('block.id', list).whereNot('standalone', true);
 }
 
-function applyAdd(site, list) {
+function applyAdd(site, user, list) {
 	if (!list.length) return;
 	// this relates site to inserted children
 	return site.$relatedQuery('children').insert(list).returning('*').then(function(rows) {
@@ -619,10 +619,10 @@ function applyAdd(site, list) {
 	});
 }
 
-function applyUpdate(site, list) {
+function applyUpdate(site, user, list) {
 	return Promise.all(list.map(function(block) {
 		if (site.$pagetypes.includes(block.type)) {
-			return updatePage(site, block);
+			return updatePage(site, user, block);
 		} else if (!block.updated_at) {
 			throw new HttpError.BadRequest(`Block is missing 'updated_at' ${block.id}`);
 		} else {
@@ -642,7 +642,7 @@ function applyUpdate(site, list) {
 	}));
 }
 
-function updatePage(site, page) {
+function updatePage(site, user, page) {
 	return site.$relatedQuery('children').where('block.id', page.id)
 	.whereIn('block.type', page.type ? [page.type] : site.$pagetypes)
 	.select(ref('block.data:url').as('url')).first().throwIfNotFound().then(function(dbPage) {
@@ -692,7 +692,7 @@ function updatePage(site, page) {
 	});
 }
 
-function applyRelate(site, obj) {
+function applyRelate(site, user, obj) {
 	return Promise.all(Object.keys(obj).map(function(parentId) {
 		return site.$relatedQuery('children').where('block.id', parentId)
 		.first().throwIfNotFound().then(function(parent) {
@@ -704,9 +704,9 @@ function applyRelate(site, obj) {
 	}));
 }
 
-exports.add = function(site, data) {
+exports.add = function(site, user, data) {
 	return site.constructor.prototype.$beforeInsert.call(data).then(function() {
-		return exports.save(site, {
+		return exports.save(site, user, {
 			add: [data]
 		});
 	});
@@ -724,7 +724,7 @@ exports.add.schema = {
 	}
 };
 
-exports.del = function(site, data) {
+exports.del = function(site, user, data) {
 	// TODO deleting a page should be done in TWO steps
 	// 1) data.url = null -> the page becomes only accessible through admin
 	// 2) actual deletion
