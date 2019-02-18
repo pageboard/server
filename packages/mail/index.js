@@ -217,8 +217,8 @@ exports.send.schema = {
 			}
 		},
 		from: {
-			title: 'Sender',
-			description: 'settings.id or email',
+			title: 'From',
+			description: 'Sender, settings.id or email',
 			anyOf: [{
 				type: 'string',
 				format: 'id'
@@ -228,8 +228,8 @@ exports.send.schema = {
 			}]
 		},
 		to: {
-			title: 'Recipients',
-			description: 'list of settings.id or email',
+			title: 'To',
+			description: 'Recipients, list of settings.id or email',
 			type: 'array',
 			items: {anyOf: [{
 				type: 'string',
