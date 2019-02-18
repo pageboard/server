@@ -128,6 +128,13 @@ exports.to.schema = {
 			format: 'email',
 			transform: ['trim']
 		},
+		replyTo: {
+			title: 'Reply to',
+			type: 'string',
+			format: 'email',
+			transform: ['trim'],
+			nullable: true
+		},
 		to: {
 			title: 'Recipients emails',
 			type: 'array',
@@ -190,6 +197,7 @@ exports.send = function(site, data) {
 //					contentType: 'text/plain' // optional
 //				}]
 			};
+			if (data.replyTo) mail.replyTo = data.replyTo;
 			return exports.to(mail);
 		});
 	});
