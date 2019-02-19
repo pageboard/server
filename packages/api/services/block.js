@@ -75,23 +75,19 @@ exports.search = function(site, data) {
 	var valid = false;
 	var q = site.$relatedQuery('children');
 	if (data.parent) {
-		// NB next objection release will allow multiple joinRelation calls
-		// - simplify code
-		// - allow data.parent.parents along with data.parent (remove 'else' below)
 		var parentList = data.parent.parents;
 		if (parentList && Array.isArray(parentList)) {
 			if (parentList.length) {
 				valid = true;
-				var relExpr = parentList.map(function(item, i) {
-					return 'parents as parent_' + i;
-				}).join(',');
-				q.joinRelation(`[${relExpr}]`);
 				parentList.forEach(function(item, i) {
-					q.whereObject(item, schemas[item.type], `parent_${i}`);
+					var alias = 'parent_' + i;
+					q.joinRelation('parents', {alias: alias});
+					q.whereObject(item, schemas[item.type], alias);
 				});
 			}
 			delete data.parent.parents;
-		} else if (Object.keys(data.parent).length) {
+		}
+		if (Object.keys(data.parent).length) {
 			valid = true;
 			q.joinRelation('parents', {alias: 'parent'});
 			q.whereObject(data.parent, schemas[data.parent.type], 'parent');
