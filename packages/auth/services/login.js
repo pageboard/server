@@ -36,26 +36,22 @@ function userPriv(user, trx) {
 	.where('privs.type', 'priv')
 	.first().throwIfNotFound().select().catch(function(err) {
 		if (err.statusCode != 404) throw err;
-		return user.$relatedQuery('children', trx).insert([{
+		return user.$relatedQuery('children', trx).insert({
 			type: 'priv',
 			data: {
 				otp: {
 					secret: otp.generateSecret()
 				}
 			}
-		}]).returning('*').then(function(rows) {
-			return rows[0];
-		});
+		}).returning('*');
 	});
 }
 
-function generate(email, register) {
+function generate(site, data) {
 	return Promise.resolve().then(function() {
-		if (register) {
-			return All.user.add({email: email});
-		} else {
-			return All.user.get({email: [email]});
-		}
+		if (data.register) return All.user.add({email: data.email});
+	}).then(function() {
+		return All.user.get({email: [data.email]}).select('_id');
 	}).then(function(user) {
 		return userPriv(user);
 	}).then(function(priv) {
@@ -67,7 +63,7 @@ exports.send = function(site, data) {
 	if (!site.href) {
 		return "login.send requires a hostname. Use login.link";
 	}
-	return generate(data.email, data.register).then(function(token) {
+	return generate(site, data).then(function(token) {
 		var p = Promise.resolve();
 		var settings = data.settings;
 		if (settings) {
@@ -223,7 +219,7 @@ exports.grant.schema = {
 exports.grant.external = true;
 
 exports.link = function(site, data) {
-	return generate(data.email, data.register).then(function(token) {
+	return generate(site, data).then(function(token) {
 		return URL.format({
 			pathname: "/.api/login",
 			query: {
