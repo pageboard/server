@@ -23,7 +23,9 @@ exports.subscribe = function(site, user, data) {
 		}).then(function(obj) {
 			var maxSeats = eventDate.data.seats || eventDate.parent.data.seats || 0;
 			var total = eventDate.data.reservations || 0;
-
+			if (data.reservation.seats > eventDate.parent.data.maxSeatsReservations) {
+				throw new HttpError.BadRequest("Cannot reserve that much seats at once");
+			}
 			var blockMeth, resa;
 			if (obj.items.length == 1) {
 				resa = obj.items[0];
@@ -55,15 +57,14 @@ exports.subscribe = function(site, user, data) {
 					'data:reservations': total
 				}).then(function() {
 					if (!data.url) return resa; // can't send confirmation email
-					var urlObj = URL.parse(data.url, true);
-					Object.assign(urlObj.query, {
-						date: eventDate.id,
-						reservation: resa.id
-					});
 					return site.trx.commit().then(function() {
 						delete site.trx;
 						return All.run('mail.send', site, {
-							url: URL.format(urlObj),
+							url: data.url,
+							body: {
+								date: eventDate.id,
+								reservation: resa.id
+							},
 							to: pSettings.id
 						});
 					});
@@ -115,18 +116,18 @@ exports.subscribe.schema = {
 				}
 			}
 		},
-		url: {
+		url: { // TODO remove this - mails should be send by form "arrays of methods"
 			title: 'Mail page',
 			type: "string",
-			format: "uri-reference",
-			nullable: true,
+			format: "pathname",
 			$helper: {
 				name: 'page',
-				title: 'Query',
-				description: 'Values can be [$query.xxx]',
-				query: true,
 				type: 'mail'
 			}
+		},
+		body: {
+			title: 'Mail body',
+			type: "object"
 		}
 	},
 	parents: {
