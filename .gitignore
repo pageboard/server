@@ -40,3 +40,5 @@ jspm_packages
 /uploads
 /dumps
 /sites
+
+yarn.lock
