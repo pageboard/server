@@ -36,14 +36,16 @@ function userPriv(user, trx) {
 	.where('privs.type', 'priv')
 	.first().throwIfNotFound().select().catch(function(err) {
 		if (err.statusCode != 404) throw err;
-		return user.$relatedQuery('children', trx).insert({
+		return user.$relatedQuery('children', trx).insert([{
 			type: 'priv',
 			data: {
 				otp: {
 					secret: otp.generateSecret()
 				}
 			}
-		}).returning('*');
+		}]).returning('*').then(function(rows) {
+			return rows[0];
+		});
 	});
 }
 
