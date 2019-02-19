@@ -49,18 +49,16 @@ exports.get.schema = {
 };
 
 exports.add = function(data) {
-	return All.api.transaction(function(trx) {
-		return QueryUser({
-			email: [data.email]
-		}).transacting(trx).then(function(user) {
-			return user;
-		}).catch(function(err) {
-			if (err.status != 404) throw err;
-			return All.api.Block.query(trx).insert({
-				data: { email: data.email },
-				type: 'user'
-			}).returning('id');
-		});
+	return QueryUser({
+		email: [data.email]
+	}).then(function(user) {
+		return user;
+	}).catch(function(err) {
+		if (err.status != 404) throw err;
+		return All.api.Block.query().insert({
+			data: { email: data.email },
+			type: 'user'
+		}).returning('id');
 	});
 };
 exports.add.schema = {
@@ -76,6 +74,7 @@ exports.add.schema = {
 };
 
 exports.save = function(data) {
+	// i can't think of anything here for now
 	return QueryUser(data).patchObject(data);
 };
 
