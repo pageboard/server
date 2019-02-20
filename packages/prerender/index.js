@@ -1,6 +1,7 @@
 var dom = require('express-dom');
 var Path = require('path');
 var formPlugin = require('./plugins/form');
+var upcachePlugin = require('./plugins/upcache');
 
 module.exports = function(opt) {
 	if (!opt.prerender) opt.prerender = {};
@@ -22,6 +23,7 @@ module.exports = function(opt) {
 		bearer: true // allow only auth cookie
 	}));
 	dom.settings.load.plugins.unshift(dom.plugins.httpequivs);
+	dom.settings.load.plugins.unshift(upcachePlugin);
 	dom.settings.load.plugins.unshift(dom.plugins.httplinkpreload);
 	dom.settings.load.plugins.unshift(formPlugin);
 
