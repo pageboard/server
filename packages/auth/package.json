@@ -19,7 +19,7 @@
   "dependencies": {
     "otplib": "^10.0.1",
     "spawn-please": "^0.3.0",
-    "upcache": "^0.9.2"
+    "upcache": "^0.10.0"
   },
   "pageboard": true
 }

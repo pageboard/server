@@ -26,9 +26,14 @@ function init(All) {
 		var scope = upcacheScope(opt.scope);
 
 		All.auth.restrict = scope.restrict.bind(scope);
+		All.auth.headers = scope.headers.bind(scope);
 		All.auth.sign = scope.sign.bind(scope);
 
-		All.app.use(All.auth.restrict('*'));
+		All.app.use(scope.handshake.bind(scope));
+		All.app.use('/.api/*', function(req, res, next) {
+			All.auth.headers(res, Object.keys(req.site.$grants));
+			next();
+		});
 	});
 }
 
@@ -39,17 +44,20 @@ exports.install = function(site) {
 exports.locked = locked;
 exports.filter = filter;
 
-exports.filterResponse = function(site, scopes, obj) {
+exports.filterResponse = function(site, user, obj) {
+	if (!user) user = {};
+	user.granted = {};
 	if (!obj.item && !obj.items) {
-		return filter(site, scopes, obj);
+		return filter(site, user, obj);
 	}
 	if (obj.item) {
-		var item = filter(site, scopes, obj.item, 'read');
+		var item = filter(site, user, obj.item, 'read');
 		if (!item) throw new HttpError.Unauthorized("user not granted");
 	}
 	if (obj.items) obj.items = obj.items.filter(function(item) {
-		return filter(site, scopes, item, 'read');
+		return filter(site, user, item, 'read');
 	});
+	return Object.keys(user.granted);
 };
 
 function grantsLevels(DomainBlock) {

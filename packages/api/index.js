@@ -244,7 +244,8 @@ All.send = function(res, obj) {
 	if (obj.location) {
 		res.redirect(obj.location);
 	} else {
-		All.auth.filterResponse(req.site, req.user, obj);
+		var grants = All.auth.filterResponse(req.site, req.user, obj);
+		All.auth.headers(res, grants || []);
 		res.json(obj);
 	}
 };
