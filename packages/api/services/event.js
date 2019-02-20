@@ -77,7 +77,7 @@ exports.subscribe = function(site, user, data) {
 exports.subscribe.schema = {
 	title: 'Subscribe',
 	$action: 'write',
-	required: ['parents', 'reservation'],
+	required: ['parents', 'reservation', 'from'],
 	properties: {
 		parents: {
 			title: 'parents',
@@ -115,6 +115,17 @@ exports.subscribe.schema = {
 					pattern: '^\\d+(\\s*\\.*-*\\d+)*$'
 				}
 			}
+		},
+		from: {
+			title: 'From',
+			description: 'Sender, settings.id or email',
+			anyOf: [{
+				type: 'string',
+				format: 'id'
+			}, {
+				type: 'string',
+				format: 'email'
+			}]
 		},
 		url: { // TODO remove this - mails should be send by form "arrays of methods"
 			title: 'Mail page',

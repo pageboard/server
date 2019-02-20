@@ -205,7 +205,7 @@ exports.send = function(site, data) {
 exports.send.schema = {
 	title: 'Send email',
 	$action: 'write',
-	required: ['url', 'to'],
+	required: ['url', 'to', 'from'],
 	properties: {
 		url: {
 			title: 'Mail page',
