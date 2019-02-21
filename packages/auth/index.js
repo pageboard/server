@@ -29,9 +29,10 @@ function init(All) {
 		All.auth.headers = scope.headers.bind(scope);
 		All.auth.sign = scope.sign.bind(scope);
 
-		All.app.use(scope.handshake.bind(scope));
-		All.app.use('/.api/*', function(req, res, next) {
-			All.auth.headers(res, Object.keys(req.site.$grants));
+		All.app.use(function(req, res, next) {
+			scope.handshake(req, res, function() {});
+			scope.parseBearer(req);
+			if (!req.user) req.user = {};
 			next();
 		});
 	});
@@ -46,7 +47,6 @@ exports.filter = filter;
 
 exports.filterResponse = function(site, user, obj) {
 	if (!user) user = {};
-	user.granted = {};
 	if (!obj.item && !obj.items) {
 		return filter(site, user, obj);
 	}
@@ -57,7 +57,6 @@ exports.filterResponse = function(site, user, obj) {
 	if (obj.items) obj.items = obj.items.filter(function(item) {
 		return filter(site, user, item, 'read');
 	});
-	return Object.keys(user.granted);
 };
 
 function grantsLevels(DomainBlock) {
@@ -78,7 +77,8 @@ function locked(site, user, locks) {
 	if (locks == null) return false;
 	if (typeof locks == "string") locks = [locks];
 	if (locks.length == 0) return false;
-	if (!user) return true;
+	if (!user) user = {};
+	if (!user.grants) user.grants = {};
 	var grants = Object.keys(user.scopes || {});
 	var scopes = {};
 	var minLevel = Infinity;
@@ -87,10 +87,14 @@ function locked(site, user, locks) {
 		minLevel = Math.min(site.$grants[grant], minLevel);
 	});
 
-	return !locks.some(function(lock) {
+	var granted = locks.some(function(lock) {
 		var lockIndex = site.$grants[lock] || -1;
-		return (lockIndex > minLevel) || scopes[lock];
+		if ((lockIndex > minLevel) || scopes[lock]) {
+			user.grants[lock] = true;
+			return true;
+		}
 	});
+	return !granted;
 }
 
 function filter(site, user, item, action) {

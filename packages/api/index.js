@@ -110,7 +110,7 @@ function init(All) {
 
 	Object.assign(exports, imports);
 
-	// api depends on site files
+	// api depends on site files, that tag is invalidated in cache install
 	All.app.get('/.api/*', All.cache.tag('app-:site'));
 	All.app.use('/.api/*',
 		// invalid site by site
@@ -244,8 +244,8 @@ All.send = function(res, obj) {
 	if (obj.location) {
 		res.redirect(obj.location);
 	} else {
-		var grants = All.auth.filterResponse(req.site, req.user, obj);
-		All.auth.headers(res, grants || []);
+		All.auth.filterResponse(req.site, req.user, obj);
+		All.auth.headers(res, Object.keys(req.user.grants || {}));
 		res.json(obj);
 	}
 };
