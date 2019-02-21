@@ -152,10 +152,23 @@ exports.send = function(site, data) {
 		type: 'mail',
 		data: {url: data.url}
 	})];
+	var mailOpts = {
+		from: defaultSender
+	};
 	if (data.from) {
 		var p;
-		if (data.from.indexOf('@') > 0) p = All.run('settings.find', site, {email: data.from});
-		else p = All.run('settings.get', site, {id: data.from});
+		// if it's a known email,let's set a <site><settings>@pageboard as "from"
+		// else let's set replyTo
+		if (data.from.indexOf('@') > 0) {
+			p = All.run('settings.find', site, {email: data.from}).catch(function(err) {
+				if (err.statusCode != 404) throw err;
+				mailOpts.replyTo = data.from;
+				delete data.from;
+				return {};
+			});
+		} else {
+			p = All.run('settings.get', site, {id: data.from});
+		}
 		list.push(p.then(function(settings) {
 			return settings.id;
 		}));
@@ -171,11 +184,11 @@ exports.send = function(site, data) {
 
 	return Promise.all(list).then(function(rows) {
 		var emailPage = rows[0].item;
-		var from = defaultSender;
-		if (data.from) from = {
+		if (data.from && typeof rows[1] == 'string') mailOpts.from = {
 			name: site.data.title,
 			address: `${site.id}.${rows[1]}@${mailDomain}`
 		};
+		mailOpts.to = rows.slice(-1).pop();
 		var emailUrl = site.href + emailPage.data.url;
 
 		return got(emailUrl + ".mail", {
@@ -185,20 +198,15 @@ exports.send = function(site, data) {
 		}).then(function(response) {
 			return JSON.parse(response.body);
 		}).then(function(obj) {
-			var mail = {
-				from: from,
-				to: rows.slice(-1).pop(),
-				subject: obj.title,
-				html: obj.html,
-				text: obj.text,
-//				attachments: [{
-//					path: '/path/to/test.txt',
-//					filename: 'test.txt', // optional
-//					contentType: 'text/plain' // optional
-//				}]
-			};
-			if (data.replyTo) mail.replyTo = data.replyTo;
-			return exports.to(mail);
+			mailOpts.subject = obj.title;
+			mailOpts.html = obj.html;
+			mailOpts.text = obj.text;
+			// mailOpts.attachments = [{
+			// 	path: '/path/to/test.txt',
+			// 	filename: 'test.txt', // optional
+			// 	contentType: 'text/plain' // optional
+			// }];
+			return exports.to(mailOpts);
 		});
 	});
 };
@@ -218,7 +226,7 @@ exports.send.schema = {
 		},
 		from: {
 			title: 'From',
-			description: 'Sender, settings.id or email',
+			description: 'settings.id or email',
 			anyOf: [{
 				type: 'string',
 				format: 'id'
@@ -229,7 +237,7 @@ exports.send.schema = {
 		},
 		to: {
 			title: 'To',
-			description: 'Recipients, list of settings.id or email',
+			description: 'List (settings.id or email)',
 			type: 'array',
 			items: {anyOf: [{
 				type: 'string',

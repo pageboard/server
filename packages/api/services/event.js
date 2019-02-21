@@ -118,7 +118,7 @@ exports.subscribe.schema = {
 		},
 		from: {
 			title: 'From',
-			description: 'Sender, settings.id or email',
+			description: 'settings.id or email',
 			anyOf: [{
 				type: 'string',
 				format: 'id'
