@@ -1,5 +1,3 @@
-const URL = require('url');
-
 exports = module.exports = function(opt) {
 	return {
 		name: 'event',
