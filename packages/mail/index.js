@@ -153,19 +153,13 @@ exports.send = function(site, data) {
 		data: {url: data.url}
 	})];
 	var mailOpts = {
-		from: defaultSender
+		from: defaultSender,
 	};
+	if (data.replyTo) mailOpts.replyTo = data.replyTo;
 	if (data.from) {
 		var p;
-		// if it's a known email,let's set a <site><settings>@pageboard as "from"
-		// else let's set replyTo
 		if (data.from.indexOf('@') > 0) {
-			p = All.run('settings.find', site, {email: data.from}).catch(function(err) {
-				if (err.statusCode != 404) throw err;
-				mailOpts.replyTo = data.from;
-				delete data.from;
-				return {};
-			});
+			p = All.run('settings.find', site, {email: data.from});
 		} else {
 			p = All.run('settings.get', site, {id: data.from});
 		}
@@ -184,7 +178,7 @@ exports.send = function(site, data) {
 
 	return Promise.all(list).then(function(rows) {
 		var emailPage = rows[0].item;
-		if (data.from && typeof rows[1] == 'string') mailOpts.from = {
+		if (data.from) mailOpts.from = {
 			name: site.data.title,
 			address: `${site.id}.${rows[1]}@${mailDomain}`
 		};
@@ -213,7 +207,7 @@ exports.send = function(site, data) {
 exports.send.schema = {
 	title: 'Send email',
 	$action: 'write',
-	required: ['url', 'to', 'from'],
+	required: ['url', 'to'],
 	properties: {
 		url: {
 			title: 'Mail page',
@@ -226,7 +220,7 @@ exports.send.schema = {
 		},
 		from: {
 			title: 'From',
-			description: 'settings.id or email',
+			description: 'User settings.id or email',
 			anyOf: [{
 				type: 'string',
 				format: 'id'
@@ -235,9 +229,15 @@ exports.send.schema = {
 				format: 'email'
 			}]
 		},
+		replyTo: {
+			title: 'Reply To',
+			description: 'Any email address',
+			type: 'string',
+			format: 'email'
+		},
 		to: {
 			title: 'To',
-			description: 'List (settings.id or email)',
+			description: 'List of users (settings.id or email)',
 			type: 'array',
 			items: {anyOf: [{
 				type: 'string',
