@@ -57,15 +57,19 @@ exports.save = function(site, data) {
 			if (err.statusCode != 404) throw err;
 			return All.run('user.add', {data: {email: data.email}});
 		}).then(function(user) {
-			return site.$model.query(site.trx).insertGraph({
+			var block = {
 				type: 'settings',
 				data: data.data,
 				parents: [site, user]
-			}, {
-				relate: ['parents']
-			}).then(function(settings) {
-				delete settings.parents;
-				return settings;
+			};
+			return site.$beforeInsert.call(block).then(function() {
+				block.lock = {read: [`user-${block.id}`]};
+				return site.$model.query(site.trx).insertGraph(block, {
+					relate: ['parents']
+				}).then(function(settings) {
+					delete settings.parents;
+					return settings;
+				});
 			});
 		});
 	});
