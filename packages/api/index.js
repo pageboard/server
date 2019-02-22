@@ -28,7 +28,7 @@ var ajvApiSettings = {
 	}
 };
 var ajvApiWithDefaults = AjvKeywords(ajv(Object.assign({}, ajvApiSettings, {
-	useDefaults: true
+	useDefaults: 'empty'
 })).addMetaSchema(ajvMetaSchema));
 
 var ajvApiWithNoDefaults = AjvKeywords(ajv(Object.assign({}, ajvApiSettings, {
