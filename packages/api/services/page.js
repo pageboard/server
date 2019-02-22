@@ -705,7 +705,7 @@ function applyRelate(site, user, obj) {
 }
 
 exports.add = function(site, user, data) {
-	return site.constructor.prototype.$beforeInsert.call(data).then(function() {
+	return site.$beforeInsert.call(data).then(function() {
 		return exports.save(site, user, {
 			add: [data]
 		});
