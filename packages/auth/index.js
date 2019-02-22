@@ -83,11 +83,15 @@ function locked(site, user, locks) {
 	var scopes = {};
 	var minLevel = Infinity;
 	grants.forEach(function(grant) {
+		if (grant == "user") {
+			scopes[`user-${user.id}`] = true;
+		}
 		scopes[grant] = true;
 		minLevel = Math.min(site.$grants[grant], minLevel);
 	});
 
 	var granted = locks.some(function(lock) {
+		// NB: user-:id grants cannot be accessed by any other
 		var lockIndex = site.$grants[lock] || -1;
 		if ((lockIndex > minLevel) || scopes[lock]) {
 			user.grants[lock] = true;
@@ -104,6 +108,9 @@ function filter(site, user, item, action) {
 			return filter(site, user, item, action);
 		});
 	}
+	if (item.child) {
+		item.child = filter(site, user, item.child, action);
+	}
 	if (item.parents) {
 		item.parents = item.parents.filter(function(item) {
 			return filter(site, user, item, action);
@@ -111,7 +118,6 @@ function filter(site, user, item, action) {
 	}
 	if (item.parent) {
 		item.parent = filter(site, user, item.parent, action);
-		if (!item.parent) return;
 	}
 	var schema = site.$schema(item.type) || {}; // old types might not have schema
 	var $lock = schema.$lock || {};
@@ -123,7 +129,10 @@ function filter(site, user, item, action) {
 	};
 	if (typeof $lock != "object") $lock = { '*': $lock };
 	locks = Object.assign({}, locks, $lock);
-	if (locked(site, user, locks['*'])) return;
+	if (locked(site, user, locks['*'])) return {
+		id: item.id,
+		type: 'lock'
+	};
 	delete locks['*'];
 	Object.keys(locks).forEach(function(path) {
 		var list = locks[path];
