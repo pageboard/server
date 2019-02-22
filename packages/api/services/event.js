@@ -39,7 +39,8 @@ exports.subscribe = function(site, user, data) {
 				resa = {
 					type: 'event_reservation',
 					data: data.reservation,
-					parents: data.parents
+					parents: data.parents,
+					lock: [`user-${user.id}`, 'scheduler']
 				};
 			} else {
 				throw new Error("Two reservations using the same login");
