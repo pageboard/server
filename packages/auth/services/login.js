@@ -86,16 +86,17 @@ exports.send = function(site, data) {
 				address: data.email
 			}
 		};
+		var tokenStr = token.toString().replace(/\B(?=(\d{2})+(?!\d))/g, " ");
 		var prefix = site.data.title ? site.data.title + ' - ' : '';
 		if (site.data.lang == "fr") {
-			mail.subject = `${prefix}code de vérification: ${token}`;
-			mail.text = `${token}
+			mail.subject = `${prefix}code de vérification: ${tokenStr}`;
+			mail.text = `${tokenStr}
 Ce message est envoyé depuis
 ${site.href}
 et peut être ignoré.`;
 		} else {
-			mail.subject = `${prefix}Verification token: ${token}`;
-			mail.text = `${token}
+			mail.subject = `${prefix}Verification token: ${tokenStr}`;
+			mail.text = `${tokenStr}
 This message is sent from
 ${site.href}
 and can be ignored.`;
@@ -142,6 +143,7 @@ function verifyToken(email, token) {
 						throw new HttpError.TooManyRequests();
 					}
 				}
+				token = token.replace(/\s/g, '');
 				var verified = otp.check(token, priv.data.otp.secret);
 				return priv.$query(trx).patch({
 					'data:otp.checked_at': new Date().toISOString(),
@@ -202,7 +204,7 @@ exports.grant.schema = {
 		token: {
 			title: 'Token',
 			type: 'string',
-			pattern: '\\d{6}'
+			pattern: '^[\\s\\d]{1,10}$'
 		},
 		grant: {
 			title: 'Grant',
