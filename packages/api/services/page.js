@@ -168,16 +168,16 @@ exports.get = function(site, user, data) {
 			return page;
 		}
 	}).then(function(page) {
-		page.children = page.children.concat(page.standalones);
-		delete page.standalones;
 		var links = {};
 		Object.assign(obj, {
 			item: page,
+			items: page.children.concat(page.standalones),
 			meta: site.$standalones[page.type],
 			links: links,
 			hrefs: page.hrefs
 		});
-
+		delete page.standalones;
+		delete page.children;
 		delete page.hrefs;
 		if (page.data.url == null) return obj;
 
