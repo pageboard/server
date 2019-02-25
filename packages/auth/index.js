@@ -52,9 +52,9 @@ exports.filterResponse = function(site, user, obj) {
 	}
 	if (obj.item) {
 		var item = filter(site, user, obj.item, 'read');
-		if (!item) throw new HttpError.Unauthorized("user not granted");
+		if (!item.type) throw new HttpError.Unauthorized("user not granted");
 	}
-	if (obj.items) obj.items = obj.items.filter(function(item) {
+	if (obj.items) obj.items = obj.items.map(function(item) {
 		return filter(site, user, item, 'read');
 	});
 };
@@ -130,8 +130,7 @@ function filter(site, user, item, action) {
 	if (typeof $lock != "object") $lock = { '*': $lock };
 	locks = Object.assign({}, locks, $lock);
 	if (locked(site, user, locks['*'])) return {
-		id: item.id,
-		type: 'lock'
+		id: item.id
 	};
 	delete locks['*'];
 	Object.keys(locks).forEach(function(path) {
