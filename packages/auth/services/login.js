@@ -17,7 +17,7 @@ exports = module.exports = function(opt) {
 
 function init(All) {
 	All.app.get("/.api/login", function(req, res, next) {
-		All.run('login.grant', req.site, req.query).then(function(data) {
+		All.run('login.grant', req.site, req.user, req.query).then(function(data) {
 			data.location = "back";
 			All.send(res, data);
 		}).catch(next);
@@ -156,7 +156,7 @@ function verifyToken(email, token) {
 	});
 }
 
-exports.grant = function(site, data) {
+exports.grant = function(site, user, data) {
 	return verifyToken(data.email, data.token).then(function(verified) {
 		if (!verified) throw new HttpError.BadRequest("Bad token");
 		return All.run('settings.find', site, {
@@ -171,16 +171,16 @@ exports.grant = function(site, data) {
 			if (All.auth.locked(site, {scopes: userScopes}, [data.grant])) {
 				throw new HttpError.Forbidden("User has insufficient grants");
 			}
-			var scopes = {};
-			scopes[data.grant] = true;
+			user.scopes = {};
+			user.scopes[data.grant] = true;
+			user.id = settings.id;
 			return {
-				grants: scopes,
 				item: settings,
 				cookies: {
 					bearer: {
 						value: All.auth.sign(site, {
-							id: settings.id,
-							scopes: scopes
+							id: user.id,
+							scopes: user.scopes
 						}, All.opt.scope),
 						maxAge: All.opt.scope.maxAge * 1000
 					}

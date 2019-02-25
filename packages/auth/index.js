@@ -79,13 +79,10 @@ function locked(site, user, locks) {
 	if (locks.length == 0) return false;
 	if (!user) user = {};
 	if (!user.grants) user.grants = {};
-	var grants = Object.keys(user.scopes || {});
 	var scopes = {};
+	scopes[`user-${user.id}`] = true;
 	var minLevel = Infinity;
-	grants.forEach(function(grant) {
-		if (grant == "user") {
-			scopes[`user-${user.id}`] = true;
-		}
+	Object.keys(user.scopes || {}).forEach(function(grant) {
 		scopes[grant] = true;
 		minLevel = Math.min(site.$grants[grant], minLevel);
 	});

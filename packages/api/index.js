@@ -232,11 +232,8 @@ All.send = function(res, obj) {
 		});
 		delete obj.cookies;
 	}
-	if (!obj.grants) {
-		// because req.user is not set on the request setting the cookie
-		// do not overwrite grants set by auth.login
-		obj.grants = (req.user || {}).scopes || {};
-	}
+	// client needs to know what keys are supposed to be available
+	obj.grants = req.user.scopes || {};
 	if (obj.status) {
 		res.status(obj.status);
 		delete obj.status;
