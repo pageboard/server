@@ -358,7 +358,6 @@ exports.import = function(data) {
 							map[id] = new RegExp(`block-id="${old}"`, 'g');
 						});
 					}))).then(function() {
-						lone['#id'] = "#lone";
 						var lones = lone.standalones;
 						var lonesRefs = [];
 						if (lones) {
@@ -384,8 +383,6 @@ exports.import = function(data) {
 							replaceContent(map, child);
 							child.parents = [{
 								"#dbRef": site._id
-							}, {
-								"#ref": "#lone"
 							}];
 						});
 						lone.children = lone.children.concat(lonesRefs);
