@@ -127,6 +127,8 @@ exports.QueryBuilder = class CommonQueryBuilder extends QueryBuilder {
 				this.whereRaw(`'[${cond.start}, ${cond.end})'::daterange @> ??`, [
 					refk.castTo('date')
 				]);
+			} else if (typeof cond == "object" && cond.op == "not") {
+				this.whereNot(refk.castText(), cond.val);
 			} else {
 				this.where(refk.castText(), cond);
 			}
@@ -143,8 +145,9 @@ exports.QueryBuilder = class CommonQueryBuilder extends QueryBuilder {
 function asPaths(obj, ret, pre, first, schema) {
 	if (!schema) schema = {};
 	var props = schema.properties || {};
-	Object.keys(obj).forEach(function(key) {
-		var val = obj[key];
+	Object.keys(obj).forEach(function(str) {
+		var val = obj[str];
+		var [key, op] = str.split(':');
 		var schem = props[key] || {};
 		var cur;
 		if (pre) {
@@ -165,7 +168,11 @@ function asPaths(obj, ret, pre, first, schema) {
 				if (val == "false" || val == 0 || !val) val = false;
 				else val = true;
 			}
-			ret[cur] = val;
+			if (op) ret[cur] = {
+				op: op,
+				val: val
+			};
+			else ret[cur] = val;
 		} else if (typeof val == "object") {
 			asPaths(val, ret, cur + (first ? ':' : ''), false, schem);
 		}
