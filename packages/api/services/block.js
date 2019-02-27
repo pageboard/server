@@ -82,20 +82,26 @@ exports.search = function(site, data) {
 				parentList.forEach(function(item, i) {
 					var alias = 'parent_' + i;
 					q.joinRelation('parents', {alias: alias});
+					if (!item.type) throw new HttpError.BadRequest("Missing parents.item.type");
+					schemas[item.type] = site.$schema(item.type);
 					q.whereObject(item, schemas[item.type], alias);
 				});
 			}
 			delete data.parent.parents;
 		}
 		if (Object.keys(data.parent).length) {
+			if (!data.parent.type) throw new HttpError.BadRequest("Missing parent.type");
 			valid = true;
 			q.joinRelation('parents', {alias: 'parent'});
+			schemas[data.parent.type] = site.$schema(data.parent.type);
 			q.whereObject(data.parent, schemas[data.parent.type], 'parent');
 		}
 	}
 	if (data.child && Object.keys(data.child).length) {
-		q.joinRelation('children', {alias: 'child'})
-		.whereObject(data.child, schemas[data.children.type], 'child');
+		if (!data.child.type) throw new HttpError.BadRequest("Missing child.type");
+		q.joinRelation('children', {alias: 'child'});
+		schemas[data.child.type] = site.$schema(data.child.type);
+		q.whereObject(data.child, schemas[data.child.type], 'child');
 	}
 	var eagers = [];
 
@@ -380,7 +386,7 @@ function whereSub(q, data, schema, alias = 'block') {
 		valid = stand && stand.const === true || valid;
 		q.where(`${alias}.type`, data.type);
 	} else {
-		q.whereNot(`${alias}.type`, 'site');
+		if (!data.type) throw new HttpError.BadRequest("Missing type");
 	}
 	if (data.id) {
 		valid = true;
