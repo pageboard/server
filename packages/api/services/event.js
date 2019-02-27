@@ -176,20 +176,31 @@ exports.subscribe.schema = {
 };
 exports.subscribe.external = true;
 
-exports.unsubscribe = function(site, data) {
-
+exports.unsubscribe = function(site, user, data) {
+	return All.block.get(site, {
+		type: 'event_reservation',
+		id: data.reservation
+	}).eager('[parents(parentsFilter)]', {parentsFilter: function(q) {
+		q.whereIn('type', ['settings', 'event_date']).select('block.id', 'block.type');
+	}}).then(function(reservation) {
+		if (reservation.data.seats !== 0) return All.run('event.subscribe', site, user, {
+			parents: reservation.parents,
+			reservation: {
+				name: `(${reservation.data.name})`,
+				seats: 0
+			}
+		});
+	});
 };
 exports.unsubscribe.schema = {
 	title: 'Unsubscribe',
 	$action: 'write',
-	type: 'object',
-	parents: exports.subscribe.parents,
-	required: ['parents'],
+	required: ['reservation'],
 	properties: {
-		parents: {
-			title: 'parents',
-			type: 'array',
-			$filter: 'relation'
+		reservation: {
+			title: 'Reservation',
+			type: 'string',
+			format: 'id'
 		}
 	}
 };
