@@ -29,7 +29,7 @@ function init(All) {
 		All.auth.headers = scope.headers.bind(scope);
 		All.auth.sign = scope.sign.bind(scope);
 
-		All.app.use(function(req, res, next) {
+		All.app.use(All.auth.restrict('*'), function(req, res, next) {
 			scope.handshake(req, res, function() {});
 			scope.parseBearer(req);
 			if (!req.user) req.user = {};
