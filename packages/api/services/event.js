@@ -61,14 +61,16 @@ exports.subscribe = function(site, user, data) {
 					if (!data.url) return resa; // can't send confirmation email
 					return site.trx.commit().then(function() {
 						delete site.trx;
-						return All.run('mail.send', site, {
+						var mail = {
 							url: data.url,
 							body: {
 								date: eventDate.id,
 								reservation: resa.id
 							},
 							to: pSettings.id
-						});
+						};
+						if (data.from) mail.from = data.from;
+						return All.run('mail.send', site, mail);
 					});
 				});
 			});
@@ -79,7 +81,7 @@ exports.subscribe = function(site, user, data) {
 exports.subscribe.schema = {
 	title: 'Subscribe',
 	$action: 'write',
-	required: ['parents', 'reservation', 'from'],
+	required: ['parents', 'reservation'],
 	properties: {
 		parents: {
 			title: 'parents',
