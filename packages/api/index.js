@@ -230,7 +230,8 @@ All.send = function(res, obj) {
 		delete obj.cookies;
 	}
 	// client needs to know what keys are supposed to be available
-	obj.grants = req.user.scopes || {};
+	// what goes in grants might also be user.id IF doors have "id-*"
+	obj.grants = req.user.grants || [];
 	if (obj.status) {
 		res.status(obj.status);
 		delete obj.status;
@@ -238,8 +239,8 @@ All.send = function(res, obj) {
 	if (obj.location) {
 		res.redirect(obj.location);
 	} else {
-		All.auth.filterResponse(req.site, req.user, obj);
-		All.auth.headers(res, Object.keys(req.user.grants || {}));
+		All.auth.filterResponse(req, obj);
+		All.auth.headers(res, req.doors);
 		res.json(obj);
 	}
 };

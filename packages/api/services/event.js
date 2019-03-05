@@ -43,7 +43,7 @@ exports.subscribe = function(req, data) {
 					type: 'event_reservation',
 					data: data.reservation,
 					parents: data.parents,
-					lock: {read: [`user-${user.id}`, 'scheduler']}
+					lock: {read: [`id-${req.user.id}`, 'scheduler']}
 				};
 			} else {
 				throw new Error("Two reservations using the same login");
