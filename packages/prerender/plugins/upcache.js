@@ -1,10 +1,10 @@
 module.exports = function upcachePlugin(page) {
-	var scopesMap = {};
+	var locksMap = {};
 	var tagsMap = {};
 	page.on('response', function(res) {
-		var list = res.headers['X-Upcache-Scope'];
+		var list = res.headers['X-Upcache-Lock'];
 		if (list) list.split(',').forEach(function(str) {
-			scopesMap[str.trim()] = true;
+			locksMap[str.trim()] = true;
 		});
 		list = res.headers['X-Upcache-Tag'];
 		if (list) list.split(',').forEach(function(str) {
@@ -12,14 +12,14 @@ module.exports = function upcachePlugin(page) {
 		});
 	});
 	page.when('idle', function() {
-		var scopes = Object.keys(scopesMap);
+		var locks = Object.keys(locksMap);
 		var tags = Object.keys(tagsMap);
-		if (scopes.length || tags.length) return page.run(function(scopes, tags) {
-			if (scopes) {
-				var metaScopes = document.createElement('meta');
-				metaScopes.setAttribute('http-equiv', 'X-Upcache-Scope');
-				metaScopes.setAttribute('content', scopes);
-				document.head.appendChild(metaScopes);
+		if (locks.length || tags.length) return page.run(function(locks, tags) {
+			if (locks) {
+				var metaLocks = document.createElement('meta');
+				metaLocks.setAttribute('http-equiv', 'X-Upcache-Lock');
+				metaLocks.setAttribute('content', locks);
+				document.head.appendChild(metaLocks);
 			}
 			if (tags) {
 				var metaTags = document.createElement('meta');
@@ -27,6 +27,6 @@ module.exports = function upcachePlugin(page) {
 				metaTags.setAttribute('content', tags);
 				document.head.appendChild(metaTags);
 			}
-		}, scopes.join(','), tags.join(','));
+		}, locks.join(','), tags.join(','));
 	});
 };

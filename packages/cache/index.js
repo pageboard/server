@@ -1,4 +1,4 @@
-var tag = require('upcache/tag');
+const {tag} = require('upcache');
 var pify = require('util').promisify;
 var fs = {
 	readFile: pify(require('fs').readFile),

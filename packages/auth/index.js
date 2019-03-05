@@ -1,4 +1,4 @@
-var upcacheScope = require('upcache/scope');
+const UpcacheLock = require('upcache').lock;
 
 exports = module.exports = function(opt) {
 	opt.plugins.unshift(
@@ -16,25 +16,27 @@ exports = module.exports = function(opt) {
 
 function init(All) {
 	var opt = All.opt;
-	opt.scope = Object.assign({
+	opt.lock = Object.assign({
 		maxAge: 60 * 60 * 24 * 31,
 		userProperty: 'user',
 		keysize: 2048
-	}, opt.scope);
+	}, opt.lock);
 
 	return require('./lib/keygen')(All).then(function() {
-		var scope = upcacheScope(opt.scope);
+		var lock = UpcacheLock(opt.lock);
 
-		All.auth.restrict = scope.restrict.bind(scope);
-		All.auth.headers = scope.headers.bind(scope);
-		All.auth.sign = scope.sign.bind(scope);
+		All.auth.vary = lock.vary;
+		All.auth.headers = lock.headers;
+		All.auth.cookie = function({site, user}) {
+			return {
+				value: lock.sign(user, Object.assign({
+					hostname: site.hostname
+				}, opt.lock)),
+				maxAge: opt.lock.maxAge * 1000
+			};
+		};
 
-		All.app.use(All.auth.restrict('*'), function(req, res, next) {
-			scope.handshake(req, res, function() {});
-			scope.parseBearer(req);
-			if (!req.user) req.user = {};
-			next();
-		});
+		All.app.use(lock.init);
 	});
 }
 
