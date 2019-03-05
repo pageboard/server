@@ -18,7 +18,6 @@
   "homepage": "https://github.com/pageboard/server#readme",
   "dependencies": {
     "otplib": "^10.0.1",
-    "spawn-please": "^0.3.0",
     "upcache": "^1.0.0"
   },
   "pageboard": true
