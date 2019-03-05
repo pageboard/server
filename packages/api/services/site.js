@@ -1,7 +1,7 @@
 var lodashMerge = require('lodash.merge');
 const {ref} = require('objection');
 const {PassThrough} = require('stream');
-const {createReadStream} = require('fs');
+const {createReadStream, createWriteStream} = require('fs');
 
 exports = module.exports = function(opt) {
 	return {
@@ -184,7 +184,7 @@ exports.save.schema = {
 exports.del = function(data) {
 	var Block = All.api.Block;
 	return All.api.transaction(function(trx) {
-		var result = {};
+		var counts = {};
 		return Block.query(trx).where('type', 'site').select('_id').where('id', data.id)
 		.first().throwIfNotFound().then(function(site) {
 			return Promise.all([
@@ -196,23 +196,38 @@ exports.del = function(data) {
 					.select('c._id')
 				).del()
 				.then(function(count) {
-					result.blocks = count;
+					counts.blocks = count;
 					return Block.query(trx).whereIn(
 						'_id',
 						Block.query(trx)
 						.where('block._id', site._id)
 						.joinRelation('children', {alias: 'c'})
+						.where('c.standalone', false)
 						.select('c._id')
 					).del();
 				}).then(function(count) {
-					result.standalones = count;
+					counts.blocks += count;
+					return Block.query(trx).whereIn(
+						'_id',
+						Block.query(trx)
+						.where('block._id', site._id)
+						.joinRelation('children', {alias: 'c'})
+						.where('c.standalone', true)
+						.select('c._id')
+					).del();
+				}).then(function(count) {
+					counts.standalones = count;
 					return site.$query(trx).del().then(function(count) {
-						result.site = count;
-						return result;
+						counts.site = count;
+						return counts;
 					});
 				}),
-				All.api.Href.query(trx).where('_parent_id', site._id).del()
+				All.api.Href.query(trx).where('_parent_id', site._id).del().then(function(count) {
+					counts.hrefs = count;
+				})
 			]);
+		}).then(function() {
+			return counts;
 		});
 	});
 };
@@ -229,6 +244,13 @@ exports.del.schema = {
 
 // export all data but files
 exports.export = function(data) {
+	var counts = {
+		site: 0,
+		blocks: 0,
+		standalones: 0,
+		hrefs: 0,
+		settings: 0
+	};
 	return exports.get(data).eager(`[children(lones)]`, {
 		lones: function(builder) {
 			return builder.select('_id').where('standalone', true).orderByRaw("data->>'url' IS NOT NULL");
@@ -236,11 +258,14 @@ exports.export = function(data) {
 	}).then(function(site) {
 		var children = site.children;
 		delete site.children;
-		var out = new PassThrough();
+		var out = createWriteStream(data.file);
+		counts.site = 1;
+		counts.standalones = children.length;
 		out.write('{"site": ');
 		out.write(JSON.stringify(site));
 		out.write(',\n"standalones": [');
 		var last = children.length - 1;
+		var prom = Promise.resolve();
 		children.reduce(function(p, child, i) {
 			return p.then(function() {
 				return All.api.Block.query()
@@ -262,14 +287,16 @@ exports.export = function(data) {
 					} else {
 						delete lone.standalones;
 					}
+					counts.blocks += lone.children.length;
 					out.write(JSON.stringify(lone));
 					if (i != last) out.write(',');
 				});
 			});
-		}, Promise.resolve()).then(function() {
+		}, prom).then(function() {
 			out.write('],\n"hrefs": [');
 			return All.api.Href.query().select()
 			.omit(['tsv', '_id', '_parent_id']).whereSite(site.id).then(function(hrefs) {
+				counts.hrefs = hrefs.length;
 				var last = hrefs.length - 1;
 				hrefs.forEach(function(href, i) {
 					out.write(JSON.stringify(href));
@@ -296,6 +323,7 @@ exports.export = function(data) {
 					if (user.length == 0) return;
 					user = user[0];
 					if (!user.email) return;
+					counts.settings++;
 					setting._email = user.email;
 					out.write(JSON.stringify(setting));
 					if (i != last) out.write(',');
@@ -303,11 +331,10 @@ exports.export = function(data) {
 			});
 		}).then(function() {
 			out.end(']}');
-		}).catch(function(err) {
-			out.emit('error', err);
+			return counts;
 		});
-		return out;
 	});
+	return prom;
 };
 exports.export.schema = {
 	$action: 'read',
@@ -317,6 +344,9 @@ exports.export.schema = {
 			title: 'Site id',
 			type: 'string',
 			format: 'id'
+		},
+		file: {
+			type: 'string'
 		}
 	}
 };
@@ -324,6 +354,13 @@ exports.export.schema = {
 // import all data but files
 exports.import = function(data) {
 	var Block = All.api.Block;
+	var counts = {
+		site: 0,
+		blocks: 0,
+		standalones: 0,
+		settings: 0,
+		users: 0
+	};
 	return All.api.transaction(function(trx) {
 		var p = Promise.resolve();
 		const fstream = createReadStream(data.file);
@@ -339,6 +376,7 @@ exports.import = function(data) {
 				if (obj.site) {
 					obj.site.id = data.id;
 					return Block.query(trx).insert(obj.site).returning('*').then(function(copy) {
+						counts.site++;
 						site = copy;
 					});
 				} else if (obj.lone) {
@@ -390,6 +428,8 @@ exports.import = function(data) {
 					}).then(function() {
 						return site.$relatedQuery('children', trx).insertGraph(lone).then(function(obj) {
 							standalones[lone.id] = obj._id;
+							counts.standalones++;
+							counts.blocks += lone.children.length;
 						});
 					});
 				} else if (obj.href) {
@@ -397,20 +437,29 @@ exports.import = function(data) {
 					if (href.pathname) {
 						href.pathname = href.pathname.replace(/\/uploads\/[^/]+\//, `/uploads/${site.id}/`);
 					}
+					counts.hrefs++;
 					return site.$relatedQuery('hrefs', trx).insert(href).catch(function(err) {
 						console.error(err, href);
 						throw err;
 					});
 				} else if (obj.setting) {
 					var setting = obj.setting;
-					return Block.query(trx)
-					.whereJsonText('data:email', setting._email)
-					.where('type', 'user').first().then(function(user) {
-						delete setting._email;
-						if (!user) return;
+					return Block.query(trx).where('type', 'user')
+					.whereJsonText('data:email', setting._email).select('_id')
+					.first().throwIfNotFound()
+					.catch(function(err) {
+						if (err.status != 404) throw err;
+						counts.users++;
+						return Block.query(trx).insert({
+							data: { email: setting._email },
+							type: 'user'
+						}).returning('_id');
+					}).then(function(user) {
 						return Block.genId().then(function(id) {
 							setting.id = id;
 							setting.parents = [{'#dbRef': user._id}];
+							counts.settings++;
+							delete setting._email;
 							return site.$relatedQuery('children', trx).insertGraph(setting);
 						});
 					});
@@ -448,6 +497,8 @@ exports.import = function(data) {
 		});
 		return q.then(function() {
 			return p;
+		}).then(function() {
+			return counts;
 		});
 	});
 };
