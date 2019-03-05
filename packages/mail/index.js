@@ -147,8 +147,8 @@ exports.to.schema = {
 	}
 };
 
-exports.send = function(site, data) {
-	var list = [All.run('block.find', site, {
+exports.send = function(req, data) {
+	var list = [All.run('block.find', req, {
 		type: 'mail',
 		data: {url: data.url}
 	})];
@@ -159,23 +159,24 @@ exports.send = function(site, data) {
 	if (data.from) {
 		var p;
 		if (data.from.indexOf('@') > 0) {
-			p = All.run('settings.find', site, {email: data.from});
+			p = All.run('settings.find', req, {email: data.from});
 		} else {
-			p = All.run('settings.get', site, {id: data.from});
+			p = All.run('settings.get', req, {id: data.from});
 		}
 		list.push(p.then(function(settings) {
 			return settings.id;
 		}));
 	}
 	list.push(Promise.all(data.to.map(function(to) {
-		if (to.indexOf('@') > 0) return All.run('settings.find', site, {email:to}).then(function(settings) {
+		if (to.indexOf('@') > 0) return All.run('settings.find', req, {email:to}).then(function(settings) {
 			return settings.email;
 		});
-		else return All.run('settings.get', site, {id:to}).then(function(settings) {
+		else return All.run('settings.get', req, {id:to}).then(function(settings) {
 			return settings.user.data.email;
 		});
 	})));
 
+	var site = req.site;
 	return Promise.all(list).then(function(rows) {
 		var emailPage = rows[0].item;
 		if (data.from) mailOpts.from = {
