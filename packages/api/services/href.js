@@ -11,24 +11,25 @@ exports = module.exports = function(opt) {
 };
 
 function init(All) {
-	All.app.get("/.api/hrefs", All.auth.restrict('webmaster'), function(req, res, next) {
-		All.run('href.search', req.site, req.user, req.query).then(function(href) {
+	// FIXME those locks must be set on Href model
+	All.app.get("/.api/hrefs", All.auth.lock('webmaster'), function(req, res, next) {
+		All.run('href.search', req, req.query).then(function(href) {
 			res.send(href);
 		}).catch(next);
 	});
-	All.app.post("/.api/href", All.auth.restrict('webmaster'), function(req, res, next) {
-		All.run('href.add', req.site, req.user, req.body).then(function(href) {
+	All.app.post("/.api/href", All.auth.lock('webmaster'), function(req, res, next) {
+		All.run('href.add', req, req.body).then(function(href) {
 			res.send(href);
 		}).catch(next);
 	});
-	All.app.delete("/.api/href", All.auth.restrict('webmaster'), function(req, res, next) {
-		All.run('href.del', req.site, req.user, req.query).then(function(href) {
+	All.app.delete("/.api/href", All.auth.lock('webmaster'), function(req, res, next) {
+		All.run('href.del', req, req.query).then(function(href) {
 			res.send(href);
 		}).catch(next);
 	});
 }
 
-exports.get = function(site, user, data) {
+exports.get = function({site}, data) {
 	return All.api.Href.query(site.trx).select('href._id')
 	.whereSite(site.id)
 	.where('href.url', data.url).first();
@@ -45,9 +46,9 @@ exports.get.schema = {
 	}
 };
 
-exports.search = function(site, user, data) {
+exports.search = function(req, data) {
 	var Href = All.api.Href;
-	var q = Href.query().select().whereSite(site.id);
+	var q = Href.query().select().whereSite(req.site.id);
 
 	if (data.type) {
 		q.whereIn('href.type', data.type);
@@ -136,7 +137,8 @@ exports.search.schema = {
 	}
 };
 
-exports.add = function(site, user, data) {
+exports.add = function(req, data) {
+	var site = req.site;
 	var Href = All.api.Href;
 
 	var url = data.url;
@@ -155,7 +157,7 @@ exports.add = function(site, user, data) {
 
 	if (isLocal && !data.url.startsWith('/.')) {
 		// consider it's a page
-		p = All.page.get(site, user, {
+		p = All.page.get(req, {
 			url: data.url
 		}).then(function(pageBlock) {
 			return {
@@ -171,7 +173,7 @@ exports.add = function(site, user, data) {
 		p = callInspector(site.id, data.url, isLocal);
 	}
 	return p.then(function(result) {
-		return exports.get(site, user, data).forUpdate().then(function(href) {
+		return exports.get(req, data).forUpdate().then(function(href) {
 			if (!href) {
 				return site.$relatedQuery('hrefs').insert(result).returning(Href.columns);
 			} else {
@@ -198,13 +200,13 @@ exports.add.schema = {
 	}
 };
 
-exports.save = function(site, user, data) {
+exports.save = function(req, data) {
 	var Href = All.api.Href;
-	return exports.get(site, user, data)
+	return exports.get(req, data)
 	.throwIfNotFound()
 	.forUpdate()
 	.then(function(href) {
-		return site.$relatedQuery('hrefs').patchObject({
+		return req.site.$relatedQuery('hrefs').patchObject({
 			title: data.title
 		}).where('_id', href._id).first().returning(Href.columns);
 	});
@@ -230,9 +232,9 @@ exports.save.schema = {
 	}
 };
 
-exports.del = function(site, user, data) {
-	return exports.get(site, user, data).throwIfNotFound().then(function(href) {
-		return site.$relatedQuery('hrefs').patchObject({
+exports.del = function(req, data) {
+	return exports.get(req, data).throwIfNotFound().then(function(href) {
+		return req.site.$relatedQuery('hrefs').patchObject({
 			visible: false
 		}).where('_id', href._id).then(function() {
 			href.visible = false;

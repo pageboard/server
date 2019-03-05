@@ -142,8 +142,7 @@ function check(fun, data) {
 	}
 }
 
-All.run = function(apiStr) {
-	var args = Array.prototype.slice.call(arguments, 1);
+All.run = function(apiStr, req, data) {
 	return Promise.resolve().then(function() {
 		var api = apiStr.split('.');
 		var modName = api[0];
@@ -152,23 +151,19 @@ All.run = function(apiStr) {
 		if (!mod) throw new HttpError.BadRequest(`Unknown api module ${modName}`);
 		var fun = mod[funName];
 		if (!fun) throw new HttpError.BadRequest(`Unknown api method ${funName}`);
-		if (args.length < fun.length) {
-			throw new HttpError.BadRequest(`Api method ${funName} expected ${fun.length} arguments, and only got ${args.length} arguments`);
+		if (req && data === undefined && fun.length == 1) {
+			data = req;
+			req = null;
 		}
-		if (args.length == fun.length + 1 && args.length == 3) {
-			// drop user arg
-			args.splice(1, 1);
-		}
-		var data = args[args.length - 1] || {};
 		try {
-			args[args.length - 1] = check(fun, data);
+			data = check(fun, data);
 		} catch(err) {
 			console.error(`run ${apiStr} ${JSON.stringify(data)}`);
 			throw err;
 		}
 		// start a transaction on set trx object on site
-		var site = args.length >= 2 ? args[0] : null;
 		var hadTrx = false;
+		var site = req ? req.site : null;
 		return Promise.resolve().then(function() {
 			if (!site) {
 				return;
@@ -178,10 +173,12 @@ All.run = function(apiStr) {
 				return;
 			}
 			return exports.transaction().then(function(trx) {
-				site = args[0] = site.$clone();
+				site = req.site = site.$clone();
 				site.trx = trx;
 			});
 		}).then(function() {
+			var args = [data];
+			if (req) args.unshift(req);
 			return fun.apply(mod, args);
 		}).then(function(obj) {
 			if (!hadTrx && site && site.trx) {

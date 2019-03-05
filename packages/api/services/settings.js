@@ -6,7 +6,7 @@ exports = module.exports = function(opt) {
 	};
 };
 
-exports.get = function(site, data) {
+exports.get = function({site}, data) {
 	return site.$relatedQuery('children')
 	.where('block.type', 'settings')
 	.where('block.id', data.id).first().throwIfNotFound().select()
@@ -31,7 +31,7 @@ exports.get.schema = {
 	}
 };
 
-exports.find = function(site, data) {
+exports.find = function({site}, data) {
 	var q = site.$relatedQuery('children').alias('settings')
 	.where('settings.type', 'settings').first().throwIfNotFound().select().select(ref('user.data:email').as('email'))
 	.joinRelation('parents', {alias: 'user'}).where('user.type', 'user');
@@ -46,8 +46,9 @@ Object.defineProperty(exports.find, 'schema', {
 	}
 });
 
-exports.save = function(site, data) {
-	return All.run('settings.find', site, data).then(function(settings) {
+exports.save = function(req, data) {
+	var site = req.site;
+	return All.run('settings.find', req, data).then(function(settings) {
 		return settings.$query(site.trx).patchObject({data: data.data}).then(function() {
 			return settings;
 		});
@@ -63,7 +64,7 @@ exports.save = function(site, data) {
 				parents: [site, user]
 			};
 			return site.$beforeInsert.call(block).then(function() {
-				block.lock = {read: [`user-${block.id}`]};
+				block.lock = {read: [`id-${block.id}`]};
 				return site.$model.query(site.trx).insertGraph(block, {
 					relate: ['parents']
 				}).then(function(settings) {

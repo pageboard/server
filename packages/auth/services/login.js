@@ -17,14 +17,14 @@ exports = module.exports = function(opt) {
 
 function init(All) {
 	All.app.get("/.api/login", function(req, res, next) {
-		All.run('login.grant', req.site, req.user, req.query).then(function(data) {
+		All.run('login.grant', req, req.query).then(function(data) {
 			data.location = "back";
 			All.send(res, data);
 		}).catch(next);
 	});
 
 	All.app.get("/.api/logout", function(req, res, next) {
-		All.run('login.clear', req.site, req.query).then(function(data) {
+		All.run('login.clear', req, req.query).then(function(data) {
 			data.location = "back";
 			All.send(res, data);
 		}).catch(next);
@@ -59,7 +59,8 @@ function generate(site, data) {
 	});
 }
 
-exports.send = function(site, data) {
+exports.send = function(req, data) {
+	var site = req.site;
 	if (!site.href) {
 		return "login.send requires a hostname. Use login.link";
 	}
@@ -68,7 +69,7 @@ exports.send = function(site, data) {
 		var settings = data.settings;
 		if (settings) {
 			delete settings.grants;
-			p = All.settings.save(site, {
+			p = All.settings.save(req, {
 				email: data.email,
 				data: settings
 			});
@@ -156,34 +157,25 @@ function verifyToken(email, token) {
 	});
 }
 
-exports.grant = function(site, user, data) {
+exports.grant = function(req, data) {
 	return verifyToken(data.email, data.token).then(function(verified) {
 		if (!verified) throw new HttpError.BadRequest("Bad token");
-		return All.run('settings.find', site, {
+		return All.run('settings.find', req, {
 			email: data.email
 		}).then(function(settings) {
-			var userGrants = settings.data && settings.data.grants || [];
-			if (userGrants.length == 0) userGrants.push('user'); // the minimum grant
-			var userScopes = {};
-			userGrants.forEach(function(g) {
-				userScopes[g] = true;
-			});
-			if (All.auth.locked(site, {scopes: userScopes}, [data.grant])) {
+			var user = req.user = {
+				id: settings.id,
+				grants: settings.data && settings.data.grants || []
+			};
+			var locks = [data.grant];
+			if (All.auth.locked(req, locks)) {
 				throw new HttpError.Forbidden("User has insufficient grants");
 			}
-			user.scopes = {};
-			user.scopes[data.grant] = true;
-			user.id = settings.id;
+			user.grants = locks;
 			return {
 				item: settings,
 				cookies: {
-					bearer: {
-						value: All.auth.sign(site, {
-							id: user.id,
-							scopes: user.scopes
-						}, All.opt.scope),
-						maxAge: All.opt.scope.maxAge * 1000
-					}
+					bearer: All.auth.cookie(req)
 				}
 			};
 		});

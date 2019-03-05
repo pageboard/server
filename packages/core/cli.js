@@ -41,7 +41,7 @@ pageboard.init(config).then(function(All) {
 		if (All.opt.site) {
 			return All.site.get({id: All.opt.site}).select('_id').then(function(site) {
 				return All.install(site).then(function(site) {
-					args.push(site);
+					args.push({site});
 					if (config.data !== undefined) args.push(config.data);
 				});
 			});
