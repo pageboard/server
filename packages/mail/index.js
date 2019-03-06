@@ -8,7 +8,6 @@ var got = require('got');
 // use a different domain for transactional and for bulk sending
 
 var multipart = require('./lib/multipart.js');
-var mailPlugin = require('./lib/express-dom-email');
 var validateMailgun = require('./lib/validate-mailgun.js');
 
 var mailer, defaultSender, mailDomain;
@@ -50,7 +49,7 @@ exports = module.exports = function(opt) {
 				}).catch(next);
 			});
 			All.opt.extnames.push('mail');
-			All.dom.settings.helpers.unshift(mailPlugin);
+			All.dom.settings.helpers.unshift(require('./lib/express-dom-email'));
 		}
 	};
 };
@@ -187,6 +186,9 @@ exports.send = function(req, data) {
 		var emailUrl = site.href + emailPage.data.url;
 
 		return got(emailUrl + ".mail", {
+			headers: {
+				cookie: req.get('cookie')
+			},
 			query: data.body,
 			retry: 0,
 			timeout: 10000
