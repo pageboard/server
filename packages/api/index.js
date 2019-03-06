@@ -231,7 +231,10 @@ All.send = function(res, obj) {
 	}
 	// client needs to know what keys are supposed to be available
 	// what goes in grants might also be user.id IF doors have "id-*"
-	obj.grants = req.user.grants || [];
+	obj.grants = {};
+	(req.user.grants || []).forEach(function(grant) {
+		obj.grants[grant] = true;
+	});
 	if (obj.status) {
 		res.status(obj.status);
 		delete obj.status;
