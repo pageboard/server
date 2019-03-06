@@ -49,12 +49,13 @@ exports.locked = locked;
 exports.filter = filter;
 
 exports.filterResponse = function(req, obj) {
-	if (!obj.item && !obj.items) {
+	var {item, items} = obj;
+	if (!item && !items) {
 		return filter(req, obj);
 	}
-	if (obj.item) {
-		var item = filter(req, obj.item, 'read');
-		if (!item.type) throw new HttpError.Unauthorized("user not granted");
+	if (item) {
+		item = filter(req, item, 'read');
+		if (!item.type) throw new HttpError.Unauthorized("Cannot read item");
 	}
 	if (obj.items) obj.items = obj.items.map(function(item) {
 		return filter(req, item, 'read');
@@ -119,36 +120,44 @@ function locked(req, locks) {
 
 function filter(req, item, action) {
 	if (!item.type) return item;
-	if (item.children) {
-		item.children = item.children.filter(function(item) {
+	var {children, child, parents, parent} = item;
+	var blank = {
+		id: item.id
+	};
+	if (children) {
+		item.children = children.filter(function(item) {
 			return filter(req, item, action);
 		});
 	}
-	if (item.child) {
-		item.child = filter(req, item.child, action);
-	}
-	if (item.parents) {
-		item.parents = item.parents.filter(function(item) {
+	if (parents) {
+		item.parents = parents.filter(function(item) {
 			return filter(req, item, action);
 		});
 	}
-	if (item.parent) {
-		item.parent = filter(req, item.parent, action);
+	if (child) {
+		item.child = filter(req, child, action);
+		if (!item.child.type) return blank;
+	}
+	if (parent) {
+		item.parent = filter(req, parent, action);
+		if (!item.parent.type) return blank;
 	}
 	var schema = req.site.$schema(item.type) || {}; // old types might not have schema
 	var $lock = schema.$lock || {};
 	var lock = (item.lock || {})[action] || [];
 
 	if (Object.keys($lock).length == 0 && lock.length == 0) return item;
+
 	var locks = {
 		'*': lock
 	};
 	if (typeof $lock != "object") $lock = { '*': $lock };
 	locks = Object.assign({}, locks, $lock);
-	if (locked(req, locks['*'])) return {
-		id: item.id
-	};
+	if (locked(req, locks['*'])) {
+		return blank;
+	}
 	delete locks['*'];
+
 	Object.keys(locks).forEach(function(path) {
 		var list = locks[path];
 		path = path.split('.');
