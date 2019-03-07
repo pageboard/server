@@ -55,11 +55,12 @@ exports.filterResponse = function(req, obj) {
 	}
 	if (item) {
 		item = filter(req, item, 'read');
-		if (!item.type) throw new HttpError.Unauthorized("Cannot read item");
+		if (!item.type) return;
 	}
 	if (obj.items) obj.items = obj.items.map(function(item) {
 		return filter(req, item, 'read');
 	});
+	return obj;
 };
 
 function grantsLevels(DomainBlock) {
