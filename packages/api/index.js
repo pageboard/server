@@ -242,7 +242,13 @@ All.send = function(res, obj) {
 	if (obj.location) {
 		res.redirect(obj.location);
 	} else {
-		All.auth.filterResponse(req, obj);
+		obj = All.auth.filterResponse(req, obj);
+		if (!obj) {
+			res.status((req.user.grants || []).length == 0 ? 401 : 403);
+			obj = {
+				doors: req.doors
+			};
+		}
 		All.auth.headers(res, req.doors);
 		res.json(obj);
 	}
