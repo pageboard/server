@@ -51,7 +51,7 @@ exports.filter = filter;
 exports.filterResponse = function(req, obj) {
 	var {item, items} = obj;
 	if (!item && !items) {
-		return filter(req, obj);
+		return filter(req, obj, 'read');
 	}
 	if (item) {
 		item = filter(req, item, 'read');
