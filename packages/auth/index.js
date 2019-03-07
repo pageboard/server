@@ -84,7 +84,7 @@ function lockMw(locks) {
 			All.auth.headers(res, locks);
 			var status = (req.user.grants || []).length == 0 ? 401 : 403;
 			res.status(status);
-			res.send({locks: locks});
+			res.send({doors: req.doors});
 		} else {
 			next();
 		}
