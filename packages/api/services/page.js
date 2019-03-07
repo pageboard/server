@@ -134,36 +134,14 @@ function QueryPageHref(site, url) {
 exports.get = function(req, data) {
 	var site = req.site;
 	var obj = {
-		status: 200,
-		site: site.data
+		site: site.data,
+		status: 200
 	};
-	var wkp = /^\/\.well-known\/(\d{3})$/.exec(data.url);
-	if (wkp) obj.status = parseInt(wkp[1]);
 	return QueryPage(site).whereIn('page.type', site.$pagetypes)
 	.whereJsonText("page.data:url", data.url)
 	.select(
 		QueryPageHref(site, data.url).as('hrefs')
 	).then(function(page) {
-		if (!page) {
-			obj.status = 404;
-		} else if (All.auth.locked(req, (page.lock || {}).read)) {
-			obj.status = 401;
-		}
-		if (obj.status != 200) {
-			var statusUrl = `/.well-known/${obj.status}`;
-			return QueryPage(site)
-			.where('page.type', 'page')
-			.whereJsonText("page.data:url", statusUrl)
-			.select(
-				QueryPageHref(site, statusUrl).as('hrefs')
-			).then(function(page) {
-				if (!page) throw new HttpError[obj.status]();
-				return page;
-			});
-		} else {
-			return page;
-		}
-	}).then(function(page) {
 		var links = {};
 		Object.assign(obj, {
 			item: page,
@@ -176,11 +154,12 @@ exports.get = function(req, data) {
 		delete page.children;
 		delete page.hrefs;
 		if (page.data.url == null) return obj;
+		var dir = data.dir || data.url;
 
 		return Promise.all([
-			getParents(site, data.url),
+			getParents(site, dir),
 			listPages(site, {
-				parent: data.url.split('/').slice(0, -1).join('/') || '/'
+				parent: dir.split('/').slice(0, -1).join('/') || '/'
 			}).clearSelect().select([
 				ref('block.data:url').as('url'),
 				ref('block.data:redirect').as('redirect'),
@@ -190,7 +169,7 @@ exports.get = function(req, data) {
 			links.up = list[0].map(redUrl);
 			var siblings = list[1];
 			var position = siblings.findIndex(function(item) {
-				return item.url == data.url;
+				return item.url == data.dir;
 			});
 			if (position > 0) links.prev = redUrl(siblings[position - 1]);
 			if (position < siblings.length - 1) links.next = redUrl(siblings[position + 1]);
@@ -200,6 +179,10 @@ exports.get = function(req, data) {
 			}
 			return obj;
 		});
+	}).catch(function(err) {
+		return {
+			status: 404
+		};
 	});
 };
 exports.get.schema = {
@@ -210,8 +193,9 @@ exports.get.schema = {
 			type: 'string',
 			format: 'pathname'
 		},
-		user: {
-			type: 'object',
+		dir: {
+			type: 'string',
+			format: 'pathname',
 			nullable: true
 		}
 	}
