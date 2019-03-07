@@ -23,9 +23,7 @@ function init(All) {
 			});
 		} else {
 			delete req.query.develop;
-			All.run('page.get', req, {
-				url: req.query.url
-			}).then(function(data) {
+			All.run('page.get', req, req.query).then(function(data) {
 				All.send(res, data);
 			}).catch(next);
 		}

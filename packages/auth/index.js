@@ -77,15 +77,14 @@ function grantsLevels(DomainBlock) {
 	return grants;
 }
 
-function lockMw(lock) {
+function lockMw(locks) {
 	return function(req, res, next) {
-		if (locked(req, lock)) {
-			All.auth.headers(res, lock);
-			if ((req.user.grants || []).length == 0) {
-				next(new HttpError.Unauthorized());
-			} else {
-				next(new HttpError.Forbidden());
-			}
+		if (typeof locks == "string") locks = [locks];
+		if (locked(req, locks)) {
+			All.auth.headers(res, locks);
+			var status = (req.user.grants || []).length == 0 ? 401 : 403;
+			res.status(status);
+			res.send({locks: locks});
 		} else {
 			next();
 		}
