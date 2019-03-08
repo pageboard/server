@@ -77,26 +77,26 @@ function grantsLevels(DomainBlock) {
 	return grants;
 }
 
-function lockMw(locks) {
+function lockMw(list) {
 	return function(req, res, next) {
-		if (typeof locks == "string") locks = [locks];
-		if (locked(req, locks)) {
-			All.auth.headers(res, locks);
+		if (typeof list == "string") list = [list];
+		if (locked(req, list)) {
+			All.auth.headers(res, list);
 			var status = (req.user.grants || []).length == 0 ? 401 : 403;
 			res.status(status);
-			res.send({doors: req.doors});
+			res.send({locks: req.locks});
 		} else {
 			next();
 		}
 	};
 }
 
-function locked(req, locks) {
-	var {site, user, doors} = req;
-	if (!doors) doors = req.doors = [];
-	if (locks == null) return false;
-	if (typeof locks == "string") locks = [locks];
-	if (locks.length == 0) return false;
+function locked(req, list) {
+	var {site, user, locks} = req;
+	if (!locks) locks = req.locks = [];
+	if (list == null) return false;
+	if (typeof list == "string") list = [list];
+	if (list.length == 0) return false;
 	var minLevel = Infinity;
 	var grants = user.grants || [];
 	grants.forEach(function(grant) {
@@ -104,16 +104,15 @@ function locked(req, locks) {
 	});
 
 	var granted = false;
-	locks.forEach(function(lock) {
+	list.forEach(function(lock) {
 		var lockIndex = site.$grants[lock] || -1;
-		var door = lock;
 		if (lock.startsWith('id-')) {
 			if ('id-' + user.id == lock) granted = true;
-			door = 'id-:id';
+			lock = 'id-:id';
 		} else if ((lockIndex > minLevel) || grants.includes(lock)) {
 			granted = true;
 		}
-		if (!doors.includes(door)) doors.push(door);
+		if (!locks.includes(lock)) locks.push(lock);
 	});
 	return !granted;
 }

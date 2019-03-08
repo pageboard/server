@@ -230,8 +230,8 @@ All.send = function(res, obj) {
 		delete obj.cookies;
 	}
 	// client needs to know what keys are supposed to be available
-	// what goes in grants might also be user.id IF doors have "id-*"
-	obj.grants = {};
+	// what goes in grants might also be user.id IF locks have "id-*"
+	var grants = obj.grants = {};
 	(req.user.grants || []).forEach(function(grant) {
 		obj.grants[grant] = true;
 	});
@@ -246,10 +246,11 @@ All.send = function(res, obj) {
 		if (!obj) {
 			res.status((req.user.grants || []).length == 0 ? 401 : 403);
 			obj = {
-				doors: req.doors
+				locks: req.locks,
+				grants: grants
 			};
 		}
-		All.auth.headers(res, req.doors);
+		All.auth.headers(res, req.locks);
 		res.json(obj);
 	}
 };

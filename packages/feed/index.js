@@ -14,7 +14,7 @@ exports = module.exports = function(opt) {
 						url: req.params[0],
 						query: req.query
 					}).then(function(xml) {
-						All.auth.headers(res, req.doors);
+						All.auth.headers(res, req.locks);
 						res.type("application/xml");
 						res.send(xml);
 					}).catch(next);
