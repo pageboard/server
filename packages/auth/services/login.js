@@ -202,6 +202,7 @@ exports.grant.schema = {
 			title: 'Grant',
 			type: 'string',
 			format: 'id',
+			nullable: true,
 			$filter: {
 				name: 'schema',
 				path: 'settings.properties.grants.items'
