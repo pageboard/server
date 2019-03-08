@@ -138,7 +138,7 @@ exports.get = function(req, data) {
 		status: 200
 	};
 	return QueryPage(site).whereIn('page.type', site.$pagetypes)
-	.whereJsonText("page.data:url", data.url)
+	.whereJsonText("page.data:url", data.canonical || data.url)
 	.select(
 		QueryPageHref(site, data.url).as('hrefs')
 	).then(function(page) {
@@ -154,12 +154,11 @@ exports.get = function(req, data) {
 		delete page.children;
 		delete page.hrefs;
 		if (page.data.url == null) return obj;
-		var dir = data.dir || data.url;
 
 		return Promise.all([
-			getParents(site, dir),
+			getParents(site, data.url),
 			listPages(site, {
-				parent: dir.split('/').slice(0, -1).join('/') || '/'
+				parent: data.url.split('/').slice(0, -1).join('/') || '/'
 			}).clearSelect().select([
 				ref('block.data:url').as('url'),
 				ref('block.data:redirect').as('redirect'),
@@ -169,7 +168,7 @@ exports.get = function(req, data) {
 			links.up = list[0].map(redUrl);
 			var siblings = list[1];
 			var position = siblings.findIndex(function(item) {
-				return item.url == data.dir;
+				return item.url == data.url;
 			});
 			if (position > 0) links.prev = redUrl(siblings[position - 1]);
 			if (position < siblings.length - 1) links.next = redUrl(siblings[position + 1]);
@@ -193,7 +192,7 @@ exports.get.schema = {
 			type: 'string',
 			format: 'pathname'
 		},
-		dir: {
+		canonical: {
 			type: 'string',
 			format: 'pathname',
 			nullable: true
