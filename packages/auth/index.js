@@ -54,8 +54,8 @@ exports.filterResponse = function(req, obj) {
 		return filter(req, obj, 'read');
 	}
 	if (item) {
-		item = filter(req, item, 'read');
-		if (!item.type) return;
+		obj.item = filter(req, item, 'read');
+		if (!obj.item.type) delete obj.items;
 	}
 	if (obj.items) obj.items = obj.items.map(function(item) {
 		return filter(req, item, 'read');

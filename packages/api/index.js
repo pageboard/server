@@ -230,9 +230,7 @@ All.send = function(res, obj) {
 		});
 		delete obj.cookies;
 	}
-	// client needs to know what keys are supposed to be available
-	// what goes in grants might also be user.id IF locks have "id-*"
-	var grants = obj.grants = {};
+	obj.grants = {};
 	(req.user.grants || []).forEach(function(grant) {
 		obj.grants[grant] = true;
 	});
@@ -244,12 +242,11 @@ All.send = function(res, obj) {
 		res.redirect(obj.location);
 	} else {
 		obj = All.auth.filterResponse(req, obj);
-		if (!obj) {
+		if (obj.item && !obj.item.type) {
 			res.status((req.user.grants || []).length == 0 ? 401 : 403);
-			obj = {
-				locks: req.locks,
-				grants: grants
-			};
+			obj.locks = req.locks.filter(function(lock) {
+				return lock != 'id-:id';
+			});
 		}
 		All.auth.headers(res, req.locks);
 		res.json(obj);
