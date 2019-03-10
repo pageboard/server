@@ -278,7 +278,7 @@ function createApp(All) {
 		} else {
 			res.setHeader('Referrer-Policy', 'same-origin');
 			res.setHeader('X-XSS-Protection','1;mode=block');
-			res.setHeader('X-Frame-Options', 'deny');
+			res.setHeader('X-Frame-Options', 'sameorigin');
 			res.setHeader('X-Content-Type-Options', 'nosniff');
 			next();
 		}
