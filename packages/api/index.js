@@ -25,7 +25,8 @@ var ajvApiSettings = {
 		singleline: /^[^\n\r]*$/,
 		pathname: /^(\/[\w-.]*)+$/,
 		id: /^[\w-]+$/
-	}
+	},
+	invalidDefaults: 'log'
 };
 var ajvApiWithDefaults = AjvKeywords(ajv(Object.assign({}, ajvApiSettings, {
 	useDefaults: 'empty'
