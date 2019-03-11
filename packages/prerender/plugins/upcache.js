@@ -1,4 +1,4 @@
-module.exports = function upcachePlugin(page) {
+module.exports = function upcachePlugin(page, settings, request, response) {
 	var locksMap = {};
 	var tagsMap = {};
 	page.on('response', function(res) {
@@ -13,20 +13,8 @@ module.exports = function upcachePlugin(page) {
 	});
 	page.when('idle', function() {
 		var locks = Object.keys(locksMap);
+		if (locks.length) All.auth.headers(response, locks);
 		var tags = Object.keys(tagsMap);
-		if (locks.length || tags.length) return page.run(function(locks, tags) {
-			if (locks) {
-				var metaLocks = document.createElement('meta');
-				metaLocks.setAttribute('http-equiv', 'X-Upcache-Lock');
-				metaLocks.setAttribute('content', locks);
-				document.head.appendChild(metaLocks);
-			}
-			if (tags) {
-				var metaTags = document.createElement('meta');
-				metaTags.setAttribute('http-equiv', 'X-Upcache-Tag');
-				metaTags.setAttribute('content', tags);
-				document.head.appendChild(metaTags);
-			}
-		}, locks.join(','), tags.join(','));
+		if (tags.length) All.cache.tag.apply(null, tags)(request, response);
 	});
 };
