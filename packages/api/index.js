@@ -244,9 +244,7 @@ All.send = function(res, obj) {
 		obj = All.auth.filterResponse(req, obj);
 		if (obj.item && !obj.item.type) {
 			res.status((req.user.grants || []).length == 0 ? 401 : 403);
-			obj.locks = req.locks.filter(function(lock) {
-				return lock != 'id-:id';
-			});
+			obj.locks = All.auth.clientLocks(req.site, req.locks);
 		}
 		All.auth.headers(res, req.locks);
 		res.json(obj);

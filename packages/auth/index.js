@@ -63,6 +63,20 @@ exports.filterResponse = function(req, obj) {
 	return obj;
 };
 
+exports.clientLocks = function(site, locks) {
+	var list = (locks || []).filter(function(lock) {
+		return lock != "id-:id";
+	});
+	list.sort(function(a, b) {
+		var an = site.$grants[a];
+		var bn = site.$grants[b];
+		if (an < bn) return 1;
+		else if (an > bn) return -1;
+		else return 0;
+	});
+	return list;
+};
+
 function grantsLevels(DomainBlock) {
 	var grants = {};
 	var list = DomainBlock.schema('settings.data.grants').items.anyOf || [];
