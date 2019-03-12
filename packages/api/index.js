@@ -230,10 +230,7 @@ All.send = function(res, obj) {
 		});
 		delete obj.cookies;
 	}
-	obj.grants = {};
-	(req.user.grants || []).forEach(function(grant) {
-		obj.grants[grant] = true;
-	});
+	obj.grants = All.auth.clientLocks(req.site, req.user.grants || []);
 	if (obj.status) {
 		res.status(obj.status);
 		delete obj.status;
@@ -243,7 +240,7 @@ All.send = function(res, obj) {
 	} else {
 		obj = All.auth.filterResponse(req, obj);
 		if (obj.item && !obj.item.type) {
-			res.status((req.user.grants || []).length == 0 ? 401 : 403);
+			res.status(obj.grants.length == 0 ? 401 : 403);
 			obj.locks = All.auth.clientLocks(req.site, req.locks);
 		}
 		All.auth.headers(res, req.locks);
