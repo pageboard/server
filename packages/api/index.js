@@ -230,7 +230,8 @@ All.send = function(res, obj) {
 		});
 		delete obj.cookies;
 	}
-	obj.grants = All.auth.clientLocks(req.site, req.user.grants || []);
+
+	obj.grants = All.auth.clientLocks(req.site, req.user.grants);
 	if (obj.status) {
 		res.status(obj.status);
 		delete obj.status;
@@ -240,7 +241,9 @@ All.send = function(res, obj) {
 	} else {
 		obj = All.auth.filterResponse(req, obj);
 		if (obj.item && !obj.item.type) {
-			res.status(obj.grants.length == 0 ? 401 : 403);
+			// 401 Unauthorized: missing or bad authentication
+			// 403 Forbidden: authenticated but not authorized
+			res.status(obj.grants ? 403 : 401);
 			obj.locks = All.auth.clientLocks(req.site, req.locks);
 		}
 		All.auth.headers(res, req.locks);

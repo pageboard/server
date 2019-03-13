@@ -64,6 +64,7 @@ exports.filterResponse = function(req, obj) {
 };
 
 exports.clientLocks = function(site, locks) {
+	if (!locks) return null;
 	var list = (locks || []).filter(function(lock) {
 		return lock != "id-:id";
 	});
