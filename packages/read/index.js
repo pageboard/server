@@ -37,6 +37,21 @@ function prerender(dom) {
 			var scripts = req.site.$resources.map(function(src) {
 				return `<script src="${src}" defer></script>`;
 			});
+			if (All.opt.report.uri) {
+				res.set('Report-To', JSON.stringify({
+					group: "default",
+					max_age: 31536000,
+					endpoints: [{
+						url: All.opt.report.uri
+					}],
+					include_subdomains: true
+				}));
+				res.set('NEL', JSON.stringify({
+					report_to: "default",
+					max_age: 31536000,
+					include_subdomains: true
+				}));
+			}
 			settings.view = `<!DOCTYPE html>
 <html>
 <head>

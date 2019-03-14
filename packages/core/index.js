@@ -53,6 +53,7 @@ exports.config = function(pkgOpt) {
 			listen: 3000,
 			log: ':method :status :time :size :site:url'
 		},
+		report: {},
 		extnames: []
 	});
 	symlinkDir(opt, 'sites');
