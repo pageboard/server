@@ -1,4 +1,4 @@
-const {tag} = require('upcache');
+const {tag, map} = require('upcache');
 var pify = require('util').promisify;
 var fs = {
 	readFile: pify(require('fs').readFile),
@@ -13,6 +13,7 @@ var got = require('got');
 var state = new CacheState();
 
 exports = module.exports = function(opt) {
+	exports.map = map;
 	exports.tag = paramSiteWrap(tag);
 	exports.for = paramSiteWrap(tag.for);
 	exports.disable = tag.disable;
