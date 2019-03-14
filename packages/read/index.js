@@ -34,6 +34,9 @@ function prerender(dom) {
 			settings.load.disable = true;
 			settings.prepare.disable = true;
 		} else {
+			if (req.query.develop !== undefined) {
+				All.cache.map(res, '/.well-known/200');
+			}
 			var scripts = req.site.$resources.map(function(src) {
 				return `<script src="${src}" defer></script>`;
 			});
