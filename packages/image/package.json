@@ -1,6 +1,6 @@
 {
   "name": "@pageboard/image",
-  "version": "0.6.0",
+  "version": "0.6.1",
   "description": "",
   "main": "index.js",
   "scripts": {
@@ -19,7 +19,7 @@
   "dependencies": {
     "datauri": "^1.1.0",
     "express-urlrewrite": "^1.2.0",
-    "sharpie": "^3.5.1"
+    "sharpie": "^4.0.0"
   },
   "pageboard": true
 }
