@@ -82,7 +82,7 @@ function request(url) {
 	obj.headers = {
 		"User-Agent": "Mozilla/5.0 (compatible; Googlebot/2.1; +http://www.google.com/bot.html)",
 		"Accept-Encoding": "identity",
-		"Accept": "*/*"
+		"Accept": "image/webp,*/*"
 	};
 	agent.get(obj).on('response', function(res) {
 		res.pipe(stream);
@@ -103,12 +103,12 @@ exports.thumbnail = function(url) {
 	.max()
 	.background('white')
 	.flatten()
-	.toFormat('jpeg', {
-		quality: 65
+	.toFormat('webp', {
+		quality: 50
 	})
 	.toBuffer().then(function(buf) {
 		var dtu = new DataUri();
-		dtu.format('.jpeg', buf);
+		dtu.format('.webp', buf);
 		return dtu.content;
 	});
 };
