@@ -152,6 +152,8 @@ exports.add.schema = {
 };
 
 exports.save = function(data) {
+	if (data.data.domains === "") data.data.domains = null;
+	if (data.data.version === "") data.data.version = null;
 	return All.api.transaction(function(trx) {
 		return exports.get(data).transacting(trx).forUpdate().then(function(site) {
 			lodashMerge(site.data, data.data);
