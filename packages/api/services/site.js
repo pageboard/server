@@ -333,8 +333,8 @@ exports.export = function(data) {
 			out.end(']}');
 			return counts;
 		});
+		return prom;
 	});
-	return prom;
 };
 exports.export.schema = {
 	$action: 'read',
