@@ -263,3 +263,12 @@ exports.clear.schema = {
 };
 
 exports.clear.external = true;
+
+exports.keyuri = function(data) {
+	return All.user.get({email: [data.email]}).then(function(user) {
+		return userPriv(user).then(function(priv) {
+			return otp.keyuri(user.data.email, All.opt.name, priv.data.otp.secret);
+		});
+	});
+};
+
