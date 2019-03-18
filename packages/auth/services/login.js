@@ -1,11 +1,9 @@
 var otp = require('otplib').authenticator;
 var URL = require('url');
 
-// validity of token: 10 minutes
-// accept previous token in case it has been generated just before the end of validity
 otp.options = {
-	step: 60 * 10,
-	window: [1, 0]
+	step: 30, // do not change this value, we want third-party otp apps to work with us
+	window: [20, 1] // ten minutes-old tokens are still valid
 };
 
 exports = module.exports = function(opt) {
