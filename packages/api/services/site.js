@@ -270,7 +270,16 @@ exports.export = function(data) {
 		counts.site = 1;
 		counts.standalones = children.length;
 		out.write('{"site": ');
-		out.write(JSON.stringify(site));
+		if (data.carbon) {
+			out.write(JSON.stringify(site));
+		} else {
+			out.write(JSON.stringify({
+				type: 'site',
+				data: {
+					module: site.data.module
+				}
+			}));
+		}
 		out.write(',\n"standalones": [');
 		var last = children.length - 1;
 		var prom = Promise.resolve();
@@ -314,7 +323,9 @@ exports.export = function(data) {
 		}).then(function() {
 			// TODO extend to any non-standalone block that is child of user or settings
 			// TODO fix calendar so that reservations are made against a user, not against its settings
-			out.write('],\n"settings": [');
+			out.write(']');
+			if (!data.settings) return;
+			out.write(',\n"settings": [');
 			return site.$relatedQuery('children').where('block.type', 'settings')
 			.select().eager('parents(user) as user', {
 				user: function(builder) {
@@ -336,9 +347,11 @@ exports.export = function(data) {
 					out.write(JSON.stringify(setting));
 					if (i != last) out.write(',');
 				});
+			}).then(function() {
+				out.write(']');
 			});
 		}).then(function() {
-			out.end(']}');
+			out.end('}');
 			return counts;
 		});
 		return prom.then(function() {
@@ -348,7 +361,7 @@ exports.export = function(data) {
 };
 exports.export.schema = {
 	$action: 'read',
-	required: ['id'],
+	required: ['id', 'file'],
 	properties: {
 		id: {
 			title: 'Site id',
@@ -357,6 +370,14 @@ exports.export.schema = {
 		},
 		file: {
 			type: 'string'
+		},
+		settings: {
+			type: 'boolean',
+			default: false
+		},
+		carbon: {
+			type: 'boolean',
+			default: false
 		}
 	}
 };
