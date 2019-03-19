@@ -535,7 +535,7 @@ exports.import = function(data) {
 };
 exports.import.schema = {
 	$action: 'write',
-	required: ['id'],
+	required: ['id', 'file'],
 	properties: {
 		id: {
 			type: 'string',
