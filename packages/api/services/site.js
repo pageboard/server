@@ -261,6 +261,12 @@ exports.export = function(data) {
 		var children = site.children;
 		delete site.children;
 		var out = createWriteStream(data.file);
+		var finished = new Promise(function(resolve, reject) {
+			out.resolve = resolve;
+			out.reject = reject;
+		});
+		out.once('finish', out.resolve);
+		out.once('error', out.reject);
 		counts.site = 1;
 		counts.standalones = children.length;
 		out.write('{"site": ');
@@ -335,7 +341,9 @@ exports.export = function(data) {
 			out.end(']}');
 			return counts;
 		});
-		return prom;
+		return prom.then(function() {
+			return finished;
+		});
 	});
 };
 exports.export.schema = {
