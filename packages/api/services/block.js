@@ -14,7 +14,19 @@ function init(All) {
 		if (!type || ['user', 'site', 'page'].indexOf(type) >= 0) {
 			return next(new HttpError.BadRequest("Cannot request that type"));
 		}
-		All.run('block.get', req, req.query).then(function(data) {
+		All.run('block.find', req, req.query).then(function(data) {
+			All.send(res, data);
+		}).catch(next);
+	});
+
+	All.app.get("/.api/blocks", function(req, res, next) {
+		All.run('block.search', req, req.query).then(function(data) {
+			All.send(res, data);
+		}).catch(next);
+	});
+
+	All.app.post('/.api/blocks', function(req, res, next) {
+		All.run('block.write', req, req.body).then(function(data) {
 			All.send(res, data);
 		}).catch(next);
 	});
@@ -567,6 +579,50 @@ exports.del.schema = {
 	}
 };
 exports.del.external = true;
+
+exports.write = function(req, data) {
+	var list = data.operations;
+	return Promise.all(list.map(function(op) {
+		return All.run(`block.${op.method}`, req, op.item);
+	}));
+};
+
+exports.write.schema = {
+	title: 'Write multiple blocks',
+	$action: 'write',
+	required: ['operations'],
+	properties: {
+		operations: {
+			title: 'Operations',
+			type: 'array',
+			items: {
+				title: 'Operation',
+				type: 'object',
+				properties: {
+					method: {
+						title: 'Method',
+						anyOf: [{
+							const: 'add',
+							title: 'Add'
+						}, {
+							const: 'save',
+							title: 'Save'
+						}, {
+							const: 'del',
+							title: 'Delete'
+						}]
+					},
+					item: {
+						title: 'Item',
+						type: 'object'
+					}
+				}
+			}
+		}
+	}
+};
+exports.write.external = true;
+
 
 exports.gc = function(days) {
 	// this might prove useless
