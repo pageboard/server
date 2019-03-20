@@ -10,10 +10,6 @@ exports = module.exports = function() {
 
 function init(All) {
 	All.app.get("/.api/block", function(req, res, next) {
-		var type = req.query.type;
-		if (!type || ['user', 'site', 'page'].indexOf(type) >= 0) {
-			return next(new HttpError.BadRequest("Cannot request that type"));
-		}
 		All.run('block.find', req, req.query).then(function(data) {
 			All.send(res, data);
 		}).catch(next);
@@ -201,13 +197,6 @@ exports.search.schema = {
 			title: 'Select by type',
 			type: 'string',
 			format: 'id',
-			not: { // TODO permissions should be managed dynamically
-				oneOf: [{
-					const: "user"
-				}, {
-					const: "site"
-				}]
-			},
 			$filter: {
 				name: 'element',
 				standalone: true,
@@ -267,13 +256,6 @@ exports.search.schema = {
 					title: 'Select by type',
 					type: 'string',
 					format: 'id',
-					not: { // TODO permissions should be managed dynamically
-						oneOf: [{
-							const: "user"
-						}, {
-							const: "site"
-						}]
-					},
 					nullable: true,
 					$filter: {
 						name: 'element',
@@ -336,13 +318,6 @@ exports.search.schema = {
 					title: 'Select by type',
 					type: 'string',
 					format: 'id',
-					not: { // TODO permissions should be managed dynamically
-						oneOf: [{
-							const: "user"
-						}, {
-							const: "site"
-						}]
-					},
 					nullable: true,
 					$filter: {
 						name: 'element',
