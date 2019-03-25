@@ -87,7 +87,10 @@ function sortPriority(list) {
 	list.sort(function(a, b) {
 		var pa = a.priority;
 		var pb = b.priority;
-		if (pa == pb) return 0;
+		if (pa == pb) {
+			if (a.path && b.path) return Path.basename(a.path).localeCompare(Path.basename(b.path));
+			else return 0;
+		}
 		if (pa < pb) return -1;
 		else return 1;
 	});
