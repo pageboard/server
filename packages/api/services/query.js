@@ -23,13 +23,14 @@ exports.query = function(req, data) {
 	return All.run('block.get', req, {
 		id: data.id
 	}).then(function(form) {
-		if (All.auth.locked(req, (form.lock || {}).read)) {
-			throw HttpError.Unauthorized("Check user permissions");
-		}
-		if (!form) throw HttpError.Unauthorized("Check user permissions");
 		var fd = form.data || {};
 		var method = fd.action.method;
-		if (!method) throw new HttpError.BadRequest("Missing method");
+		if (!method) {
+			throw new HttpError.BadRequest("Missing method");
+		}
+		if (All.auth.locked(req, fd.action.lock)) {
+			throw HttpError.Unauthorized("Check user permissions");
+		}
 		// build parameters
 		var expr = ((form.expr || {}).action || {}).parameters || {};
 		var params = All.utils.mergeParameters(expr, {

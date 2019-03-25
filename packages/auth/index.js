@@ -51,14 +51,14 @@ exports.filter = filter;
 exports.filterResponse = function(req, obj) {
 	var {item, items} = obj;
 	if (!item && !items) {
-		return filter(req, obj, 'read');
+		return filter(req, obj);
 	}
 	if (item) {
-		obj.item = filter(req, item, 'read');
+		obj.item = filter(req, item);
 		if (!obj.item.type) delete obj.items;
 	}
 	if (obj.items) obj.items = obj.items.map(function(item) {
-		return filter(req, item, 'read');
+		return filter(req, item);
 	});
 	return obj;
 };
@@ -109,9 +109,13 @@ function lockMw(list) {
 function locked(req, list) {
 	var {site, user, locks} = req;
 	if (!locks) locks = req.locks = [];
+	if (list != null && !Array.isArray(list) && typeof list == "object" && list.read !== undefined) {
+		// backward compat, block.lock only cares about read access
+		list = list.read;
+	}
 	if (list == null) return false;
 	if (typeof list == "string") list = [list];
-	if (list.length == 0) return false;
+	if (list === true || list.length == 0) return false;
 	var minLevel = Infinity;
 	var grants = user.grants || [];
 	grants.forEach(function(grant) {
@@ -132,7 +136,7 @@ function locked(req, list) {
 	return !granted;
 }
 
-function filter(req, item, action) {
+function filter(req, item) {
 	if (!item.type) return item;
 	var {children, child, parents, parent} = item;
 	var blank = {
@@ -140,32 +144,34 @@ function filter(req, item, action) {
 	};
 	if (children) {
 		item.children = children.filter(function(item) {
-			return filter(req, item, action);
+			return filter(req, item);
 		});
 	}
 	if (parents) {
 		item.parents = parents.filter(function(item) {
-			return filter(req, item, action);
+			return filter(req, item);
 		});
 	}
 	if (child) {
-		item.child = filter(req, child, action);
+		item.child = filter(req, child);
 		if (!item.child.type) return blank;
 	}
 	if (parent) {
-		item.parent = filter(req, parent, action);
+		item.parent = filter(req, parent);
 		if (!item.parent.type) return blank;
 	}
-	var schema = req.site.$schema(item.type) || {}; // old types might not have schema
+	// old types might not have schema
+	var schema = req.site.$schema(item.type) || {};
+
 	var $lock = schema.$lock || {};
-	var lock = (item.lock || {})[action] || [];
+	if (typeof $lock == "string" || Array.isArray($lock)) $lock = {'*': $lock};
+	var lock = item.lock || [];
 
 	if (Object.keys($lock).length == 0 && lock.length == 0) return item;
 
 	var locks = {
 		'*': lock
 	};
-	if (typeof $lock != "object") $lock = { '*': $lock };
 	locks = Object.assign({}, locks, $lock);
 	if (locked(req, locks['*'])) {
 		return blank;
