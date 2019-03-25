@@ -243,6 +243,7 @@ All.send = function(res, obj) {
 			// 403 Forbidden: authenticated but not authorized
 			res.status(req.user.id ? 403 : 401);
 		}
+		if (req.user.authorized) res.set('X-Authorized', 1);
 		All.auth.headers(res, req.locks);
 		res.json(obj);
 	}
