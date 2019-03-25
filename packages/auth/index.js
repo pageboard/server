@@ -133,6 +133,13 @@ function locked(req, list) {
 		}
 		if (!locks.includes(lock)) locks.push(lock);
 	});
+	locks.sort(function(a, b) {
+		var al = site.$grants[a] || -1;
+		var bl = site.$grants[b] || -1;
+		if (al == bl) return 0;
+		else if (al < bl) return 1;
+		else if (al > bl) return -1;
+	});
 	return !granted;
 }
 

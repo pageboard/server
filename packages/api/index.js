@@ -241,20 +241,7 @@ All.send = function(res, obj) {
 		if (obj.item && !obj.item.type) {
 			// 401 Unauthorized: missing or bad authentication
 			// 403 Forbidden: authenticated but not authorized
-			var status, message;
-			if (!req.user.id) {
-				status = 401;
-				message = "Missing authentication";
-			} else {
-				status = 403;
-				message = "Missing authorization";
-			}
-			var grant = All.auth.clientLocks(req.site, req.locks).shift();
-			if (grant) {
-				message += ": " + grant;
-			}
-			res.status(status);
-			res.statusMessage = message;
+			res.status(req.user.id ? 403 : 401);
 		}
 		All.auth.headers(res, req.locks);
 		res.json(obj);
