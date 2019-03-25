@@ -20,6 +20,7 @@ exports.get = function({site}, data) {
 	});
 };
 exports.get.schema = {
+	title: 'User settings',
 	$action: 'read',
 	required: ['id'],
 	properties: {
@@ -30,6 +31,7 @@ exports.get.schema = {
 		}
 	}
 };
+exports.get.external = true;
 
 exports.find = function({site}, data) {
 	var q = site.$relatedQuery('children').alias('settings')
