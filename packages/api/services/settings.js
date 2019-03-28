@@ -2,9 +2,14 @@ var ref = require('objection').ref;
 
 exports = module.exports = function(opt) {
 	return {
-		name: 'settings'
+		name: 'settings',
+		service: init
 	};
 };
+
+function init() {
+
+}
 
 exports.get = function({site, user}, data) {
 	if (!user || !user.id) throw new HttpError.NotFound("Missing user id");
