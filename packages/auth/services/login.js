@@ -171,12 +171,11 @@ exports.grant = function(req, data) {
 				throw new HttpError.Forbidden("User has insufficient grants");
 			}
 			user.grants = locks;
-			var bearer = All.auth.cookie(req);
-			req.user.authorized = grants.join(',') != locks.join(',');
+			req.granted = grants.join(',') != locks.join(',');
 			return {
 				item: settings,
 				cookies: {
-					bearer: bearer
+					bearer: All.auth.cookie(req)
 				}
 			};
 		});
