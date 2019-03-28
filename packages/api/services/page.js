@@ -153,6 +153,7 @@ exports.get = function(req, data) {
 		delete page.standalones;
 		delete page.children;
 		delete page.hrefs;
+		if (data.canonical) obj.canonical = data.canonical;
 		if (page.data.url == null) return obj;
 
 		return Promise.all([
