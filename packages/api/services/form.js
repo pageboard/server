@@ -25,7 +25,7 @@ exports.submit = function(req, data) {
 		id: data.id
 	}).then(function(form) {
 		var fd = form.data || {};
-		var method = fd.action.method;
+		var method = (fd.action || {}).method;
 		if (!method) {
 			throw new HttpError.BadRequest("Missing method");
 		}
