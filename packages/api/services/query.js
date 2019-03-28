@@ -38,7 +38,17 @@ exports.query = function(req, data) {
 			$user: req.user
 		});
 		params = All.utils.mergeObjects(params, fd.action.parameters);
-		return All.run(method, req, params);
+		return All.run(method, req, params).catch(function(err) {
+			return {
+				status: err.status,
+				item: {
+					type: 'error',
+					data: {
+						message: err.message
+					}
+				}
+			};
+		});
 	});
 };
 

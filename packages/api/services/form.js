@@ -61,7 +61,17 @@ exports.submit = function(req, data) {
 		}
 		body = All.utils.mergeObjects(body, params);
 
-		return All.run(method, req, body);
+		return All.run(method, req, body).catch(function(err) {
+			return {
+				status: err.status,
+				item: {
+					type: 'error',
+					data: {
+						message: err.message
+					}
+				}
+			};
+		});
 	});
 };
 
