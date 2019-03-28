@@ -131,9 +131,6 @@ function locked(req, list) {
 function filter(req, item) {
 	if (!item.type) return item;
 	var {children, child, parents, parent} = item;
-	var blank = {
-		id: item.id
-	};
 	if (children) {
 		item.children = children.filter(function(item) {
 			return filter(req, item);
@@ -146,11 +143,9 @@ function filter(req, item) {
 	}
 	if (child) {
 		item.child = filter(req, child);
-		if (!item.child.type) return blank;
 	}
 	if (parent) {
 		item.parent = filter(req, parent);
-		if (!item.parent.type) return blank;
 	}
 	// old types might not have schema
 	var schema = req.site.$schema(item.type) || {};
@@ -166,7 +161,11 @@ function filter(req, item) {
 	};
 	locks = Object.assign({}, locks, $lock);
 	if (locked(req, locks['*'])) {
-		return blank;
+		if (item.content != null) item.content = {};
+		if (item.data != null) item.data = {};
+		if (item.expr != null) item.expr = {};
+		delete item.type;
+		return item;
 	}
 	delete locks['*'];
 
