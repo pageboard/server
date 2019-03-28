@@ -6,10 +6,11 @@ exports = module.exports = function(opt) {
 	};
 };
 
-exports.get = function({site}, data) {
+exports.get = function({site, user}, data) {
+	if (!user || !user.id) throw new HttpError.NotFound("Missing user id");
 	return site.$relatedQuery('children')
 	.where('block.type', 'settings')
-	.where('block.id', data.id).first().throwIfNotFound().select()
+	.where('block.id', user.id).first().throwIfNotFound().select()
 	.eager('[parents(userFilter) as user]', {
 		userFilter: function(query) {
 			query.select().where('type', 'user');
@@ -20,16 +21,8 @@ exports.get = function({site}, data) {
 	});
 };
 exports.get.schema = {
-	title: 'User settings',
-	$action: 'read',
-	required: ['id'],
-	properties: {
-		id: {
-			type: 'string',
-			minLength: 1,
-			format: 'id'
-		}
-	}
+	title: 'Get User',
+	$action: 'read'
 };
 exports.get.external = true;
 
