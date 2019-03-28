@@ -80,28 +80,13 @@ Block.jsonSchema = {
 			type: 'string'
 		},
 		lock: {
-			type: 'object',
 			nullable: true,
-			properties: {
-				read: {
-					type: 'array',
-					nullable: true,
-					items: {
-						type: 'string',
-						format: 'id'
-					},
-					uniqueItems: true
-				},
-				write: {
-					type: 'array',
-					nullable: true,
-					items: {
-						type: 'string',
-						format: 'id'
-					},
-					uniqueItems: true
-				}
-			}
+			type: 'array',
+			items: {
+				type: 'string',
+				format: 'id'
+			},
+			uniqueItems: true
 		}
 	}
 };
