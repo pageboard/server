@@ -39,8 +39,9 @@ exports.dump = function(conn, opt) {
 
 exports.knexConfig = function(config) {
 	if (!process.env.HOME) process.env.HOME = require('passwd-user').sync(process.getuid()).homedir;
+	var dbName = config.database.name || config.name;
 	var dbOpts = Object.assign({}, {
-		url: `postgres://localhost/${opt.name}`
+		url: `postgres://localhost/${dbName}`
 	}, config.database);
 	delete dbOpts.dump;
 	var parsed = require('url').parse(dbOpts.url, true);
@@ -63,6 +64,9 @@ exports.knexConfig = function(config) {
 	if (dbOpts.debug) {
 		obj.debug = dbOpts.debug;
 		delete dbOpts.debug;
+	}
+	if (config.env == "development") {
+		obj.asyncStackTraces = true;
 	}
 	Object.assign(conn, dbOpts);
 	return obj;
