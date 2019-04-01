@@ -2,6 +2,8 @@ var dom = require('express-dom');
 var Path = require('path');
 dom.plugins.form = require('./plugins/form');
 dom.plugins.upcache = require('./plugins/upcache');
+dom.plugins.report = require('./plugins/report').plugin;
+dom.helpers.report = require('./plugins/report').helper;
 dom.plugins.bearer = dom.plugins.cookies({
 	bearer: true // allow only auth cookie
 });
@@ -27,6 +29,8 @@ module.exports = function(opt) {
 	dom.settings.load.plugins.unshift(dom.plugins.upcache);
 	dom.settings.load.plugins.unshift(dom.plugins.httplinkpreload);
 	dom.settings.load.plugins.unshift(dom.plugins.form);
+	dom.settings.helpers.push(dom.helpers.report);
+	dom.settings.load.plugins.push(dom.plugins.report);
 
 	Object.assign(dom.pool, {
 		max: 8
@@ -43,5 +47,4 @@ module.exports = function(opt) {
 		view: function() {}
 	};
 };
-
 
