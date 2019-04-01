@@ -1,0 +1,26 @@
+{
+  "name": "@pageboard/image",
+  "version": "0.2.1",
+  "description": "",
+  "main": "index.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/pageboard/image.git"
+  },
+  "author": "Jérémy Lal <kapouer@melix.org>",
+  "license": "MIT",
+  "bugs": {
+    "url": "https://github.com/pageboard/image/issues"
+  },
+  "homepage": "https://github.com/pageboard/image#readme",
+  "dependencies": {
+    "bl": "^1.2.2",
+    "datauri": "^1.1.0",
+    "express-urlrewrite": "^1.2.0",
+    "sharpie": "^3.4.0"
+  },
+  "pageboard": true
+}

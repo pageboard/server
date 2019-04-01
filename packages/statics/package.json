@@ -1,0 +1,29 @@
+{
+  "name": "@pageboard/statics",
+  "version": "0.2.1",
+  "description": "",
+  "main": "index.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/pageboard/statics.git"
+  },
+  "author": "Jérémy Lal <kapouer@melix.org>",
+  "license": "MIT",
+  "bugs": {
+    "url": "https://github.com/pageboard/statics/issues"
+  },
+  "homepage": "https://github.com/pageboard/statics#readme",
+  "dependencies": {
+    "debug": "^3.1.0",
+    "mkdirp": "^0.5.1",
+    "postinstall-css": "^0.3.0",
+    "postinstall-js": "^0.3.4",
+    "rimraf": "^2.6.2",
+    "serve-static": "^1.12.1",
+    "worker-nodes": "^1.6.1"
+  },
+  "pageboard": true
+}

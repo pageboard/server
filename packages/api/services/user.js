@@ -1,0 +1,81 @@
+exports = module.exports = function(opt) {
+	return {
+		name: 'user'
+	};
+};
+
+
+function QueryUser(data) {
+	var Block = All.api.Block;
+	var q = Block.query().alias('user').select()
+	.first().throwIfNotFound().where('user.type', 'user');
+	if (!data.id && !data.email) throw new HttpError.BadRequest("Missing id or email");
+	if (data.id) {
+		q.where('user.id', data.id);
+		delete data.id;
+	} else if (data.email) {
+		q.whereJsonText('user.data:email', 'in', data.email);
+		delete data.email;
+	}
+	return q;
+}
+
+exports.get = function(data) {
+	return QueryUser(data);
+};
+exports.get.schema = {
+	anyOf: [{
+		required: ['email']
+	}, {
+		required: ['id']
+	}],
+	properties: {
+		id: {
+			type: 'string',
+			minLength: 1
+		},
+		email: {
+			type: 'array',
+			items: {
+				type: 'string',
+				format: 'email',
+				transform: ['trim', 'toLowerCase']
+			}
+		}
+	},
+	additionalProperties: false
+};
+
+exports.add = function(data) {
+	return QueryUser(data).then(function(user) {
+		throw new HttpError.Conflict();
+	}).catch(function(err) {
+		if (err.status == 404) {
+			return All.api.Block.query().insert({
+				data: { email: data.email },
+				type: 'user'
+			});
+		} else {
+			throw err;
+		}
+	});
+};
+exports.add.schema = {
+	required: ['email'],
+	properties: {
+		email: {
+			type: 'string',
+			format: 'email',
+			transform: ['trim', 'toLowerCase']
+		}
+	}
+};
+
+exports.save = function(data) {
+	return QueryUser(data).patchObject(data);
+};
+
+exports.del = function(data) {
+	return QueryUser(data).del();
+};
+exports.del.schema = exports.get.schema;

@@ -1,0 +1,26 @@
+{
+  "name": "@pageboard/mail",
+  "version": "0.3.4",
+  "description": "",
+  "main": "index.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/pageboard/mail.git"
+  },
+  "author": "Jérémy Lal <kapouer@melix.org>",
+  "license": "MIT",
+  "bugs": {
+    "url": "https://github.com/pageboard/mail/issues"
+  },
+  "homepage": "https://github.com/pageboard/mail#readme",
+  "dependencies": {
+    "busboy": "^0.2.14",
+    "got": "^8.3.0",
+    "nodemailer": "^4.6.7",
+    "nodemailer-mailgun-transport": "^1.4.0"
+  },
+  "pageboard": true
+}
