@@ -20,7 +20,7 @@ function init(All) {
 
 	return require('./lib/keygen')(All).then(function() {
 		var lock = UpcacheLock(opt.scope);
-		All.auth.restrict = lock.restrict;
+		All.auth.restrict = lock.restrict.bind(lock);
 		All.auth.vary = lock.vary;
 		All.auth.headers = lock.headers;
 
