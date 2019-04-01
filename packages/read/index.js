@@ -13,7 +13,7 @@ function init(All) {
 	// the route for load will use the preload route as source (view helper can pipe http requests)
 	All.app.get(
 		'*',
-		All.auth.restrict('*'),
+		All.auth.vary('*'),
 		All.cache.tag('site-:site', 'data-:site'),
 		optimize,
 		prerender(All.dom)
