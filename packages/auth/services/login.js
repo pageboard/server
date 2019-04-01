@@ -89,16 +89,16 @@ exports.send = function(req, data) {
 		var prefix = site.data.title ? site.data.title + ' - ' : '';
 		if (site.data.lang == "fr") {
 			mail.subject = `${prefix}code de vérification: ${tokenStr}`;
-			mail.text = `${tokenStr}
-Ce message est envoyé depuis
-${site.href}
-et peut être ignoré.`;
+			mail.text = Text`${tokenStr}
+				Ce message est envoyé depuis
+				${site.href}
+				et peut être ignoré.`;
 		} else {
 			mail.subject = `${prefix}Verification token: ${tokenStr}`;
-			mail.text = `${tokenStr}
-This message is sent from
-${site.href}
-and can be ignored.`;
+			mail.text = Text`${tokenStr}
+				This message is sent from
+				${site.href}
+				and can be ignored.`;
 		}
 		return All.mail.to(mail).then(function() {
 			return {};
