@@ -1,4 +1,4 @@
-var upcacheScope = require('upcache/scope');
+const UpcacheLock = require('upcache').lock;
 
 exports = module.exports = function(opt) {
 	return {
@@ -19,10 +19,10 @@ function init(All) {
 	}, opt.scope);
 
 	return require('./lib/keygen')(All).then(function() {
-		var scope = upcacheScope(opt.scope);
-		All.auth.restrict = scope.restrict.bind(scope);
-		All.auth.test = scope.test.bind(scope);
-		All.auth.cookie = scope.serializeBearer.bind(scope);
+		var lock = UpcacheLock(opt.scope);
+		All.auth.restrict = lock.restrict.bind(lock);
+		All.auth.vary = lock.vary;
+		All.auth.headers = lock.headers;
 
 		All.app.use('/.api/auth/*', All.cache.disable());
 
@@ -34,21 +34,17 @@ function init(All) {
 
 		All.app.get('/.api/auth/validate', function(req, res, next) {
 			return All.run('auth.validate', req.site, req.query).then(function(settings) {
-				var keys = {};
 				var session = settings.data.session;
-				session.grants.forEach(function(grant) {
-					keys[grant] = true;
-				});
-				scope.login(res, {
+				lock.login(res, {
 					id: settings.id,
-					scopes: keys
+					grants: session.grants
 				});
 				res.redirect(session.referer || '/');
 			}).catch(next);
 		});
 
 		All.app.get('/.api/auth/logout', function(req, res, next) {
-			scope.logout(res);
+			lock.logout(res);
 			res.redirect('back');
 		});
 

@@ -21,7 +21,7 @@ function init(All) {
 	});
 	All.app.get('/.api/pages', function(req, res, next) {
 		var data = req.query;
-		if (All.auth.test(req, 'webmaster')) {
+		if ((req.user.grants || []).includes('webmaster')) {
 			req.query.drafts = true; // TODO replace by proper permission management
 			req.query.type = ['page', 'mail'];
 		}

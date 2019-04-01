@@ -1,6 +1,6 @@
 {
   "name": "@pageboard/auth",
-  "version": "0.1.0",
+  "version": "0.5.0",
   "description": "",
   "main": "index.js",
   "scripts": {
@@ -18,7 +18,7 @@
   "homepage": "https://github.com/pageboard/auth#readme",
   "dependencies": {
     "spawn-please": "^0.3.0",
-    "upcache": "^0.9.2"
+    "upcache": "^1.0.0"
   },
   "pageboard": true
 }
