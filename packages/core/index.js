@@ -28,6 +28,7 @@ var fs = {
 
 // exceptional but so natural
 global.HttpError = require('http-errors');
+global.Text = require('outdent');
 
 exports.config = function(pkgOpt) {
 	var cwd = process.cwd();

@@ -26,6 +26,7 @@
     "morgan": "^1.8.2",
     "pad": "^1.1.0",
     "pkg-up": "^2.0.0",
+    "outdent": "^0.7.0",
     "postinstall": "^0.4.1",
     "pretty-bytes": "^4.0.2",
     "promise.prototype.finally": "^3.1.0",
