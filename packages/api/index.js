@@ -55,6 +55,7 @@ exports = module.exports = function(opt) {
 function init(All) {
 	var opt = All.opt;
 	var dbOpt = dba.knexConfig(opt);
+	console.info("Using database", dbOpt.connection.database);
 	var knexInst = knex(dbOpt);
 
 	objection.Model.createValidator = function() {
