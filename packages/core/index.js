@@ -1,5 +1,6 @@
-var pify = require('util').promisify;
-if (!pify) pify = require('util').promisify = require('util-promisify');
+var util = require('util');
+var pify = util.promisify;
+if (!pify) pify = util.promisify = require('util-promisify');
 if (!Promise.prototype.finally) require('promise.prototype.finally').shim();
 var Path = require('path');
 var express = require('express');
@@ -13,6 +14,8 @@ var resolvePkg = require('resolve-pkg');
 var pkgup = require('pkg-up');
 var debug = require('debug')('pageboard:core');
 var http = require('http');
+
+util.inspect.defaultOptions.depth = 10;
 
 var Domains = require('./lib/domains');
 var Install = require('./lib/install');
