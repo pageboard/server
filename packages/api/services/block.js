@@ -375,8 +375,7 @@ exports.search.external = true;
 function whereSub(q, data, schema, alias = 'block') {
 	var valid = false;
 	if (data.type) {
-		var stand = schema && schema.properties.standalone;
-		valid = stand && stand.const === true || valid;
+		valid = true;
 		q.where(`${alias}.type`, data.type);
 	} else {
 		if (!data.type) throw new HttpError.BadRequest("Missing type");
