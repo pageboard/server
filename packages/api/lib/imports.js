@@ -181,7 +181,7 @@ function listDependencies(rootGroup, eltsMap, el, list=[], sieve={}) {
 					listDependencies(rootGroup, eltsMap, gel, list, sieve);
 				}
 			});
-			if (!isGroup) console.error("Cannot find element");
+			if (!isGroup) console.error(`Element '${word}' is not in a group`);
 		}
 	}
 	if (!el || sieve[el.name]) return list;
