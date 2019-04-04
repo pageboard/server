@@ -71,6 +71,27 @@ function init(All) {
 			onCreateAjv: function(ajv) {
 				ajv.addMetaSchema(ajvMetaSchema);
 				AjvKeywords(ajv);
+				ajv.addKeyword('coerce', {
+					modifying: true,
+					type: 'string',
+					validate: function(schema, data, parentSchema, path, parent, name) {
+						if (data == null) return true;
+						var format = parentSchema.format;
+						if (format != "date" && format != "time" && format != "date-time") return true;
+						var d = new Date(data);
+						if (isNaN(d.getTime())) {
+							parent[name] = null;
+						} else {
+							data = d.toISOString();
+							if (format == "date") parent[name] = data.split('T').shift();
+							else if (format == "time") parent[name] = data.split('T').pop();
+							else if (format == "date-time") parent[name] = data;
+						}
+						return true;
+					}
+				});
+				var rules = ajv.RULES.types.string.rules;
+				rules.unshift(rules.pop());
 			},
 			options: {
 				$data: true,
