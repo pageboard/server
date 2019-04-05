@@ -90,6 +90,8 @@ function init(All) {
 						return true;
 					}
 				});
+				// otherwise the `format` keyword would validate before `coerce`
+				// https://github.com/epoberezkin/ajv/issues/986
 				var rules = ajv.RULES.types.string.rules;
 				rules.unshift(rules.pop());
 			},
