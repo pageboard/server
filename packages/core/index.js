@@ -11,7 +11,6 @@ var rc = require('rc');
 var mkdirp = pify(require('mkdirp'));
 var xdg = require('xdg-basedir');
 var resolvePkg = require('resolve-pkg');
-var pkgup = require('pkg-up');
 var debug = require('debug')('pageboard:core');
 var http = require('http');
 
@@ -95,9 +94,8 @@ exports.init = function(opt) {
 		opt.installerPath = path;
 	}).then(function() {
 		return Promise.all(Object.keys(opt.dependencies).map(function(module) {
-			return pkgup(resolvePkg(module)).then(function(pkgPath) {
-				return Install.config(Path.dirname(pkgPath), "pageboard", module, All.opt);
-			});
+			var pkgPath = resolvePkg(module);
+			return Install.config(pkgPath, "pageboard", module, All.opt);
 		})).then(function(modules) {
 			opt.plugins = modules.filter(x => !!x);
 			var plugin, module;
