@@ -97,6 +97,8 @@ Domains.prototype.init = function(req, res, next) {
 		doWait(host);
 	}
 
+	var p;
+
 	if (req.path == "/.well-known/upcache") {
 		if (host.finalize) {
 			host.finalize();
