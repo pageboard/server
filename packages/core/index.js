@@ -57,7 +57,8 @@ exports.config = function(pkgOpt) {
 			log: ':method :status :time :size :site:url'
 		},
 		report: {},
-		extnames: []
+		extnames: [],
+		upstreams: {}
 	});
 	symlinkDir(opt, 'sites');
 	symlinkDir(opt, 'uploads');
