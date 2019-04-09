@@ -271,7 +271,6 @@ function initLog(opt) {
 function createApp(All) {
 	var app = express();
 	var opt = All.opt;
-	// https://www.smashingmagazine.com/2017/04/secure-web-app-http-headers/
 	// for csp headers, see prerender and write
 	app.set("env", opt.env);
 	app.disable('x-powered-by');
