@@ -85,7 +85,9 @@ CacheState.prototype.install = function(site) {
 		return;
 	}
 	setTimeout(function() {
-		if (site.href) got.post(`${site.href}/.well-known/upcache`).catch(function(err) {
+		if (site.href) got.post(`${site.href}/.well-known/upcache`, {
+			timeout: 5000
+		}).catch(function(err) {
 			console.error(err);
 		});
 	});
