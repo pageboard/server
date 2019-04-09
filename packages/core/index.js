@@ -279,8 +279,7 @@ function createApp(All) {
 	app.use(function(req, res, next) {
 		if (req.path == "/.well-known/pageboard") {
 			res.type("json").send({
-				errors: req.site.errors,
-				server: req.site.data.server || 'stable'
+				errors: req.site.errors
 			});
 		} else {
 			res.setHeader('Referrer-Policy', 'same-origin');
