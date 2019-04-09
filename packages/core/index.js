@@ -260,7 +260,11 @@ function initLog(opt) {
 		return pad(req.site && req.site.id && req.site.id.substring(0, 8) || req.hostname, 8);
 	});
 
-	return morgan(opt.core.log);
+	return morgan(opt.core.log, {
+		skip: function(req, res) {
+			return false;
+		}
+	});
 }
 
 function createApp(All) {
