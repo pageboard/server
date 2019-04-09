@@ -302,7 +302,8 @@ function getPkg(pkgDir) {
 		pkg.name = name;
 		if (version != null) pkg.version = version;
 		return pkg;
-	}).catch(function() {
+	}).catch(function(err) {
+		console.error(err);
 		return pkg;
 	});
 }
