@@ -12,9 +12,6 @@ var imports = require('./lib/imports');
 var utils = require('./lib/utils');
 var common = require('./models/common');
 
-var proxy = require('http-proxy').createProxyServer();
-
-
 var ajvApiSettings = {
 	$data: true,
 	allErrors: true,
@@ -135,21 +132,6 @@ function init(All) {
 	});
 
 	Object.assign(exports, imports);
-
-	All.app.use('/.api/*', function(req, res, next) {
-		var version = req.get('Accept-Version');
-		var upstream = version && opt.upstreams[version] || null;
-		if (!upstream) version = opt.version;
-		res.vary('Accept-Version');
-		res.set('Content-Version', version);
-		if (upstream) {
-			proxy.web(req, res, {
-				target: upstream
-			});
-		} else {
-			next();
-		}
-	});
 
 	// api depends on site files, that tag is invalidated in cache install
 	All.app.get('/.api/*', All.cache.tag('app-:site'));
