@@ -2,9 +2,6 @@
 
 var Path = require('path');
 
-// a work around because old pageboard has a bug preventing installation with another app name
-process.env.APPNAME = "pageboardfr";
-
 process.chdir(__dirname);
 require(
 	Path.join(Path.dirname(require.resolve('@pageboard/core')), 'cli.js')
