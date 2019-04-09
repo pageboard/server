@@ -40,7 +40,7 @@ exports.config = function(pkgOpt) {
 		cwd: cwd,
 		env: pkgOpt.env || process.env.NODE_ENV || 'development',
 		name: name,
-		version: pkgOpt.version,
+		version: pkgOpt.version.split('.').slice(0, 2).join('.'),
 		global: true,
 		dirs: {
 			cache: Path.join(xdg.cache, name),
