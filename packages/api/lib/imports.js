@@ -147,7 +147,7 @@ function bundle(site, pkg, rootEl) {
 function bundleSource(site, pkg, prefix, name, obj) {
 	var filename = `${prefix}${name}.js`;
 	var version = site.data.version;
-	if (version == null) version = 'master';
+	if (version == null) version = site.branch;
 	var fileurl = `/.files/${version}/_${filename}`;
 	var fileruntime = All.statics.resolve(site.id, fileurl);
 
