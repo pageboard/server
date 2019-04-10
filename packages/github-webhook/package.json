@@ -1,6 +1,6 @@
 {
   "name": "@pageboard/github-webhook",
-  "version": "0.1.2",
+  "version": "0.5.0",
   "description": "Update pageboard site dependencies with github webhooks",
   "main": "index.js",
   "scripts": {
@@ -8,13 +8,13 @@
   },
   "repository": {
     "type": "git",
-    "url": "git+https://github.com/kapouer/github-webhook.git"
+    "url": "git+https://github.com/pageboard/server.git"
   },
   "author": "Jérémy Lal <kapouer@melix.org>",
   "license": "MIT",
   "bugs": {
-    "url": "https://github.com/kapouer/github-webhook/issues"
+    "url": "https://github.com/pageboard/server/issues"
   },
-  "homepage": "https://github.com/kapouer/github-webhook#readme",
+  "homepage": "https://github.com/pageboard/server#readme",
   "pageboard": true
 }

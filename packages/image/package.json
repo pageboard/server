@@ -1,6 +1,6 @@
 {
   "name": "@pageboard/image",
-  "version": "0.2.1",
+  "version": "0.5.0",
   "description": "",
   "main": "index.js",
   "scripts": {
@@ -8,14 +8,14 @@
   },
   "repository": {
     "type": "git",
-    "url": "git+https://github.com/pageboard/image.git"
+    "url": "git+https://github.com/pageboard/server.git"
   },
   "author": "Jérémy Lal <kapouer@melix.org>",
   "license": "MIT",
   "bugs": {
-    "url": "https://github.com/pageboard/image/issues"
+    "url": "https://github.com/pageboard/server/issues"
   },
-  "homepage": "https://github.com/pageboard/image#readme",
+  "homepage": "https://github.com/pageboard/server#readme",
   "dependencies": {
     "bl": "^1.2.2",
     "datauri": "^1.1.0",
