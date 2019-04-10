@@ -147,7 +147,12 @@ function decideInstall(dataDir, site) {
 	var version = site.data.version;
 	if (version == "") version = site.data.version = null; // temporary fix, should not happen
 	if (version == null) {
-		version = "master";
+		var module = site.data.module;
+		var branch;
+		if (module.indexOf('/') > 0 && !module.startsWith('@')) {
+			branch = module.split('#').pop();
+		}
+		version = branch || "master";
 	} else if (/\s/.test(version) == true || semverRegex().test(version) == false && /^\w+$/.test(version) == false) {
 		return Promise.reject(new Error(`${site.id} has invalid version ${version}`));
 	}
