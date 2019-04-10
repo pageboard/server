@@ -279,8 +279,13 @@ function proxySite(site, req, res) {
 	var upstream = site.upstream;
 	if (!upstream) {
 		var version = site.data.server;
-		if (version == All.opt.version) return false;
-		site.upstream = upstream = version && All.opt.upstreams[version] || null;
+		if (!version || version == All.opt.version) return false;
+		upstream = version && All.opt.upstreams[version] || null;
+		if (!upstream) {
+			console.error("Unknown server version", version, "from", site.id);
+			return false;
+		}
+		site.upstream = upstream;
 	}
 
 	proxy.web(req, res, {
