@@ -142,7 +142,12 @@ function decideInstall(dataDir, site) {
 	var version = site.data.version;
 	if (version == "") version = site.data.version = null; // temporary fix, should not happen
 	if (version == null) {
-		version = "master";
+		var module = site.data.module;
+		var branch;
+		if (module.indexOf('/') > 0 && !module.startsWith('@')) {
+			branch = module.split('#').pop();
+		}
+		version = branch || "master";
 	} else if (/\s/.test(version) == true || semverRegex().test(version) == false && /^\w+$/.test(version) == false) {
 		return Promise.reject(new Error(`${site.id} has invalid version ${version}`));
 	}
@@ -175,11 +180,15 @@ function doInstall(site, pkg, opt) {
 		var version = site.data.version;
 		var module = site.data.module;
 		if (version != null) {
-			if (module.indexOf('/') > 0 && !module.startsWith('@')) module += "#";
-			else module += "@";
+			if (module.indexOf('/') > 0 && !module.startsWith('@')) {
+				module = module.split('#').shift();
+				module += "#";
+			} else {
+				module += "@";
+			}
 			module += version;
 		}
-		console.info("install", site.id, module, version);
+		console.info("install", site.id, site.data.module, site.data.version);
 		var baseEnv = {
 			HOME: process.env.HOME,
 			PATH: process.env.PATH
