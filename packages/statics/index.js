@@ -92,7 +92,7 @@ exports.bundle = function(site, pkg, list, filename) {
 	var buildPath = Path.join(buildDir, filename);
 	var opts = All.opt.statics;
 	var version = site.data.version;
-	if (version == null) version = 'master';
+	if (version == null) version = site.branch;
 	var inputs = list.map(function(url) {
 		return urlToPath(opts, site.id, url);
 	});
@@ -100,7 +100,7 @@ exports.bundle = function(site, pkg, list, filename) {
 	var output = urlToPath(opts, site.id, outUrl);
 
 	return Promise.all([mkdirp(buildDir), mkdirp(cacheDir)]).then(function() {
-		if (version != 'master') return fs.stat(buildPath).catch(function(err) {})
+		if (version != site.branch) return fs.stat(buildPath).catch(function(err) {})
 		.then(function(stat) {
 			return !!stat;
 		});
