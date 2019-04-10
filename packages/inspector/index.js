@@ -37,7 +37,6 @@ function filterResult(result) {
 	});
 	if (obj.icon == "data:/,") delete obj.icon;
 	if (result.url) obj.pathname = URL.parse(result.url).pathname;
-	var meta = {};
 	['width', 'height', 'duration', 'size', 'thumbnail', 'description']
 	.forEach(function(key) {
 		if (result[key] !== undefined) obj.meta[key] = result[key];
