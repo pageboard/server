@@ -96,7 +96,7 @@ exports.init = function(opt) {
 			});
 		})).then(function(modules) {
 			opt.plugins = modules.filter(x => !!x);
-			var plugin;
+			var plugin, module;
 			while (opt.plugins.length) {
 				module = opt.plugins.shift();
 				try {
