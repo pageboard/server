@@ -22,8 +22,8 @@
   },
   "homepage": "https://github.com/pageboard/server#readme",
   "dependencies": {
-    "express-dom": "^5.12.2",
-    "webkitgtk": "^4.9.0"
+    "express-dom": "^5.12.10",
+    "webkitgtk": "^4.10.0"
   },
   "pageboard": true
 }
