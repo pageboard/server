@@ -102,7 +102,7 @@ exports.bundle = function(site, pkg, list, filename) {
 	var installPath = Path.join(pkg.dir, filename);
 	var opts = All.opt.statics;
 	var version = site.data.version;
-	if (version == null) version = 'master';
+	if (version == null) version = site.branch;
 	var inputs = list.map(function(url) {
 		return urlToPath(opts, site.id, url);
 	});
@@ -117,7 +117,7 @@ exports.bundle = function(site, pkg, list, filename) {
 		}
 	}
 	var p = Promise.resolve().then(function() {
-		if (version != '-') return fs.stat(installPath).catch(function(err) {})
+		if (version != site.branch) return fs.stat(installPath).catch(function(err) {})
 		.then(function(stat) {
 			return !!stat;
 		});

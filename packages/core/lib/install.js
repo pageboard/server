@@ -147,7 +147,7 @@ function decideInstall(dataDir, site) {
 		if (module.indexOf('/') > 0 && !module.startsWith('@')) {
 			branch = module.split('#').pop();
 		}
-		version = branch || "master";
+		site.branch = version = branch || "master";
 	} else if (/\s/.test(version) == true || semverRegex().test(version) == false && /^\w+$/.test(version) == false) {
 		return Promise.reject(new Error(`${site.id} has invalid version ${version}`));
 	}
@@ -267,7 +267,7 @@ function prepareDir(pkg) {
 }
 
 function populatePkg(site, pkg) {
-	var version = pkg.version != null ? pkg.version : site.data.version != null ? site.data.version : 'master';
+	var version = pkg.version || site.branch || site.data.version;
 	var pair = `${site.id}/${version}`;
 	var siteModuleDir = Path.join(pkg.dir, 'node_modules', pkg.name);
 	return fs.readFile(Path.join(siteModuleDir, "package.json")).then(function(buf) {
