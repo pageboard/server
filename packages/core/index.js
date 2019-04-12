@@ -278,6 +278,7 @@ function createApp(All) {
 	app.use(All.domains.init);
 	app.use(function(req, res, next) {
 		if (req.path == "/.well-known/pageboard") {
+			if (req.site.upstream) res.set('X-Upstream', req.site.upstream);
 			res.type("json").send({
 				errors: req.site.errors
 			});
