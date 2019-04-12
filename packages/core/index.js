@@ -283,11 +283,15 @@ function createApp(All) {
 				errors: req.site.errors
 			});
 		} else {
-			res.setHeader('Referrer-Policy', 'same-origin');
-			res.setHeader('X-XSS-Protection','1;mode=block');
-			res.setHeader('X-Frame-Options', 'sameorigin');
-			res.setHeader('X-Content-Type-Options', 'nosniff');
-			next();
+			if (req.site.upstream) {
+				res.sendStatus(503);
+			} else {
+				res.setHeader('Referrer-Policy', 'same-origin');
+				res.setHeader('X-XSS-Protection','1;mode=block');
+				res.setHeader('X-Frame-Options', 'sameorigin');
+				res.setHeader('X-Content-Type-Options', 'nosniff');
+				next();
+			}
 		}
 	});
 	app.use(function(err, req, res, next) {

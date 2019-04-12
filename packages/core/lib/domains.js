@@ -73,7 +73,8 @@ Domains.prototype.init = function(req, res, next) {
 			});
 			hostUpdate(host, domains[0]);
 			host.domains = domains;
-			host.proxying = proxySite(site, req, res);
+			host.proxying = setUpstream(site);
+			if (host.proxying && host.finalize) host.finalize();
 			return site;
 		}).catch(function(err) {
 			host._error = err;
@@ -270,7 +271,7 @@ Domains.prototype.error = function(site, err) {
 	}
 };
 
-function proxySite(site, req, res) {
+function setUpstream(site) {
 	var upstream = site.upstream;
 	if (!upstream) {
 		var version = site.data.server;
