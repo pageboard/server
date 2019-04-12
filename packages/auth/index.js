@@ -22,7 +22,8 @@ function init(All) {
 		keysize: 2048
 	}, opt.lock);
 
-	return require('./lib/keygen')(All).then(function() {
+	return require('./lib/keygen')(All).then(function(keys) {
+		Object.assign(opt.lock, keys);
 		var lock = UpcacheLock(opt.lock);
 
 		All.auth.vary = lock.vary;

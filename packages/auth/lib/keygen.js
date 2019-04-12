@@ -39,7 +39,7 @@ module.exports = function(All) {
 			keys.privateKey = keys.private;
 			delete keys.private;
 		}
-		Object.assign(All.opt.lock, keys);
+		return keys;
 	});
 };
 
