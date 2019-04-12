@@ -87,7 +87,10 @@ function sortPriority(list) {
 	list.sort(function(a, b) {
 		var pa = a.priority;
 		var pb = b.priority;
-		if (pa == pb) return 0;
+		if (pa == pb) {
+			if (a.path && b.path) return Path.basename(a.path).localeCompare(Path.basename(b.path));
+			else return 0;
+		}
 		if (pa < pb) return -1;
 		else return 1;
 	});
@@ -178,7 +181,7 @@ function listDependencies(rootGroup, eltsMap, el, list=[], sieve={}) {
 					listDependencies(rootGroup, eltsMap, gel, list, sieve);
 				}
 			});
-			if (!isGroup) console.error("Cannot find element");
+			if (!isGroup) console.error(`Element '${word}' is not in a group`);
 		}
 	}
 	if (!el || sieve[el.name]) return list;

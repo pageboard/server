@@ -113,6 +113,13 @@ function init(All) {
 	// api depends on site files, that tag is invalidated in cache install
 	All.app.get('/.api/*', All.cache.tag('app-:site'));
 	All.app.use('/.api/*',
+		function(req, res, next) {
+			if (req.site.data.maintenance === true && req.method != "GET") {
+				throw new HttpError.ServiceUnavailable("Site is in maintenance mode");
+			} else {
+				next();
+			}
+		},
 		// invalid site by site
 		All.cache.tag('data-:site'),
 		// parse json bodies
@@ -233,7 +240,10 @@ All.send = function(res, obj) {
 		delete obj.cookies;
 	}
 	// client needs to know what keys are supposed to be available
-	obj.grants = req.user.scopes || {};
+	obj.grants = {};
+	(req.user.grants || []).forEach(function(grant) {
+		obj.grants[grant] = true;
+	});
 	if (obj.status) {
 		res.status(obj.status);
 		delete obj.status;
@@ -242,7 +252,7 @@ All.send = function(res, obj) {
 		res.redirect(obj.location);
 	} else {
 		All.auth.filterResponse(req.site, req.user, obj);
-		All.auth.headers(res, Object.keys(req.user.grants || {}));
+		All.auth.headers(res, req.locks);
 		res.json(obj);
 	}
 };

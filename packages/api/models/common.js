@@ -234,7 +234,7 @@ class PatchObjectOperation extends UpdateOperation {
 				// "col" : raw(`jsonb_set("col", '{attr}', to_jsonb("other"#>'{lol}'), true)`)
 
 				let parsed = ref(key);
-				let jsonRefs = '{' + parsed.reference.access.map(it => it.ref).join(',') + '}';
+				let jsonRefs = '{' + parsed._parsedExpr.access.map(it => it.ref).join(',') + '}';
 				let valuePlaceholder = '?';
 
 				if (isKnexQueryBuilder(val) || isKnexRaw(val)) {

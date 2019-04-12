@@ -10,7 +10,6 @@ var rc = require('rc');
 var mkdirp = pify(require('mkdirp'));
 var xdg = require('xdg-basedir');
 var resolvePkg = require('resolve-pkg');
-var pkgup = require('pkg-up');
 var debug = require('debug')('pageboard:core');
 var http = require('http');
 
@@ -37,7 +36,7 @@ exports.config = function(pkgOpt) {
 		cwd: cwd,
 		env: pkgOpt.env || process.env.NODE_ENV || 'development',
 		name: name,
-		version: pkgOpt.version,
+		version: pkgOpt.version.split('.').slice(0, 2).join('.'),
 		global: true,
 		dirs: {
 			cache: Path.join(xdg.cache, name),
@@ -50,9 +49,9 @@ exports.config = function(pkgOpt) {
 		dependencies: pkgOpt.dependencies || {},
 		core: {
 			installer: "npm",  // or yarn
-			listen: 3000,
 			log: ':method :status :time :size :site:url'
 		},
+		port: 3000,
 		extnames: []
 	});
 	symlinkDir(opt, 'sites');
@@ -90,9 +89,8 @@ exports.init = function(opt) {
 		opt.installerPath = path;
 	}).then(function() {
 		return Promise.all(Object.keys(opt.dependencies).map(function(module) {
-			return pkgup(resolvePkg(module)).then(function(pkgPath) {
-				return Install.config(Path.dirname(pkgPath), "pageboard", module, All.opt);
-			});
+			var pkgPath = resolvePkg(module);
+			return Install.config(pkgPath, "pageboard", module, All.opt);
 		})).then(function(modules) {
 			opt.plugins = modules.filter(x => !!x);
 			var plugin, module;
@@ -168,8 +166,8 @@ function install(site) {
 
 exports.start = function(All) {
 	var server = http.createServer(All.app);
-	server.listen(All.opt.core.listen);
-	console.info(`Listening on port ${All.opt.core.listen}`);
+	server.listen(All.opt.port);
+	console.info(`Listening on port ${All.opt.port}`);
 	setTimeout(function() {
 		All.api.gc(All);
 	}, 1000);

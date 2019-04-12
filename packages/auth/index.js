@@ -1,4 +1,4 @@
-var upcacheScope = require('upcache/scope');
+const UpcacheLock = require('upcache').lock;
 
 exports = module.exports = function(opt) {
 	opt.plugins.unshift(
@@ -22,19 +22,22 @@ function init(All) {
 		keysize: 2048
 	}, opt.scope);
 
-	return require('./lib/keygen')(All).then(function() {
-		var scope = upcacheScope(opt.scope);
+	return require('./lib/keygen')(All).then(function(keys) {
+		Object.assign(opt.scope, keys);
+		var lock = UpcacheLock(opt.scope);
+		All.auth.restrict = lock.restrict.bind(lock);
+		All.auth.vary = lock.vary;
+		All.auth.headers = lock.headers;
+		All.auth.cookie = function({site, user}) {
+			return {
+				value: lock.sign(user, Object.assign({
+					hostname: site.hostname
+				}, opt.lock)),
+				maxAge: opt.lock.maxAge * 1000
+			};
+		};
 
-		All.auth.restrict = scope.restrict.bind(scope);
-		All.auth.headers = scope.headers.bind(scope);
-		All.auth.sign = scope.sign.bind(scope);
-
-		All.app.use(All.auth.restrict('*'), function(req, res, next) {
-			scope.handshake(req, res, function() {});
-			scope.parseBearer(req);
-			if (!req.user) req.user = {};
-			next();
-		});
+		All.app.use(All.auth.vary('*'));
 	});
 }
 
@@ -74,26 +77,37 @@ function grantsLevels(DomainBlock) {
 }
 
 function locked(site, user, locks) {
-	if (locks == null) return false;
-	if (typeof locks == "string") locks = [locks];
-	if (locks.length == 0) return false;
-	if (!user) user = {};
-	if (!user.grants) user.grants = {};
-	var scopes = {};
-	scopes[`user-${user.id}`] = true;
+	if (!locks) locks = req.locks = [];
+	if (list != null && !Array.isArray(list) && typeof list == "object" && list.read !== undefined) {
+		// backward compat, block.lock only cares about read access
+		list = list.read;
+	}
+	if (list == null) return false;
+	if (typeof list == "string") list = [list];
+	if (list === true || list.length == 0) return false;
 	var minLevel = Infinity;
-	Object.keys(user.scopes || {}).forEach(function(grant) {
-		scopes[grant] = true;
-		minLevel = Math.min(site.$grants[grant], minLevel);
+	var grants = user.grants || [];
+	grants.forEach(function(grant) {
+		minLevel = Math.min(site.$grants[grant] || Infinity, minLevel);
 	});
 
-	var granted = locks.some(function(lock) {
-		// NB: user-:id grants cannot be accessed by any other
+	var granted = false;
+	list.forEach(function(lock) {
 		var lockIndex = site.$grants[lock] || -1;
-		if ((lockIndex > minLevel) || scopes[lock]) {
-			user.grants[lock] = true;
-			return true;
+		if (lock.startsWith('id-')) {
+			if ('id-' + user.id == lock) granted = true;
+			lock = 'id-:id';
+		} else if ((lockIndex > minLevel) || grants.includes(lock)) {
+			granted = true;
 		}
+		if (!locks.includes(lock)) locks.push(lock);
+	});
+	locks.sort(function(a, b) {
+		var al = site.$grants[a] || -1;
+		var bl = site.$grants[b] || -1;
+		if (al == bl) return 0;
+		else if (al < bl) return 1;
+		else if (al > bl) return -1;
 	});
 	return !granted;
 }

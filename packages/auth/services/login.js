@@ -4,8 +4,8 @@ var URL = require('url');
 // validity of token: 10 minutes
 // accept previous token in case it has been generated just before the end of validity
 otp.options = {
-	step: 60 * 10,
-	window: [1, 0]
+	step: 30, // do not change this value, we want third-party otp apps to work with us
+	window: [20, 1] // ten minutes-old tokens are still valid
 };
 
 exports = module.exports = function(opt) {
@@ -162,28 +162,21 @@ exports.grant = function(site, user, data) {
 		return All.run('settings.find', site, {
 			email: data.email
 		}).then(function(settings) {
-			var userGrants = settings.data && settings.data.grants || [];
-			if (userGrants.length == 0) userGrants.push('user'); // the minimum grant
-			var userScopes = {};
-			userGrants.forEach(function(g) {
-				userScopes[g] = true;
-			});
-			if (All.auth.locked(site, {scopes: userScopes}, [data.grant])) {
+			var grants = req.user && req.user.grants || [];
+			var user = req.user = {
+				id: settings.id,
+				grants: settings.data && settings.data.grants || []
+			};
+			var locks = [data.grant];
+			if (All.auth.locked(req, locks)) {
 				throw new HttpError.Forbidden("User has insufficient grants");
 			}
-			user.scopes = {};
-			user.scopes[data.grant] = true;
-			user.id = settings.id;
+			user.grants = locks;
+			req.granted = grants.join(',') != locks.join(',');
 			return {
 				item: settings,
 				cookies: {
-					bearer: {
-						value: All.auth.sign(site, {
-							id: user.id,
-							scopes: user.scopes
-						}, All.opt.scope),
-						maxAge: All.opt.scope.maxAge * 1000
-					}
+					bearer: All.auth.cookie(req)
 				}
 			};
 		});

@@ -2,6 +2,7 @@ var DNS = {
 	lookup: require('util').promisify(require('dns').lookup),
 	reverse: require('util').promisify(require('dns').reverse)
 };
+
 var pageboardNames;
 module.exports = Domains;
 
@@ -36,7 +37,8 @@ Domains.prototype.init = function(req, res, next) {
 			console.error(req.headers);
 			return next(new HttpError.BadRequest('Missing Host header'));
 		}
-		portUpdate(host, hostHeader);
+		hostUpdatePort(host, hostHeader);
+		host.protocol = req.get('X-Forwarded-Proto') || 'http';
 	}
 	if (!host.searching && !host._error) {
 		delete host._error;
@@ -70,7 +72,7 @@ Domains.prototype.init = function(req, res, next) {
 			domains.forEach(function(domain) {
 				hosts[domain] = host;
 			});
-			hostUpdate(host, domains[0]);
+			hostUpdateDomain(host, domains[0]);
 			host.domains = domains;
 			return site;
 		}).catch(function(err) {
@@ -265,29 +267,16 @@ Domains.prototype.error = function(site, err) {
 	}
 };
 
-function portUpdate(host, header) {
+function hostUpdatePort(host, header) {
 	var parts = header.split(':');
 	var port = parts.length == 2 ? parseInt(parts[1]) : null;
 	if (!isNaN(port)) host.port = port;
 	else delete host.port;
 }
 
-function hostUpdate(host, name) {
+function hostUpdateDomain(host, name) {
 	host.name = name;
-	var port = host.port;
-	var protocol = "http";
-	if (port) {
-		var right = port % 1000;
-		if (right == 80) {
-			port += - 80 + 443;
-			protocol = "https";
-		} else if (right == 443) {
-			protocol = "https";
-		}
-	} else {
-		protocol = "https";
-	}
-	host.href = protocol + '://' + name + (port ? `:${port}` : '');
+	host.href = host.protocol + '://' + name + (host.port ? `:${host.port}` : '');
 }
 
 function errorObject(site, err) {

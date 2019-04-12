@@ -1,4 +1,4 @@
-var tag = require('upcache/tag');
+const {tag, map} = require('upcache');
 var pify = require('util').promisify;
 var fs = {
 	readFile: pify(require('fs').readFile),
@@ -13,6 +13,7 @@ var got = require('got');
 var state = new CacheState();
 
 exports = module.exports = function(opt) {
+	exports.map = map;
 	exports.tag = paramSiteWrap(tag);
 	exports.for = paramSiteWrap(tag.for);
 	exports.disable = tag.disable;
@@ -84,7 +85,9 @@ CacheState.prototype.install = function(site) {
 		return;
 	}
 	setTimeout(function() {
-		if (site.href) got.post(`${site.href}/.well-known/upcache`).catch(function(err) {
+		if (site.href) got.post(`${site.href}/.well-known/upcache`, {
+			timeout: 5000
+		}).catch(function(err) {
 			console.error(err);
 		});
 	});
