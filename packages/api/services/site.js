@@ -384,6 +384,7 @@ exports.export.schema = {
 
 // import all data but files
 exports.import = function(data) {
+	var keep = data.pristine;
 	var Block = All.api.Block;
 	var counts = {
 		site: 0,
@@ -413,7 +414,7 @@ exports.import = function(data) {
 				} else if (obj.lone) {
 					var lone = obj.lone;
 					var map = {};
-					return Promise.all([
+					return (keep ? Promise.resolve() : Promise.all([
 						Block.genId().then(function(id) {
 							var old = lone.id;
 							lone.id = id;
@@ -426,18 +427,18 @@ exports.import = function(data) {
 							child.id = id;
 							map[id] = new RegExp(`block-id="${old}"`, 'g');
 						});
-					}))).then(function() {
+					})))).then(function() {
 						var lones = lone.standalones;
 						var lonesRefs = [];
 						if (lones) {
 							delete lone.standalones;
 							lones.forEach(function(rlone) {
 								// relate lone to rlone
-								var id = oldmap[rlone.id];
+								var id = keep ? rlone.id : oldmap[rlone.id];
 								if (!id) {
 									throw new Error("unknown standalone " + rlone.id);
 								}
-								map[id] = new RegExp(`block-id="${rlone.id}"`, 'g');
+								if (!keep) map[id] = new RegExp(`block-id="${rlone.id}"`, 'g');
 								var _id = standalones[id];
 								if (!_id) {
 									console.error(rlone, id);
@@ -449,13 +450,13 @@ exports.import = function(data) {
 							});
 						}
 						lone.children.forEach(function(child) {
-							replaceContent(map, child);
+							if (!keep) replaceContent(map, child);
 							child.parents = [{
 								"#dbRef": site._id
 							}];
 						});
 						lone.children = lone.children.concat(lonesRefs);
-						replaceContent(map, lone);
+						if (!keep) replaceContent(map, lone);
 					}).then(function() {
 						return site.$relatedQuery('children', trx).insertGraph(lone).then(function(obj) {
 							standalones[lone.id] = obj._id;
@@ -486,8 +487,9 @@ exports.import = function(data) {
 							type: 'user'
 						}).returning('_id');
 					}).then(function(user) {
-						return Block.genId().then(function(id) {
+						return (keep ? Promise.resolve() : Block.genId().then(function(id) {
 							setting.id = id;
+						})).then(function() {
 							setting.parents = [{'#dbRef': user._id}];
 							counts.settings++;
 							delete setting._email;
@@ -538,11 +540,18 @@ exports.import.schema = {
 	required: ['id', 'file'],
 	properties: {
 		id: {
+			title: 'Site id',
 			type: 'string',
 			format: 'id'
 		},
 		file: {
+			title: 'File path',
 			type: 'string'
+		},
+		pristine: {
+			title: 'Keep original id',
+			type: 'boolean',
+			default: false
 		}
 	}
 };
