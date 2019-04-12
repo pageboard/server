@@ -2,7 +2,6 @@ var DNS = {
 	lookup: require('util').promisify(require('dns').lookup),
 	reverse: require('util').promisify(require('dns').reverse)
 };
-var proxy = require('http-proxy').createProxyServer();
 
 var pageboardNames;
 module.exports = Domains;
@@ -287,13 +286,7 @@ function proxySite(site, req, res) {
 		}
 		site.upstream = upstream;
 	}
-
-	proxy.web(req, res, {
-		target: upstream
-	}, function(err) {
-		console.error(err);
-	});
-	return true;
+	return upstream;
 }
 
 function portUpdate(host, header) {
