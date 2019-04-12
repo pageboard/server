@@ -35,7 +35,7 @@ Domains.prototype.init = function(req, res, next) {
 		var hostHeader = req.get('Host');
 		if (!hostHeader) {
 			console.error(req.headers);
-			return next(new Error('Missing Host header'));
+			return next(new HttpError.BadRequest('Missing Host header'));
 		}
 		portUpdate(host, hostHeader);
 	}
@@ -316,7 +316,6 @@ function hostUpdate(host, name) {
 
 function errorObject(site, err) {
 	var std = err.toString();
-	var stop = false;
 	var errObj = {
 		name: err.name,
 		message: err.message
