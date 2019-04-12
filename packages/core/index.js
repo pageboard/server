@@ -53,9 +53,9 @@ exports.config = function(pkgOpt) {
 		dependencies: pkgOpt.dependencies || {},
 		core: {
 			installer: "npm",  // or yarn
-			listen: 3000,
 			log: ':method :status :time :size :site:url'
 		},
+		port: 3000,
 		report: {},
 		extnames: [],
 		upstreams: {}
@@ -172,8 +172,8 @@ function install(site) {
 
 exports.start = function(All) {
 	var server = http.createServer(All.app);
-	server.listen(All.opt.core.listen);
-	console.info(`Listening on port ${All.opt.core.listen}`);
+	server.listen(All.opt.port);
+	console.info(`Listening on port ${All.opt.port}`);
 	setTimeout(function() {
 		All.api.gc(All);
 	}, 1000);
