@@ -407,6 +407,7 @@ exports.import = function(data) {
 			p = p.then(function() {
 				if (obj.site) {
 					obj.site.id = data.id;
+					delete obj.site.data.domains;
 					return Block.query(trx).insert(obj.site).returning('*').then(function(copy) {
 						counts.site++;
 						site = copy;
