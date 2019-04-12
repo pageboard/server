@@ -83,7 +83,7 @@ Domains.prototype.init = function(req, res, next) {
 		});
 	}
 
-	if (!host.proxying && !host.installing && !host._error) {
+	if (!host.installing && !host._error) {
 		host.isInstalling = true;
 		host.installing = host.searching.then(function(site) {
 			if (host._error || host.proxying) return;
@@ -137,30 +137,26 @@ Domains.prototype.init = function(req, res, next) {
 			next(new HttpError.ServiceUnavailable(`Missing host.id or site for ${host.name}`));
 			return;
 		}
-		if (proxySite(site, req, res)) {
-			host.proxying = true;
-		} else {
-			var path = req.path;
-
-			var errors = site.errors;
-			// calls to api use All.run which does site.$clone() to avoid concurrency issues
-			req.site = site;
-
-			if (req.hostname != host.domains[0] && (
-				!path.startsWith('/.well-known/') || /^.well-known\/\d{3}$/.test(path)
-			)) {
-				All.cache.tag('data-:site')(req, res, function() {
-					res.redirect(308, host.href +  req.url);
-				});
-				return;
-			}
-
-			site.href = host.href;
-			site.hostname = host.name; // at this point it should be == host.domains[0]
-			site.errors = errors;
-
+		// calls to api use All.run which does site.$clone() to avoid concurrency issues
+		req.site = site;
+		if (host.proxying) {
 			next();
+			return;
 		}
+		var path = req.path;
+		if (req.hostname != host.domains[0] && (
+			!path.startsWith('/.well-known/') || /^.well-known\/\d{3}$/.test(path)
+		)) {
+			All.cache.tag('data-:site')(req, res, function() {
+				res.redirect(308, host.href +  req.url);
+			});
+			return;
+		}
+
+		site.href = host.href;
+		site.hostname = host.name; // at this point it should be == host.domains[0]
+
+		next();
 	}).catch(next);
 };
 
