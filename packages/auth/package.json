@@ -17,8 +17,7 @@
   },
   "homepage": "https://github.com/pageboard/server#readme",
   "dependencies": {
-    "spawn-please": "^0.3.0",
-    "upcache": "^1.0.0"
+    "upcache": "^1.1.1"
   },
   "pageboard": true
 }

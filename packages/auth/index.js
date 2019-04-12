@@ -12,13 +12,15 @@ exports = module.exports = function(opt) {
 // validate: process activation link and return bearer in cookie
 
 function init(All) {
+	var opt = All.opt;
 	opt.scope = Object.assign({
 		maxAge: 60 * 60 * 24 * 31,
 		userProperty: 'user',
 		keysize: 2048
 	}, opt.scope);
 
-	return require('./lib/keygen')(All).then(function() {
+	return require('./lib/keygen')(All).then(function(keys) {
+		Object.assign(opt.scope, keys);
 		var lock = UpcacheLock(opt.scope);
 		All.auth.restrict = lock.restrict.bind(lock);
 		All.auth.vary = lock.vary;
