@@ -276,9 +276,11 @@ function loadFromFile(buf, elts, names, context) {
 		filename: context.path
 	});
 	var sandbox = {
-		Pageboard: {
-			elements: new Proxy(elts, new MapProxy(context))
-		}
+		exports: new Proxy(elts, new MapProxy(context))
+	};
+	// let's keep compatibility for now
+	sandbox.Pageboard = {
+		elements: sandbox.exports
 	};
 	script.runInNewContext(sandbox, {
 		filename: context.path,
