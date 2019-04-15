@@ -270,37 +270,65 @@ exports.export = function(data) {
 		counts.site = 1;
 		counts.standalones = children.length;
 		out.write('{"site": ');
-		out.write(',\n"standalones": [');
-		var last = children.length - 1;
-		var prom = Promise.resolve();
-		children.reduce(function(p, child, i) {
-			return p.then(function() {
-				return All.api.Block.query()
-				.select().omit(['tsv', '_id'])
-				.first().where('_id', child._id)
-				.eager('[children(notlones) as children,children(lones) as standalones]', {
-					notlones: function(builder) {
-						return builder.select().omit(['tsv', '_id']).where('standalone', false);
-					},
-					lones: function(builder) {
-						return builder.select('block.id').where('standalone', true);
-					}
-				}).then(function(lone) {
-					if (lone.standalones.length > 0) {
-						if (!lone.data || !lone.data.url) {
-							console.warn("standalone block without url has standalone children", lone);
 		out.write(JSON.stringify(site));
+		// TODO extend to any non-standalone block that is child of user or settings
+		// TODO fix calendar so that reservations are made against a user, not against its settings
+		out.write(',\n"settings": [');
+		return site.$relatedQuery('children').where('block.type', 'settings')
+		.select().eager('parents(user) as user', {
+			user: function(builder) {
+				return builder.select(
+					ref('data:email').castText().as('email')
+				).where('block.type', 'user');
+			}
+		}).joinRelation('parents', {alias: 'site'})
+		.where('site.type', 'site').then(function(settings) {
+			var last = settings.length - 1;
+			settings.forEach(function(setting, i) {
+				var user = setting.user;
+				delete setting.user;
+				if (user.length == 0) return;
+				user = user[0];
+				if (!user.email) return;
+				counts.settings++;
+				setting._email = user.email;
+				out.write(JSON.stringify(setting));
+				if (i != last) out.write(',');
+			});
+		}).then(function() {
+			out.write(']');
+		}).then(function() {
+			out.write(',\n"standalones": [');
+			var last = children.length - 1;
+			var prom = Promise.resolve();
+			return children.reduce(function(p, child, i) {
+				return p.then(function() {
+					return All.api.Block.query()
+					.select().omit(['tsv', '_id'])
+					.first().where('_id', child._id)
+					.eager('[children(notlones) as children,children(lones) as standalones]', {
+						notlones: function(builder) {
+							return builder.select().omit(['tsv', '_id']).where('standalone', false);
+						},
+						lones: function(builder) {
+							return builder.select('block.id').where('standalone', true);
+						}
+					}).then(function(lone) {
+						if (lone.standalones.length > 0) {
+							if (!lone.data || !lone.data.url) {
+								console.warn("standalone block without url has standalone children", lone);
+								delete lone.standalones;
+							}
+						} else {
 							delete lone.standalones;
 						}
-					} else {
-						delete lone.standalones;
-					}
-					counts.blocks += lone.children.length;
-					out.write(JSON.stringify(lone));
-					if (i != last) out.write(',');
+						counts.blocks += lone.children.length;
+						out.write(JSON.stringify(lone));
+						if (i != last) out.write(',');
+					});
 				});
-			});
-		}, prom).then(function() {
+			}, prom);
+		}).then(function() {
 			out.write('],\n"hrefs": [');
 			return All.api.Href.query().select()
 			.omit(['tsv', '_id', '_parent_id']).whereSite(site.id).then(function(hrefs) {
@@ -312,42 +340,13 @@ exports.export = function(data) {
 				});
 			});
 		}).then(function() {
-			// TODO extend to any non-standalone block that is child of user or settings
-			// TODO fix calendar so that reservations are made against a user, not against its settings
 			out.write(']');
-			if (!data.settings) return;
-			out.write(',\n"settings": [');
-			return site.$relatedQuery('children').where('block.type', 'settings')
-			.select().eager('parents(user) as user', {
-				user: function(builder) {
-					return builder.select(
-						ref('data:email').castText().as('email')
-					).where('block.type', 'user');
-				}
-			}).joinRelation('parents', {alias: 'site'})
-			.where('site.type', 'site').then(function(settings) {
-				var last = settings.length - 1;
-				settings.forEach(function(setting, i) {
-					var user = setting.user;
-					delete setting.user;
-					if (user.length == 0) return;
-					user = user[0];
-					if (!user.email) return;
-					counts.settings++;
-					setting._email = user.email;
-					out.write(JSON.stringify(setting));
-					if (i != last) out.write(',');
-				});
-			}).then(function() {
-				out.write(']');
-			});
 		}).then(function() {
 			out.end('}');
-			return counts;
-		});
-		return prom.then(function() {
 			return finished;
 		});
+	}).then(function() {
+		return counts;
 	});
 };
 exports.export.schema = {
@@ -361,10 +360,6 @@ exports.export.schema = {
 		},
 		file: {
 			type: 'string'
-		},
-		settings: {
-			type: 'boolean',
-			default: false
 		}
 	}
 };
