@@ -384,7 +384,8 @@ exports.import = function(data) {
 		});
 		var site;
 		var standalones = {};
-		var oldmap = {};
+		var idMap = {};
+		var regMap = {};
 		pstream.on('data', function(obj) {
 			p = p.then(function() {
 				if (obj.site) {
@@ -396,19 +397,17 @@ exports.import = function(data) {
 					});
 				} else if (obj.lone) {
 					var lone = obj.lone;
-					var map = {};
 					return (keep ? Promise.resolve() : Promise.all([
 						Block.genId().then(function(id) {
 							var old = lone.id;
-							lone.id = id;
-							oldmap[old] = id;
-							map[id] = new RegExp(`block-id="${old}"`, 'g');
+							lone.id = idMap[old] = id;
+							regMap[id] = new RegExp(`block-id="${old}"`, 'g');
 						})
 					].concat(lone.children.map(function(child) {
 						return Block.genId().then(function(id) {
 							var old = child.id;
-							child.id = id;
-							map[id] = new RegExp(`block-id="${old}"`, 'g');
+							child.id = idMap[child.id] = id;
+							regMap[id] = new RegExp(`block-id="${old}"`, 'g');
 						});
 					})))).then(function() {
 						var lones = lone.standalones;
@@ -417,11 +416,11 @@ exports.import = function(data) {
 							delete lone.standalones;
 							lones.forEach(function(rlone) {
 								// relate lone to rlone
-								var id = keep ? rlone.id : oldmap[rlone.id];
+								var id = keep ? rlone.id : idMap[rlone.id];
 								if (!id) {
 									throw new Error("unknown standalone " + rlone.id);
 								}
-								if (!keep) map[id] = new RegExp(`block-id="${rlone.id}"`, 'g');
+								if (!keep) regMap[id] = new RegExp(`block-id="${rlone.id}"`, 'g');
 								var _id = standalones[id];
 								if (!_id) {
 									console.error(rlone, id);
@@ -433,13 +432,19 @@ exports.import = function(data) {
 							});
 						}
 						lone.children.forEach(function(child) {
-							if (!keep) replaceContent(map, child);
+							if (!keep) {
+								replaceContent(regMap, child);
+								replaceLock(idMap, child);
+							}
 							child.parents = [{
 								"#dbRef": site._id
 							}];
 						});
 						lone.children = lone.children.concat(lonesRefs);
-						if (!keep) replaceContent(map, lone);
+						if (!keep) {
+							replaceContent(regMap, lone);
+							replaceLock(idMap, lone);
+						}
 					}).then(function() {
 						return site.$relatedQuery('children', trx).insertGraph(lone).then(function(obj) {
 							standalones[lone.id] = obj._id;
@@ -471,7 +476,8 @@ exports.import = function(data) {
 						}).returning('_id');
 					}).then(function(user) {
 						return (keep ? Promise.resolve() : Block.genId().then(function(id) {
-							setting.id = id;
+							setting.id = idMap[setting.id] = id;
+							replaceLock(idMap, setting);
 						})).then(function() {
 							setting.parents = [{'#dbRef': user._id}];
 							counts.settings++;
@@ -551,6 +557,20 @@ function replaceContent(map, block) {
 			str = str.replace(map[id], `block-id="${id}"`);
 		}
 		block.content[key] = str;
+	});
+}
+
+function replaceLock(map, block) {
+	var lock = block.lock;
+	if (!lock) return;
+	if (lock.read) lock = lock.read;
+	if (!Array.isArray(lock)) return;
+	lock.forEach(function(item, i) {
+		item = item.split('-');
+		if (item.length != 2) return;
+		var id = map[item[1]];
+		if (id) item[1] = id;
+		lock[i] = item.join('-');
 	});
 }
 
