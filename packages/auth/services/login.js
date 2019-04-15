@@ -137,7 +137,7 @@ function verifyToken(email, token) {
 		return All.user.get({email: [email]}).then(function(user) {
 			return userPriv(user, trx).then(function(priv) {
 				var tries = (priv.data.otp.tries || 0) + 1;
-				if (tries >= 3) {
+				if (tries >= 5) {
 					var at = Date.parse(priv.data.otp.checked_at);
 					if (!isNaN(at) && Date.now() - at < 1000 * otp.options.step / 2) {
 						throw new HttpError.TooManyRequests();
@@ -162,21 +162,20 @@ exports.grant = function(site, user, data) {
 		return All.run('settings.find', site, {
 			email: data.email
 		}).then(function(settings) {
-			var grants = req.user && req.user.grants || [];
-			var user = req.user = {
+			var testUser = {
 				id: settings.id,
 				grants: settings.data && settings.data.grants || []
 			};
 			var locks = [data.grant];
-			if (All.auth.locked(req, locks)) {
+			if (All.auth.locked(site, testUser, locks)) {
 				throw new HttpError.Forbidden("User has insufficient grants");
 			}
-			user.grants = locks;
-			req.granted = grants.join(',') != locks.join(',');
+			testUser.grants = locks;
+			Object.assign(user, testUser);
 			return {
 				item: settings,
 				cookies: {
-					bearer: All.auth.cookie(req)
+					bearer: All.auth.cookie(site, testUser)
 				}
 			};
 		});

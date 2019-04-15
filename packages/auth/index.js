@@ -28,12 +28,12 @@ function init(All) {
 		All.auth.restrict = lock.restrict.bind(lock);
 		All.auth.vary = lock.vary;
 		All.auth.headers = lock.headers;
-		All.auth.cookie = function({site, user}) {
+		All.auth.cookie = function(site, user) {
 			return {
 				value: lock.sign(user, Object.assign({
 					hostname: site.hostname
-				}, opt.lock)),
-				maxAge: opt.lock.maxAge * 1000
+				}, opt.scope)),
+				maxAge: opt.scope.maxAge * 1000
 			};
 		};
 
@@ -76,8 +76,7 @@ function grantsLevels(DomainBlock) {
 	return grants;
 }
 
-function locked(site, user, locks) {
-	if (!locks) locks = req.locks = [];
+function locked(site, user, list) {
 	if (list != null && !Array.isArray(list) && typeof list == "object" && list.read !== undefined) {
 		// backward compat, block.lock only cares about read access
 		list = list.read;
@@ -100,14 +99,6 @@ function locked(site, user, locks) {
 		} else if ((lockIndex > minLevel) || grants.includes(lock)) {
 			granted = true;
 		}
-		if (!locks.includes(lock)) locks.push(lock);
-	});
-	locks.sort(function(a, b) {
-		var al = site.$grants[a] || -1;
-		var bl = site.$grants[b] || -1;
-		if (al == bl) return 0;
-		else if (al < bl) return 1;
-		else if (al > bl) return -1;
 	});
 	return !granted;
 }
