@@ -270,16 +270,6 @@ exports.export = function(data) {
 		counts.site = 1;
 		counts.standalones = children.length;
 		out.write('{"site": ');
-		if (data.carbon) {
-			out.write(JSON.stringify(site));
-		} else {
-			out.write(JSON.stringify({
-				type: 'site',
-				data: {
-					module: site.data.module
-				}
-			}));
-		}
 		out.write(',\n"standalones": [');
 		var last = children.length - 1;
 		var prom = Promise.resolve();
@@ -299,6 +289,7 @@ exports.export = function(data) {
 					if (lone.standalones.length > 0) {
 						if (!lone.data || !lone.data.url) {
 							console.warn("standalone block without url has standalone children", lone);
+		out.write(JSON.stringify(site));
 							delete lone.standalones;
 						}
 					} else {
@@ -372,10 +363,6 @@ exports.export.schema = {
 			type: 'string'
 		},
 		settings: {
-			type: 'boolean',
-			default: false
-		},
-		carbon: {
 			type: 'boolean',
 			default: false
 		}
