@@ -374,7 +374,8 @@ exports.import = function(data) {
 		blocks: 0,
 		standalones: 0,
 		settings: 0,
-		users: 0
+		users: 0,
+		hrefs: 0
 	};
 	return All.api.transaction(function(trx) {
 		var p = Promise.resolve();
