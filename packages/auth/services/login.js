@@ -136,7 +136,7 @@ function verifyToken(email, token) {
 		return All.user.get({email: [email]}).then(function(user) {
 			return userPriv(user, trx).then(function(priv) {
 				var tries = (priv.data.otp.tries || 0) + 1;
-				if (tries >= 3) {
+				if (tries >= 5) {
 					var at = Date.parse(priv.data.otp.checked_at);
 					if (!isNaN(at) && Date.now() - at < 1000 * otp.options.step / 2) {
 						throw new HttpError.TooManyRequests();
