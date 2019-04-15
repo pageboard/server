@@ -20,9 +20,6 @@ process.title = title;
 console.info(title);
 
 pageboard.init(config).then(function(All) {
-	var p = Promise.resolve();
-	var site = All.opt.site;
-
 	if (All.opt._.length > 1) {
 		console.error("Cannot process arguments", All.opt._);
 		process.exit(1);
