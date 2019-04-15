@@ -1,5 +1,10 @@
+TODO
+read
+https://dev.to/neilmadden/7-best-practices-for-json-web-tokens
+
 # pageboard-auth
 
+pageboard --site=yourid login.link email=you@mxdomain.com grants=webmaster
 
 ## permissions
 
