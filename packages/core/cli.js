@@ -1,8 +1,5 @@
 #!/usr/bin/env node
 
-const {Readable} = require('stream');
-const logger = new (require('./lib/logger'))();
-
 var pkgOpt = {};
 if (process.env.APPNAME) pkgOpt.name = process.env.APPNAME;
 
@@ -28,7 +25,6 @@ pageboard.init(config).then(function(All) {
 		process.exit(1);
 	}
 	if (All.opt._.length != 1) {
-		logger.flush(true);
 		return pageboard.start(All);
 	}
 
@@ -53,22 +49,10 @@ pageboard.init(config).then(function(All) {
 			if (config.data !== undefined) args.push(config.data);
 		}
 	}).then(function() {
-		return All.run.apply(All, args).catch(function(err) {
-			console.error(err);
-			process.exit(1);
-		});
-	}).then(function(results) {
-		logger.clear(true);
-		if (results instanceof Readable) {
-			results.pipe(process.stdout);
-			results.once('end', function() {
-				results.unpipe(process.stdout);
-				process.exit();
-			});
-		} else {
+		return All.run.apply(All, args).then(function(results) {
 			console.log(JSON.stringify(results, null, ' '));
 			process.exit();
-		}
+		});
 	});
 }).catch(function(err) {
 	console.error(err);
