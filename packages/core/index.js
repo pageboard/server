@@ -33,11 +33,12 @@ global.HttpError = require('http-errors');
 global.Text = require('outdent');
 
 exports.config = function(pkgOpt) {
-	var cwd = process.cwd();
-	pkgOpt = Object.assign({}, require(cwd + '/package.json'), pkgOpt);
+	var dir = Path.resolve(__dirname, '..', '..');
+	pkgOpt = Object.assign({}, require(Path.join(dir, 'package.json')), pkgOpt);
 	var name = pkgOpt.name;
 	var opt = rc(name, {
-		cwd: cwd,
+		cwd: process.cwd(),
+		dir: dir,
 		env: pkgOpt.env || process.env.NODE_ENV || 'development',
 		name: name,
 		version: pkgOpt.version.split('.').slice(0, 2).join('.'),
@@ -69,7 +70,7 @@ exports.config = function(pkgOpt) {
 function symlinkDir(opt, name) {
 	return fs.symlink(
 		Path.join(opt.dirs.data, name),
-		Path.join(opt.cwd, name)
+		Path.join(opt.dir, name)
 	).catch(function() {});
 }
 
@@ -95,7 +96,7 @@ exports.init = function(opt) {
 		opt.installerPath = path;
 	}).then(function() {
 		return Promise.all(Object.keys(opt.dependencies).map(function(module) {
-			var pkgPath = resolvePkg(module);
+			var pkgPath = resolvePkg(module, {cwd: opt.dir});
 			return Install.config(pkgPath, "pageboard", module, All.opt);
 		})).then(function(modules) {
 			opt.plugins = modules.filter(x => !!x);
