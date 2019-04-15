@@ -367,7 +367,7 @@ exports.export.schema = {
 
 // import all data but files
 exports.import = function(data) {
-	var copy = !data.copy;
+	var copy = data.copy;
 	var Block = All.api.Block;
 	var counts = {
 		site: 0,
