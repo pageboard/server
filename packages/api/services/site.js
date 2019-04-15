@@ -367,7 +367,7 @@ exports.export.schema = {
 
 // import all data but files
 exports.import = function(data) {
-	var keep = data.pristine;
+	var keep = !data.copy;
 	var Block = All.api.Block;
 	var counts = {
 		site: 0,
@@ -538,8 +538,8 @@ exports.import.schema = {
 			title: 'File path',
 			type: 'string'
 		},
-		pristine: {
-			title: 'Keep original id',
+		copy: {
+			title: 'Generate new ids',
 			type: 'boolean',
 			default: false
 		}
