@@ -2,6 +2,7 @@ var lodashMerge = require('lodash.merge');
 const {ref} = require('objection');
 const {PassThrough} = require('stream');
 const {createReadStream, createWriteStream} = require('fs');
+const Path = require('path');
 
 exports = module.exports = function(opt) {
 	return {
@@ -260,7 +261,7 @@ exports.export = function(data) {
 	}).then(function(site) {
 		var children = site.children;
 		delete site.children;
-		var out = createWriteStream(data.file);
+		var out = createWriteStream(Path.resolve(All.opt.cwd, data.file));
 		var finished = new Promise(function(resolve, reject) {
 			out.resolve = resolve;
 			out.reject = reject;
@@ -377,7 +378,7 @@ exports.import = function(data) {
 	};
 	return All.api.transaction(function(trx) {
 		var p = Promise.resolve();
-		const fstream = createReadStream(data.file);
+		const fstream = createReadStream(Path.resolve(All.opt.cwd, data.file));
 		const pstream = new PassThrough({
 			objectMode: true,
 			highWaterMark: 1
