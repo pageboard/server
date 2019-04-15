@@ -17,7 +17,7 @@ if (process.argv.length > 2) {
 var pageboard = require(__dirname);
 
 var config = pageboard.config(pkgOpt);
-var title = `${config.name} ${config.version}`;
+var title = `${config.name}@${config.version}`;
 process.title = title;
 
 console.info(title);
