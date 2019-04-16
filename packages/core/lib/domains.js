@@ -74,6 +74,8 @@ Domains.prototype.init = function(req, res, next) {
 			});
 			hostUpdateDomain(host, domains[0]);
 			host.domains = domains;
+			host.proxying = setUpstream(site);
+			if (host.proxying && host.finalize) host.finalize();
 			return site;
 		}).catch(function(err) {
 			host._error = err;
@@ -82,14 +84,16 @@ Domains.prototype.init = function(req, res, next) {
 			host.isSearching = false;
 		});
 	}
+
 	if (!host.installing && !host._error) {
 		host.isInstalling = true;
 		host.installing = host.searching.then(function(site) {
-			if (host._error) return;
+			if (host._error || host.proxying) return;
 			site.href = host.href;
 			site.hostname = host.name;
-			// never throw an error since errors are already dealt with in install
-			return All.install(site).catch(function() {});
+			return All.install(site).catch(function() {
+				// never throw an error since errors are already dealt with in install
+			});
 		}).finally(function() {
 			host.isInstalling = false;
 		});
@@ -98,7 +102,8 @@ Domains.prototype.init = function(req, res, next) {
 		doWait(host);
 	}
 	var p;
-	if (req.path == "/.well-known/upcache") {
+	if (host.proxying) p = Promise.resolve();
+	else if (req.path == "/.well-known/upcache") {
 		if (host.finalize) {
 			host.finalize();
 		}
@@ -134,12 +139,13 @@ Domains.prototype.init = function(req, res, next) {
 			next(new HttpError.ServiceUnavailable(`Missing host.id or site for ${host.name}`));
 			return;
 		}
-		var path = req.path;
-
-		var errors = site.errors;
 		// calls to api use All.run which does site.$clone() to avoid concurrency issues
 		req.site = site;
-
+		if (host.proxying) {
+			next();
+			return;
+		}
+		var path = req.path;
 		if (req.hostname != host.domains[0] && (
 			!path.startsWith('/.well-known/') || /^.well-known\/\d{3}$/.test(path)
 		)) {
@@ -151,7 +157,6 @@ Domains.prototype.init = function(req, res, next) {
 
 		site.href = host.href;
 		site.hostname = host.name; // at this point it should be == host.domains[0]
-		site.errors = errors;
 
 		next();
 	}).catch(next);
@@ -266,6 +271,21 @@ Domains.prototype.error = function(site, err) {
 		console.error(ex);
 	}
 };
+
+function setUpstream(site) {
+	var upstream = site.upstream;
+	if (!upstream) {
+		var version = site.data.server;
+		if (!version || version == All.opt.version) return false;
+		upstream = version && All.opt.upstreams[version] || null;
+		if (!upstream) {
+			console.error("Unknown server version", version, "from", site.id);
+			return false;
+		}
+		site.upstream = upstream;
+	}
+	return upstream;
+}
 
 function hostUpdatePort(host, header) {
 	var parts = header.split(':');

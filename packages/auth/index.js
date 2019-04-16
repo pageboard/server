@@ -28,7 +28,7 @@ function init(All) {
 		All.auth.restrict = lock.restrict.bind(lock);
 		All.auth.vary = lock.vary;
 		All.auth.headers = lock.headers;
-		All.auth.cookie = function(site, user) {
+		All.auth.cookie = function({site, user}) {
 			return {
 				value: lock.sign(user, Object.assign({
 					hostname: site.hostname
@@ -48,18 +48,18 @@ exports.install = function(site) {
 exports.locked = locked;
 exports.filter = filter;
 
-exports.filterResponse = function(site, user, obj) {
-	if (!user) user = {};
+exports.filterResponse = function(req, obj) {
 	if (!obj.item && !obj.items) {
-		return filter(site, user, obj);
+		return filter(req, obj);
 	}
 	if (obj.item) {
-		var item = filter(site, user, obj.item, 'read');
+		var item = filter(req, obj.item);
 		if (!item.type) throw new HttpError.Unauthorized("user not granted");
 	}
 	if (obj.items) obj.items = obj.items.map(function(item) {
-		return filter(site, user, item, 'read');
+		return filter(req, item);
 	});
+	return obj;
 };
 
 function grantsLevels(DomainBlock) {
@@ -76,7 +76,7 @@ function grantsLevels(DomainBlock) {
 	return grants;
 }
 
-function locked(site, user, list) {
+function locked({site, user}, list) {
 	if (list != null && !Array.isArray(list) && typeof list == "object" && list.read !== undefined) {
 		// backward compat, block.lock only cares about read access
 		list = list.read;
@@ -93,8 +93,8 @@ function locked(site, user, list) {
 	var granted = false;
 	list.forEach(function(lock) {
 		var lockIndex = site.$grants[lock] || -1;
-		if (/^(user|id)-/.test(lock)) {
-			if (user.id == lock.split('-').pop()) granted = true;
+		if (lock.startsWith('id-')) {
+			if (`id-${user.id}` == lock) granted = true;
 		} else if ((lockIndex > minLevel) || grants.includes(lock)) {
 			granted = true;
 		}
@@ -102,48 +102,52 @@ function locked(site, user, list) {
 	return !granted;
 }
 
-function filter(site, user, item, action) {
+function filter(req, item) {
 	if (!item.type) return item;
 	if (item.children) {
 		item.children = item.children.filter(function(item) {
-			return filter(site, user, item, action);
+			return filter(req, item);
 		});
 	}
 	if (item.child) {
-		item.child = filter(site, user, item.child, action);
+		item.child = filter(req, item.child);
 	}
 	if (item.parents) {
 		item.parents = item.parents.filter(function(item) {
-			return filter(site, user, item, action);
+			return filter(req, item);
 		});
 	}
 	if (item.parent) {
-		item.parent = filter(site, user, item.parent, action);
+		item.parent = filter(req, item.parent);
 	}
-	var schema = site.$schema(item.type) || {}; // old types might not have schema
+	// old types might not have schema
+	var schema = req.site.$schema(item.type) || {};
 	var $lock = schema.$lock || {};
-	var lock = (item.lock || {})[action] || [];
+	if (typeof $lock == "string" || Array.isArray($lock)) $lock = {'*': $lock};
+	var lock = item.lock || [];
 
 	if (Object.keys($lock).length == 0 && lock.length == 0) return item;
+
 	var locks = {
 		'*': lock
 	};
-	if (typeof $lock != "object") $lock = { '*': $lock };
 	locks = Object.assign({}, locks, $lock);
-	if (locked(site, user, locks['*'])) return {
+	if (locked(req, locks['*'])) return {
 		id: item.id
 	};
 	delete locks['*'];
+
 	Object.keys(locks).forEach(function(path) {
 		var list = locks[path];
 		path = path.split('.');
 		path.reduce(function(obj, val, index) {
 			if (obj == null) return;
 			if (index == path.length - 1) {
-				if (locked(site, user, list)) delete obj[val];
+				if (locked(req, list)) delete obj[val];
 			}
 			return obj[val];
 		}, item);
 	});
 	return item;
 }
+

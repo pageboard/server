@@ -1,6 +1,9 @@
 module.exports = function(mw, settings, request, response) {
 	if (request.path.endsWith('.mail') == false) return;
 	settings.load.plugins = [
+		All.dom.plugins.upcache,
+		All.dom.plugins.hide,
+		All.dom.plugins.bearer,
 		All.dom.plugins.prerender,
 		mailPlugin
 	];

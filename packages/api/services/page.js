@@ -14,7 +14,7 @@ function init(All) {
 		// FIXME
 		// THIS IS CATASTROPHIC as it varies the cache with the 301 redirection to the version
 		// without develop parameter
-		var isWebmaster = !All.auth.locked(req.site, req.user, ['webmaster']);
+		var isWebmaster = !All.auth.locked(req, ['webmaster']);
 		if (isWebmaster && req.query.develop != "write") {
 			All.send(res, {
 				item: {
@@ -26,7 +26,7 @@ function init(All) {
 			});
 		} else {
 			delete req.query.develop;
-			All.run('page.get', req.site, req.user, {
+			All.run('page.get', req, {
 				url: req.query.url
 			}).then(function(data) {
 				All.send(res, data);
@@ -34,7 +34,7 @@ function init(All) {
 		}
 	});
 	All.app.get('/.api/pages', function(req, res, next) {
-		var isWebmaster = !All.auth.locked(req.site, req.user, ['webmaster']);
+		var isWebmaster = !All.auth.locked(req, ['webmaster']);
 		if (isWebmaster) {
 			// webmaster want to see those anyway
 			// this must not be confused with page.lock
@@ -43,37 +43,37 @@ function init(All) {
 		}
 
 		var action = req.query.text != null ? 'page.search' : 'page.list';
-		All.run(action, req.site, req.query).then(function(obj) {
+		All.run(action, req, req.query).then(function(obj) {
 			All.send(res, obj);
 		}).catch(next);
 	});
 	All.app.post('/.api/page', All.auth.restrict('webmaster'), function(req, res, next) {
-		All.run('page.add', req.site, req.user, req.body).then(function(page) {
+		All.run('page.add', req, req.body).then(function(page) {
 			res.send(page);
 		}).catch(next);
 	});
 	All.app.put('/.api/page', All.auth.restrict('webmaster'), function(req, res, next) {
-		All.run('page.save', req.site, req.user, req.body).then(function(page) {
+		All.run('page.save', req, req.body).then(function(page) {
 			res.send(page);
 		}).catch(next);
 	});
 	All.app.delete('/.api/page', All.auth.restrict('webmaster'), function(req, res, next) {
-		All.run('page.del', req.site, req.user, req.query).then(function(page) {
+		All.run('page.del', req, req.query).then(function(page) {
 			res.send(page);
 		}).catch(next);
 	});
 
 	All.app.get('/robots.txt', All.cache.tag('api'), function(req, res, next) {
-		All.run('page.robots', req.site).then(function(txt) {
+		All.run('page.robots', req).then(function(txt) {
 			res.type('text/plain');
 			res.send(txt);
 		}).catch(next);
 	});
 
 	All.app.get('/.well-known/sitemap.txt', function(req, res, next) {
-		All.run('page.list', req.site, {}).then(function(obj) {
+		All.run('page.list', req, {}).then(function(obj) {
 			res.type('text/plain');
-			All.auth.filter(req.site, req.user, obj);
+			All.auth.filter(req, obj);
 			res.send(obj.items.map(page => req.site.href + page.data.url).join('\n'));
 		}).catch(next);
 	});
@@ -136,7 +136,8 @@ function QueryPageHref(site, url) {
 	.where('rp.parent_id', site._id);
 }
 
-exports.get = function(site, user, data) {
+exports.get = function(req, data) {
+	var site = req.site;
 	var obj = {
 		status: 200,
 		site: site.data
@@ -150,7 +151,7 @@ exports.get = function(site, user, data) {
 	).then(function(page) {
 		if (!page) {
 			obj.status = 404;
-		} else if (All.auth.locked(site, user, (page.lock || {}).read)) {
+		} else if (All.auth.locked(req, (page.lock || {}).read)) {
 			obj.status = 401;
 		}
 		if (obj.status != 200) {
@@ -213,10 +214,6 @@ exports.get.schema = {
 		url: {
 			type: 'string',
 			format: 'pathname'
-		},
-		user: {
-			type: 'object',
-			nullable: true
 		}
 	}
 };
@@ -273,7 +270,7 @@ function listPages(site, data) {
 	return q.orderBy(ref('block.data:url'), 'block.updated_at DESC');
 }
 
-exports.search = function(site, data) {
+exports.search = function({site}, data) {
 	var drafts = '';
 	if (!data.drafts) {
 		drafts = `AND (page.data->'nositemap' IS NULL OR (page.data->'nositemap')::BOOLEAN IS NOT TRUE)`;
@@ -385,7 +382,7 @@ exports.search.schema = {
 };
 exports.search.external = true;
 
-exports.list = function(site, data) {
+exports.list = function({site}, data) {
 	return listPages(site, data).then(function(pages) {
 		var els = {};
 		var obj = {
@@ -455,7 +452,7 @@ exports.list.schema = {
 };
 exports.list.external = true;
 
-exports.save = function(site, user, changes) {
+exports.save = function(req, changes) {
 	changes = Object.assign({
 		// blocks removed from their standalone parent (grouped by parent)
 		unrelate: {},
@@ -476,18 +473,18 @@ exports.save = function(site, user, changes) {
 	pages.all = pages.add.concat(pages.update);
 
 	changes.add.forEach(function(b) {
-		stripHostname(site, b);
+		stripHostname(req.site, b);
 	});
 	changes.update.forEach(function(b) {
-		stripHostname(site, b);
+		stripHostname(req.site, b);
 	});
 	// this also effectively prevents removing a page and adding a new page
 	// with the same url as the one removed
 	var allUrl = {};
 	var returning = {};
-	return site.$relatedQuery('children')
+	return req.site.$relatedQuery('children')
 	.select('block.id', ref('block.data:url').as('url'))
-	.whereIn('block.type', site.$pagetypes)
+	.whereIn('block.type', req.site.$pagetypes)
 	.whereNotNull(ref('block.data:url')).then(function(dbPages) {
 		pages.all.forEach(function(page) {
 			if (!page.data.url) {
@@ -508,25 +505,25 @@ exports.save = function(site, user, changes) {
 	}).then(function() {
 		// FIXME use site.$model.hrefs to track the blocks with href when saving,
 		// and check all new/changed href have matching row in href table
-		return applyUnrelate(site, user, changes.unrelate).then(function() {
-			return applyRemove(site, user, changes.remove);
+		return applyUnrelate(req, changes.unrelate).then(function() {
+			return applyRemove(req, changes.remove);
 		}).then(function() {
-			return applyAdd(site, user, changes.add);
+			return applyAdd(req, changes.add);
 		}).then(function(list) {
 			returning.update = list || [];
-			return applyUpdate(site, user, changes.update);
+			return applyUpdate(req, changes.update);
 		}).then(function(list) {
 			returning.update = returning.update.concat(list);
-			return applyRelate(site, user, changes.relate);
+			return applyRelate(req, changes.relate);
 		});
 	}).then(function(parts) {
 		return Promise.all(pages.update.map(function(child) {
 			if (!child.data.url || child.data.url.startsWith('/.')) return;
-			return All.href.save(site, user, {
+			return All.href.save(req, {
 				url: child.data.url,
 				title: child.data.title
 			}).catch(function(err) {
-				if (err.statusCode == 404) return All.href.add(site, user, {
+				if (err.statusCode == 404) return All.href.add(req, {
 					url: child.data.url
 				}).catch(function(err) {
 					console.error(err);
@@ -538,7 +535,7 @@ exports.save = function(site, user, changes) {
 		return Promise.all(pages.add.map(function(child) {
 			if (!child.data.url || child.data.url.startsWith('/.')) return;
 			// problem: added pages are not saved here
-			return All.href.add(site, user, {
+			return All.href.add(req, {
 				url: child.data.url
 			}).catch(function(err) {
 				console.error(err);
@@ -589,7 +586,7 @@ function stripHostname(site, block) {
 	}
 }
 
-function applyUnrelate(site, user, obj) {
+function applyUnrelate({site}, obj) {
 	return Promise.all(Object.keys(obj).map(function(parentId) {
 		return site.$relatedQuery('children').where('block.id', parentId)
 		.first().throwIfNotFound().then(function(parent) {
@@ -600,13 +597,13 @@ function applyUnrelate(site, user, obj) {
 	}));
 }
 
-function applyRemove(site, user, list) {
+function applyRemove({site}, list) {
 	if (!list.length) return;
 	return site.$relatedQuery('children').delete()
 	.whereIn('block.id', list).whereNot('standalone', true);
 }
 
-function applyAdd(site, user, list) {
+function applyAdd({site}, list) {
 	if (!list.length) return;
 	// this relates site to inserted children
 	return site.$relatedQuery('children').insert(list).returning('*').then(function(rows) {
@@ -619,15 +616,15 @@ function applyAdd(site, user, list) {
 	});
 }
 
-function applyUpdate(site, user, list) {
+function applyUpdate(req, list) {
 	return Promise.all(list.map(function(block) {
-		if (site.$pagetypes.includes(block.type)) {
-			return updatePage(site, user, block);
+		if (req.site.$pagetypes.includes(block.type)) {
+			return updatePage(req, block);
 		} else if (!block.updated_at) {
 			throw new HttpError.BadRequest(`Block is missing 'updated_at' ${block.id}`);
 		} else {
 			// simpler path
-			return site.$relatedQuery('children')
+			return req.site.$relatedQuery('children')
 			.where('block.id', block.id)
 			.where('block.type', block.type)
 			.where(raw("date_trunc('milliseconds', block.updated_at)"), block.updated_at)
@@ -642,7 +639,8 @@ function applyUpdate(site, user, list) {
 	}));
 }
 
-function updatePage(site, user, page) {
+function updatePage(req, page) {
+	var site = req.site;
 	return site.$relatedQuery('children').where('block.id', page.id)
 	.whereIn('block.type', page.type ? [page.type] : site.$pagetypes)
 	.select(ref('block.data:url').as('url')).first().throwIfNotFound().then(function(dbPage) {
@@ -692,7 +690,7 @@ function updatePage(site, user, page) {
 	});
 }
 
-function applyRelate(site, user, obj) {
+function applyRelate({site}, obj) {
 	return Promise.all(Object.keys(obj).map(function(parentId) {
 		return site.$relatedQuery('children').where('block.id', parentId)
 		.first().throwIfNotFound().then(function(parent) {
@@ -704,9 +702,9 @@ function applyRelate(site, user, obj) {
 	}));
 }
 
-exports.add = function(site, user, data) {
-	return site.$beforeInsert.call(data).then(function() {
-		return exports.save(site, user, {
+exports.add = function(req, data) {
+	return req.site.$beforeInsert.call(data).then(function() {
+		return exports.save(req, {
 			add: [data]
 		});
 	});
@@ -724,7 +722,7 @@ exports.add.schema = {
 	}
 };
 
-exports.del = function(site, user, data) {
+exports.del = function(req, data) {
 	// TODO deleting a page should be done in TWO steps
 	// 1) data.url = null -> the page becomes only accessible through admin
 	// 2) actual deletion
@@ -738,7 +736,7 @@ exports.del = function(site, user, data) {
 	throw new HttpError.NotImplemented("TODO use save to delete page blocks");
 };
 
-exports.robots = function(site) {
+exports.robots = function({site}) {
 	var lines = ["User-agent: *"];
 	if (site.data.env == "production") {
 		lines.push("Allow : /");

@@ -17,9 +17,9 @@
   },
   "homepage": "https://github.com/pageboard/server#readme",
   "dependencies": {
-    "busboy": "^0.2.14",
-    "got": "^8.3.0",
-    "nodemailer": "^4.6.7",
+    "busboy": "^0.3.0",
+    "got": "^9.6.0",
+    "nodemailer": "^6.0.0",
     "nodemailer-mailgun-transport": "^1.4.0"
   },
   "pageboard": true

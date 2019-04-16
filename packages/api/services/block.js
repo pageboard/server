@@ -14,14 +14,20 @@ function init(All) {
 		if (!type || ['user', 'site', 'page'].indexOf(type) >= 0) {
 			return next(new HttpError.BadRequest("Cannot request that type"));
 		}
-		All.run('block.get', req.site, req.query).then(function(data) {
+		All.run('block.get', req, req.query).then(function(data) {
+			All.send(res, data);
+		}).catch(next);
+	});
+
+	All.app.post('/.api/blocks', All.auth.restrict('writer'), function(req, res, next) {
+		All.run('block.write', req, req.body).then(function(data) {
 			All.send(res, data);
 		}).catch(next);
 	});
 }
 
-exports.get = function(site, data) {
-	var q = site.$relatedQuery('children').select()
+exports.get = function(req, data) {
+	var q = req.site.$relatedQuery('children').select()
 	.where('block.id', data.id);
 	if (data.type) q.where('block.type', data.type);
 	if (data.standalone) q.eager('[children(childrenFilter)]', {
@@ -50,7 +56,8 @@ exports.get.schema = {
 	}
 };
 
-exports.search = function(site, data) {
+exports.search = function(req, data) {
+	var site = req.site;
 	var schemas = {};
 	if (data.type) {
 		schemas[data.type] = site.$schema(data.type);
@@ -382,8 +389,7 @@ exports.search.external = true;
 function whereSub(q, data, schema, alias = 'block') {
 	var valid = false;
 	if (data.type) {
-		var stand = schema && schema.properties.standalone;
-		valid = stand && stand.const === true || valid;
+		valid = true;
 		q.where(`${alias}.type`, data.type);
 	} else {
 		if (!data.type) throw new HttpError.BadRequest("Missing type");
@@ -422,10 +428,10 @@ function filterSub(q, data, schema, alias) {
 	return valid;
 }
 
-exports.find = function(site, data) {
+exports.find = function(req, data) {
 	data.limit = 1;
 	data.offset = 0;
-	return exports.search(site, data).then(function(obj) {
+	return exports.search(req, data).then(function(obj) {
 		if (obj.items.length == 0) {
 			throw new HttpError.NotFound("Block not found");
 		}
@@ -445,7 +451,7 @@ delete exports.find.schema.properties.limit;
 delete exports.find.schema.properties.offset;
 exports.find.external = true;
 
-exports.add = function(site, user, data) {
+exports.add = function({site}, data) {
 	var parents = data.parents || [];
 	delete data.parents;
 
@@ -492,14 +498,14 @@ exports.add.schema = {
 };
 exports.add.external = true;
 
-exports.save = function(site, user, data) {
-	return exports.get(site, data).forUpdate().then(function(block) {
+exports.save = function(req, data) {
+	return exports.get(req, data).forUpdate().then(function(block) {
 		var obj ={
 			type: block.type,
 			data: data.data
 		};
 		if (data.lock) obj.lock = data.lock;
-		return block.$query(site.trx).patchObject(obj).then(function() {
+		return block.$query(req.site.trx).patchObject(obj).then(function() {
 			if (!block) throw new Error(`Block not found for update ${data.id}`);
 			return block;
 		});
@@ -537,7 +543,7 @@ exports.save.schema = {
 };
 exports.save.external = true;
 
-exports.del = function(site, data) {
+exports.del = function({site}, data) {
 	return site.$relatedQuery('children')
 	.where('block.id', data.id)
 	.where('block.type', data.type)
@@ -566,6 +572,50 @@ exports.del.schema = {
 	}
 };
 exports.del.external = true;
+
+exports.write = function(req, data) {
+	var list = data.operations;
+	return Promise.all(list.map(function(op) {
+		return All.run(`block.${op.method}`, req, op.item);
+	}));
+};
+
+exports.write.schema = {
+	title: 'Write multiple blocks',
+	$action: 'write',
+	required: ['operations'],
+	properties: {
+		operations: {
+			title: 'Operations',
+			type: 'array',
+			items: {
+				title: 'Operation',
+				type: 'object',
+				properties: {
+					method: {
+						title: 'Method',
+						anyOf: [{
+							const: 'add',
+							title: 'Add'
+						}, {
+							const: 'save',
+							title: 'Save'
+						}, {
+							const: 'del',
+							title: 'Delete'
+						}]
+					},
+					item: {
+						title: 'Item',
+						type: 'object'
+					}
+				}
+			}
+		}
+	}
+};
+exports.write.external = true;
+
 
 exports.gc = function(days) {
 	// this might prove useless

@@ -9,7 +9,7 @@ exports = module.exports = function(opt) {
 				/^(\/[a-zA-Z0-9-]*|(\/[a-zA-Z0-9-]+)+)\.rss$/,
 				All.auth.restrict('*'),	All.cache.tag('data-:site').for('1 day'),
 				function(req, res, next) {
-					All.run('feed.get', req.site, {
+					All.run('feed.get', req, {
 						url: req.params[0],
 						query: req.query
 					}).then(function(xml) {
@@ -22,16 +22,15 @@ exports = module.exports = function(opt) {
 	};
 };
 
-exports.get = function(site, data) {
-	return All.run('page.list', site, {
+exports.get = function(req, data) {
+	return All.run('page.list', req, {
 		parent: data.url,
-		home: true,
-		user: data.user
+		home: true
 	}).then(function(obj) {
 		var home = obj.item;
 		if (!home || home.data.url != data.url) throw new HttpError.NotFound("No feed");
-		All.auth.filterResponse(site, (data.user || {}).scopes, obj);
-		return Feed(site, obj.item, obj.items).rss2(); // atom1 json1
+		All.auth.filterResponse(req, obj);
+		return Feed(req.site, obj.item, obj.items).rss2(); // atom1 json1
 	});
 };
 
@@ -45,10 +44,6 @@ exports.get.schema = {
 			type: "string",
 			pattern: "^(/[a-zA-Z0-9-]*)+$",
 			$helper: 'pageUrl'
-		},
-		user: {
-			type: 'object',
-			nullable: true
 		},
 		hostname: {
 			type: 'string',

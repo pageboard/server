@@ -5,18 +5,18 @@ exports = module.exports = function(opt) {
 	};
 };
 
-exports.subscribe = function(site, user, data) {
+exports.subscribe = function(req, data) {
 	var [pSettings, pDate] = data.parents;
 	if (pSettings.type == "event_date" && pDate.type == "settings") {
 		[pDate, pSettings] = data.parents;
 	}
 	if (pSettings.type != "settings") throw new Error("Wrong parents, expected settings, event_date");
-	return All.run('block.find', site, Object.assign({}, pDate, {
+	return All.run('block.find', req, Object.assign({}, pDate, {
 		parents: {type: 'event', first: true}
 	})).then(function(result) {
 		var eventDate = result.item;
 		// add event_reservation block with two parents: settings and event_date
-		return All.run('block.search', site, {
+		return All.run('block.search', req, {
 			type: 'event_reservation',
 			parent: {
 				parents: data.parents // because search data.parents is for eager join, not relation
@@ -43,7 +43,7 @@ exports.subscribe = function(site, user, data) {
 					type: 'event_reservation',
 					data: data.reservation,
 					parents: data.parents,
-					lock: {read: [`id-${user.id}`, 'scheduler']}
+					lock: [`id-${req.user.id}`, 'scheduler']
 				};
 			} else {
 				throw new Error("Two reservations using the same login");
@@ -54,13 +54,13 @@ exports.subscribe = function(site, user, data) {
 				throw new HttpError.BadRequest("Cannot reserve that much seats");
 			}
 
-			return All.run(blockMeth, site, user, resa).then(function(resa) {
-				return eventDate.$query(site.trx).patch({
+			return All.run(blockMeth, req, resa).then(function(resa) {
+				return eventDate.$query(req.site.trx).patch({
 					'data:reservations': total
 				}).then(function() {
 					if (!data.url) return resa; // can't send confirmation email
-					return site.trx.commit().then(function() {
-						delete site.trx;
+					return req.site.trx.commit().then(function() {
+						delete req.site.trx;
 						var mail = {
 							url: data.url,
 							body: {
@@ -70,7 +70,7 @@ exports.subscribe = function(site, user, data) {
 							to: pSettings.id
 						};
 						if (data.from) mail.from = data.from;
-						return All.run('mail.send', site, mail);
+						return All.run('mail.send', req, mail);
 					});
 				});
 			});
@@ -176,14 +176,14 @@ exports.subscribe.schema = {
 };
 exports.subscribe.external = true;
 
-exports.unsubscribe = function(site, user, data) {
-	return All.block.get(site, {
+exports.unsubscribe = function(req, data) {
+	return All.block.get(req, {
 		type: 'event_reservation',
 		id: data.reservation
 	}).eager('[parents(parentsFilter)]', {parentsFilter: function(q) {
 		q.whereIn('type', ['settings', 'event_date']).select('block.id', 'block.type');
 	}}).then(function(reservation) {
-		if (reservation.data.seats !== 0) return All.run('event.subscribe', site, user, {
+		if (reservation.data.seats !== 0) return All.run('event.subscribe', req, {
 			parents: reservation.parents,
 			reservation: {
 				name: `(${reservation.data.name})`,

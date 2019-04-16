@@ -30,6 +30,7 @@ var fs = {
 
 // exceptional but so natural
 global.HttpError = require('http-errors');
+global.Text = require('outdent');
 
 exports.config = function(pkgOpt) {
 	var dir = Path.resolve(__dirname, '..', '..');
@@ -56,7 +57,9 @@ exports.config = function(pkgOpt) {
 			log: ':method :status :time :size :site:url'
 		},
 		port: 3000,
-		extnames: []
+		report: {},
+		extnames: [],
+		upstreams: {}
 	});
 	symlinkDir(opt, 'sites');
 	symlinkDir(opt, 'uploads');
@@ -259,13 +262,16 @@ function initLog(opt) {
 		return pad(req.site && req.site.id && req.site.id.substring(0, 8) || req.hostname, 8);
 	});
 
-	return morgan(opt.core.log);
+	return morgan(opt.core.log, {
+		skip: function(req, res) {
+			return false;
+		}
+	});
 }
 
 function createApp(All) {
 	var app = express();
 	var opt = All.opt;
-	// https://www.smashingmagazine.com/2017/04/secure-web-app-http-headers/
 	// for csp headers, see prerender and write
 	app.set("env", opt.env);
 	app.disable('x-powered-by');
@@ -273,15 +279,20 @@ function createApp(All) {
 	app.use(All.domains.init);
 	app.use(function(req, res, next) {
 		if (req.path == "/.well-known/pageboard") {
+			if (req.site.upstream) res.set('X-Upstream', req.site.upstream);
 			res.type("json").send({
-				errors: req.site.errors,
-				server: req.site.data.server || 'stable'
+				errors: req.site.errors
 			});
 		} else {
-			res.setHeader('X-XSS-Protection','1;mode=block');
-			res.setHeader('X-Frame-Options', 'SAMEORIGIN');
-			res.setHeader('X-Content-Type-Options', 'nosniff');
-			next();
+			if (req.site.upstream) {
+				res.sendStatus(503);
+			} else {
+				res.setHeader('Referrer-Policy', 'same-origin');
+				res.setHeader('X-XSS-Protection','1;mode=block');
+				res.setHeader('X-Frame-Options', 'sameorigin');
+				res.setHeader('X-Content-Type-Options', 'nosniff');
+				next();
+			}
 		}
 	});
 	app.use(function(err, req, res, next) {

@@ -567,8 +567,6 @@ function replaceContent(map, block) {
 function replaceLock(map, block) {
 	var lock = block.lock;
 	if (!lock) return;
-	lock = lock.read;
-	if (!lock) return;
 	lock.forEach(function(item, i) {
 		item = item.split('-');
 		if (item.length != 2) return;
@@ -579,6 +577,12 @@ function replaceLock(map, block) {
 }
 
 function upgradeBlock(block) {
+	if (block.lock && !Array.isArray(block.lock)) {
+		block.lock = block.lock.read;
+		if (block.lock) block.lock.forEach(function(lock) {
+			lock = lock.replace(/^user-/, "id-");
+		});
+	}
 	return block;
 }
 

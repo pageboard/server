@@ -10,7 +10,7 @@ function init(All) {
 		next(new HttpError.MethodNotAllowed("Only post allowed"));
 	});
 	All.app.post("/.api/form/:id", function(req, res, next) {
-		All.run('form.submit', req.site, req.user, {
+		All.run('form.submit', req, {
 			id: req.params.id,
 			query: All.utils.unflatten(req.query),
 			body: All.utils.unflatten(req.body)
@@ -20,11 +20,11 @@ function init(All) {
 	});
 }
 
-exports.submit = function(site, user, data) {
-	return All.run('block.get', site, {
+exports.submit = function(req, data) {
+	return All.run('block.get', req, {
 		id: data.id
 	}).then(function(form) {
-		if (All.auth.locked(site, user, (form.lock || {}).write)) {
+		if (All.auth.locked(req, (form.lock || {}).write)) {
 			throw HttpError.Unauthorized("Check user permissions");
 		}
 		var fd = form.data || {};
@@ -34,14 +34,14 @@ exports.submit = function(site, user, data) {
 		var expr = ((form.expr || {}).action || {}).parameters || {};
 		var params = All.utils.mergeParameters(expr, {
 			$query: data.query,
-			$user: user
+			$user: req.user
 		});
 		params = All.utils.mergeObjects(params, fd.action.parameters);
 
 		// build body
 		var body = data.body;
 		if (params.type && Object.keys(body).length > 0) {
-			var el = site.$schema(params.type);
+			var el = req.site.$schema(params.type);
 			if (!el) throw new HttpError.BadRequest("Unknown element type " + params.type);
 			var newBody = {data: {}};
 			Object.keys((el.properties.data || {}).properties || {}).forEach(function(key) {
@@ -59,7 +59,7 @@ exports.submit = function(site, user, data) {
 		}
 		body = All.utils.mergeObjects(body, params);
 
-		return All.run(method, site, user, body);
+		return All.run(method, req, body);
 	});
 };
 

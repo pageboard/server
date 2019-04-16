@@ -17,14 +17,14 @@ exports = module.exports = function(opt) {
 
 function init(All) {
 	All.app.get("/.api/login", function(req, res, next) {
-		All.run('login.grant', req.site, req.user, req.query).then(function(data) {
+		All.run('login.grant', req, req.query).then(function(data) {
 			data.location = "back";
 			All.send(res, data);
 		}).catch(next);
 	});
 
 	All.app.get("/.api/logout", function(req, res, next) {
-		All.run('login.clear', req.site, req.query).then(function(data) {
+		All.run('login.clear', req, req.query).then(function(data) {
 			data.location = "back";
 			All.send(res, data);
 		}).catch(next);
@@ -59,7 +59,8 @@ function generate(site, data) {
 	});
 }
 
-exports.send = function(site, data) {
+exports.send = function(req, data) {
+	var site = req.site;
 	if (!site.href) {
 		return "login.send requires a hostname. Use login.link";
 	}
@@ -68,7 +69,7 @@ exports.send = function(site, data) {
 		var settings = data.settings;
 		if (settings) {
 			delete settings.grants;
-			p = All.settings.save(site, {
+			p = All.settings.save(req, {
 				email: data.email,
 				data: settings
 			});
@@ -90,16 +91,16 @@ exports.send = function(site, data) {
 		var prefix = site.data.title ? site.data.title + ' - ' : '';
 		if (site.data.lang == "fr") {
 			mail.subject = `${prefix}code de vérification: ${tokenStr}`;
-			mail.text = `${tokenStr}
-Ce message est envoyé depuis
-${site.href}
-et peut être ignoré.`;
+			mail.text = Text`${tokenStr}
+				Ce message est envoyé depuis
+				${site.href}
+				et peut être ignoré.`;
 		} else {
 			mail.subject = `${prefix}Verification token: ${tokenStr}`;
-			mail.text = `${tokenStr}
-This message is sent from
-${site.href}
-and can be ignored.`;
+			mail.text = Text`${tokenStr}
+				This message is sent from
+				${site.href}
+				and can be ignored.`;
 		}
 		return All.mail.to(mail).then(function() {
 			return {};
@@ -156,26 +157,26 @@ function verifyToken(email, token) {
 	});
 }
 
-exports.grant = function(site, user, data) {
+exports.grant = function(req, data) {
 	return verifyToken(data.email, data.token).then(function(verified) {
 		if (!verified) throw new HttpError.BadRequest("Bad token");
-		return All.run('settings.find', site, {
+		return All.run('settings.find', req, {
 			email: data.email
 		}).then(function(settings) {
-			var testUser = {
+			var grants = req.user && req.user.grants || [];
+			var user = req.user = {
 				id: settings.id,
 				grants: settings.data && settings.data.grants || []
 			};
 			var locks = [data.grant];
-			if (All.auth.locked(site, testUser, locks)) {
+			if (All.auth.locked(req, locks)) {
 				throw new HttpError.Forbidden("User has insufficient grants");
 			}
-			testUser.grants = locks;
-			Object.assign(user, testUser);
+			user.grants = locks;
 			return {
 				item: settings,
 				cookies: {
-					bearer: All.auth.cookie(site, testUser)
+					bearer: All.auth.cookie(req)
 				}
 			};
 		});
@@ -202,6 +203,7 @@ exports.grant.schema = {
 			title: 'Grant',
 			type: 'string',
 			format: 'id',
+			nullable: true,
 			$filter: {
 				name: 'schema',
 				path: 'settings.properties.grants.items'
