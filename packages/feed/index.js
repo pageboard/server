@@ -47,10 +47,6 @@ exports.get.schema = {
 			pattern: "^(/[a-zA-Z0-9-]*)+$",
 			$helper: 'pageUrl'
 		},
-		user: {
-			type: 'object',
-			nullable: true
-		},
 		hostname: {
 			type: 'string',
 			format: 'hostname'
