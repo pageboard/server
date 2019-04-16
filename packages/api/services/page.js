@@ -705,7 +705,7 @@ exports.add.schema = {
 	}
 };
 
-exports.del = function(site, user, data) {
+exports.del = function(req, data) {
 	// TODO deleting a page should be done in TWO steps
 	// 1) data.url = null -> the page becomes only accessible through admin
 	// 2) actual deletion
