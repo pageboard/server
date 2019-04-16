@@ -38,7 +38,7 @@ exports.config = function(pkgOpt) {
 		cwd: cwd,
 		env: pkgOpt.env || process.env.NODE_ENV || 'development',
 		name: name,
-		version: pkgOpt.version,
+		version: pkgOpt.version.split('.').slice(0, 2).join('.'),
 		global: true,
 		dirs: {
 			cache: Path.join(xdg.cache, name),
@@ -53,8 +53,13 @@ exports.config = function(pkgOpt) {
 			installer: "npm",  // or yarn
 			log: ':method :status :time :size :site:url'
 		},
-		port: 3000
+		upstreams: {}
 	});
+	opt.upstream = opt.upstreams[opt.version];
+	if (!opt.port) {
+		if (opt.upstream) opt.port = opt.upstream.split(':').pop();
+		else opt.port = 3000;
+	}
 	symlinkDir(opt, 'sites');
 	symlinkDir(opt, 'uploads');
 	symlinkDir(opt, 'dumps');
