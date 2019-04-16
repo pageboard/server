@@ -64,7 +64,7 @@ exports.save = function(req, data) {
 				parents: [site, user]
 			};
 			return site.$beforeInsert.call(block).then(function() {
-				block.lock = {read: [`id-${block.id}`]};
+				block.lock = [`id-${block.id}`];
 				return site.$model.query(site.trx).insertGraph(block, {
 					relate: ['parents']
 				}).then(function(settings) {
