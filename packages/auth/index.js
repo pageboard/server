@@ -93,9 +93,8 @@ function locked(site, user, list) {
 	var granted = false;
 	list.forEach(function(lock) {
 		var lockIndex = site.$grants[lock] || -1;
-		if (lock.startsWith('id-')) {
-			if ('id-' + user.id == lock) granted = true;
-			lock = 'id-:id';
+		if (/^(user|id)-/.test(lock)) {
+			if (user.id == lock.split('-').pop()) granted = true;
 		} else if ((lockIndex > minLevel) || grants.includes(lock)) {
 			granted = true;
 		}
