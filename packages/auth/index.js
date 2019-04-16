@@ -112,7 +112,7 @@ function locked(req, list) {
 	list.forEach(function(lock) {
 		var lockIndex = site.$grants[lock] || -1;
 		if (lock.startsWith('id-')) {
-			if ('id-' + user.id == lock) granted = true;
+			if (`id-${user.id}` == lock) granted = true;
 			lock = 'id-:id';
 		} else if ((lockIndex > minLevel) || grants.includes(lock)) {
 			granted = true;
