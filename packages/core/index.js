@@ -56,11 +56,15 @@ exports.config = function(pkgOpt) {
 			installer: "npm",  // or yarn
 			log: ':method :status :time :size :site:url'
 		},
-		port: 3000,
 		report: {},
 		extnames: [],
 		upstreams: {}
 	});
+	opt.upstream = opt.upstreams[opt.version];
+	if (!opt.port) {
+		if (opt.upstream) opt.port = opt.upstream.split(':').pop();
+		else opt.port = 3000;
+	}
 	symlinkDir(opt, 'sites');
 	symlinkDir(opt, 'uploads');
 	symlinkDir(opt, 'dumps');
