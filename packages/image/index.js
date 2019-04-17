@@ -38,7 +38,7 @@ function initFile(All) {
 		uploadDir = "." + uploadDir;
 		console.info("Uploaded images resizable by upload at", "/" + uploadDir);
 		All.app.get(`:url(/${uploadDir}/*)`, function(req, res, next) {
-			if (req.query.raw !== undefined) {
+			if (req.query.raw === "" || req.query.raw === null) {
 				if (Object.keys(req.query).length != 1) {
 					res.sendStatus(400);
 				} else {
