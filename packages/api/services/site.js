@@ -391,6 +391,7 @@ exports.import = function(data) {
 		pstream.on('data', function(obj) {
 			p = p.then(function() {
 				if (obj.site) {
+					Object.assign(obj.site.data, data.data || {});
 					upgradeBlock(obj.site);
 					obj.site.id = data.id;
 					delete obj.site.data.domains;
@@ -545,6 +546,11 @@ exports.import.schema = {
 			title: 'Generate new ids',
 			type: 'boolean',
 			default: false
+		},
+		data: {
+			title: 'Site data',
+			type: 'object',
+			default: {}
 		}
 	}
 };
