@@ -283,20 +283,26 @@ function createApp(All) {
 	app.use(All.domains.init);
 	app.use(function(req, res, next) {
 		if (req.path == "/.well-known/pageboard") {
-			if (req.site.upstream) res.set('X-Upstream', req.site.upstream);
+			if (req.site.upstream) {
+				res.set('X-Upstream', req.site.upstream);
+			}
 			res.type("json").send({
 				errors: req.site.errors
 			});
 		} else {
 			if (req.site.upstream) {
-				res.sendStatus(503);
-			} else {
-				res.setHeader('Referrer-Policy', 'same-origin');
-				res.setHeader('X-XSS-Protection','1;mode=block');
-				res.setHeader('X-Frame-Options', 'sameorigin');
-				res.setHeader('X-Content-Type-Options', 'nosniff');
-				next();
+				console.error(
+					"Only requests to /.well-known/pageboard should be made to another upstream:",
+					req.site.upstream, req.site.data.version,
+					"by", opt.version, req.hostname, req.url
+				);
+				throw new HttpError.BadRequest("Bad upstream");
 			}
+			res.setHeader('Referrer-Policy', 'same-origin');
+			res.setHeader('X-XSS-Protection','1;mode=block');
+			res.setHeader('X-Frame-Options', 'sameorigin');
+			res.setHeader('X-Content-Type-Options', 'nosniff');
+			next();
 		}
 	});
 	app.use(function(err, req, res, next) {
