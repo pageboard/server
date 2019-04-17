@@ -163,7 +163,6 @@ exports.grant = function(req, data) {
 		return All.run('settings.find', req, {
 			email: data.email
 		}).then(function(settings) {
-			var grants = req.user && req.user.grants || [];
 			var user = req.user = {
 				id: settings.id,
 				grants: settings.data && settings.data.grants || []
