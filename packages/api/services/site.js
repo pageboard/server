@@ -565,24 +565,22 @@ function replaceContent(map, block) {
 }
 
 function replaceLock(map, block) {
-	var lock = block.lock;
-	if (!lock) return;
-	lock.forEach(function(item, i) {
+	var locks = block.lock && block.lock.read;
+	if (!locks) return;
+	locks.forEach(function(item, i) {
 		item = item.split('-');
 		if (item.length != 2) return;
 		var id = map[item[1]];
 		if (id) item[1] = id;
-		lock[i] = item.join('-');
+		locks[i] = item.join('-');
 	});
 }
 
 function upgradeBlock(block) {
-	if (block.lock && !Array.isArray(block.lock)) {
-		block.lock = block.lock.read;
-		if (block.lock) block.lock.forEach(function(lock) {
-			lock = lock.replace(/^user-/, "id-");
-		});
-	}
+	var locks = block.lock && block.lock.read;
+	if (locks) locks.forEach(function(lock, i) {
+		locks[i] = lock.replace(/^user-/, "id-");
+	});
 	return block;
 }
 

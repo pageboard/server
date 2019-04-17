@@ -153,7 +153,7 @@ function filter(req, item) {
 
 	var $lock = schema.$lock || {};
 	if (typeof $lock == "string" || Array.isArray($lock)) $lock = {'*': $lock};
-	var lock = item.lock || [];
+	var lock = (item.lock || {}).read || [];
 
 	if (Object.keys($lock).length == 0 && lock.length == 0) return item;
 
