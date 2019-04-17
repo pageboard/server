@@ -42,7 +42,6 @@ Domains.prototype.init = function(req, res, next) {
 	}
 	if (!host.searching && !host._error) {
 		delete host._error;
-		host.isSearching = true;
 		host.searching = Promise.resolve().then(function() {
 			return this.check(host, req);
 		}.bind(this)).then(function(hostname) {
@@ -80,13 +79,10 @@ Domains.prototype.init = function(req, res, next) {
 		}).catch(function(err) {
 			host._error = err;
 			if (host.finalize) host.finalize();
-		}).finally(function() {
-			host.isSearching = false;
 		});
 	}
 
 	if (!host.installing && !host._error) {
-		host.isInstalling = true;
 		host.installing = host.searching.then(function(site) {
 			if (host._error || host.proxying) return;
 			site.href = host.href;
@@ -94,8 +90,6 @@ Domains.prototype.init = function(req, res, next) {
 			return All.install(site).catch(function() {
 				// never throw an error since errors are already dealt with in install
 			});
-		}).finally(function() {
-			host.isInstalling = false;
 		});
 	}
 	if (!host.waiting && !host._error) {
