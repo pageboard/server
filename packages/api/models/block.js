@@ -81,6 +81,7 @@ Block.jsonSchema = {
 		},
 		lock: {
 			type: 'object',
+			nullable: true,
 			properties: {
 				read: {
 					type: 'array',
