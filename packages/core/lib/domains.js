@@ -96,8 +96,7 @@ Domains.prototype.init = function(req, res, next) {
 		doWait(host);
 	}
 	var p;
-	if (host.proxying) p = Promise.resolve();
-	else if (req.path == "/.well-known/upcache") {
+	if (req.path == "/.well-known/upcache") {
 		if (host.finalize) {
 			host.finalize();
 		}
