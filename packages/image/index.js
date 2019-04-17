@@ -39,17 +39,21 @@ function initFile(All) {
 		console.info("Uploaded images resizable by upload at", "/" + uploadDir);
 		All.app.get(`:url(/${uploadDir}/*)`, function(req, res, next) {
 			if (req.query.raw !== undefined) {
-				next('route');
-				return;
-			}
-			var wrongParam = Object.keys(req.query).some(function(key) {
-				return !allowedParameters[key];
-			});
-			if (wrongParam) {
-				res.sendStatus(400);
+				if (Object.keys(req.query).length != 1) {
+					res.sendStatus(400);
+				} else {
+					next('route');
+				}
 			} else {
-				req.params.url += req.params.url.includes('?') ? '&raw' : '?raw';
-				next();
+				var wrongParam = Object.keys(req.query).some(function(key) {
+					return !allowedParameters[key];
+				});
+				if (wrongParam) {
+					res.sendStatus(400);
+				} else {
+					req.params.url += req.params.url.includes('?') ? '&raw' : '?raw';
+					next();
+				}
 			}
 		}, sharpie(All.opt.image));
 	}
