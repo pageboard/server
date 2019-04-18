@@ -28,7 +28,7 @@ function init(All) {
 	});
 }
 
-exports.get = function(site, user, data) {
+exports.get = function({site}, data) {
 	return All.api.Href.query(site.trx).select('href._id')
 	.whereSite(site.id)
 	.where('href.url', data.url).first();
