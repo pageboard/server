@@ -251,7 +251,8 @@ exports.export = function(data) {
 		blocks: 0,
 		standalones: 0,
 		hrefs: 0,
-		settings: 0
+		settings: 0,
+		reservations: 0
 	};
 	return exports.get(data).eager(`[children(lones)]`, {
 		lones: function(builder) {
@@ -270,12 +271,12 @@ exports.export = function(data) {
 		counts.site = 1;
 		counts.standalones = children.length;
 		out.write('{"site": ');
-		out.write(JSON.stringify(site));
+		out.write(toJSON(site));
 		// TODO extend to any non-standalone block that is child of user or settings
 		// TODO fix calendar so that reservations are made against a user, not against its settings
 		out.write(',\n"settings": [');
 		return site.$relatedQuery('children').where('block.type', 'settings')
-		.select().eager('parents(user) as user', {
+		.select().eager('[parents(user) as user]', {
 			user: function(builder) {
 				return builder.select(
 					ref('data:email').castText().as('email')
@@ -292,8 +293,8 @@ exports.export = function(data) {
 				if (!user.email) return;
 				counts.settings++;
 				setting._email = user.email;
-				out.write(JSON.stringify(setting));
-				if (i != last) out.write(',');
+				out.write(toJSON(setting));
+				if (i != last) out.write('\n,');
 			});
 		}).then(function() {
 			out.write(']');
@@ -323,11 +324,28 @@ exports.export = function(data) {
 							delete lone.standalones;
 						}
 						counts.blocks += lone.children.length;
-						out.write(JSON.stringify(lone));
-						if (i != last) out.write(',');
+						out.write(toJSON(lone));
+						if (i != last) out.write('\n,');
 					});
 				});
 			}, prom);
+		}).then(function() {
+			out.write('],\n"reservations": [');
+		}).then(function() {
+			return site.$relatedQuery('children').where('block.type', 'event_reservation')
+			.select().eager('parents(notsite) as parents', {
+				notsite: function(builder) {
+					return builder.select('block.id', 'block.type')
+					.whereIn('block.type', ['settings', 'event_date']);
+				}
+			}).then(function(reservations) {
+				var last = reservations.length - 1;
+				reservations.forEach(function(resa, i) {
+					counts.reservations++;
+					out.write(toJSON(resa));
+					if (i != last) out.write('\n,');
+				});
+			});
 		}).then(function() {
 			out.write('],\n"hrefs": [');
 			return All.api.Href.query().select()
@@ -336,7 +354,7 @@ exports.export = function(data) {
 				var last = hrefs.length - 1;
 				hrefs.forEach(function(href, i) {
 					out.write(JSON.stringify(href));
-					if (i != last) out.write(',');
+					if (i != last) out.write('\n,');
 				});
 			});
 		}).then(function() {
@@ -374,7 +392,8 @@ exports.import = function(data) {
 		standalones: 0,
 		settings: 0,
 		users: 0,
-		hrefs: 0
+		hrefs: 0,
+		reservations: 0
 	};
 	return All.api.transaction(function(trx) {
 		var p = Promise.resolve();
@@ -490,6 +509,34 @@ exports.import = function(data) {
 							return site.$relatedQuery('children', trx).insertGraph(setting);
 						});
 					});
+				} else if (obj.reservation) {
+					var resa = upgradeBlock(obj.reservation);
+					var parents = resa.parents || [];
+					if (parents.length != 2) {
+						console.warn("Ignoring reservation", resa);
+						return;
+					}
+					if (copy) parents.forEach(function(block) {
+						block.id = idMap[block.id];
+					});
+					return (!copy ? Promise.resolve() : Block.genId().then(function(id) {
+						resa.id = idMap[resa.id] = id;
+						replaceLock(idMap, resa);
+					})).then(function() {
+						// get settings, date
+						return site.$relatedQuery('children', trx)
+						.select('_id')
+						.whereIn('block.id', parents.map(function(parent) {
+							return parent.id;
+						})).then(function(parents) {
+							resa.parents = parents.map(function(parent) {
+								return {"#dbRef": parent._id};
+							});
+						});
+					}).then(function() {
+						counts.reservations++;
+						return site.$relatedQuery('children', trx).insertGraph(resa);
+					});
 				}
 			});
 		});
@@ -506,6 +553,9 @@ exports.import = function(data) {
 		});
 		jstream.node('!.settings[*]', function(data) {
 			pstream.write({setting: data});
+		});
+		jstream.node('!.reservations[*]', function(data) {
+			pstream.write({reservation: data});
 		});
 		jstream.on('end', function() {
 			pstream.end();
@@ -594,6 +644,10 @@ function fixSiteCoercion(site) {
 	if (site.data.domains === "") site.data.domains = null;
 	if (site.data.version === "") site.data.version = null;
 	return site;
+}
+
+function toJSON(obj) {
+	return JSON.stringify(obj, null, " ");
 }
 
 exports.gc = function() {
