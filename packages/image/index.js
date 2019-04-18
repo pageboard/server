@@ -103,10 +103,13 @@ exports.thumbnail = function(url) {
 		request(url).pipe(pipeline);
 	}
 	return pipeline
-	.resize(null, 64)
-	.max()
-	.background('white')
-	.flatten()
+	.resize({
+		fit: "inside",
+		height: 64
+	})
+	.flatten({
+		background: 'white'
+	})
 	.toFormat('webp', {
 		quality: 50
 	})
