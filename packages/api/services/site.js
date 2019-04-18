@@ -153,8 +153,7 @@ exports.add.schema = {
 };
 
 exports.save = function(data) {
-	if (data.data.domains === "") data.data.domains = null;
-	if (data.data.version === "") data.data.version = null;
+	fixSiteCoercion(data);
 	return All.api.transaction(function(trx) {
 		return exports.get(data).transacting(trx).forUpdate().then(function(site) {
 			lodashMerge(site.data, data.data);
@@ -391,10 +390,11 @@ exports.import = function(data) {
 		pstream.on('data', function(obj) {
 			p = p.then(function() {
 				if (obj.site) {
+					if (copy) delete obj.site.data.domains;
 					Object.assign(obj.site.data, data.data || {});
+					fixSiteCoercion(obj.site);
 					upgradeBlock(obj.site);
 					obj.site.id = data.id;
-					delete obj.site.data.domains;
 					return Block.query(trx).insert(obj.site).returning('*').then(function(copy) {
 						counts.site++;
 						site = copy;
@@ -588,6 +588,12 @@ function upgradeBlock(block) {
 		locks[i] = lock.replace(/^user-/, "id-");
 	});
 	return block;
+}
+
+function fixSiteCoercion(site) {
+	if (site.data.domains === "") site.data.domains = null;
+	if (site.data.version === "") site.data.version = null;
+	return site;
 }
 
 exports.gc = function() {
