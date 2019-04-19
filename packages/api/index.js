@@ -239,6 +239,10 @@ All.run = function(apiStr, req, data) {
 
 All.send = function(res, obj) {
 	var req = res.req;
+	if (obj == null || typeof obj != "object") {
+		console.warn("All.send expects an object", obj);
+		obj = {};
+	}
 	if (obj.cookies) {
 		var host = All.domains.hosts[req.hostname];
 		var cookieParams = {
