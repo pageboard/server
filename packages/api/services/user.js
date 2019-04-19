@@ -1,9 +1,13 @@
 exports = module.exports = function(opt) {
 	return {
-		name: 'user'
+		name: 'user',
+		service: init
 	};
 };
 
+function init() {
+
+}
 
 function QueryUser(data) {
 	var Block = All.api.Block;
