@@ -19,6 +19,12 @@ function init(All) {
 		}).catch(next);
 	});
 
+	All.app.get("/.api/blocks", function(req, res, next) {
+		All.run('block.search', req, req.query).then(function(data) {
+			All.send(res, data);
+		}).catch(next);
+	});
+
 	All.app.post('/.api/blocks', All.auth.restrict('writer'), function(req, res, next) {
 		All.run('block.write', req, req.body).then(function(data) {
 			All.send(res, data);
