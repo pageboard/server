@@ -653,7 +653,7 @@ function updatePage(req, page) {
 			return Promise.all(hrefs[type].map(function(key) {
 				key = 'block.data:' + key;
 				var field = ref(key).castText();
-				var args = field.toRawArgs();
+				var args = field._createRawArgs(All.api.Block.query());
 				return site.$relatedQuery('children').where('block.type', type)
 				.where(function() {
 					this.where(field, 'LIKE', `${oldUrl}/%`)
