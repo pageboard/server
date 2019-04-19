@@ -3,7 +3,9 @@ var DNS = {
 	reverse: require('util').promisify(require('dns').reverse)
 };
 
-var pageboardNames;
+var pageboardNames = [];
+var pageboardIps = {};
+
 module.exports = Domains;
 
 function Domains(All) {
@@ -187,10 +189,12 @@ Domains.prototype.check = function(host, req) {
 	var hostname = host.name;
 
 	return Promise.resolve().then(function() {
-		if (!pageboardNames) return DNS.reverse(ip).then(function(hostnames) {
-			pageboardNames = hostnames.map(function(hn) {
+		if (!pageboardIps[ip]) return DNS.reverse(ip).then(function(hostnames) {
+			pageboardIps[ip] = true;
+			hostnames.forEach(function(hn) {
 				if (hn == "localhost") hn += ".localdomain";
-				return '.' + hn;
+				hn = '.' + hn;
+				if (!pageboardNames.includes(hn)) pageboardNames.push(hn);
 			});
 		});
 	}).then(function() {
