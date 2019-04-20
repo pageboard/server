@@ -3,7 +3,7 @@ var URL = require('url');
 
 otp.options = {
 	step: 30, // do not change this value, we want third-party otp apps to work with us
-	window: [20, 1] // ten minutes-old tokens are still valid
+	window: [40, 1] // ten minutes-old tokens are still valid
 };
 
 exports = module.exports = function(opt) {
