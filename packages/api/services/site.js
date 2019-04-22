@@ -187,47 +187,12 @@ exports.del = function(data) {
 	var Block = All.api.Block;
 	return All.api.transaction(function(trx) {
 		var counts = {};
-		return Block.query(trx).where('type', 'site').select('_id').where('id', data.id)
-		.first().throwIfNotFound().then(function(site) {
-			return Promise.all([
-				Block.query(trx).whereIn(
-					'_id',
-					Block.query(trx)
-					.where('block._id', site._id)
-					.joinRelation('children.children', {alias: 'c'})
-					.select('c._id')
-				).del()
-				.then(function(count) {
-					counts.blocks = count;
-					return Block.query(trx).whereIn(
-						'_id',
-						Block.query(trx)
-						.where('block._id', site._id)
-						.joinRelation('children', {alias: 'c'})
-						.where('c.standalone', false)
-						.select('c._id')
-					).del();
-				}).then(function(count) {
-					counts.blocks += count;
-					return Block.query(trx).whereIn(
-						'_id',
-						Block.query(trx)
-						.where('block._id', site._id)
-						.joinRelation('children', {alias: 'c'})
-						.where('c.standalone', true)
-						.select('c._id')
-					).del();
-				}).then(function(count) {
-					counts.standalones = count;
-					return site.$query(trx).del().then(function(count) {
-						counts.site = count;
-						return counts;
-					});
-				}),
-				All.api.Href.query(trx).where('_parent_id', site._id).del().then(function(count) {
-					counts.hrefs = count;
-				})
-			]);
+		return Block.query(trx).where('type', 'site')
+		.select('_id', Block.raw('recursive_delete(_id, TRUE) AS blocks'))
+		.where('id', data.id)
+		.first().throwIfNotFound().then(function(row) {
+			counts.blocks = row.blocks;
+			// no need to remove href thanks to delete cascade on href._parent_id
 		}).then(function() {
 			return counts;
 		});
