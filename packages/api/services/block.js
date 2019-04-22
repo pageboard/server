@@ -551,11 +551,9 @@ exports.save.external = true;
 
 exports.del = function({site}, data) {
 	return site.$relatedQuery('children')
+	.select(site.$raw('recursive_delete(block._id, FALSE) AS blocks'))
 	.where('block.id', data.id)
-	.where('block.type', data.type)
-	.delete().then(function(count) {
-		return {count: count};
-	});
+	.where('block.type', data.type);
 };
 exports.del.schema = {
 	title: 'Delete a block',
