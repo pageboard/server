@@ -186,7 +186,7 @@ exports.grant.schema = {
 	title: 'Grant',
 	description: 'Sets cookie with grants',
 	$action: 'write',
-	required: ['email', 'token', 'grant'],
+	required: ['email', 'token'],
 	properties: {
 		email: {
 			title: 'Email',
