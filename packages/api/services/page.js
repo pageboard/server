@@ -705,18 +705,32 @@ exports.add.schema = {
 	}
 };
 
-exports.del = function(req, data) {
-	// TODO deleting a page should be done in TWO steps
-	// 1) data.url = null -> the page becomes only accessible through admin
-	// 2) actual deletion
-	// consequences:
-	// - if there are links starting or equal to that page url, it's not possible
-	// to delete that url
-	// - sitemap needs a specific zone that displays pages that have no url
-	// - deleting a page from that zone actually deletes the page
-	// - moving a page to that zone removes the url of the page (when saving,
-	// and when possible)
-	throw new HttpError.NotImplemented("TODO use save to delete page blocks");
+exports.del = function({site}, data) {
+	var counts = {};
+	return site.$relatedQuery('children')
+	.where('block.id', data.id)
+	.join('href', 'href.url', "block.data->>'url'")
+	.where('href._parent_id', site._id).del().then(function(count) {
+		counts.hrefs = count;
+		return site.$relatedQuery('children')
+		.where('block.id', data.id)
+		.first().throwIfNotFound()
+		.select(site.$raw('recursive_delete(block._id, FALSE) AS count')).then(function(row) {
+			counts.blocks = row.count;
+			return counts;
+		});
+	});
+};
+exports.del.schema = {
+	$action: 'del',
+	required: ['id'],
+	properties: {
+		id: {
+			title: 'id',
+			type: 'string',
+			format: 'id'
+		}
+	}
 };
 
 exports.robots = function({site}) {
