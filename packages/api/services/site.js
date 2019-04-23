@@ -183,6 +183,14 @@ exports.save.schema = {
 	}
 };
 
+exports.all = function() {
+	return All.api.Block.query().where('type', 'site').select();
+};
+exports.all.schema = {
+	$action: 'read',
+	properties: {}
+};
+
 exports.del = function(data) {
 	var Block = All.api.Block;
 	return All.api.transaction(function(trx) {
