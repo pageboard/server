@@ -1,10 +1,11 @@
-var DNS = {
+const DNS = {
 	lookup: require('util').promisify(require('dns').lookup),
 	reverse: require('util').promisify(require('dns').reverse)
 };
-
-var pageboardNames = [];
-var pageboardIps = {};
+const localhost4 = "127.0.0.1";
+// const localhost6 = "::1";
+const pageboardNames = [];
+const pageboardIps = {};
 
 module.exports = Domains;
 
@@ -28,9 +29,33 @@ so adding an IP to pageboard and pointing a host to that IP needs a restart)
 */
 Domains.prototype.init = function(req, res, next) {
 	var All = this.All;
+	var hostname = req.hostname;
+	if (hostname == null && req.path == "/.well-known/pageboard") {
+		All.run('site.all', req).then(function(list) {
+			var map = {};
+			list.forEach(function(site) {
+				var upstream = All.opt.upstreams[site.data.server || All.opt.version];
+				var domains = site.data.domains || [];
+				var domain = domains.shift();
+				if (domain != null) {
+					domains = domains.slice();
+					domains.push(site.id);
+					domains.forEach(function(secondary) {
+						map[secondary] = '=' + domain;
+					});
+					map[domain] = upstream;
+				} else {
+					map[site.id] = upstream;
+				}
+			});
+			res.send({
+				domains: map
+			});
+		});
+		return;
+	}
 	var sites = this.sites;
 	var hosts = this.hosts;
-	var hostname = req.hostname;
 	var host = hosts[hostname];
 	if (!host) {
 		hosts[hostname] = host = {name: hostname};
@@ -147,14 +172,19 @@ Domains.prototype.init = function(req, res, next) {
 		site.href = host.href;
 		site.hostname = host.name; // at this point it should be == host.domains[0]
 
-		next();
+		if (req.path == "/.well-known/pageboard") {
+			// this is expected by proxy/statics/status.html
+			res.send({
+				errors: site.errors
+			});
+		} else {
+			next();
+		}
 	}).catch(next);
 };
 
 Domains.prototype.check = function(host, req) {
 	var fam = 4;
-	var localhost4 = "127.0.0.1";
-	// var localhost6 = "::1";
 	var ip = req.get('X-Forwarded-By');
 	if (ip) {
 		if (isIPv6(ip)) fam = 6;
