@@ -166,7 +166,7 @@ exports.grant = function(req, data) {
 				id: settings.id,
 				grants: settings.data && settings.data.grants || []
 			};
-			var locks = [data.grant];
+			var locks = data.grant ? [data.grant] : [];
 			if (All.auth.locked(req, locks)) {
 				throw new HttpError.Forbidden("User has insufficient grants");
 			}
