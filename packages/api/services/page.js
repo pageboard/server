@@ -42,7 +42,7 @@ function init(All) {
 			if (!req.query.type) req.query.type = ['page', 'mail'];
 		}
 
-		var action = req.query.text != null ? 'page.search' : 'page.list';
+		var action = req.query.text != null ? 'page.search' : 'page.all';
 		All.run(action, req, req.query).then(function(obj) {
 			All.send(res, obj);
 		}).catch(next);
@@ -71,7 +71,7 @@ function init(All) {
 	});
 
 	All.app.get('/.well-known/sitemap.txt', function(req, res, next) {
-		All.run('page.list', req, {}).then(function(obj) {
+		All.run('page.all', req, {}).then(function(obj) {
 			res.type('text/plain');
 			All.auth.filter(req, obj);
 			res.send(obj.items.map(page => req.site.href + page.data.url).join('\n'));
@@ -382,7 +382,7 @@ exports.search.schema = {
 };
 exports.search.external = true;
 
-exports.list = function({site}, data) {
+exports.all = function({site}, data) {
 	return listPages(site, data).then(function(pages) {
 		var els = {};
 		var obj = {
@@ -406,7 +406,7 @@ exports.list = function({site}, data) {
 		return obj;
 	});
 };
-exports.list.schema = {
+exports.all.schema = {
 	title: 'Site map',
 	$action: 'read',
 	properties: {
@@ -450,7 +450,7 @@ exports.list.schema = {
 		}
 	}
 };
-exports.list.external = true;
+exports.all.external = true;
 
 exports.save = function(req, changes) {
 	changes = Object.assign({
