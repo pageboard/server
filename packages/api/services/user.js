@@ -77,18 +77,10 @@ exports.add.schema = {
 	}
 };
 
-exports.save = function(data) {
-	// i can't think of anything here for now
-	return QueryUser(data).patchObject(data);
-};
-
 exports.del = function(data) {
 	return QueryUser(data).del();
 };
-Object.defineProperty(exports.del, 'schema', {
-	get: function() {
-		var schema = Object.assign({}, exports.get.schema);
-		schema.$action = 'del';
-		return schema;
-	}
+exports.del.schema = Object.assign({}, exports.get.schema, {
+	$action: 'del'
 });
+
