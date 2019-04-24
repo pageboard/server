@@ -30,7 +30,7 @@ so adding an IP to pageboard and pointing a host to that IP needs a restart)
 Domains.prototype.init = function(req, res, next) {
 	var All = this.All;
 	var hostname = req.hostname;
-	if (hostname == null && req.path == "/.well-known/pageboard") {
+	if (hostname == localhost4 && req.path == "/.well-known/pageboard") {
 		All.run('site.all', req).then(function(list) {
 			var map = {};
 			list.forEach(function(site) {
