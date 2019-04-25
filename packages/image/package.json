@@ -18,7 +18,6 @@
   "homepage": "https://github.com/pageboard/server#readme",
   "dependencies": {
     "datauri": "^2.0.0",
-    "express-urlrewrite": "^1.2.0",
     "sharpie": "^4.0.0"
   },
   "pageboard": true
