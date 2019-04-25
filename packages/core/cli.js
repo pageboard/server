@@ -50,7 +50,8 @@ pageboard.init(config).then(function(All) {
 		}
 	}).then(function() {
 		return All.run.apply(All, args).then(function(results) {
-			console.log(JSON.stringify(results, null, ' '));
+			if (typeof results == "string") console.log(results);
+			else console.log(JSON.stringify(results, null, ' '));
 			process.exit();
 		});
 	});
