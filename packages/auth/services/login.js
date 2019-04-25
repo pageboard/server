@@ -1,5 +1,6 @@
-var otp = require('otplib').authenticator;
-var URL = require('url');
+const otp = require('otplib').authenticator;
+const qrcode = require('qrcode').toString;
+const URL = require('url');
 
 otp.options = {
 	step: 30, // do not change this value, we want third-party otp apps to work with us
@@ -266,11 +267,35 @@ exports.clear.schema = {
 
 exports.clear.external = true;
 
-exports.keyuri = function(data) {
+exports.key = function(data) {
 	return All.user.get({email: [data.email]}).then(function(user) {
 		return userPriv(user).then(function(priv) {
-			return otp.keyuri(user.data.email, All.opt.name, priv.data.otp.secret);
+			var uri = otp.keyuri(user.data.email, All.opt.name, priv.data.otp.secret);
+			if (data.qr) {
+				return qrcode(uri, {
+					type: 'terminal',
+					errorCorrectionLevel: 'L'
+				});
+			} else {
+				return uri;
+			}
 		});
 	});
 };
-
+exports.key.schema = {
+	title: 'Private Key URI',
+	$action: 'read',
+	required: ['email'],
+	properties: {
+		email: {
+			title: 'Email',
+			type: 'string',
+			format: 'email'
+		},
+		qr: {
+			title: 'QR Code',
+			type: 'boolean',
+			default: false
+		}
+	}
+};
