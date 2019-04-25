@@ -45,6 +45,7 @@ exports.install = function(site) {
 	site.$grants = grantsLevels(site.constructor);
 };
 
+exports.lock = lockMw;
 exports.locked = locked;
 exports.filter = filter;
 
@@ -76,7 +77,23 @@ function grantsLevels(DomainBlock) {
 	return grants;
 }
 
-function locked({site, user}, list) {
+function lockMw(list) {
+	return function(req, res, next) {
+		if (typeof list == "string") list = [list];
+		if (locked(req, list)) {
+			All.auth.headers(res, list);
+			var status = (req.user.grants || []).length == 0 ? 401 : 403;
+			res.status(status);
+			res.send({locks: req.locks});
+		} else {
+			next();
+		}
+	};
+}
+
+function locked(req, list) {
+	var {site, user, locks} = req;
+	if (!locks) locks = req.locks = [];
 	if (list != null && !Array.isArray(list) && typeof list == "object" && list.read !== undefined) {
 		// backward compat, block.lock only cares about read access
 		list = list.read;
@@ -95,9 +112,18 @@ function locked({site, user}, list) {
 		var lockIndex = site.$grants[lock] || -1;
 		if (lock.startsWith('id-')) {
 			if (`id-${user.id}` == lock) granted = true;
+			lock = 'id-:id';
 		} else if ((lockIndex > minLevel) || grants.includes(lock)) {
 			granted = true;
 		}
+		if (!locks.includes(lock)) locks.push(lock);
+	});
+	locks.sort(function(a, b) {
+		var al = site.$grants[a] || -1;
+		var bl = site.$grants[b] || -1;
+		if (al == bl) return 0;
+		else if (al < bl) return 1;
+		else if (al > bl) return -1;
 	});
 	return !granted;
 }
