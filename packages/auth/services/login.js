@@ -266,7 +266,7 @@ exports.clear.schema = {
 
 exports.clear.external = true;
 
-exports.key = function(data) {
+exports.key = function(req, data) {
 	return All.user.get({email: data.email}).then(function(user) {
 		return userPriv(user).then(function(priv) {
 			var uri = otp.keyuri(user.data.email, All.opt.name, priv.data.otp.secret);
