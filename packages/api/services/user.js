@@ -51,7 +51,7 @@ exports.get.schema = {
 
 exports.add = function(data) {
 	return QueryUser({
-		email: [data.email]
+		email: data.email
 	}).then(function(user) {
 		return user;
 	}).catch(function(err) {
