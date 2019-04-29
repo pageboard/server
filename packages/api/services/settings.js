@@ -87,7 +87,7 @@ exports.save = function(req, data) {
 		if (err.statusCode != 404) throw err;
 		return All.run('user.get', {email: data.email}).catch(function(err) {
 			if (err.statusCode != 404) throw err;
-			return All.run('user.add', {data: {email: data.email}});
+			return All.run('user.add', {email: data.email});
 		}).then(function(user) {
 			var block = {
 				type: 'settings',
