@@ -18,7 +18,7 @@ function QueryUser(data) {
 		q.where('user.id', data.id);
 		delete data.id;
 	} else if (data.email) {
-		q.whereJsonText('user.data:email', 'in', data.email);
+		q.whereJsonText('user.data:email', data.email);
 		delete data.email;
 	}
 	return q;
@@ -42,12 +42,9 @@ exports.get.schema = {
 		},
 		email: {
 			title: 'User email',
-			type: 'array',
-			items: {
-				type: 'string',
-				format: 'email',
-				transform: ['trim', 'toLowerCase']
-			}
+			type: 'string',
+			format: 'email',
+			transform: ['trim', 'toLowerCase']
 		}
 	}
 };
@@ -70,6 +67,7 @@ exports.add.schema = {
 	required: ['email'],
 	properties: {
 		email: {
+			title: 'User email',
 			type: 'string',
 			format: 'email',
 			transform: ['trim', 'toLowerCase']
@@ -77,18 +75,10 @@ exports.add.schema = {
 	}
 };
 
-exports.save = function(data) {
-	// i can't think of anything here for now
-	return QueryUser(data).patchObject(data);
-};
-
 exports.del = function(data) {
 	return QueryUser(data).del();
 };
-Object.defineProperty(exports.del, 'schema', {
-	get: function() {
-		var schema = Object.assign({}, exports.get.schema);
-		schema.$action = 'del';
-		return schema;
-	}
+exports.del.schema = Object.assign({}, exports.get.schema, {
+	$action: 'del'
 });
+

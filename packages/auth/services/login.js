@@ -50,7 +50,7 @@ function generate(site, data) {
 	return Promise.resolve().then(function() {
 		if (data.register) return All.user.add({email: data.email});
 	}).then(function() {
-		return All.user.get({email: [data.email]}).select('_id');
+		return All.user.get({email: data.email}).select('_id');
 	}).then(function(user) {
 		return userPriv(user);
 	}).then(function(priv) {
@@ -134,7 +134,7 @@ exports.send.external = true;
 
 function verifyToken(email, token) {
 	return All.api.transaction(function(trx) {
-		return All.user.get({email: [email]}).then(function(user) {
+		return All.user.get({email: email}).then(function(user) {
 			return userPriv(user, trx).then(function(priv) {
 				var tries = (priv.data.otp.tries || 0) + 1;
 				if (tries >= 5) {
@@ -267,7 +267,7 @@ exports.clear.schema = {
 exports.clear.external = true;
 
 exports.key = function(data) {
-	return All.user.get({email: [data.email]}).then(function(user) {
+	return All.user.get({email: data.email}).then(function(user) {
 		return userPriv(user).then(function(priv) {
 			var uri = otp.keyuri(user.data.email, All.opt.name, priv.data.otp.secret);
 			if (data.qr) {
