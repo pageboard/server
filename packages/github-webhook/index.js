@@ -82,9 +82,6 @@ function init(All) {
 				msg = `Saving version ${version}`;
 			}
 			res.status(200).send(msg);
-		}).catch(function(err) {
-			next(err);
-			throw err;
 		}).then(function() {
 			if (version != null) return All.site.save(site).then(function() {
 				if (pusher) All.mail.to({
@@ -106,7 +103,7 @@ function init(All) {
 				text: `An error occurred while deploying from repository:
 					${err.message}`
 			});
-			else console.error(site.id, site.data.module, err);
+			next(err);
 		});
 	});
 }
