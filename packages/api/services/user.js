@@ -16,10 +16,8 @@ function QueryUser(data) {
 	if (!data.id && !data.email) throw new HttpError.BadRequest("Missing id or email");
 	if (data.id) {
 		q.where('user.id', data.id);
-		delete data.id;
 	} else if (data.email) {
 		q.whereJsonText('user.data:email', data.email);
-		delete data.email;
 	}
 	return q;
 }
