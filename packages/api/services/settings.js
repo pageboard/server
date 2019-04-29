@@ -11,11 +11,10 @@ function init() {
 
 }
 
-exports.get = function({site, user}, data) {
-	if (!user || !user.id) throw new HttpError.NotFound("Missing user id");
+exports.get = function({site}, data) {
 	return site.$relatedQuery('children')
 	.where('block.type', 'settings')
-	.where('block.id', user.id).first().throwIfNotFound().select()
+	.where('block.id', data.id).first().throwIfNotFound().select()
 	.eager('[parents(userFilter) as user]', {
 		userFilter: function(query) {
 			query.select().where('type', 'user');
@@ -26,8 +25,17 @@ exports.get = function({site, user}, data) {
 	});
 };
 exports.get.schema = {
-	title: 'Get User',
-	$action: 'read'
+	title: 'Get',
+	$action: 'read',
+	required: ['id'],
+	properties: {
+		id: {
+			title: 'Settings id',
+			type: 'string',
+			minLength: 1,
+			format: 'id'
+		}
+	}
 };
 exports.get.external = true;
 
@@ -37,7 +45,7 @@ exports.find = function({site}, data) {
 	.joinRelation('parents', {alias: 'user'}).where('user.type', 'user');
 	if (!data.id && !data.email) throw new HttpError.BadRequest("Missing id or email");
 	if (data.id) q.where('user.id', data.id);
-	else if (data.email) q.whereJsonText('user.data:email', 'in', data.email);
+	else if (data.email) q.whereJsonText('user.data:email', data.email);
 	return q;
 };
 Object.defineProperty(exports.find, 'schema', {
@@ -45,6 +53,29 @@ Object.defineProperty(exports.find, 'schema', {
 		return All.user.get.schema;
 	}
 });
+
+exports.search = function({site}, data) {
+	var q = site.$relatedQuery('children').alias('settings')
+	.where('settings.type', 'settings').first().throwIfNotFound().select().select(ref('user.data:email').as('email'))
+	.joinRelation('parents', {alias: 'user'}).where('user.type', 'user');
+	q.whereJsonText('user.data:email', 'in', data.email);
+	return q;
+};
+exports.search.schema = {
+	$action: 'read',
+	required: ['email'],
+	properties: {
+		email: {
+			title: 'User emails',
+			type: 'array',
+			items: {
+				type: 'string',
+				format: 'email',
+				transform: ['trim', 'toLowerCase']
+			}
+		}
+	}
+};
 
 exports.save = function(req, data) {
 	var site = req.site;

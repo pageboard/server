@@ -72,13 +72,14 @@ exports.receive = function(data) {
 		parts = parts[0].split('.');
 		if (parts.length != 2) return false;
 		return All.run('site.get', {id: parts[0]}).then(function(site) {
-			return Promise.all(All.run('settings.find', site, {
+			return Promise.all(All.run('settings.search', site, {
 				email: senders
-			}), All.run('settings.get', site, {id: parts[1]})).then(function([sender, settings]) {
+			}), All.run('settings.get', site, {id: parts[1]})).then(function([senders, settings]) {
+				if (senders.length == 0) throw new HttpError.NotFound("No known sender");
 				return exports.to({
 					from: {
 						name: site.data.title,
-						address: `${site.id}.${sender.id}@${mailDomain}`
+						address: `${site.id}.${senders[0].id}@${mailDomain}`
 					},
 					to: {
 						name: settings.data.name || undefined,
