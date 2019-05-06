@@ -66,33 +66,36 @@ function init(All) {
 
 	All.app.post('/.api/upload/:id?', function(req, res, next) {
 		Promise.resolve().then(function() {
-			var defaults = {
+			var limits = {
 				files: upload.files,
-				size: upload.size
+				size: upload.size,
+				types: ['*/*']
 			};
 			if (req.params.id) {
 				return All.run('block.get', req, {id: req.params.id}).then(function(input) {
-					return Object.assign(defaults, input.data);
+					return Object.assign(limits, input.data.limits);
 				});
 			} else {
-				return defaults;
+				return limits;
 			}
-		}).then(function(opts) {
+		}).then(function(limits) {
 			multer({
 				storage: storage,
 				fileFilter: function(req, file, cb) {
-					var types = opts.types && opts.types.length ? opts.types : ['*/*'];
-					cb(null, !!typeis(file.mimetype, types));
+					var types = limits.types.length ? limits.types : ['*/*'];
+					cb(null, !!typeis.is(file.mimetype, types));
 				},
 				limits: {
-					files: opts.files,
-					fileSize: opts.size
+					files: limits.files,
+					fileSize: limits.size
 				}
 			}).array('files')(req, res, function() {
 				return Promise.all(req.files.map(function(file) {
 					return exports.file(req, file);
 				})).then(function(list) {
-					res.send(list);
+					// backward compatibility with elements-write's input href
+					var obj = req.params.id ? {items: list} : list;
+					res.send(obj);
 				}).catch(next);
 			});
 		});
