@@ -214,7 +214,7 @@ exports.grant.schema = {
 
 exports.grant.external = true;
 
-exports.link = function(site, data) {
+exports.link = function({site}, data) {
 	return generate(site, data).then(function(token) {
 		return URL.format({
 			pathname: "/.api/login",
@@ -251,7 +251,7 @@ exports.link.schema = {
 };
 
 
-exports.clear = function(site, data) {
+exports.clear = function({site}, data) {
 	return {
 		cookies: {
 			bearer: {}
