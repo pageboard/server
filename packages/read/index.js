@@ -37,15 +37,16 @@ function prerender(dom) {
 			var scripts = req.site.$resources.map(function(src) {
 				return `<script src="${src}" defer></script>`;
 			});
-			settings.view = `<!DOCTYPE html>
-<html>
-<head>
-	<title></title>
-	${scripts.join('\n')}
-</head>
-<body>
-</body>
-</html>`;
+			settings.view = Text`
+				<!DOCTYPE html>
+				<html>
+					<head>
+						<title></title>
+						${scripts.join('\n')}
+					</head>
+					<body></body>
+				</html>
+			`;
 		}
 	}).load();
 }
