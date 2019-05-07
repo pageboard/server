@@ -4,6 +4,7 @@ var mkdirp = pify(require('mkdirp'));
 var semverRegex = require('semver-regex');
 var rimraf = pify(require('rimraf'));
 var debug = require('debug')('pageboard:core');
+var exec = pify(require('child_process').exec);
 var postinstall = require('postinstall');
 
 var fs = {
@@ -194,35 +195,35 @@ function doInstall(site, pkg, opt) {
 			// some local setup require to pass this to be able to use ssh keys
 			baseEnv.SSH_AUTH_SOCK = process.env.SSH_AUTH_SOCK;
 		}
-		if (opt.core.installer == "yarn") {
-			return All.utils.spawn(opt.installerPath, [
-				"--ignore-scripts", // only postinstall scripts are allowed through hook
-				"--non-interactive", // yarn only
-				"--ignore-optional", // yarn
-				"--no-progress",
-				"--production",
-				"--no-lockfile", // yarn
-				"--silent",
-				"add", module
-			], {
+		if (opt.installer.bin == "yarn") {
+			return exec(Text({newline: ' '})`
+				${opt.installer.path}
+				--ignore-scripts
+				--non-interactive
+				--ignore-optional
+				--no-progress
+				--production
+				--no-lockfile
+				--silent add ${module}`, {
 				cwd: pkg.dir,
-				timeout: 60 * 1000,
+				timeout: opt.installer.timeout,
+				killSignal: 'SIGKILL',
 				env: baseEnv
 			});
 		} else {
-			return All.utils.spawn(opt.installerPath, [
-				"install",
-				"--ignore-scripts", // only postinstall scripts are allowed through hook
-				"--no-optional", // npm
-				"--no-progress",
-				"--production",
-				"--no-package-lock", // npm
-				"--silent",
-				"--no-audit",
-				"--save", module
-			], {
+			return exec(Text({newline: ' '})`
+				${opt.installer.path} install
+				--ignore-scripts
+				--no-optional
+				--no-progress
+				--production
+				--no-package-lock
+				--silent
+				--no-audit
+				--save ${module}`, {
 				cwd: pkg.dir,
-				timeout: 60 * 1000,
+				timeout: opt.installer.timeout,
+				killSignal: 'SIGKILL',
 				env: Object.assign(baseEnv, {
 					npm_config_userconfig: '' // attempt to disable user config
 				})
@@ -237,7 +238,10 @@ function doInstall(site, pkg, opt) {
 		}
 		throw err;
 	}).then(function(out) {
-		if (out) debug(out);
+		if (out) {
+			if (out.stdout) debug(out.stdout.toString());
+			if (out.stderr) console.error(out.stderr.toString());
+		}
 		return getPkg(pkg.dir).then(function(npkg) {
 			if (!npkg.name) {
 				var err = new Error("Installation error");
@@ -308,7 +312,6 @@ function getPkg(pkgDir) {
 		if (version != null) pkg.version = version;
 		return pkg;
 	}).catch(function(err) {
-		console.error(err);
 		return pkg;
 	});
 }

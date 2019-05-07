@@ -42,6 +42,10 @@ exports.config = function(pkgOpt) {
 		env: pkgOpt.env || process.env.NODE_ENV || 'development',
 		name: name,
 		version: pkgOpt.version.split('.').slice(0, 2).join('.'),
+		installer: {
+			bin: 'npm',
+			timeout: 60000
+		},
 		global: true,
 		dirs: {
 			cache: Path.join(xdg.cache, name),
@@ -53,7 +57,6 @@ exports.config = function(pkgOpt) {
 		plugins: [],
 		dependencies: pkgOpt.dependencies || {},
 		core: {
-			installer: "npm",  // or yarn
 			log: ':method :status :time :size :site:url'
 		},
 		report: {},
@@ -65,6 +68,7 @@ exports.config = function(pkgOpt) {
 		if (opt.upstream) opt.port = opt.upstream.split(':').pop();
 		else opt.port = 3000;
 	}
+	opt.installer.timeout = parseInt(opt.installer.timeout);
 	symlinkDir(opt, 'sites');
 	symlinkDir(opt, 'uploads');
 	symlinkDir(opt, 'dumps');
@@ -83,7 +87,6 @@ exports.init = function(opt) {
 		opt: opt,
 		utils: {}
 	};
-	All.utils.spawn = require('spawn-please');
 	All.utils.which = pify(require('which'));
 	All.install = install.bind(All);
 	All.domains = new Domains(All);
@@ -94,10 +97,9 @@ exports.init = function(opt) {
 	All.log = initLog(opt);
 
 	var plugins = [];
-
-	return All.utils.which(opt.core.installer).then(function(path) {
-		console.info("using core installer", path);
-		opt.installerPath = path;
+	return (opt.installer.path ? Promise.resolve(opt.installer.path) : All.utils.which(opt.installer.bin)).then(function(path) {
+		console.info("using installer.path", path);
+		opt.installer.path = path;
 	}).then(function() {
 		return Promise.all(Object.keys(opt.dependencies).map(function(module) {
 			var pkgPath = resolvePkg(module, {cwd: opt.dir});
