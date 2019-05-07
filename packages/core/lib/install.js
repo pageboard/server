@@ -320,7 +320,6 @@ function getPkg(pkgDir) {
 		if (version != null) pkg.version = version;
 		return pkg;
 	}).catch(function(err) {
-		console.error(err);
 		return pkg;
 	});
 }
