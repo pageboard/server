@@ -47,7 +47,7 @@ function prerender(dom) {
 						<title></title>
 						${scripts.join('\n')}
 					</head>
-				<body></body>
+					<body></body>
 				</html>
 			`;
 		}
