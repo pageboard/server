@@ -11,24 +11,30 @@ exports = module.exports = function(opt) {
 
 function init(All) {
 	All.app.get('/.api/page', function(req, res, next) {
-		// FIXME
-		// THIS IS CATASTROPHIC as it varies the cache with the 301 redirection to the version
-		// without develop parameter
 		var isWebmaster = !All.auth.locked(req, ['webmaster']);
-		if (isWebmaster && req.query.develop != "write") {
+		var dev = req.query.develop == "write";
+		var $write = req.site.$standalones.write;
+		delete req.query.develop;
+		if (isWebmaster && !dev) {
 			All.send(res, {
 				item: {
 					type: 'write',
 					data: {}
 				},
-				meta: Object.assign({services: req.site.$services}, req.site.$standalones.write),
+				meta: Object.assign({services: req.site.$services}, $write),
 				site: req.site.data
 			});
 		} else {
-			delete req.query.develop;
 			All.run('page.get', req, {
 				url: req.query.url
 			}).then(function(data) {
+				if (dev && $write.resources.length == 6) {
+					data.meta.scripts.unshift($write.resources[2]);
+					data.meta.writes = {
+						scripts: $write.resources.slice(3, 5),
+						stylesheets: $write.resources.slice(5)
+					};
+				}
 				All.send(res, data);
 			}).catch(next);
 		}
