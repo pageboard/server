@@ -231,24 +231,16 @@ function doInstall(site, pkg, opt) {
 			];
 		}
 		return new Promise(function(resolve, reject) {
-			var list = [];
 			var proc = spawn(opt.installer.path, args, {
 				cwd: pkg.dir,
 				env: Object.assign(baseEnv, {
 					npm_config_userconfig: '' // attempt to disable user config
 				}),
-				stdio: ['ignore', 'pipe', 'pipe']
-			});
-			proc.stdout.on('data', function(data) {
-				list.push(data);
-			});
-			proc.stderr.on('data', function(data) {
-				list.push(data);
+				stdio: ['ignore', 'inherit', 'inherit']
 			});
 			proc.on('exit', function(code, signal) {
-				var str = Buffer.from(list).toString();
-				if (code !== 0) reject(str);
-				else resolve(str);
+				if (code !== 0) reject(`${opt.installer.path} exits with code ${code} ${signal}`);
+				else resolve(`${opt.installer.bin} installed ${module}`);
 			});
 
 			setTimeout(function() {
