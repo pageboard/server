@@ -236,16 +236,23 @@ function doInstall(site, pkg, opt) {
 				env: Object.assign(baseEnv, {
 					npm_config_userconfig: '' // attempt to disable user config
 				}),
-				stdio: ['ignore', 'inherit', 'inherit']
+				detached: true,
+				stdio: ['ignore', 'ignore', 'ignore']
 			});
-			proc.on('exit', function(code, signal) {
-				if (code !== 0) reject(`${opt.installer.path} exits with code ${code} ${signal}`);
-				else resolve(`${opt.installer.bin} installed ${module}`);
-			});
-
-			setTimeout(function() {
+			var idTimeout = setTimeout(function() {
+				if (proc.killed) return;
 				proc.kill('SIGKILL');
+				reject(`${opt.installer.bin} times out ${module}`);
 			}, opt.installer.timeout);
+
+			proc.on('exit', function(code, signal) {
+				clearTimeout(idTimeout);
+				if (code !== 0) {
+					reject(`${opt.installer.path} exits with code ${code} ${signal}`);
+				} else {
+					resolve(`${opt.installer.bin} installed ${module}`);
+				}
+			});
 		});
 	}).catch(function(err) {
 		if (typeof err == "string") {
