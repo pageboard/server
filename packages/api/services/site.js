@@ -155,7 +155,7 @@ exports.add.schema = {
 exports.save = function(data) {
 	fixSiteCoercion(data);
 	return All.api.transaction(function(trx) {
-		return exports.get(data).transacting(trx).forUpdate().then(function(site) {
+		return exports.get(data).transacting(trx).then(function(site) {
 			lodashMerge(site.data, data.data);
 			return All.install(site).then(function(site) {
 				return site.$query(trx).patchObject({
