@@ -4,7 +4,7 @@ var mkdirp = pify(require('mkdirp'));
 var semverRegex = require('semver-regex');
 var rimraf = pify(require('rimraf'));
 var debug = require('debug')('pageboard:core');
-var spawn = require('child_process').spawn;
+var exec = pify(require('child_process').exec);
 var postinstall = require('postinstall');
 
 var fs = {
@@ -237,44 +237,15 @@ function doInstall(site, pkg, opt) {
 				module
 			];
 		}
-		return new Promise(function(resolve, reject) {
-			var proc = spawn(opt.installer.path, args, {
-				cwd: pkg.dir,
-				env: baseEnv,
-				detached: true,
-				stdio: ['ignore', 'ignore', 'ignore']
-			});
-			var idTimeout = setTimeout(function() {
-				if (proc.killed) return;
-				proc.kill('SIGKILL');
-				reject(`${opt.installer.bin} times out ${module}`);
-			}, opt.installer.timeout);
-
-			proc.on('exit', function(code, signal) {
-				console.info("install exits with", code, signal);
-				clearTimeout(idTimeout);
-				if (code !== 0) {
-					reject(`${opt.installer.path} exits with code ${code} ${signal}`);
-				} else {
-					resolve(`${opt.installer.bin} installed ${module}`);
-				}
-			});
+		return exec(`${opt.installer.path} ${args.join(' ')}`, {
+			cwd: pkg.dir,
+			env: baseEnv,
+			shell: true,
+			timeout: opt.installer.timeout
 		});
-	}).catch(function(err) {
-		if (typeof err == "string") {
-			var installError = new Error(err);
-			installError.name = "InstallationError";
-			err = installError;
-			delete err.stack;
-		}
-		throw err;
 	}).then(function(out) {
 		return getPkg(pkg.dir).then(function(npkg) {
-			if (!npkg.name) {
-				var err = new Error("Installation error");
-				err.output = out;
-				throw err;
-			}
+			if (!npkg.name) throw new Error("Installed module has no package name");
 			return npkg;
 		}).then(function(pkg) {
 			return runPostinstall(pkg.dir, pkg.name, opt).then(function(result) {
