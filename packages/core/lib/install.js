@@ -4,7 +4,7 @@ var mkdirp = pify(require('mkdirp'));
 var semverRegex = require('semver-regex');
 var rimraf = pify(require('rimraf'));
 var debug = require('debug')('pageboard:core');
-var exec = pify(require('child_process').exec);
+var spawn = require('child_process').spawn;
 var postinstall = require('postinstall');
 
 var fs = {
@@ -237,11 +237,23 @@ function doInstall(site, pkg, opt) {
 				module
 			];
 		}
-		return exec(`${opt.installer.path} ${args.join(' ')}`, {
-			cwd: pkg.dir,
-			env: baseEnv,
-			shell: true,
-			timeout: opt.installer.timeout
+		return new Promise(function(resolve, reject) {
+			var proc = spawn(opt.installer.path, args, {
+				cwd: pkg.dir,
+				env: baseEnv,
+				shell: true,
+				detached: true,
+				stdio: 'ignore'
+			});
+			var to = setTimeout(function() {
+				if (!proc.killed) proc.kill('SIGKILL');
+			}, opt.installer.timeout);
+
+			proc.on('exit', function(code, signal) {
+				clearTimeout(to);
+				if (code === 0) resolve();
+				else reject(new Error("Installation failure"));
+			});
 		});
 	}).then(function(out) {
 		return getPkg(pkg.dir).then(function(npkg) {
