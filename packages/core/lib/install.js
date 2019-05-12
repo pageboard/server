@@ -134,7 +134,7 @@ exports.clean = function(site, pkg, opt) {
 				if (a.stat.mtimeMs < b.stat.mtimeMs) return 1;
 			});
 			return Promise.all(stats.slice(2).map(function(obj) {
-				return rimraf(obj.path);
+				return rimraf(obj.path, {glob: false});
 			}));
 		});
 	}).catch(function(err) {
@@ -281,6 +281,10 @@ function doInstall(site, pkg, opt) {
 				if (result) debug(result);
 				return pkg;
 			});
+		});
+	}).catch(function(err) {
+		return rimraf(pkg.dir, {glob: false}).then(function() {
+			throw err;
 		});
 	});
 }
