@@ -108,7 +108,7 @@ function init(All) {
 					${err.message}
 				`
 			});
-			next(err);
+			else console.error(err, err.stderr ? err.stderr.toString() : "");
 		});
 	});
 }
