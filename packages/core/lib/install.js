@@ -196,9 +196,16 @@ function doInstall(site, pkg, opt) {
 		}
 		console.info("install", site.id, site.data.module, site.data.version);
 		var baseEnv = {
-			HOME: process.env.HOME,
-			PATH: process.env.PATH
+			npm_config_userconfig: ''
 		};
+		Object.entries(process.env).forEach(function([key, val]) {
+			if (
+				['HOME', 'PATH', 'LANG', 'SHELL'].includes(key) ||
+				key.startsWith('XDG_') || key.startsWith('LC_')
+			) {
+				baseEnv[key] = val;
+			}
+		});
 		if (opt.env == "development" && process.env.SSH_AUTH_SOCK) {
 			// some local setup require to pass this to be able to use ssh keys
 			baseEnv.SSH_AUTH_SOCK = process.env.SSH_AUTH_SOCK;
@@ -233,9 +240,7 @@ function doInstall(site, pkg, opt) {
 		return new Promise(function(resolve, reject) {
 			var proc = spawn(opt.installer.path, args, {
 				cwd: pkg.dir,
-				env: Object.assign(baseEnv, {
-					npm_config_userconfig: '' // attempt to disable user config
-				}),
+				env: baseEnv,
 				detached: true,
 				stdio: ['ignore', 'ignore', 'ignore']
 			});
@@ -246,6 +251,7 @@ function doInstall(site, pkg, opt) {
 			}, opt.installer.timeout);
 
 			proc.on('exit', function(code, signal) {
+				console.info("install exits with", code, signal);
 				clearTimeout(idTimeout);
 				if (code !== 0) {
 					reject(`${opt.installer.path} exits with code ${code} ${signal}`);
