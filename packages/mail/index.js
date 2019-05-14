@@ -39,21 +39,28 @@ exports = module.exports = function(opt) {
 	mailDomain = opt.mail.domain;
 
 	return {
-		priority: -10, // because default prerendering happens at 0
+		priority: 1, // after read plugin
 		name: 'mail',
-		service: function(All) {
-			All.app.post('/.api/mail', multipart, function(req, res, next) {
-				All.run('mail.receive', req.body).then(function(ok) {
-					// https://documentation.mailgun.com/en/latest/user_manual.html#receiving-messages-via-http-through-a-forward-action
-					if (!ok) res.sendStatus(406);
-					else res.sendStatus(200);
-				}).catch(next);
-			});
-			All.opt.extnames.push('mail');
-			All.dom.settings.helpers.unshift(require('./lib/express-dom-email'));
+		service: init,
+		view: function(All) {
+			var path = Path.join(__dirname, './lib/mail');
+			All.opt.prerender.helpers.unshift(path);
+			All.opt.prerender.plugins.push(path);
+			All.opt.read.helpers.push('mail');
 		}
 	};
 };
+
+function init(All) {
+	All.app.post('/.api/mail', multipart, function(req, res, next) {
+		All.run('mail.receive', req.body).then(function(ok) {
+			// https://documentation.mailgun.com/en/latest/user_manual.html#receiving-messages-via-http-through-a-forward-action
+			if (!ok) res.sendStatus(406);
+			else res.sendStatus(200);
+		}).catch(next);
+	});
+	All.opt.extnames.push('mail');
+}
 
 exports.receive = function(data) {
 	// https://documentation.mailgun.com/en/latest/user_manual.html#parsed-messages-parameters
