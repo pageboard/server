@@ -1,15 +1,17 @@
-module.exports = function(mw, settings, request, response) {
+var dom = require('express-dom');
+
+exports.helper = function(mw, settings, request, response) {
 	if (request.path.endsWith('.mail') == false) return;
 	settings.load.plugins = [
-		All.dom.plugins.upcache,
-		All.dom.plugins.hide,
-		All.dom.plugins.bearer,
-		All.dom.plugins.prerender,
-		mailPlugin
+		dom.plugins.upcache,
+		dom.plugins.hide,
+		dom.plugins.bearer,
+		dom.plugins.prerender,
+		dom.plugins.mail
 	];
 };
 
-function mailPlugin(page, settings, request, response) {
+exports.plugin = function(page, settings, request, response) {
 	page.when('idle', function() {
 		return page.run(function(done) {
 			var doc = document;
@@ -29,5 +31,4 @@ function mailPlugin(page, settings, request, response) {
 			response.status(500);
 		});
 	});
-}
-
+};
