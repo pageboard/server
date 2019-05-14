@@ -25,9 +25,7 @@ function init(All) {
 				site: req.site.data
 			});
 		} else {
-			All.run('page.get', req, {
-				url: req.query.url
-			}).then(function(data) {
+			All.run('page.get', req, req.query).then(function(data) {
 				if (dev && $write.resources.length == 6) {
 					data.meta.scripts.unshift($write.resources[2]);
 					data.meta.writes = {
