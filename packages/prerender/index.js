@@ -1,45 +1,102 @@
-var dom = require('express-dom');
-var Path = require('path');
-var formPlugin = require('./plugins/form');
+const Path = require('path');
+const { Pool, TimeoutError } = require('tarn');
+const fork = require('child_process').fork;
 
 module.exports = function(opt) {
-	if (!opt.prerender) opt.prerender = {};
-	if (opt.develop) {
-		opt.prerender.develop = true;
-		opt.prerender.cacheModel = "none";
-	}
+	opt.prerender = {};
 
-	opt.prerender.console = true;
+	opt.prerender.helpers = [];
+	opt.prerender.plugins = [
+		'./plugins/form'
+	];
 
-	Object.assign(dom.settings, {
+	opt.prerender.settings = {
+		cacheDir: Path.join(opt.dirs.cache, "prerender"),
 		stall: 20000,
 		allow: "same-origin",
-		cacheDir: Path.join(opt.dirs.cache, "prerender")
-	}, opt.prerender);
+		console: true
+	};
+	if (opt.develop) {
+		opt.prerender.settings.develop = true;
+		opt.prerender.settings.cacheModel = "none";
+	}
 
-	dom.settings.helpers.push(dom.helpers.develop);
-	dom.settings.load.plugins.unshift(dom.plugins.cookies({
-		bearer: true // allow only auth cookie
-	}));
-	dom.settings.load.plugins.unshift(dom.plugins.httpequivs);
-	dom.settings.load.plugins.unshift(dom.plugins.httplinkpreload);
-	dom.settings.load.plugins.unshift(formPlugin);
+	const workerPath = Path.join(__dirname, 'worker.js');
 
-	Object.assign(dom.pool, {
+	const pool = new Pool({
+		create: function(cb) {
+			var child;
+			try {
+				child = fork(workerPath, {
+					detached: true,
+					env: process.env
+				});
+				child.send({
+					prerender: opt.prerender,
+					report: opt.report
+				});
+			} catch(ex) {
+				cb(ex);
+				return;
+			}
+			cb(null, child);
+		},
+		destroy: function(child) {
+			child.kill();
+		},
+		min: 2,
 		max: 8
-	}, opt.prerender.pool);
+	});
+	process.on('exit', function() {
+		return pool.destroy();
+	});
 
-	if (opt.prerender.pool) delete dom.settings.pool;
-
-	dom.clear();
-
-	All.dom = dom; // because we need it asap
-
-	return {
-		priority: -Infinity,
-		view: init
+	All.dom = function(config, req, res, next) {
+		pool.acquire().promise.then(function(worker) {
+			worker.once("message", function(obj) {
+				worker.removeAllListeners("error");
+				pool.release(worker);
+				if (obj.err) {
+					return next(objToError(obj.err));
+				}
+				if (obj.locks) All.auth.headers(res, obj.locks);
+				if (obj.tags) All.cache.tag.apply(null, obj.tags)(req, res);
+				if (obj.headers != null) {
+					for (var k in obj.headers) res.set(k, obj.headers[k]);
+				}
+				if (obj.code != null) {
+					if (obj.body === undefined) res.sendStatus(obj.code);
+					else res.status(obj.code);
+				}
+				if (obj.body !== undefined) res.send(obj.body);
+			});
+			worker.once("error", function(err) {
+				worker.removeAllListeners("message");
+				pool.release(worker);
+				next(err);
+			});
+			worker.send({
+				view: config.view,
+				helpers: config.helpers || [],
+				plugins: config.plugins || [],
+				path: req.path,
+				protocol: req.protocol,
+				query: req.query,
+				headers: req.headers,
+				cookies: req.cookies,
+				xhr: req.xhr
+			});
+		}).catch(function(err) {
+			console.error(err);
+			next(err);
+		});
 	};
 };
 
-function init(All) {};
 
+function objToError(obj) {
+	var err = new Error(obj.message);
+	err.name = obj.name;
+	err.stack = obj.stack;
+	return err;
+}

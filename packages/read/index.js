@@ -1,16 +1,32 @@
-var Path = require('path');
+const Path = require('path');
+const got = require('got').extend({retry: 0, throwHttpErrors: false});
 
 module.exports = function(opt) {
 	return {
 		priority: 0,
+		name: 'read',
 		view: init
 	};
 };
 
 function init(All) {
-	// TODO use opt.prerender to configure dom plugins
-	// TODO expose route for preload and route for load,
-	// the route for load will use the preload route as source (view helper can pipe http requests)
+	All.opt.read = {};
+	All.opt.read.helpers = [
+		'develop'
+	];
+
+	All.opt.read.plugins = [
+		'form',
+		'httplinkpreload',
+		'httpequivs',
+		'bearer',
+		'hide',
+		'nomedia',
+		'prerender',
+		'redirect',
+		'referrer',
+		'html'
+	];
 	All.app.get(
 		'*',
 		All.auth.vary('*'),
@@ -39,24 +55,27 @@ function optimize(req, res, next) {
 }
 
 function prerender(dom) {
-	return dom(function(mw, settings, req, res) {
+	return function(req, res, next) {
 		if (req.path != '/.well-known/notfound' && /^(\/[a-zA-Z0-9-]*|(\/[a-zA-Z0-9-]+)+)$/.test(req.path) == false) {
-			settings.view = req.site.href + '/.well-known/notfound';
-			settings.load.disable = true;
-			settings.prepare.disable = true;
+			got.stream(req.site.href + '/.well-known/notfound').pipe(res);
 		} else {
 			var scripts = req.site.$resources.map(function(src) {
 				return `<script src="${src}"></script>`;
 			});
-			settings.view = `<!DOCTYPE html>
-<html>
-<head>
-	<title></title>
-	${scripts.join('\n')}
-</head>
-<body>
-</body>
-</html>`;
+			var view = Text`
+				<!DOCTYPE html>
+				<html>
+					<head>
+						<title></title>
+						${scripts.join('\n')}
+					</head>
+					<body></body>
+				</html>`;
+			dom({
+				view: view,
+				helpers: All.opt.read.helpers,
+				plugins: All.opt.read.plugins
+			}, req, res, next);
 		}
-	}).load();
+	};
 }
