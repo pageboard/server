@@ -115,7 +115,7 @@ function QueryPageHref(site, url) {
 	.joinRelation('parent', {alias: 'site'})
 	.where('site._id', site._id)
 	.join('block as b', function() {
-		Object.keys(hrefs).forEach(function(type) {
+		if (Object.keys(hrefs).map(function(type) {
 			this.orOn(function() {
 				this.on('b.type', site.$lit(type));
 				var list = hrefs[type];
@@ -125,7 +125,7 @@ function QueryPageHref(site, url) {
 					}, this);
 				});
 			});
-		}, this);
+		}, this).length == 0) this.on('b.type', site.$lit(null));
 	})
 	.where('b.standalone', false)
 	.join('relation AS r', {
