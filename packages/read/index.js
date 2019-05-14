@@ -1,16 +1,29 @@
 const Path = require('path');
+const got = require('got').extend({retry: 0});
 
 module.exports = function(opt) {
 	return {
 		priority: 0,
+		name: 'read',
 		view: init
 	};
 };
 
 function init(All) {
-	// TODO use opt.prerender to configure dom plugins
-	// TODO expose route for preload and route for load,
-	// the route for load will use the preload route as source (view helper can pipe http requests)
+	All.opt.read = {};
+	All.opt.read.helpers = [
+		'develop',
+		'report'
+	];
+	All.opt.read.plugins = [
+		'hide', 'nomedia', 'prerender', 'redirect', 'referrer', 'html',
+		'form',
+		'httplinkpreload',
+		'upcache',
+		'httpequivs',
+		'bearer',
+		'report'
+	];
 	All.app.get(
 		'*',
 		All.cache.tag('app-:site'),
@@ -19,7 +32,7 @@ function init(All) {
 }
 
 function prerender(dom) {
-	return dom(function(mw, settings, req, res) {
+	return function(req, res, next) {
 		var el = req.site.$schema('page');
 		var pattern = el && el.properties.data && el.properties.data.properties.url.pattern;
 		if (!pattern) throw new Error("Missing page element missing schema for data.url.pattern");
@@ -30,14 +43,12 @@ function prerender(dom) {
 			path = path.slice(0, -ext.length - 1);
 		}
 		if (urlRegex.test(path) == false) {
-			settings.view = req.site.href + '/.well-known/404';
-			settings.load.disable = true;
-			settings.prepare.disable = true;
+			got(req.site.href + '/.well-known/404').pipe(res);
 		} else {
 			var scripts = req.site.$resources.map(function(src) {
 				return `<script src="${src}" defer></script>`;
 			});
-			settings.view = Text`
+			var view = Text`
 				<!DOCTYPE html>
 				<html>
 					<head>
@@ -45,8 +56,12 @@ function prerender(dom) {
 						${scripts.join('\n')}
 					</head>
 					<body></body>
-				</html>
-			`;
+				</html>`;
+			dom({
+				view: view,
+				helpers: All.opt.read.helpers,
+				plugins: All.opt.read.plugins
+			}, req, res, next);
 		}
-	}).load();
+	};
 }
