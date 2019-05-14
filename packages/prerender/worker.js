@@ -21,6 +21,10 @@ class FakeResponse {
 		this.status(code);
 		send(this);
 	}
+	json(data) {
+		this.body = data;
+		send(this);
+	}
 	send(data) {
 		this.body = data;
 		send(this);
