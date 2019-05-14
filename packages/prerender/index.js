@@ -1,5 +1,5 @@
 const Path = require('path');
-const { Pool, TimeoutError } = require('tarn');
+const { Pool } = require('tarn');
 const fork = require('child_process').fork;
 
 module.exports = function(opt) {
@@ -25,6 +25,9 @@ module.exports = function(opt) {
 	const workerPath = Path.join(__dirname, 'worker.js');
 
 	const pool = new Pool({
+		validate: function(child) {
+			return !child.killed;
+		},
 		create: function(cb) {
 			var child;
 			try {
@@ -43,8 +46,9 @@ module.exports = function(opt) {
 			cb(null, child);
 		},
 		destroy: function(child) {
-			child.kill();
+			if (!child.killed) child.kill();
 		},
+		acquireTimeoutMillis: 5000,
 		min: 2,
 		max: 8
 	});
@@ -73,6 +77,7 @@ module.exports = function(opt) {
 			});
 			worker.once("error", function(err) {
 				worker.removeAllListeners("message");
+				worker.kill();
 				pool.release(worker);
 				next(err);
 			});

@@ -67,7 +67,7 @@ function init(opt) {
 
 	Object.assign(dom.settings, conf.settings);
 
-	dom.pool.max = 1;
+	dom.pool.max = 2;
 	dom.pool.min = 1;
 
 	dom.clear();
