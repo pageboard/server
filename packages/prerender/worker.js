@@ -72,17 +72,17 @@ function init(opt) {
 function run(params) {
 	var req = new FakeRequest(params);
 	var res = new FakeResponse();
+	params.helpers.forEach(function(name) {
+		var fn = dom.helpers[name];
+		if (fn) dom.settings.helpers.push(fn);
+		else console.error("Prerender missing helper", name);
+	});
 	dom(function(mw, settings) {
 		settings.view = params.view;
-		settings.helpers = params.helpers.map(function(name) {
-			var fn = dom.helpers[name];
-			if (fn) return fn;
-			else console.error("no helper", name);
-		});
 		settings.load.plugins = params.plugins.map(function(name) {
 			var fn = dom.plugins[name];
 			if (fn) return fn;
-			else console.error("no plugin", name);
+			else console.error("Prerender missing plugin", name);
 		});
 	}).load()(req, res, function(err) {
 		if (err) send({err: errObject(err)});

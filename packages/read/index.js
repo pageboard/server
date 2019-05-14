@@ -15,19 +15,20 @@ function init(All) {
 		'develop',
 		'report'
 	];
+
 	All.opt.read.plugins = [
-		'hide',
-		'nomedia',
 		'form',
 		'httplinkpreload',
 		'upcache',
 		'httpequivs',
 		'bearer',
-		'report',
+		'hide',
+		'nomedia',
 		'prerender',
 		'redirect',
 		'referrer',
-		'html'
+		'html',
+		'report'
 	];
 	All.app.get(
 		'*',
