@@ -4,23 +4,25 @@ exports = module.exports = function(opt) {
 	return {
 		priority: -9, // because default prerendering happens at 0
 		name: 'feed',
-		view: function(All) {
-			All.app.get(
-				/^(\/[a-zA-Z0-9-]*|(\/[a-zA-Z0-9-]+)+)\.rss$/,
-				All.auth.restrict('*'),	All.cache.tag('data-:site').for('1 day'),
-				function(req, res, next) {
-					All.run('feed.get', req, {
-						url: req.params[0],
-						query: req.query
-					}).then(function(xml) {
-						res.type("application/xml");
-						res.send(xml);
-					}).catch(next);
-				}
-			);
-		}
+		view: init
 	};
 };
+
+function init(All) {
+	All.app.get(
+		/^(\/[a-zA-Z0-9-]*|(\/[a-zA-Z0-9-]+)+)\.rss$/,
+		All.auth.restrict('*'),	All.cache.tag('data-:site').for('1 day'),
+		function(req, res, next) {
+			All.run('feed.get', req, {
+				url: req.params[0],
+				query: req.query
+			}).then(function(xml) {
+				res.type("application/xml");
+				res.send(xml);
+			}).catch(next);
+		}
+	);
+}
 
 exports.get = function(req, data) {
 	return All.run('page.list', req, {
