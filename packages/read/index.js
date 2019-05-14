@@ -1,5 +1,5 @@
 const Path = require('path');
-const got = require('got').extend({retry: 0});
+const got = require('got').extend({retry: 0, throwHttpErrors: false});
 
 module.exports = function(opt) {
 	return {
@@ -16,13 +16,18 @@ function init(All) {
 		'report'
 	];
 	All.opt.read.plugins = [
-		'hide', 'nomedia', 'prerender', 'redirect', 'referrer', 'html',
+		'hide',
+		'nomedia',
 		'form',
 		'httplinkpreload',
 		'upcache',
 		'httpequivs',
 		'bearer',
-		'report'
+		'report',
+		'prerender',
+		'redirect',
+		'referrer',
+		'html'
 	];
 	All.app.get(
 		'*',
@@ -43,7 +48,7 @@ function prerender(dom) {
 			path = path.slice(0, -ext.length - 1);
 		}
 		if (urlRegex.test(path) == false) {
-			got(req.site.href + '/.well-known/404').pipe(res);
+			got.stream(req.site.href + '/.well-known/404').pipe(res);
 		} else {
 			var scripts = req.site.$resources.map(function(src) {
 				return `<script src="${src}" defer></script>`;

@@ -12,19 +12,18 @@ class FakeRequest {
 
 class FakeResponse {
 	constructor() {
-		this.obj = {};
 		this.headers = {};
 	}
 	status(code) {
-		this.obj.status = code;
+		this.code = code;
 	}
 	sendStatus(code) {
 		this.status(code);
-		send(this.obj);
+		send(this);
 	}
 	send(data) {
-		this.obj.body = data;
-		send(this.obj);
+		this.body = data;
+		send(this);
 	}
 	get(name) {
 		return this.headers[name] ? this.headers[name].split(',') : [];
@@ -36,6 +35,7 @@ class FakeResponse {
 		var list = this.headers[name];
 		if (!list) list = val;
 		else list += "," + val;
+		this.headers[name] = list;
 	}
 }
 
@@ -86,7 +86,7 @@ function run(params) {
 		});
 	}).load()(req, res, function(err) {
 		if (err) send({err: errObject(err)});
-		else send(res.obj);
+		else send(res);
 	});
 }
 

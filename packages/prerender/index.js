@@ -69,9 +69,9 @@ module.exports = function(opt) {
 				if (obj.headers != null) {
 					for (var k in obj.headers) res.set(k, obj.headers[k]);
 				}
-				if (obj.status != null) {
-					if (obj.body === undefined) res.sendStatus(obj.status);
-					else res.status(obj.status);
+				if (obj.code != null) {
+					if (obj.body === undefined) res.sendStatus(obj.code);
+					else res.status(obj.code);
 				}
 				if (obj.body !== undefined) res.send(obj.body);
 			});
