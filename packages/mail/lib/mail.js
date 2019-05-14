@@ -3,7 +3,6 @@ var dom = require('express-dom');
 exports.helper = function(mw, settings, request, response) {
 	if (request.query.email == null) return;
 	settings.load.plugins = [
-		dom.plugins.upcache,
 		dom.plugins.hide,
 		dom.plugins.bearer,
 		dom.plugins.prerender,
