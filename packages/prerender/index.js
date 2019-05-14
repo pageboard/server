@@ -7,7 +7,8 @@ module.exports = function(opt) {
 
 	opt.prerender.helpers = [];
 	opt.prerender.plugins = [
-		'./plugins/form'
+		'./plugins/form',
+		'./plugins/bearer'
 	];
 
 	opt.prerender.settings = {
