@@ -108,7 +108,7 @@ function init(All) {
 					${err.message}
 				`
 			});
-			else console.error(err, err.stderr ? err.stderr.toString() : "");
+			else console.error(err);
 		});
 	});
 }

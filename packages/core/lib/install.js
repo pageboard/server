@@ -4,7 +4,7 @@ var mkdirp = pify(require('mkdirp'));
 var semverRegex = require('semver-regex');
 var rimraf = pify(require('rimraf'));
 var debug = require('debug')('pageboard:core');
-var spawn = require('child_process').spawn;
+var exec = pify(require('child_process').exec);
 var postinstall = require('postinstall');
 
 var fs = {
@@ -239,25 +239,15 @@ function doInstall(site, pkg, opt) {
 				module
 			];
 		}
-		return new Promise(function(resolve, reject) {
-			var proc = spawn(opt.installer.path, args, {
-				cwd: pkg.dir,
-				env: baseEnv,
-				shell: true,
-				detached: true,
-				stdio: 'ignore'
-			});
-			var to = setTimeout(function() {
-				if (!proc.killed) proc.kill('SIGKILL');
-			}, opt.installer.timeout);
-
-			proc.on('exit', function(code, signal) {
-				clearTimeout(to);
-				if (code === 0) resolve();
-				else reject(new Error("Installation failure"));
-			});
+		return exec(`${opt.installer.path} ${args.join(' ')}`, {
+			cwd: pkg.dir,
+			env: baseEnv,
+			shell: false,
+			timeout: opt.installer.timeout
+		}).catch(function(err) {
+			throw new Error(err.stderr.toString() || err.stdout.toString());
 		});
-	}).then(function(out) {
+	}).then(function() {
 		return getPkg(pkg.dir).then(function(npkg) {
 			if (!npkg.name) throw new Error("Installed module has no package name");
 			return npkg;
