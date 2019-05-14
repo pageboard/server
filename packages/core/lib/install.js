@@ -133,7 +133,9 @@ exports.clean = function(site, pkg, opt) {
 				if (a.stat.mtimeMs == b.stat.mtimeMs) return 0;
 				if (a.stat.mtimeMs < b.stat.mtimeMs) return 1;
 			});
-			return Promise.all(stats.slice(2).map(function(obj) {
+			return Promise.all(stats.filter(function(obj) {
+				return Path.basename(obj.path) != "master" || opt.env != "development";
+			}).slice(2).map(function(obj) {
 				return rimraf(obj.path, {glob: false});
 			}));
 		});
