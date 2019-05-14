@@ -19,17 +19,19 @@ exports = module.exports = function(opt) {
 	exports.disable = tag.disable;
 	exports.install = state.install.bind(state);
 	return {
-		init: function(All) {
-			return state.init(All).then(function() {
-				All.app.get('*', tag('app'));
-				All.app.post('/.well-known/upcache', state.mw.bind(state), function(req, res) {
-					res.sendStatus(204);
-				});
-			});
-		},
+		init: init,
 		name: 'cache'
 	};
 };
+
+function init(All) {
+	return state.init(All).then(function() {
+		All.app.get('*', tag('app'));
+		All.app.post('/.well-known/upcache', state.mw.bind(state), function(req, res) {
+			res.sendStatus(204);
+		});
+	});
+}
 
 function paramSiteWrap(fn) {
 	return function() {
