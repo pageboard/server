@@ -1,14 +1,15 @@
-var NodeMailer = require('nodemailer');
-var AddressParser = require('nodemailer/lib/addressparser');
-var Mailgun = require('nodemailer-mailgun-transport');
-var got = require('got');
+const Path = require('path');
+const NodeMailer = require('nodemailer');
+const AddressParser = require('nodemailer/lib/addressparser');
+const Mailgun = require('nodemailer-mailgun-transport');
+const got = require('got');
 
 // TODO https://nodemailer.com/dkim/
 // TODO https://postmarkapp.com/blog/differences-in-delivery-between-transactional-and-bulk-email
 // use a different domain for transactional and for bulk sending
 
-var multipart = require('./lib/multipart.js');
-var validateMailgun = require('./lib/validate-mailgun.js');
+const multipart = require('./lib/multipart.js');
+const validateMailgun = require('./lib/validate-mailgun.js');
 
 var mailer, defaultSender, mailDomain;
 
