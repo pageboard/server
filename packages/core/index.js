@@ -203,8 +203,8 @@ function initPlugins(plugins, type) {
 		if (!type && (obj.file || obj.service || obj.view)) return false;
 		return true;
 	}).sort(function(a, b) {
-		a = a.priority || Infinity;
-		b = b.priority || Infinity;
+		a = a.priority != null ? a.priority : Infinity;
+		b = b.priority != null ? b.priority : Infinity;
 		if (a == b) return 0;
 		else if (a > b) return 1;
 		else if (a < b) return -1;
