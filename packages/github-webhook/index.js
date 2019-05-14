@@ -90,7 +90,10 @@ function init(All) {
 						address: pusher.email
 					},
 					subject: `Pageboard deployed ${site.data.module} to ${req.site.href}`,
-					text: `The version ${site.data.version} is immediately available at\n${req.site.href}`
+					text: Text`
+						The version ${site.data.version} is immediately available at
+						${req.site.href}
+					`
 				});
 			});
 		}).catch(function(err) {
@@ -100,10 +103,12 @@ function init(All) {
 					address: pusher.email
 				},
 				subject: `Pageboard error deploying ${site.data.module} to ${req.site.href}`,
-				text: `An error occurred while deploying from repository:
-					${err.message}`
+				text: Text`
+					An error occurred while deploying from repository:
+					${err.message}
+				`
 			});
-			next(err);
+			else console.error(err);
 		});
 	});
 }

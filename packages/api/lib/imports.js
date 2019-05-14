@@ -121,25 +121,25 @@ function bundle(site, pkg, rootEl) {
 	var p;
 
 	if (site.data.env == "dev" || !pkg.dir || !site.href) {
-		p = Promise.resolve();
-		rootEl.scripts = scripts;
-		rootEl.stylesheets = styles;
+		p = Promise.resolve([
+			scripts,
+			styles
+		]);
 	} else {
 		p = Promise.all([
 			All.statics.bundle(site, pkg, scripts, `${prefix}scripts.js`),
 			All.statics.bundle(site, pkg, styles, `${prefix}styles.css`)
 		]);
 	}
-	return p.then(function(both) {
-		if (both && both.length == 2) {
-			rootEl.scripts = both[0];
-			rootEl.stylesheets = both[1];
-		}
+	return p.then(function([scripts, styles]) {
+		rootEl.scripts = scripts;
+		rootEl.stylesheets = styles;
 
 		return bundleSource(site, pkg, prefix, 'elements', eltsMap).then(function(path) {
 			metaEl.bundle = path;
-			metaEl.scripts = rootEl.scripts;
-			metaEl.stylesheets = rootEl.stylesheets;
+			metaEl.scripts = rootEl.group != "page" ? rootEl.scripts : [];
+			metaEl.stylesheets = rootEl.group != "page" ? rootEl.stylesheets : [];
+			metaEl.resources = rootEl.resources;
 		});
 	});
 }

@@ -85,6 +85,14 @@ exports.config = function(moduleDir, id, module, config) {
 			var absPath = Path.resolve(moduleDir, path);
 			return fs.stat(absPath).then(function(stat) {
 				if (stat.isDirectory()) return fs.readdir(absPath).then(function(paths) {
+					// make sure files are ordered by basename
+					paths.sort(function(a, b) {
+						a = Path.basename(a, Path.extname(a));
+						b = Path.basename(b, Path.extname(b));
+						if (a == b) return 0;
+						else if (a > b) return 1;
+						else if (a < b) return -1;
+					});
 					return paths.map(function(path) {
 						return Path.join(absPath, path);
 					});
@@ -125,8 +133,10 @@ exports.clean = function(site, pkg, opt) {
 				if (a.stat.mtimeMs == b.stat.mtimeMs) return 0;
 				if (a.stat.mtimeMs < b.stat.mtimeMs) return 1;
 			});
-			return Promise.all(stats.slice(2).map(function(obj) {
-				return rimraf(obj.path);
+			return Promise.all(stats.filter(function(obj) {
+				return Path.basename(obj.path) != "master" || opt.env != "development";
+			}).slice(2).map(function(obj) {
+				return rimraf(obj.path, {glob: false});
 			}));
 		});
 	}).catch(function(err) {
@@ -188,72 +198,68 @@ function doInstall(site, pkg, opt) {
 		}
 		console.info("install", site.id, site.data.module, site.data.version);
 		var baseEnv = {
-			HOME: process.env.HOME,
-			PATH: process.env.PATH
+			npm_config_userconfig: ''
 		};
+		Object.entries(process.env).forEach(function([key, val]) {
+			if (
+				['HOME', 'PATH', 'LANG', 'SHELL'].includes(key) ||
+				key.startsWith('XDG_') || key.startsWith('LC_')
+			) {
+				baseEnv[key] = val;
+			}
+		});
 		if (opt.env == "development" && process.env.SSH_AUTH_SOCK) {
 			// some local setup require to pass this to be able to use ssh keys
 			baseEnv.SSH_AUTH_SOCK = process.env.SSH_AUTH_SOCK;
 		}
+		var args;
 		if (opt.installer.bin == "yarn") {
-			return exec(Text({newline: ' '})`
-				${opt.installer.path}
-				--ignore-scripts
-				--non-interactive
-				--ignore-optional
-				--no-progress
-				--production
-				--no-lockfile
-				--silent add ${module}`, {
-				cwd: pkg.dir,
-				timeout: opt.installer.timeout,
-				killSignal: 'SIGKILL',
-				env: baseEnv
-			});
+			args = [
+				'--ignore-scripts',
+				'--non-interactive',
+				'--ignore-optional',
+				'--no-progress',
+				'--production',
+				'--no-lockfile',
+				'--silent',
+				'add',
+				module
+			];
 		} else {
-			return exec(Text({newline: ' '})`
-				${opt.installer.path} install
-				--ignore-scripts
-				--no-optional
-				--no-progress
-				--production
-				--no-package-lock
-				--silent
-				--no-audit
-				--save ${module}`, {
-				cwd: pkg.dir,
-				timeout: opt.installer.timeout,
-				killSignal: 'SIGKILL',
-				env: Object.assign(baseEnv, {
-					npm_config_userconfig: '' // attempt to disable user config
-				})
-			});
+			args = [
+				'install',
+				'--ignore-scripts',
+				'--no-optional',
+				'--no-progress',
+				'--production',
+				'--no-package-lock',
+				'--silent',
+				'--no-audit',
+				'--save',
+				module
+			];
 		}
-	}).catch(function(err) {
-		if (typeof err == "string") {
-			var installError = new Error(err);
-			installError.name = "InstallationError";
-			err = installError;
-			delete err.stack;
-		}
-		throw err;
-	}).then(function(out) {
-		if (out) {
-			if (out.stdout) debug(out.stdout.toString());
-			if (out.stderr) console.error(out.stderr.toString());
-		}
+		return exec(`${opt.installer.path} ${args.join(' ')}`, {
+			cwd: pkg.dir,
+			env: baseEnv,
+			shell: false,
+			timeout: opt.installer.timeout
+		}).catch(function(err) {
+			throw new Error(err.stderr.toString() || err.stdout.toString());
+		});
+	}).then(function() {
 		return getPkg(pkg.dir).then(function(npkg) {
-			if (!npkg.name) {
-				var err = new Error("Installation error");
-				err.output = out;
-				throw err;
-			}
+			if (!npkg.name) throw new Error("Installed module has no package name");
 			return npkg;
 		}).then(function(pkg) {
 			return runPostinstall(pkg.dir, pkg.name, opt).then(function(result) {
 				if (result) debug(result);
 				return pkg;
 			});
+		});
+	}).catch(function(err) {
+		return rimraf(pkg.dir, {glob: false}).then(function() {
+			throw err;
 		});
 	});
 }

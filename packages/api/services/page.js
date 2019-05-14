@@ -12,18 +12,27 @@ exports = module.exports = function(opt) {
 function init(All) {
 	All.app.get('/.api/page', function(req, res, next) {
 		var isWebmaster = !All.auth.locked(req, ['webmaster']);
-		if (isWebmaster && req.query.develop != "write") {
+		var dev = req.query.develop == "write";
+		var $write = req.site.$standalones.write;
+		delete req.query.develop;
+		if (isWebmaster && !dev) {
 			All.send(res, {
 				item: {
 					type: 'write',
 					data: {}
 				},
-				meta: Object.assign({services: req.site.$services}, req.site.$standalones.write),
+				meta: Object.assign({services: req.site.$services}, $write),
 				site: req.site.data
 			});
 		} else {
-			delete req.query.develop;
 			All.run('page.get', req, req.query).then(function(data) {
+				if (dev && $write.resources.length == 6) {
+					data.meta.scripts.unshift($write.resources[2]);
+					data.meta.writes = {
+						scripts: $write.resources.slice(3, 5),
+						stylesheets: $write.resources.slice(5)
+					};
+				}
 				All.send(res, data);
 			}).catch(next);
 		}
@@ -104,7 +113,7 @@ function QueryPageHref(site, url) {
 	.joinRelation('parent', {alias: 'site'})
 	.where('site._id', site._id)
 	.join('block as b', function() {
-		Object.keys(hrefs).forEach(function(type) {
+		if (Object.keys(hrefs).map(function(type) {
 			this.orOn(function() {
 				this.on('b.type', site.$lit(type));
 				var list = hrefs[type];
@@ -114,7 +123,7 @@ function QueryPageHref(site, url) {
 					}, this);
 				});
 			});
-		}, this);
+		}, this).length == 0) this.on('b.type', site.$lit(null));
 	})
 	.where('b.standalone', false)
 	.join('relation AS r', {
