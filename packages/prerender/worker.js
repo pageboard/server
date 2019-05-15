@@ -58,16 +58,18 @@ function init(opt) {
 		var name = Path.basename(path, Path.extname(path));
 		dom.helpers[name] = mod.helper || mod;
 	});
+	delete conf.helpers;
 
 	conf.plugins.forEach(function(path) {
 		var mod = require(path);
 		var name = Path.basename(path, Path.extname(path));
 		dom.plugins[name] = mod.plugin || mod;
 	});
+	delete conf.plugins;
 
-	Object.assign(dom.settings, conf.settings);
+	Object.assign(dom.settings, conf);
 
-	dom.pool.max = 2;
+	dom.pool.max = 1;
 	dom.pool.min = 1;
 
 	dom.clear();
