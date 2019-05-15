@@ -214,10 +214,15 @@ exports.reservations = function({site}, data) {
 	.where('block.type', 'event_date')
 	.where('block.id', data.id)
 	.select().first().throwIfNotFound()
-	.eager(`[children(reservations) as reservations
+	.eager(`[
+		parents(event) as parent,
+		children(reservations) as children
 		.parents(settings) as settings
 		.parents(user) as user
 	]`, {
+		event: function(q) {
+			q.where('type', 'event').select();
+		},
 		reservations: function(q) {
 			q.where('type', 'event_reservation').select();
 		},
@@ -228,12 +233,13 @@ exports.reservations = function({site}, data) {
 			q.where('type', 'user').select(ref('data:email').as('email'));
 		}
 	}).then(function(eventDate) {
-		eventDate.reservations.forEach(function(item) {
+		eventDate.parent = eventDate.parent[0];
+		eventDate.children.forEach(function(item) {
 			item.settings = item.settings[0];
 			item.settings.data.email = item.settings.user[0].email;
 			delete item.settings.user;
 		});
-		return eventDate;
+		return {item: eventDate};
 	});
 };
 exports.reservations.schema = {
