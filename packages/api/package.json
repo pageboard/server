@@ -22,6 +22,7 @@
     "body-parser": "^1.18.3",
     "debug": "^2.6.8",
     "flat": "^4.1.0",
+    "json-schema-traverse": "^0.4.1",
     "knex": "^0.16.5",
     "lodash.merge": "^4.6.1",
     "matchdom": "^5.2.1",

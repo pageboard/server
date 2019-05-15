@@ -17,6 +17,10 @@ var config = pageboard.config(pkgOpt);
 var title = `${config.name}@${config.version}`;
 process.title = title;
 
+if (config._.length == 1) {
+	console.info = function() {};
+}
+
 console.info(title);
 
 pageboard.init(config).then(function(All) {
@@ -24,7 +28,7 @@ pageboard.init(config).then(function(All) {
 		console.error("Cannot process arguments", All.opt._);
 		process.exit(1);
 	}
-	if (All.opt._.length != 1) {
+	if (All.opt._.length == 0) {
 		return pageboard.start(All);
 	}
 
@@ -56,7 +60,7 @@ pageboard.init(config).then(function(All) {
 		});
 	});
 }).catch(function(err) {
-	console.error(err);
+	console.error(err.message || err);
 	process.exit(1);
 });
 
