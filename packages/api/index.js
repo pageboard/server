@@ -185,10 +185,11 @@ All.run = function(apiStr, req, data) {
 			data = req;
 			req = null;
 		}
+		if (data == null) data = {};
 		try {
 			data = check(fun, data);
 		} catch(err) {
-			console.error(`run ${apiStr} ${JSON.stringify(data)}`);
+			err.message += require('./lib/json-doc')(fun.schema);
 			throw err;
 		}
 		// start a transaction on set trx object on site
