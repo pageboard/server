@@ -1,3 +1,5 @@
+var ref = require('objection').ref;
+
 exports = module.exports = function(opt) {
 	return {
 		name: 'event',
@@ -205,3 +207,45 @@ exports.unsubscribe.schema = {
 	}
 };
 exports.unsubscribe.external = true;
+
+exports.reservations = function({site}, data) {
+	// given an event_date, retrieve reservations, user settings and email
+	return site.$relatedQuery('children')
+	.where('block.type', 'event_date')
+	.where('block.id', data.id)
+	.select().first().throwIfNotFound()
+	.eager(`[children(reservations) as reservations
+		.parents(settings) as settings
+		.parents(user) as user
+	]`, {
+		reservations: function(q) {
+			q.where('type', 'event_reservation').select();
+		},
+		settings: function(q) {
+			q.where('type', 'settings').select();
+		},
+		user: function(q) {
+			q.where('type', 'user').select(ref('data:email').as('email'));
+		}
+	}).then(function(eventDate) {
+		eventDate.reservations.forEach(function(item) {
+			item.settings = item.settings[0];
+			item.settings.data.email = item.settings.user[0].email;
+			delete item.settings.user;
+		});
+		return eventDate;
+	});
+};
+exports.reservations.schema = {
+	title: 'List reservations',
+	$action: 'read',
+	required: ['id'],
+	properties: {
+		id: {
+			title: 'Event date',
+			type: "string",
+			format: 'id'
+		}
+	}
+};
+exports.reservations.external = true;
