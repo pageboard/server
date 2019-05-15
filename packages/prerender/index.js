@@ -3,7 +3,17 @@ const { Pool } = require('tarn');
 const fork = require('child_process').fork;
 
 module.exports = function(opt) {
-	opt.prerender = {};
+	opt.prerender = Object.assign({
+		cacheDir: Path.join(opt.dirs.cache, "prerender"),
+		stall: 20000,
+		allow: "same-origin",
+		console: true
+	}, opt.prerender);
+
+	if (opt.develop) {
+		opt.prerender.develop = true;
+		opt.prerender.cacheModel = "none";
+	}
 
 	opt.prerender.helpers = [
 		'./plugins/report'
@@ -13,18 +23,7 @@ module.exports = function(opt) {
 		'./plugins/upcache',
 		'./plugins/bearer',
 		'./plugins/report'
-	];
-
-	opt.prerender.settings = {
-		cacheDir: Path.join(opt.dirs.cache, "prerender"),
-		stall: 20000,
-		allow: "same-origin",
-		console: true
-	};
-	if (opt.develop) {
-		opt.prerender.settings.develop = true;
-		opt.prerender.settings.cacheModel = "none";
-	}
+	]
 
 	const workerPath = Path.join(__dirname, 'worker.js');
 
