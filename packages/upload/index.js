@@ -65,6 +65,7 @@ function init(All) {
 	});
 
 	All.app.post('/.api/upload/:id?', function(req, res, next) {
+		var site = req.site;
 		Promise.resolve().then(function() {
 			var limits = {
 				files: upload.files,
@@ -72,7 +73,7 @@ function init(All) {
 				types: ['*/*']
 			};
 			if (req.params.id) {
-				return All.run('block.get', req, {id: req.params.id}).then(function(input) {
+				return All.run('block.get', site, {id: req.params.id}).then(function(input) {
 					return Object.assign(limits, input.data.limits);
 				});
 			} else {
@@ -91,7 +92,7 @@ function init(All) {
 				}
 			}).array('files')(req, res, function() {
 				return Promise.all(req.files.map(function(file) {
-					return exports.file(req, file);
+					return exports.file(site, file);
 				})).then(function(list) {
 					// backward compatibility with elements-write's input href
 					var obj = req.params.id ? {items: list} : list;
@@ -102,7 +103,7 @@ function init(All) {
 	});
 }
 
-exports.file = function({site}, data) {
+exports.file = function(site, data) {
 	var upload = All.opt.upload;
 	var dest = Path.join(upload.path, site.id);
 	if (!data.filename) data.filename = Path.basename(data.path);
