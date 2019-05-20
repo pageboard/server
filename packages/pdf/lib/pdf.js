@@ -5,7 +5,6 @@ exports.helper = function(mw, settings, request, response) {
 	settings.load.plugins = [
 		dom.plugins.upcache,
 		dom.plugins.bearer,
-		dom.plugins.prerender,
 		dom.plugins.pdf
 	];
 };
