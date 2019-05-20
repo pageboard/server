@@ -13,8 +13,8 @@ module.exports = function upcachePlugin(page, settings, request, response) {
 	});
 	page.when('idle', function() {
 		var locks = Object.keys(locksMap);
-		if (locks.length) response.locks = locks;
+		if (locks.length) response.priv.locks = locks;
 		var tags = Object.keys(tagsMap);
-		if (tags.length) response.tags = tags;
+		if (tags.length) response.priv.tags = tags;
 	});
 };
