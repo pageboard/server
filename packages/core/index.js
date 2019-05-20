@@ -332,7 +332,9 @@ function viewsError(err, req, res, next) {
 		code = 500;
 	}
 	if (All.opt.env == "development" || code >= 500) console.error(err);
-	res.sendStatus(code);
+	res.write(err.toString());
+	if (res.headersSent) res.status(code).end();
+	else res.sendStatus(code);
 //	res.redirect(req.app.settings.errorLocation + '?code=' + code);
 }
 
