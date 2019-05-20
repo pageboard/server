@@ -1,5 +1,6 @@
 const dom = require('express-dom');
 const Path = require('path');
+const {PassThrough} = require('stream');
 
 class FakeRequest {
 	constructor(params) {
@@ -10,30 +11,75 @@ class FakeRequest {
 	}
 }
 
-class FakeResponse {
+class FakeResponse extends PassThrough {
 	constructor() {
+		super();
 		this.headers = {};
+		this.priv = {};
+		this.on('pipe', () => {
+			var done = false;
+			this.on('error', (err) => {
+				if (done) return;
+				done = true;
+				this.ipc(err);
+			});
+			this.on('finish', () => {
+				if (done) return;
+				done = true;
+				this.ipc({
+					piped: true,
+					finished: true
+				});
+			});
+			this.pipe(process.stdout);
+			this.priv.piped = true;
+			this.ipc();
+		});
+	}
+	ipc(msg) {
+		if (msg) {
+			if (msg instanceof Error) {
+				msg = {err: errObject(msg)};
+			}
+		} else {
+			if (this.priv.sent) {
+				console.error("prerender render tried to send message twice");
+				return;
+			}
+			this.priv.sent = true;
+			msg = Object.assign({}, this.priv, {
+				headers: this.headers,
+				statusCode: this.statusCode
+			});
+		}
+		process.send(msg);
 	}
 	status(code) {
-		this.code = code;
+		this.statusCode = code;
 	}
 	sendStatus(code) {
 		this.status(code);
-		send(this);
+		this.ipc();
 	}
 	json(data) {
-		this.body = data;
-		send(this);
+		this.priv.body = data;
+		this.ipc();
 	}
 	send(data) {
-		this.body = data;
-		send(this);
+		this.priv.body = data;
+		this.ipc();
 	}
 	get(name) {
 		return this.headers[name] ? this.headers[name].split(',') : [];
 	}
 	set(name, val) {
 		this.headers[name] = val;
+	}
+	attachment(str) {
+		this.priv.attachment = str;
+	}
+	sendFile(path) {
+		this.priv.file = path;
 	}
 	append(name, val) {
 		var list = this.headers[name];
@@ -43,9 +89,6 @@ class FakeResponse {
 	}
 }
 
-function send(obj) {
-	process.send(obj);
-}
 var initialized = false;
 
 function init(opt) {
@@ -71,13 +114,12 @@ function init(opt) {
 
 	dom.pool.max = 1;
 	dom.pool.min = 1;
-
-	dom.clear();
 }
 
 function run(params) {
 	var req = new FakeRequest(params);
 	var res = new FakeResponse();
+
 	params.helpers.forEach(function(name) {
 		var fn = dom.helpers[name];
 		if (fn) dom.settings.helpers.push(fn);
@@ -91,8 +133,7 @@ function run(params) {
 			else console.error("Prerender missing plugin", name);
 		});
 	}).load()(req, res, function(err) {
-		if (err) send({err: errObject(err)});
-		else send(res);
+		res.ipc(err);
 	});
 }
 
@@ -105,6 +146,8 @@ function errObject(err) {
 	return {
 		name: err.name,
 		message: err.message,
-		stack: err.stack
+		stack: err.stack,
+		statusCode: err.statusCode,
+		code: err.code
 	};
 }
