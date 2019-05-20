@@ -28,6 +28,7 @@
     "@pageboard/image": "link:./packages/image",
     "@pageboard/inspector": "link:./packages/inspector",
     "@pageboard/mail": "link:./packages/mail",
+    "@pageboard/pdf": "link:./packages/pdf",
     "@pageboard/prerender": "link:./packages/prerender",
     "@pageboard/read": "link:./packages/read",
     "@pageboard/statics": "link:./packages/statics",
