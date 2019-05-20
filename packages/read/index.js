@@ -1,5 +1,6 @@
 const Path = require('path');
 const got = require('got').extend({retry: 0, throwHttpErrors: false});
+const { pipeline } = require('stream');
 
 module.exports = function(opt) {
 	return {
@@ -10,15 +11,14 @@ module.exports = function(opt) {
 };
 
 function init(All) {
-	All.opt.read = {};
-	All.opt.read.helpers = [
-		'develop',
-		'report'
+	var opt = All.opt;
+	opt.read = {};
+	opt.read.helpers = [
+		'develop'
 	];
 
-	All.opt.read.plugins = [
+	opt.read.plugins = [
 		'form',
-		'httplinkpreload',
 		'upcache',
 		'httpequivs',
 		'bearer',
@@ -26,10 +26,14 @@ function init(All) {
 		'nomedia',
 		'prerender',
 		'redirect',
-		'referrer',
-		'html',
-		'report'
+		'referrer', // this might create problems
+		'html'
 	];
+	if (opt.env != "development") {
+		opt.read.helpers.push('report');
+		opt.read.plugins.unshift('httplinkpreload', 'report');
+	}
+
 	All.app.get(
 		'*',
 		All.cache.tag('app-:site'),
@@ -49,7 +53,9 @@ function prerender(dom) {
 			path = path.slice(0, -ext.length - 1);
 		}
 		if (urlRegex.test(path) == false) {
-			got.stream(req.site.href + '/.well-known/404').pipe(res);
+			pipeline(got.stream(req.site.href + '/.well-known/404'), res, function(err) {
+				if (err) next(err);
+			});
 		} else {
 			var scripts = req.site.$resources.map(function(src) {
 				return `<script src="${src}" defer></script>`;
