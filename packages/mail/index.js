@@ -145,9 +145,6 @@ exports.send = function(site, data) {
 		var emailUrl = site.href + emailPage.data.url;
 
 		return got(emailUrl + ".email", {
-			headers: {
-				cookie: req.get('cookie')
-			},
 			query: data.query,
 			retry: 0,
 			timeout: 10000
