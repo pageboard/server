@@ -1,5 +1,6 @@
 const Path = require('path');
 const got = require('got').extend({retry: 0, throwHttpErrors: false});
+const { pipeline } = require('stream');
 
 module.exports = function(opt) {
 	return {
@@ -61,7 +62,9 @@ function optimize(req, res, next) {
 function prerender(dom) {
 	return function(req, res, next) {
 		if (req.path != '/.well-known/notfound' && /^(\/[a-zA-Z0-9-]*|(\/[a-zA-Z0-9-]+)+)$/.test(req.path) == false) {
-			got.stream(req.site.href + '/.well-known/notfound').pipe(res);
+			pipeline(got.stream(req.site.href + '/.well-known/notfound'), res, function(err) {
+				if (err) next(err);
+			});
 		} else {
 			var scripts = req.site.$resources.map(function(src) {
 				return `<script src="${src}"></script>`;
