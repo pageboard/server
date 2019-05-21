@@ -47,6 +47,10 @@ function optimize(req, res, next) {
 		return;
 	}
 	var ext = Path.extname(path).substring(1);
+	if (ext && (All.opt.extnames || []).includes(ext)) {
+		path = path.slice(0, -ext.length - 1);
+		ext = null;
+	}
 	if (ext && /^(html?|php\d?)$/.test(ext) == false) {
 		res.sendStatus(404);
 		return;

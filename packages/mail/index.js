@@ -59,6 +59,7 @@ function init(All) {
 			else res.sendStatus(200);
 		}).catch(next);
 	});
+	All.opt.extnames.push('mail');
 }
 
 function send(mail) {
@@ -143,10 +144,13 @@ exports.send = function(site, data) {
 		if (!emailPage) throw new HttpError.NotFound("Page not found");
 		var emailUrl = site.href + emailPage.data.url;
 
-		return got(emailUrl, {
-			query: Object.assign(data.query || {}, {
-				email: true
-			})
+		return got(emailUrl + ".email", {
+			headers: {
+				cookie: req.get('cookie')
+			},
+			query: data.query,
+			retry: 0,
+			timeout: 10000
 		}).then(function(response) {
 			return JSON.parse(response.body);
 		}).then(function(obj) {

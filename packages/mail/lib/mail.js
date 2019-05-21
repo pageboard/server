@@ -1,7 +1,7 @@
 var dom = require('express-dom');
 
 exports.helper = function(mw, settings, request, response) {
-	if (request.query.email == null) return;
+	if (request.path.endsWith('.mail') == false) return;
 	settings.load.plugins = [
 		dom.plugins.hide,
 		dom.plugins.bearer,
