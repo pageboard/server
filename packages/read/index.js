@@ -52,7 +52,7 @@ function prerender(dom) {
 			path = path.slice(0, -ext.length - 1);
 		}
 		if (urlRegex.test(path) == false) {
-			pipeline(got.stream(req.site.href + '/.well-known/404'), res, function(err) {
+			pipeline(got.stream(req.site.href + '/.well-known/notfound'), res, function(err) {
 				if (err) next(err);
 			});
 		} else {
