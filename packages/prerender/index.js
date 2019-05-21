@@ -3,6 +3,7 @@ const { Pool } = require('tarn');
 const fork = require('child_process').fork;
 
 module.exports = function(opt) {
+	require('express-dom').clear();
 	opt.prerender = Object.assign({
 		cacheDir: Path.join(opt.dirs.cache, "prerender"),
 		stall: 20000,
@@ -32,7 +33,8 @@ module.exports = function(opt) {
 			try {
 				child = fork(workerPath, {
 					detached: true,
-					env: process.env
+					env: process.env,
+					stdio: ['ignore', 'pipe', 'inherit', 'ipc']
 				});
 				child.send({
 					prerender: opt.prerender,
@@ -48,7 +50,8 @@ module.exports = function(opt) {
 			if (!child.killed) child.kill();
 		},
 		acquireTimeoutMillis: 5000,
-		min: 2,
+		idleTimeoutMillis: 300000,
+		min: 0,
 		max: 8
 	});
 	process.on('exit', function() {
@@ -57,27 +60,38 @@ module.exports = function(opt) {
 
 	All.dom = function(config, req, res, next) {
 		pool.acquire().promise.then(function(worker) {
-			worker.once("message", function(obj) {
-				worker.removeAllListeners("error");
-				pool.release(worker);
-				if (obj.err) {
-					return next(objToError(obj.err));
+			worker.on("message", function(msg) {
+				if (msg.err) {
+					return next(objToError(msg.err));
 				}
-				if (obj.locks) All.auth.headers(res, obj.locks);
-				if (obj.tags) All.cache.tag.apply(null, obj.tags)(req, res);
-				if (obj.headers != null) {
-					for (var k in obj.headers) res.set(k, obj.headers[k]);
+				if (msg.locks) All.auth.headers(res, msg.locks);
+				if (msg.tags) All.cache.tag.apply(null, msg.tags)(req, res);
+				if (msg.headers != null) {
+					for (var k in msg.headers) res.set(k, msg.headers[k]);
 				}
-				if (obj.code != null) {
-					if (obj.body === undefined) res.sendStatus(obj.code);
-					else res.status(obj.code);
+				if (msg.attachment != null) {
+					res.attachment(msg.attachment);
 				}
-				if (obj.body !== undefined) res.send(obj.body);
+				if (msg.statusCode) res.status(msg.statusCode);
+
+				if (!msg.piped) {
+					release(worker);
+					if (msg.body !== undefined) {
+						res.send(msg.body);
+					} else {
+						res.sendStatus(msg.statusCode || 200);
+					}
+				} else if (msg.finished) {
+					release(worker);
+					res.end();
+				} else {
+					worker.stdout.on('data', (data) => {
+						res.write(data);
+					});
+				}
 			});
 			worker.once("error", function(err) {
-				worker.removeAllListeners("message");
-				worker.kill();
-				pool.release(worker);
+				release(true);
 				next(err);
 			});
 			worker.send({
@@ -91,10 +105,14 @@ module.exports = function(opt) {
 				cookies: req.cookies,
 				xhr: req.xhr
 			});
-		}).catch(function(err) {
-			console.error(err);
-			next(err);
-		});
+			function release(kill) {
+				worker.stdout.removeAllListeners('data');
+				worker.removeAllListeners("message");
+				worker.removeAllListeners("error");
+				if (kill) worker.kill();
+				pool.release(worker);
+			}
+		}).catch(next);
 	};
 };
 
