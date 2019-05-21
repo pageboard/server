@@ -144,7 +144,7 @@ exports.send = function(site, data) {
 		if (!emailPage) throw new HttpError.NotFound("Page not found");
 		var emailUrl = site.href + emailPage.data.url;
 
-		return got(emailUrl + ".email", {
+		return got(emailUrl + ".mail", {
 			query: data.query,
 			retry: 0,
 			timeout: 10000
