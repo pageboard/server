@@ -1,26 +1,23 @@
 {
   "name": "pageboard",
-  "version": "0.5.1",
+  "version": "0.5.2",
   "description": "Web pages content management",
   "main": "index.js",
-  "bin": {
-    "pageboard": "./pageboard"
-  },
   "scripts": {
     "test": "echo \"Error: no test specified\" && exit 1",
-    "start": "pageboard",
+    "start": "./pageboard",
     "seed": "node seed.js"
   },
   "repository": {
     "type": "git",
-    "url": "git+https://github.com/pageboard/pageboard.git"
+    "url": "git+https://github.com/pageboard/server.git"
   },
   "author": "Jérémy Lal <kapouer@melix.org>",
   "license": "MIT",
   "bugs": {
-    "url": "https://github.com/pageboard/pageboard/issues"
+    "url": "https://github.com/pageboard/server/issues"
   },
-  "homepage": "https://github.com/pageboard/pageboard#readme",
+  "homepage": "https://github.com/pageboard/server#readme",
   "dependencies": {
     "@pageboard/api": "link:./packages/api",
     "@pageboard/auth": "link:./packages/auth",
