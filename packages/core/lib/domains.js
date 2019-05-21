@@ -35,7 +35,9 @@ Domains.prototype.init = function(req, res, next) {
 			var map = {};
 			list.forEach(function(site) {
 				var upstream = All.opt.upstreams[site.data.server || All.opt.version];
-				var domains = site.data.domains || [];
+				var domains = site.data.domains;
+				if (!domains) domains = [];
+				else if (typeof domains == "string") domains = [domains];
 				var domain = domains.shift();
 				if (domain != null) {
 					domains = domains.slice();
@@ -51,7 +53,7 @@ Domains.prototype.init = function(req, res, next) {
 			res.send({
 				domains: map
 			});
-		});
+		}).catch(next);
 		return;
 	}
 	var sites = this.sites;
