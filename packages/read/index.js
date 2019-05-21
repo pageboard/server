@@ -11,14 +11,14 @@ module.exports = function(opt) {
 };
 
 function init(All) {
-	All.opt.read = {};
-	All.opt.read.helpers = [
+	var opt = All.opt;
+	opt.read = {};
+	opt.read.helpers = [
 		'develop'
 	];
 
-	All.opt.read.plugins = [
+	opt.read.plugins = [
 		'form',
-		'httplinkpreload',
 		'httpequivs',
 		'bearer',
 		'hide',
@@ -28,6 +28,10 @@ function init(All) {
 		'referrer',
 		'html'
 	];
+	if (opt.env != "development") {
+		opt.read.plugins.unshift('httplinkpreload');
+	}
+
 	All.app.get(
 		'*',
 		All.auth.vary('*'),
