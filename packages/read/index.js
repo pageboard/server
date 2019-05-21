@@ -36,37 +36,23 @@ function init(All) {
 		'*',
 		All.auth.vary('*'),
 		All.cache.tag('site-:site', 'data-:site'),
-		optimize,
 		prerender(All.dom)
 	);
 }
 
-function optimize(req, res, next) {
-	var path = req.path;
-	if (path == '/.well-known/notfound') {
-		next();
-		return;
-	}
-	if (path.startsWith('/.')) {
-		res.sendStatus(404);
-		return;
-	}
-	var ext = Path.extname(path).substring(1);
-	if (ext && (All.opt.extnames || []).includes(ext)) {
-		path = path.slice(0, -ext.length - 1);
-		ext = null;
-	}
-	if (ext && /^(html?|php\d?)$/.test(ext) == false) {
-		res.sendStatus(404);
-		return;
-	}
-	next();
-}
-
 function prerender(dom) {
 	return function(req, res, next) {
-		if (req.path != '/.well-known/notfound' && /^(\/[a-zA-Z0-9-]*|(\/[a-zA-Z0-9-]+)+)$/.test(req.path) == false) {
-			pipeline(got.stream(req.site.href + '/.well-known/notfound'), res, function(err) {
+		var el = req.site.$schema('page');
+		var pattern = el && el.properties.data && el.properties.data.properties.url.pattern;
+		if (!pattern) throw new Error("Missing page element missing schema for data.url.pattern");
+		var urlRegex = new RegExp(pattern);
+		var path = req.path;
+		var ext = Path.extname(path).substring(1);
+		if (ext && (All.opt.extnames || []).includes(ext)) {
+			path = path.slice(0, -ext.length - 1);
+		}
+		if (urlRegex.test(path) == false) {
+			pipeline(got.stream(req.site.href + '/.well-known/404'), res, function(err) {
 				if (err) next(err);
 			});
 		} else {
