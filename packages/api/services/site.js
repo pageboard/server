@@ -143,6 +143,7 @@ exports.save = function(data) {
 	return All.api.transaction(function(trx) {
 		return exports.get(data).transacting(trx).then(function(site) {
 			lodashMerge(site.data, data.data);
+			fixSiteDomains(site);
 			return All.install(site).then(function(site) {
 				return site.$query(trx).patchObject({
 					type: site.type,
@@ -181,3 +182,7 @@ exports.del.schema = {
 	additionalProperties: false
 };
 
+function fixSiteDomains(site) {
+	var domains = site.data.domains;
+	if (typeof domains == "string") site.data.domains = [domains];
+}
