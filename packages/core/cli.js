@@ -23,7 +23,10 @@ if (config._.length == 1) {
 
 console.info(title);
 
-pageboard.init(config).then(function(All) {
+pageboard.init(config).catch(function(err) {
+	console.error(err);
+	process.exit(1);
+}).then(function(All) {
 	if (All.opt._.length > 1) {
 		console.error("Cannot process arguments", All.opt._);
 		process.exit(1);
