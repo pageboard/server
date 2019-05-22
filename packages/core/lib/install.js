@@ -38,6 +38,7 @@ exports.install = function(site, opt) {
 
 exports.config = function(moduleDir, id, module, config) {
 	debug("Module directory", module, moduleDir);
+	if (moduleDir == null) throw new Error(`${id} has a missing module ${module}`);
 	return fs.readFile(Path.join(moduleDir, 'package.json')).then(function(buf) {
 		var meta = JSON.parse(buf);
 		var modOpts = meta.pageboard;
