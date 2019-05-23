@@ -5,7 +5,7 @@ exports.helper = function(mw, settings, request, response) {
 	settings.pdf = {
 		defaults: {
 			paper: 'iso_a4',
-			margins: '10mm'
+			margins: '0mm'
 		},
 		mappings: {
 		}
