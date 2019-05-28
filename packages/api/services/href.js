@@ -172,6 +172,11 @@ exports.add = function(req, data) {
 		p = callInspector(site.id, data.url, isLocal);
 	}
 	return p.then(function(result) {
+		if (!isLocal && result.url != data.url) {
+			result.canonical = result.url;
+			result.url = data.url;
+			result.pathname = objUrl.pathname;
+		}
 		return exports.get(req, data).forUpdate().then(function(href) {
 			if (!href) {
 				return site.$relatedQuery('hrefs').insert(result).returning(Href.columns);

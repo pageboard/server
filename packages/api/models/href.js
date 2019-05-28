@@ -37,6 +37,17 @@ Href.jsonSchema = {
 				format: 'pathname'
 			}]
 		},
+		canonical: {
+			anyOf: [{
+				type: 'string',
+				format: 'uri',
+				nullable: true
+			}, {
+				type: "string",
+				format: 'pathname',
+				nullable: true
+			}]
+		},
 		type: {
 			type: 'string'
 		},
