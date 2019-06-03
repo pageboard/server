@@ -3,7 +3,6 @@ const { Pool } = require('tarn');
 const fork = require('child_process').fork;
 
 module.exports = function(opt) {
-	require('express-dom').clear();
 	opt.prerender = Object.assign({
 		cacheDir: Path.join(opt.dirs.cache, "prerender"),
 		stall: 20000,
@@ -28,6 +27,12 @@ module.exports = function(opt) {
 
 	const workerPath = Path.join(__dirname, 'worker.js');
 
+	const childOpts = {
+		prerender: opt.prerender,
+		report: opt.report,
+		clear: true
+	};
+
 	const pool = new Pool({
 		validate: function(child) {
 			return !child.killed;
@@ -40,10 +45,8 @@ module.exports = function(opt) {
 					env: process.env,
 					stdio: ['ignore', 'pipe', 'inherit', 'ipc']
 				});
-				child.send({
-					prerender: opt.prerender,
-					report: opt.report
-				});
+				child.send(childOpts);
+				if (childOpts.clear) delete childOpts.clear;
 			} catch(ex) {
 				cb(ex);
 				return;

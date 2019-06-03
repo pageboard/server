@@ -93,6 +93,10 @@ var initialized = false;
 
 function init(opt) {
 	initialized = true;
+	if (opt.clear) {
+		delete opt.clear;
+		dom.clear();
+	}
 	global.All = {opt: opt};
 	var conf = opt.prerender;
 
