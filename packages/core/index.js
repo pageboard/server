@@ -296,7 +296,7 @@ function createApp(All) {
 			res.type("json").send({errors: req.site.errors});
 		} else {
 			res.setHeader('X-XSS-Protection','1;mode=block');
-			res.setHeader('X-Frame-Options', 'SAMEORIGIN');
+			res.setHeader('X-Frame-Options', 'strict-origin');
 			res.setHeader('X-Content-Type-Options', 'nosniff');
 			res.setHeader('Content-Security-Policy', cspHeader);
 			next();
