@@ -25,7 +25,6 @@ function init(All) {
 		'nomedia',
 		'prerender',
 		'redirect',
-		'referrer',
 		'html'
 	];
 	if (opt.env != "development") {
