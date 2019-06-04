@@ -11,6 +11,7 @@ exports.helper = function(mw, settings, request, response) {
 		}
 	};
 	settings.load.plugins = [
+		dom.plugins.httpequivs,
 		dom.plugins.bearer,
 		dom.plugins.pdf
 	];

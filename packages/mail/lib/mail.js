@@ -4,6 +4,7 @@ exports.helper = function(mw, settings, request, response) {
 	if (request.path.endsWith('.mail') == false) return;
 	settings.load.plugins = [
 		dom.plugins.hide,
+		dom.plugins.httpequivs,
 		dom.plugins.bearer,
 		dom.plugins.prerender,
 		dom.plugins.mail
