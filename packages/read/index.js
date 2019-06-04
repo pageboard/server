@@ -26,7 +26,6 @@ function init(All) {
 		'nomedia',
 		'prerender',
 		'redirect',
-		'referrer', // this might create problems
 		'html'
 	];
 	if (opt.env != "development") {
