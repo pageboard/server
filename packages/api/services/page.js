@@ -51,17 +51,17 @@ function init(All) {
 			All.send(res, obj);
 		}).catch(next);
 	});
-	All.app.post('/.api/page', All.auth.restrict('webmaster'), function(req, res, next) {
+	All.app.post('/.api/page', All.auth.lock('webmaster'), function(req, res, next) {
 		All.run('page.add', req, req.body).then(function(page) {
 			res.send(page);
 		}).catch(next);
 	});
-	All.app.put('/.api/page', All.auth.restrict('webmaster'), function(req, res, next) {
+	All.app.put('/.api/page', All.auth.lock('webmaster'), function(req, res, next) {
 		All.run('page.save', req, req.body).then(function(page) {
 			res.send(page);
 		}).catch(next);
 	});
-	All.app.delete('/.api/page', All.auth.restrict('webmaster'), function(req, res, next) {
+	All.app.delete('/.api/page', All.auth.lock('webmaster'), function(req, res, next) {
 		All.run('page.del', req, req.query).then(function(page) {
 			res.send(page);
 		}).catch(next);

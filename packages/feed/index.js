@@ -11,12 +11,13 @@ exports = module.exports = function(opt) {
 function init(All) {
 	All.app.get(
 		/^(\/[a-zA-Z0-9-]*|(\/[a-zA-Z0-9-]+)+)\.rss$/,
-		All.auth.restrict('*'),	All.cache.tag('data-:site').for('1 day'),
+		All.cache.tag('data-:site').for('1 day'),
 		function(req, res, next) {
 			All.run('feed.get', req, {
 				url: req.params[0],
 				query: req.query
 			}).then(function(xml) {
+				All.auth.headers(res, req.locks);
 				res.type("application/xml");
 				res.send(xml);
 			}).catch(next);
@@ -54,8 +55,4 @@ exports.get.schema = {
 	}
 };
 // exports.get.external = true;
-
-
-
-
 

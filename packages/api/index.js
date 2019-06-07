@@ -278,7 +278,13 @@ All.send = function(res, obj) {
 	if (obj.location) {
 		res.redirect(obj.location);
 	} else {
-		All.auth.filterResponse(req, obj);
+		obj = All.auth.filterResponse(req, obj);
+		if (obj.item && !obj.item.type) {
+			// 401 Unauthorized: missing or bad authentication
+			// 403 Forbidden: authenticated but not authorized
+			res.status(req.user.id ? 403 : 401);
+		}
+		if (req.granted) res.set('X-Granted', 1);
 		All.auth.headers(res, req.locks);
 		res.json(obj);
 	}

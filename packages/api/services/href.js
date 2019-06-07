@@ -11,17 +11,17 @@ exports = module.exports = function(opt) {
 };
 
 function init(All) {
-	All.app.get("/.api/hrefs", All.auth.restrict('webmaster'), function(req, res, next) {
+	All.app.get("/.api/hrefs", All.auth.lock('webmaster'), function(req, res, next) {
 		All.run('href.search', req, req.query).then(function(href) {
 			res.send(href);
 		}).catch(next);
 	});
-	All.app.post("/.api/href", All.auth.restrict('webmaster'), function(req, res, next) {
+	All.app.post("/.api/href", All.auth.lock('webmaster'), function(req, res, next) {
 		All.run('href.add', req, req.body).then(function(href) {
 			res.send(href);
 		}).catch(next);
 	});
-	All.app.delete("/.api/href", All.auth.restrict('webmaster'), function(req, res, next) {
+	All.app.delete("/.api/href", All.auth.lock('webmaster'), function(req, res, next) {
 		All.run('href.del', req, req.query).then(function(href) {
 			res.send(href);
 		}).catch(next);

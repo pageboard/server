@@ -38,7 +38,7 @@ function init(All) {
 			};
 		};
 
-		All.app.use(All.auth.vary('*'));
+		All.app.use(lock.init);
 	});
 }
 
