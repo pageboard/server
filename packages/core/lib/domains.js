@@ -50,9 +50,9 @@ Domains.prototype.init = function(req, res, next) {
 					map[site.id] = upstream;
 				}
 			});
-			res.send({
+			res.type('json').end(JSON.stringify({
 				domains: map
-			});
+			}, null, ' '));
 		}).catch(next);
 		return;
 	}
