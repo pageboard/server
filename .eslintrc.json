@@ -15,6 +15,7 @@
   "extends": "eslint:recommended",
   "globals": {
     "All": true,
-    "HttpError": true
+    "HttpError": true,
+    "Text": true
   }
 }
