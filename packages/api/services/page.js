@@ -43,7 +43,7 @@ function init(All) {
 			// webmaster want to see those anyway
 			// this must not be confused with page.lock
 			req.query.drafts = true;
-			if (!req.query.type) req.query.type = ['page', 'mail'];
+			if (!req.query.type) req.query.type = req.site.$pagetypes;
 		}
 
 		var action = req.query.text != null ? 'page.search' : 'page.all';
