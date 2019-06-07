@@ -24,12 +24,14 @@ exports.submit = function(req, data) {
 	return All.run('block.get', req, {
 		id: data.id
 	}).then(function(form) {
+		var fd = form.data || {};
+		var method = (fd.action || {}).method;
+		if (!method) {
+			throw new HttpError.BadRequest("Missing method");
+		}
 		if (All.auth.locked(req, (form.lock || {}).write)) {
 			throw HttpError.Unauthorized("Check user permissions");
 		}
-		var fd = form.data || {};
-		var method = fd.action.method;
-		if (!method) throw new HttpError.BadRequest("Missing method");
 		// build parameters
 		var expr = ((form.expr || {}).action || {}).parameters || {};
 		var params = All.utils.mergeParameters(expr, {
@@ -59,7 +61,17 @@ exports.submit = function(req, data) {
 		}
 		body = All.utils.mergeObjects(body, params);
 
-		return All.run(method, req, body);
+		return All.run(method, req, body).catch(function(err) {
+			return {
+				status: err.status,
+				item: {
+					type: 'error',
+					data: {
+						message: err.message
+					}
+				}
+			};
+		});
 	});
 };
 

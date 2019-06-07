@@ -245,6 +245,11 @@ exports.search.schema = {
 			minimum: 0,
 			default: 0
 		},
+		count: {
+			title: 'Get count',
+			type: 'boolean',
+			default: false
+		},
 		parents: {
 			title: 'Parents',
 			type: 'object',

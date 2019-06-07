@@ -16,15 +16,16 @@ exports = module.exports = function(opt) {
 
 function init(All) {
 	var opt = All.opt;
-	opt.scope = Object.assign({
+	opt.lock = Object.assign({
 		maxAge: 60 * 60 * 24 * 31,
 		userProperty: 'user',
 		keysize: 2048
-	}, opt.scope);
+	}, opt.lock);
 
 	return require('./lib/keygen')(All).then(function(keys) {
-		Object.assign(opt.scope, keys);
-		var lock = UpcacheLock(opt.scope);
+		Object.assign(opt.lock, keys);
+		var lock = UpcacheLock(opt.lock);
+
 		All.auth.restrict = lock.restrict.bind(lock);
 		All.auth.vary = lock.vary;
 		All.auth.headers = lock.headers;
@@ -32,8 +33,8 @@ function init(All) {
 			return {
 				value: lock.sign(user, Object.assign({
 					hostname: site.hostname
-				}, opt.scope)),
-				maxAge: opt.scope.maxAge * 1000
+				}, opt.lock)),
+				maxAge: opt.lock.maxAge * 1000
 			};
 		};
 
@@ -50,12 +51,13 @@ exports.locked = locked;
 exports.filter = filter;
 
 exports.filterResponse = function(req, obj) {
-	if (!obj.item && !obj.items) {
+	var {item, items} = obj;
+	if (!item && !items) {
 		return filter(req, obj);
 	}
-	if (obj.item) {
-		var item = filter(req, obj.item);
-		if (!item.type) throw new HttpError.Unauthorized("user not granted");
+	if (item) {
+		obj.item = filter(req, item);
+		if (!obj.item.type) delete obj.items;
 	}
 	if (obj.items) obj.items = obj.items.map(function(item) {
 		return filter(req, item);
@@ -130,24 +132,26 @@ function locked(req, list) {
 
 function filter(req, item) {
 	if (!item.type) return item;
-	if (item.children) {
-		item.children = item.children.filter(function(item) {
+	var {children, child, parents, parent} = item;
+	if (children) {
+		item.children = children.filter(function(item) {
 			return filter(req, item);
 		});
 	}
-	if (item.child) {
-		item.child = filter(req, item.child);
-	}
-	if (item.parents) {
-		item.parents = item.parents.filter(function(item) {
+	if (parents) {
+		item.parents = parents.filter(function(item) {
 			return filter(req, item);
 		});
 	}
-	if (item.parent) {
-		item.parent = filter(req, item.parent);
+	if (child) {
+		item.child = filter(req, child);
+	}
+	if (parent) {
+		item.parent = filter(req, parent);
 	}
 	// old types might not have schema
 	var schema = req.site.$schema(item.type) || {};
+
 	var $lock = schema.$lock || {};
 	if (typeof $lock == "string" || Array.isArray($lock)) $lock = {'*': $lock};
 	var lock = (item.lock || {}).read || [];
@@ -158,9 +162,13 @@ function filter(req, item) {
 		'*': lock
 	};
 	locks = Object.assign({}, locks, $lock);
-	if (locked(req, locks['*'])) return {
-		id: item.id
-	};
+	if (locked(req, locks['*'])) {
+		if (item.content != null) item.content = {};
+		if (item.data != null) item.data = {};
+		if (item.expr != null) item.expr = {};
+		delete item.type;
+		return item;
+	}
 	delete locks['*'];
 
 	Object.keys(locks).forEach(function(path) {

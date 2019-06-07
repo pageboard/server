@@ -23,13 +23,14 @@ exports.query = function(req, data) {
 	return All.run('block.get', req, {
 		id: data.id
 	}).then(function(form) {
+		var fd = form.data || {};
+		var method = (fd.action || {}).method;
+		if (!method) {
+			throw new HttpError.BadRequest("Missing method");
+		}
 		if (All.auth.locked(req, (form.lock || {}).read)) {
 			throw HttpError.Unauthorized("Check user permissions");
 		}
-		if (!form) throw HttpError.Unauthorized("Check user permissions");
-		var fd = form.data || {};
-		var method = fd.action.method;
-		if (!method) throw new HttpError.BadRequest("Missing method");
 		// build parameters
 		var expr = ((form.expr || {}).action || {}).parameters || {};
 		var params = All.utils.mergeParameters(expr, {
@@ -37,7 +38,17 @@ exports.query = function(req, data) {
 			$user: req.user
 		});
 		params = All.utils.mergeObjects(params, fd.action.parameters);
-		return All.run(method, req, params);
+		return All.run(method, req, params).catch(function(err) {
+			return {
+				status: err.status,
+				item: {
+					type: 'error',
+					data: {
+						message: err.message
+					}
+				}
+			};
+		});
 	});
 };
 

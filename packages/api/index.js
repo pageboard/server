@@ -12,7 +12,6 @@ var imports = require('./lib/imports');
 var utils = require('./lib/utils');
 var common = require('./models/common');
 
-
 var ajvApiSettings = {
 	$data: true,
 	allErrors: true,
@@ -25,7 +24,8 @@ var ajvApiSettings = {
 		singleline: /^[^\n\r]*$/,
 		pathname: /^(\/[\w-.]*)+$/,
 		id: /^[\w-]+$/
-	}
+	},
+	invalidDefaults: 'log'
 };
 var ajvApiWithDefaults = AjvKeywords(ajv(Object.assign({}, ajvApiSettings, {
 	useDefaults: 'empty'
