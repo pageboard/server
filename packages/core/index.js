@@ -291,7 +291,7 @@ function createApp(All) {
 		if (req.path == "/.well-known/pageboard") {
 			res.type("json").send({errors: req.site.errors});
 		} else {
-			res.setHeader('Referrer-Policy', 'strict-origin');
+			res.setHeader('Referrer-Policy', 'strict-origin-when-cross-origin');
 			res.setHeader('X-XSS-Protection','1;mode=block');
 			res.setHeader('X-Frame-Options', 'sameorigin');
 			res.setHeader('X-Content-Type-Options', 'nosniff');
