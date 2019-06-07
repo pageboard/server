@@ -1,0 +1,565 @@
+{"site": {
+ "type": "site",
+ "data": {
+  "env": "dev",
+  "server": 0.6
+ },
+ "expr": null,
+ "content": {},
+ "standalone": false,
+ "updated_at": "2019-06-06T13:31:04.792Z",
+ "lock": null
+},
+"standalones": [{
+ "id": "3ff7cb9a5d42b16e",
+ "type": "page",
+ "data": {
+  "url": "/.well-known/404",
+  "title": "404",
+  "noindex": true,
+  "nositemap": true
+ },
+ "expr": null,
+ "content": {
+  "body": "<element-sticky block-id=\"3623e908d003cd09\"></element-sticky><main block-id=\"24607020af5612bd\"></main>"
+ },
+ "standalone": true,
+ "updated_at": "2019-03-19T14:06:21.944Z",
+ "lock": null,
+ "children": [
+  {
+   "id": "3623e908d003cd09",
+   "type": "header",
+   "data": {
+    "collapsed": false
+   },
+   "expr": null,
+   "content": {
+    "content": "<h1 block-id=\"402a2fada59156a2\"></h1>"
+   },
+   "standalone": false,
+   "updated_at": "2019-03-19T14:20:41.101Z",
+   "lock": null
+  },
+  {
+   "id": "24607020af5612bd",
+   "type": "main",
+   "data": {},
+   "expr": null,
+   "content": {
+    "content": "<div block-id=\"ff25288b949b4844\"></div>"
+   },
+   "standalone": false,
+   "updated_at": "2019-03-19T14:20:41.101Z",
+   "lock": null
+  },
+  {
+   "id": "402a2fada59156a2",
+   "type": "heading",
+   "data": {
+    "id": "page-not-found",
+    "align": "left",
+    "level": 1,
+    "linkable": false
+   },
+   "expr": null,
+   "content": {
+    "text": "Page not found"
+   },
+   "standalone": false,
+   "updated_at": "2019-03-19T14:20:41.067Z",
+   "lock": null
+  },
+  {
+   "id": "ff25288b949b4844",
+   "type": "breadcrumb",
+   "data": {},
+   "expr": null,
+   "content": {},
+   "standalone": false,
+   "updated_at": "2019-03-19T14:20:41.067Z",
+   "lock": null
+  }
+ ]
+}
+,{
+ "id": "2987724c47f02781",
+ "type": "page",
+ "data": {
+  "url": "/",
+  "index": 0,
+  "title": "Home",
+  "noindex": false,
+  "nositemap": false
+ },
+ "expr": null,
+ "content": {},
+ "standalone": true,
+ "updated_at": "2019-03-19T14:06:21.518Z",
+ "lock": null,
+ "children": []
+}
+,{
+ "id": "ac6fd88274a578bb",
+ "type": "page",
+ "data": {
+  "url": "/admin",
+  "title": "Admin",
+  "noindex": true,
+  "nositemap": true
+ },
+ "expr": null,
+ "content": {
+  "body": "<header block-id=\"0ad073a7fcb530a3\"></header><main block-id=\"e4a2332cfa52ce26\"></main>"
+ },
+ "standalone": true,
+ "updated_at": "2019-03-19T14:15:36.788Z",
+ "lock": {
+  "read": [
+   "webmaster"
+  ]
+ },
+ "children": [
+  {
+   "id": "0ad073a7fcb530a3",
+   "type": "header",
+   "data": {
+    "position": "top",
+    "collapsed": false
+   },
+   "expr": null,
+   "content": {
+    "content": "<h1 block-id=\"712ff333bc6d9b3f\"></h1>"
+   },
+   "standalone": false,
+   "updated_at": "2019-03-19T14:15:36.015Z",
+   "lock": null
+  },
+  {
+   "id": "712ff333bc6d9b3f",
+   "type": "heading",
+   "data": {
+    "id": "admin",
+    "align": "left",
+    "level": 1,
+    "linkable": false
+   },
+   "expr": null,
+   "content": {
+    "text": "Admin"
+   },
+   "standalone": false,
+   "updated_at": "2019-03-19T14:15:36.015Z",
+   "lock": null
+  },
+  {
+   "id": "e4a2332cfa52ce26",
+   "type": "main",
+   "data": {},
+   "expr": null,
+   "content": {
+    "content": "<element-sitemap block-id=\"0209f06bbcfff0fc\"></element-sitemap>"
+   },
+   "standalone": false,
+   "updated_at": "2019-03-19T14:15:36.015Z",
+   "lock": null
+  },
+  {
+   "id": "0209f06bbcfff0fc",
+   "type": "sitemap",
+   "data": {},
+   "expr": null,
+   "content": {},
+   "standalone": false,
+   "updated_at": "2019-03-19T14:15:36.015Z",
+   "lock": null
+  }
+ ]
+}
+,{
+ "id": "0d9f515e5e2b7884",
+ "type": "page",
+ "data": {
+  "url": "/.well-known/401",
+  "title": "401",
+  "noindex": true,
+  "nositemap": true
+ },
+ "expr": null,
+ "content": {
+  "body": "<element-sticky block-id=\"49fb2e7b09020e9b\"></element-sticky><main block-id=\"cdaa61897ce8e0e9\"></main><main block-id=\"8bf151f599567707\"></main>"
+ },
+ "standalone": true,
+ "updated_at": "2019-03-19T14:11:23.427Z",
+ "lock": null,
+ "children": [
+  {
+   "id": "49fb2e7b09020e9b",
+   "type": "header",
+   "data": {
+    "collapsed": false
+   },
+   "expr": null,
+   "content": {
+    "content": ""
+   },
+   "standalone": false,
+   "updated_at": "2019-03-19T14:11:23.383Z",
+   "lock": null
+  },
+  {
+   "id": "cdaa61897ce8e0e9",
+   "type": "main",
+   "data": {},
+   "expr": null,
+   "content": {
+    "content": "<p block-data=\"{&quot;align&quot;:&quot;left&quot;}\" class=\"left aligned\" block-type=\"paragraph\"><br></p><h1 block-id=\"ec6bdcd7a90a4720\"></h1>"
+   },
+   "standalone": false,
+   "updated_at": "2019-03-19T14:16:38.977Z",
+   "lock": null
+  },
+  {
+   "id": "ec6bdcd7a90a4720",
+   "type": "heading",
+   "data": {
+    "id": "verification-d-acces",
+    "align": "center",
+    "level": 1,
+    "linkable": false
+   },
+   "expr": null,
+   "content": {
+    "text": "Vérification d'accès"
+   },
+   "standalone": false,
+   "updated_at": "2019-03-19T14:11:23.383Z",
+   "lock": null
+  },
+  {
+   "id": "8bf151f599567707",
+   "type": "main",
+   "data": {},
+   "expr": null,
+   "content": {
+    "content": "<div block-id=\"8327bae88a490b18\"></div>"
+   },
+   "standalone": false,
+   "updated_at": "2019-03-19T14:16:49.924Z",
+   "lock": null
+  },
+  {
+   "id": "8327bae88a490b18",
+   "type": "layout",
+   "data": {
+    "width": "contained",
+    "height": 0,
+    "invert": false,
+    "vertical": "top",
+    "direction": "column",
+    "horizontal": "left"
+   },
+   "expr": null,
+   "content": {
+    "content": "<div block-id=\"9a27893f98877caa\"></div>"
+   },
+   "standalone": false,
+   "updated_at": "2019-03-19T14:16:49.873Z",
+   "lock": null
+  },
+  {
+   "id": "9a27893f98877caa",
+   "type": "grid",
+   "data": {
+    "width": "contained"
+   },
+   "expr": null,
+   "content": {
+    "columns": "<div block-id=\"f1bddc03204f2b66\"></div><div block-id=\"d3c6a0ffebe1d8fb\"></div><div block-id=\"b020465cfb116cfe\"></div>"
+   },
+   "standalone": false,
+   "updated_at": "2019-03-19T14:16:49.873Z",
+   "lock": null
+  },
+  {
+   "id": "f1bddc03204f2b66",
+   "type": "grid_column",
+   "data": {
+    "width": 0
+   },
+   "expr": null,
+   "content": {
+    "content": ""
+   },
+   "standalone": false,
+   "updated_at": "2019-03-19T14:16:49.873Z",
+   "lock": null
+  },
+  {
+   "id": "d3c6a0ffebe1d8fb",
+   "type": "grid_column",
+   "data": {
+    "width": 0
+   },
+   "expr": null,
+   "content": {
+    "content": "<element-template block-id=\"0fffa1fdd38ecd69\"></element-template>"
+   },
+   "standalone": false,
+   "updated_at": "2019-03-19T14:16:49.873Z",
+   "lock": null
+  },
+  {
+   "id": "0fffa1fdd38ecd69",
+   "type": "fetch",
+   "data": {},
+   "expr": null,
+   "content": {
+    "template": "<form block-id=\"673ff99f4585d0f6\"></form><form block-id=\"1eecfc3a6ed90c37\"></form>"
+   },
+   "standalone": false,
+   "updated_at": "2019-03-19T14:16:49.873Z",
+   "lock": null
+  },
+  {
+   "id": "673ff99f4585d0f6",
+   "type": "api_form",
+   "data": {
+    "action": {
+     "method": "login.send",
+     "parameters": {
+      "register": false
+     }
+    },
+    "hidden": false
+   },
+   "expr": {
+    "hidden": "[$query.email|!?|bmagnet:*]",
+    "redirection": {
+     "parameters": {
+      "email": "[$request.email]",
+      "grant": "[$lock]"
+     }
+    }
+   },
+   "content": {
+    "form": "<div block-id=\"d095c21d2cb1e5e3\"></div><button block-id=\"b42388d920483b9b\"></button><div block-id=\"28e57f06926b24fd\"></div><div block-id=\"f3b57b172a8c22c2\"></div><div block-id=\"6dcfbd40e73f1d05\"></div>"
+   },
+   "standalone": false,
+   "updated_at": "2019-06-07T10:07:55.699Z",
+   "lock": null
+  },
+  {
+   "id": "d095c21d2cb1e5e3",
+   "type": "input_text",
+   "data": {
+    "name": "email",
+    "type": "email",
+    "disabled": false,
+    "required": true,
+    "placeholder": "name@domain.ext"
+   },
+   "expr": {},
+   "content": {
+    "label": "<span class=\"lighter\" block-type=\"light\">Veuillez saisir votre adresse courriel</span>"
+   },
+   "standalone": false,
+   "updated_at": "2019-03-19T14:16:49.873Z",
+   "lock": null
+  },
+  {
+   "id": "b42388d920483b9b",
+   "type": "input_button",
+   "data": {
+    "type": "submit"
+   },
+   "expr": null,
+   "content": {
+    "label": "VÉRIFIER"
+   },
+   "standalone": false,
+   "updated_at": "2019-03-19T14:16:49.873Z",
+   "lock": null
+  },
+  {
+   "id": "28e57f06926b24fd",
+   "type": "message",
+   "data": {
+    "type": "error",
+    "inverted": false
+   },
+   "expr": {},
+   "content": {
+    "message": "<p block-data=\"{&quot;align&quot;:&quot;left&quot;}\" class=\"left aligned\" block-type=\"paragraph_nolink\">Une erreur s'est produite.</p>"
+   },
+   "standalone": false,
+   "updated_at": "2019-03-19T14:16:49.873Z",
+   "lock": null
+  },
+  {
+   "id": "f3b57b172a8c22c2",
+   "type": "message",
+   "data": {
+    "type": "warning",
+    "inverted": false
+   },
+   "expr": null,
+   "content": {
+    "message": "<p block-data=\"{&quot;align&quot;:&quot;left&quot;}\" class=\"left aligned\" block-type=\"paragraph_nolink\">Adresse inconnue.</p>"
+   },
+   "standalone": false,
+   "updated_at": "2019-03-19T14:16:49.873Z",
+   "lock": null
+  },
+  {
+   "id": "6dcfbd40e73f1d05",
+   "type": "message",
+   "data": {
+    "type": "success",
+    "inverted": false
+   },
+   "expr": {},
+   "content": {
+    "message": "<p block-data=\"{&quot;align&quot;:&quot;left&quot;}\" class=\"left aligned\" block-type=\"paragraph_nolink\">Envoi de code effectué.</p>"
+   },
+   "standalone": false,
+   "updated_at": "2019-03-19T14:16:49.873Z",
+   "lock": null
+  },
+  {
+   "id": "1eecfc3a6ed90c37",
+   "type": "api_form",
+   "data": {
+    "action": {
+     "method": "login.grant"
+    },
+    "hidden": false
+   },
+   "expr": {
+    "action": {
+     "parameters": {
+      "email": "[$query.email]",
+      "grant": "[$query.grant]"
+     }
+    },
+    "hidden": "[$query.email|?|bmagnet:*]",
+    "redirection": {
+     "url": "[$pathname][$query|unset:email|unset:grant|query]"
+    }
+   },
+   "content": {
+    "form": "<div block-id=\"5a3807f6d16c61dc\"></div><button block-id=\"53f06c322707f288\"></button><div block-id=\"fbad3fd843466435\"></div><div block-id=\"93bd0d455b24c142\"></div>"
+   },
+   "standalone": false,
+   "updated_at": "2019-03-19T14:16:49.873Z",
+   "lock": null
+  },
+  {
+   "id": "5a3807f6d16c61dc",
+   "type": "input_text",
+   "data": {
+    "name": "token",
+    "type": "password",
+    "disabled": false,
+    "required": true,
+    "placeholder": "xxxxxx"
+   },
+   "expr": {},
+   "content": {
+    "label": "<span class=\"lighter\" block-type=\"light\">Veuillez saisir le code de vérification que vous avez reçu.</span>"
+   },
+   "standalone": false,
+   "updated_at": "2019-03-19T14:16:49.873Z",
+   "lock": null
+  },
+  {
+   "id": "53f06c322707f288",
+   "type": "input_button",
+   "data": {
+    "type": "submit"
+   },
+   "expr": null,
+   "content": {
+    "label": "login"
+   },
+   "standalone": false,
+   "updated_at": "2019-03-19T14:16:49.873Z",
+   "lock": null
+  },
+  {
+   "id": "fbad3fd843466435",
+   "type": "message",
+   "data": {
+    "type": "success",
+    "inverted": false
+   },
+   "expr": {},
+   "content": {
+    "message": "<p block-data=\"{&quot;align&quot;:&quot;left&quot;}\" class=\"left aligned\" block-type=\"paragraph_nolink\">Login effectué.<br>Redirection en cours...</p>"
+   },
+   "standalone": false,
+   "updated_at": "2019-03-19T14:16:49.873Z",
+   "lock": null
+  },
+  {
+   "id": "93bd0d455b24c142",
+   "type": "message",
+   "data": {
+    "type": "error",
+    "inverted": false
+   },
+   "expr": {},
+   "content": {
+    "message": "<p block-data=\"{&quot;align&quot;:&quot;left&quot;}\" class=\"left aligned\" block-type=\"paragraph_nolink\">Login impossible:<br>· vérifiez votre code<br>· vérifiez vos autorisations<br>· 3 tentatives par intervalle de 10 minutes</p><p block-data=\"{&quot;align&quot;:&quot;left&quot;}\" class=\"left aligned\" block-type=\"paragraph\"><a block-id=\"bda5cf8917d1e9d4\"></a></p>"
+   },
+   "standalone": false,
+   "updated_at": "2019-03-19T14:16:49.873Z",
+   "lock": null
+  },
+  {
+   "id": "bda5cf8917d1e9d4",
+   "type": "link",
+   "data": {
+    "button": true
+   },
+   "expr": {
+    "url": "."
+   },
+   "content": {
+    "text": "<span block-id=\"159c6f5f0e9fb61b\"></span>Utiliser un autre compte"
+   },
+   "standalone": false,
+   "updated_at": "2019-03-19T14:16:49.873Z",
+   "lock": null
+  },
+  {
+   "id": "159c6f5f0e9fb61b",
+   "type": "binding",
+   "data": {
+    "attr": "$pathname\nurl"
+   },
+   "expr": null,
+   "content": {},
+   "standalone": false,
+   "updated_at": "2019-03-19T14:16:49.873Z",
+   "lock": null
+  },
+  {
+   "id": "b020465cfb116cfe",
+   "type": "grid_column",
+   "data": {
+    "width": 0
+   },
+   "expr": null,
+   "content": {
+    "content": ""
+   },
+   "standalone": false,
+   "updated_at": "2019-03-19T14:16:49.873Z",
+   "lock": null
+  }
+ ]
+}],
+"reservations": [],
+"hrefs": [{"updated_at":"2019-03-19T14:06:21.518Z","mime":"text/html; charset=utf-8","visible":true,"url":"/","canonical":null,"type":"link","title":"","icon":null,"site":"","pathname":"/","lang":null,"preview":null,"meta":{}}
+,{"updated_at":"2019-03-19T14:15:36.844Z","mime":"text/html; charset=utf-8","visible":true,"url":"/admin","canonical":null,"type":"link","title":"Admin","icon":null,"site":"","pathname":"/admin","lang":null,"preview":null,"meta":{}}]}
