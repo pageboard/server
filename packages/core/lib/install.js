@@ -221,7 +221,6 @@ function doInstall(site, pkg, opt) {
 				'--ignore-optional',
 				'--no-progress',
 				'--production',
-				'--no-lockfile',
 				'--silent',
 				'add',
 				module
@@ -233,7 +232,6 @@ function doInstall(site, pkg, opt) {
 				'--no-optional',
 				'--no-progress',
 				'--production',
-				'--no-package-lock',
 				'--silent',
 				'--no-audit',
 				'--save',
