@@ -88,7 +88,7 @@ function init(All) {
 exports.bundle = function(site, pkg, list, filename) {
 	if (list.length == 0) return [];
 	var buildDir = Path.join(pkg.dir, "builds");
-	var cacheDir = Path.join(pkg.dir, "cache");
+	var cacheDir = Path.join(All.opt.dirs.cache, "statics");
 	var buildPath = Path.join(buildDir, filename);
 	var opts = All.opt.statics;
 	var version = site.data.version;
