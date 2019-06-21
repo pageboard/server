@@ -158,7 +158,8 @@ exports.add = function(req, data) {
 			data: {
 				url: objUrl.pathname
 			}
-		}).then(function(block) {
+		}).then(function(answer) {
+			var block = answer.item;
 			return {
 				mime: 'text/html; charset=utf-8',
 				type: 'link',
