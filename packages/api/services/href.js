@@ -40,7 +40,7 @@ exports.get.schema = {
 	properties: {
 		url: {
 			type: 'string',
-			format: 'uri'
+			format: 'uri-reference'
 		}
 	}
 };
@@ -110,13 +110,8 @@ exports.search.schema = {
 			minimum: 0
 		},
 		url: {
-			anyOf: [{
-				type: 'string',
-				format: 'uri'
-			}, {
-				type: "string",
-				format: 'pathname'
-			}]
+			type: 'string',
+			format: 'uri-reference'
 		},
 		text: {
 			type: 'string',
@@ -194,13 +189,8 @@ exports.add.schema = {
 	required: ['url'],
 	properties: {
 		url: {
-			anyOf: [{
-				type: 'string',
-				format: 'uri'
-			}, {
-				type: "string",
-				format: 'pathname'
-			}]
+			type: 'string',
+			format: 'uri-reference'
 		}
 	}
 };
@@ -222,13 +212,8 @@ exports.save.schema = {
 	required: ['url', 'title'],
 	properties: {
 		url: {
-			anyOf: [{
-				type: 'string',
-				format: 'uri'
-			}, {
-				type: "string",
-				format: 'pathname'
-			}]
+			type: 'string',
+			format: 'uri-reference'
 		},
 		title: {
 			type: 'string',
@@ -253,13 +238,8 @@ exports.del.schema = {
 	required: ['url'],
 	properties: {
 		url: {
-			anyOf: [{
-				type: 'string',
-				format: 'uri'
-			}, {
-				type: "string",
-				format: 'pathname'
-			}]
+			type: 'string',
+			format: 'uri-reference'
 		}
 	}
 };
