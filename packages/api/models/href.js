@@ -29,24 +29,14 @@ Href.jsonSchema = {
 			default: true
 		},
 		url: {
-			anyOf: [{
-				type: 'string',
-				format: 'uri'
-			}, {
-				type: "string",
-				format: 'pathname'
-			}]
+			type: 'string',
+			format: 'uri-reference',
+			nullable: true
 		},
 		canonical: {
-			anyOf: [{
-				type: 'string',
-				format: 'uri',
-				nullable: true
-			}, {
-				type: "string",
-				format: 'pathname',
-				nullable: true
-			}]
+			type: 'string',
+			format: 'uri-reference',
+			nullable: true
 		},
 		type: {
 			type: 'string'
@@ -55,15 +45,9 @@ Href.jsonSchema = {
 			type: 'string'
 		},
 		icon: {
-			anyOf: [{
-				type: 'string',
-				format: 'uri',
-				nullable: true
-			}, {
-				type: "string",
-				format: 'pathname',
-				nullable: true
-			}]
+			type: 'string',
+			format: 'uri-reference',
+			nullable: true
 		},
 		site: {
 			type: 'string'

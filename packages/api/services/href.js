@@ -143,12 +143,9 @@ exports.add = function(req, data) {
 	var url = data.url;
 	var objUrl = URL.parse(url);
 	var isLocal = false;
+	if (!objUrl.hostname) objUrl.hostname = site.hostname;
 	if (site.hostname == objUrl.hostname) {
-		url = data.url;
-		data.url = objUrl.pathname;
-		isLocal = true;
-	} else if (!objUrl.hostname) {
-		url = site.href + url;
+		data.url = objUrl.path;
 		isLocal = true;
 	}
 
@@ -156,13 +153,16 @@ exports.add = function(req, data) {
 
 	if (isLocal && !data.url.startsWith('/.')) {
 		// consider it's a page
-		p = All.page.get(req, {
-			url: data.url
-		}).then(function(pageBlock) {
+		p = All.block.find(req, {
+			type: 'page',
+			data: {
+				url: objUrl.pathname
+			}
+		}).then(function(block) {
 			return {
 				mime: 'text/html; charset=utf-8',
 				type: 'link',
-				title: pageBlock.data && pageBlock.data.title || "",
+				title: block.data && block.data.title || "",
 				site: null,
 				pathname: objUrl.pathname,
 				url: objUrl.path
