@@ -2,7 +2,8 @@
  "type": "site",
  "data": {
   "env": "dev",
-  "server": 0.6
+  "server": 0.6,
+  "module": "@pageboard/client@0.6.x"
  },
  "expr": null,
  "content": {},
