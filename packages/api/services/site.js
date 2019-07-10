@@ -289,7 +289,7 @@ exports.export = function(data) {
 						}
 					}).then(function(lone) {
 						if (lone.standalones.length > 0) {
-							if (!lone.data || !lone.data.url) {
+							if (lone.type != "notfound" && (!lone.data || !lone.data.url)) {
 								console.warn("standalone block without url has standalone children", lone);
 								delete lone.standalones;
 							}
@@ -606,6 +606,14 @@ function replaceLock(map, block) {
 }
 
 function upgradeBlock(block) {
+	if (block.type == "notfound") {
+		block.type = "page";
+		block.data = Object.assign(block.data || {}, {
+			url: '/.well-known/404',
+			noindex: true,
+			nositemap: true
+		});
+	}
 	var locks = block.lock && block.lock.read;
 	if (locks) locks.forEach(function(lock, i) {
 		locks[i] = lock.replace(/^user-/, "id-");
