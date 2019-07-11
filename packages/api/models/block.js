@@ -60,16 +60,14 @@ Block.jsonSchema = {
 			format: 'id'
 		},
 		data: {
-			type: 'object',
-			default: {}
+			type: 'object'
 		},
 		expr: {
 			type: 'object',
 			nullable: true
 		},
 		content: {
-			type: 'object',
-			default: {}
+			type: 'object'
 		},
 		standalone: { // a standalone block can have 0 or multiple parents
 			type: 'boolean',
