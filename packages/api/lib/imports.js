@@ -187,17 +187,14 @@ function listDependencies(rootGroup, eltsMap, el, list=[], sieve={}) {
 	if (!el || sieve[el.name]) return list;
 	list.push(el);
 	sieve[el.name] = true;
-	var contents = el.contents;
+	var contents = All.api.Block.normalizeContents(el.contents);
 	if (!contents) {
-		if (el.standalone && el.group) contents = el.group;
+		if (el.standalone && el.group) contents = [{nodes:el.group}];
 		else return list;
 	}
-	if (typeof contents == "string") contents = {content: contents};
-	Object.keys(contents).forEach(function(key) {
-		var val = contents[key];
-		var spec = typeof val == "string" ? val : val.spec;
-		if (!spec) return;
-		spec.split(/\W+/).filter(x => !!x).forEach(function(word) {
+	contents.forEach(function(content) {
+		if (!content.nodes) return;
+		content.nodes.split(/\W+/).filter(x => !!x).forEach(function(word) {
 			if (word == "text" || word == "page") return;
 			if (!sieve[word]) {
 				listDependencies(rootGroup, eltsMap, word, list, sieve);

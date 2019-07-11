@@ -186,7 +186,7 @@ Block.extendSchema = function extendSchema(name, schemas) {
 					required: element.required || []
 				}),
 				content: Object.assign({}, blockProps.content, {
-					properties: stringProperties(element.contents || {})
+					properties: contentsNames(Block.normalizeContents(element.contents))
 				})
 			})
 		};
@@ -205,13 +205,43 @@ Block.extendSchema = function extendSchema(name, schemas) {
 	return DomainBlock;
 };
 
-function stringProperties(obj) {
+Block.normalizeContents = function(contents) {
+	if (!contents) return;
+	if (typeof contents == "string") contents = {
+		nodes: contents
+	};
+	if (!Array.isArray(contents)) {
+		if (contents.spec) {
+			contents.nodes = contents.spec;
+			delete contents.spec;
+		}
+		if (!contents.nodes) {
+			// support old version
+			contents = Object.keys(contents).map(function(key) {
+				var val = contents[key];
+				if (typeof val == "string") {
+					val = {nodes: val};
+				} else if (val.spec) {
+					val.nodes = val.spec;
+					delete val.spec;
+				}
+				val.id = key;
+				return val;
+			});
+		} else {
+			contents = [contents];
+		}
+	}
+	return contents;
+};
+function contentsNames(list) {
 	var props = {};
-	for (var k in obj) {
-		props[k] = {
+	if (!list) return props;
+	list.forEach(function(def) {
+		props[def.id || ""] = {
 			type: 'string'
 		};
-	}
+	});
 	return props;
 }
 
