@@ -210,6 +210,7 @@ Block.normalizeContents = function(contents) {
 	};
 	if (!Array.isArray(contents)) {
 		if (contents.spec) {
+			contents = Object.assign({}, contents);
 			contents.nodes = contents.spec;
 			delete contents.spec;
 		}
@@ -219,9 +220,12 @@ Block.normalizeContents = function(contents) {
 				var val = contents[key];
 				if (typeof val == "string") {
 					val = {nodes: val};
-				} else if (val.spec) {
-					val.nodes = val.spec;
-					delete val.spec;
+				} else {
+					val = Object.assign({}, val);
+					if (val.spec) {
+						val.nodes = val.spec;
+						delete val.spec;
+					}
 				}
 				val.id = key;
 				return val;
