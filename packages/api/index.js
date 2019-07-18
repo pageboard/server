@@ -181,10 +181,6 @@ All.run = function(apiStr, req, data) {
 		if (!mod) throw new HttpError.BadRequest(`Unknown api module ${modName}`);
 		var fun = mod[funName];
 		if (!fun) throw new HttpError.BadRequest(`Unknown api method ${funName}`);
-		if (req && data === undefined && fun.length == 1) {
-			data = req;
-			req = null;
-		}
 		if (data == null) data = {};
 		try {
 			data = check(fun, data);
@@ -194,27 +190,26 @@ All.run = function(apiStr, req, data) {
 		}
 		// start a transaction on set trx object on site
 		var hadTrx = false;
-		var site = req ? req.site : null;
 		return Promise.resolve().then(function() {
-			if (!site) {
+			if (!req.site) {
 				return;
 			}
-			if (site.trx) {
+			if (req.trx) {
 				hadTrx = true;
 				return;
 			}
 			return exports.transaction().then(function(trx) {
-				site = req.site = site.$clone();
-				site.trx = trx;
+				req.site = req.site.$clone();
+				req.trx = trx;
 			});
 		}).then(function() {
 			var args = [data];
 			if (req) args.unshift(req);
 			return fun.apply(mod, args);
 		}).then(function(obj) {
-			if (!hadTrx && site && site.trx) {
+			if (!hadTrx && req.trx) {
 				try {
-					return site.trx.commit().then(function() {
+					return req.trx.commit().then(function() {
 						return obj;
 					});
 				} catch(ex) {
@@ -225,9 +220,9 @@ All.run = function(apiStr, req, data) {
 		}).catch(function(err) {
 			console.error("api method:", apiStr);
 			if (req && req.user && req.user.id) console.error("by user", req.user.id, req.user.grants);
-			if (!hadTrx && site && site.trx) {
+			if (!hadTrx && req.trx) {
 				try {
-					return site.trx.rollback().then(function() {
+					return req.trx.rollback().then(function() {
 						throw err;
 					});
 				} catch(ex) {

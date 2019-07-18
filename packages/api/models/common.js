@@ -30,7 +30,10 @@ var InstanceUpdateOperation = require(
 
 exports.Model = class CommonModel extends DbErrors(Model) {
 	$query(trx) {
-		if (this.trx && !trx) trx = this.trx;
+		if (this.trx && !trx) {
+			console.trace("transactions should be passed explicitely");
+			trx = this.trx;
+		}
 		return super.$query(trx).patchObjectOperationFactory(() => {
 			return new InstancePatchObjectOperation('patch', {
 				instance: this,
@@ -40,7 +43,10 @@ exports.Model = class CommonModel extends DbErrors(Model) {
 	}
 
 	$relatedQuery(what, trx) {
-		if (this.trx && !trx) trx = this.trx;
+		if (this.trx && !trx) {
+			console.trace("transactions should be passed explicitely");
+			trx = this.trx;
+		}
 		return super.$relatedQuery(what, trx);
 	}
 

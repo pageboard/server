@@ -28,8 +28,8 @@ function init(All) {
 	});
 }
 
-exports.get = function({site}, data) {
-	return All.api.Href.query(site.trx).select('href._id')
+exports.get = function({site, trx}, data) {
+	return All.api.Href.query(trx).select('href._id')
 	.whereSite(site.id)
 	.where('href.url', data.url).first();
 };
@@ -45,9 +45,9 @@ exports.get.schema = {
 	}
 };
 
-exports.search = function(req, data) {
+exports.search = function({site, trx}, data) {
 	var Href = All.api.Href;
-	var q = Href.query().select().whereSite(req.site.id);
+	var q = Href.query(trx).select().whereSite(site.id);
 
 	if (data.type) {
 		q.whereIn('href.type', data.type);
@@ -132,7 +132,8 @@ exports.search.schema = {
 };
 
 exports.add = function(req, data) {
-	var site = req.site;
+	var {site, trx} = req;
+
 	var Href = All.api.Href;
 
 	var url = data.url;
@@ -175,9 +176,9 @@ exports.add = function(req, data) {
 		}
 		return exports.get(req, data).forUpdate().then(function(href) {
 			if (!href) {
-				return site.$relatedQuery('hrefs').insert(result).returning(Href.columns);
+				return site.$relatedQuery('hrefs', trx).insert(result).returning(Href.columns);
 			} else {
-				return site.$relatedQuery('hrefs').patchObject(result).where('_id', href._id)
+				return site.$relatedQuery('hrefs', trx).patchObject(result).where('_id', href._id)
 				.first().returning(Href.columns);
 			}
 		});
@@ -201,7 +202,7 @@ exports.save = function(req, data) {
 	.throwIfNotFound()
 	.forUpdate()
 	.then(function(href) {
-		return req.site.$relatedQuery('hrefs').patchObject({
+		return req.site.$relatedQuery('hrefs', req.trx).patchObject({
 			title: data.title
 		}).where('_id', href._id).first().returning(Href.columns);
 	});
@@ -224,7 +225,7 @@ exports.save.schema = {
 
 exports.del = function(req, data) {
 	return exports.get(req, data).throwIfNotFound().then(function(href) {
-		return req.site.$relatedQuery('hrefs').patchObject({
+		return req.site.$relatedQuery('hrefs', req.trx).patchObject({
 			visible: false
 		}).where('_id', href._id).then(function() {
 			href.visible = false;
@@ -244,7 +245,7 @@ exports.del.schema = {
 	}
 };
 
-exports.gc = function(days) {
+exports.gc = function({trx}, days) {
 	return Promise.resolve([]);
 	// TODO use sites schemas to known which paths to check:
 	// for example, data.url comes from elements.image.properties.url.input.name == "href"
@@ -252,7 +253,7 @@ exports.gc = function(days) {
 	// TODO href.site IS NULL used to be p.data->>'domain' = href.site
 	// BOTH are wrong since they won't touch external links...
 	// TODO the outer join on url is also a bit wrong since it does not use href._parent !!!
-	return All.api.Href.raw(`DELETE FROM href USING (
+	return trx.raw(`DELETE FROM href USING (
 		SELECT count(block.*) AS count, href._id FROM href
 		LEFT OUTER JOIN block ON (block.data->>'url' = href.url)
 		LEFT JOIN relation AS r ON (r.child_id = block._id)
@@ -267,7 +268,7 @@ exports.gc = function(days) {
 	});
 };
 
-exports.reinspect = function(data) {
+exports.reinspect = function({trx}, data) {
 	// usage
 	// to force reinspect
 	// UPDATE block SET data = jsonb_set(data, '{meta}', '{}'::jsonb) WHERE type='image';
@@ -278,7 +279,7 @@ exports.reinspect = function(data) {
 		id: data.site
 	};
 	delete data.site;
-	var q = All.api.Href.query().joinRelation('parent')
+	var q = All.api.Href.query(trx).joinRelation('parent')
 	.select('href.url', 'href._id', 'parent.id AS site')
 	.whereObject(data);
 	if (site.id) q.where('parent.id', site.id);
@@ -286,7 +287,7 @@ exports.reinspect = function(data) {
 		return Promise.all(rows.map(function(href) {
 			return callInspector(href.site, href.url)
 			.then(function(obj) {
-				return All.api.Href.query().patchObject(obj).where('_id', href._id);
+				return All.api.Href.query(trx).patchObject(obj).where('_id', href._id);
 			}).catch(function(err) {
 				console.error("Error inspecting", href, err);
 			});
@@ -294,7 +295,7 @@ exports.reinspect = function(data) {
 	}).then(function(arr) {
 		console.info("Inspected", arr.length, "hrefs");
 		return Promise.all([
-			All.api.Block.raw(`UPDATE block
+			trx.raw(`UPDATE block
 				SET data = jsonb_set(block.data, '{meta,width}', href.meta->'width')
 				FROM href, block AS site, relation AS r WHERE block.type = 'image'
 				AND block.data->'meta'->'width' IS NULL
@@ -303,7 +304,7 @@ exports.reinspect = function(data) {
 				AND r.child_id = block._id AND site._id = r.parent_id AND site.type = 'site'
 				${site.id ? ' AND site.id = ?' : ''}
 				AND href._parent_id = site._id`, site.id),
-			All.api.Block.raw(`UPDATE block
+			trx.raw(`UPDATE block
 				SET data = jsonb_set(block.data, '{meta,height}', href.meta->'height')
 				FROM href, block AS site, relation AS r WHERE block.type = 'image'
 				AND block.data->'meta'->'height' IS NULL
@@ -312,7 +313,7 @@ exports.reinspect = function(data) {
 				AND r.child_id = block._id AND site._id = r.parent_id AND site.type = 'site'
 				${site.id ? ' AND site.id = ?' : ''}
 				AND href._parent_id = site._id`, site.id),
-			All.api.Block.raw(`UPDATE block
+			trx.raw(`UPDATE block
 				SET data = jsonb_set(block.data, '{meta,size}', href.meta->'size')
 				FROM href, block AS site, relation AS r WHERE block.type = 'image'
 				AND block.data->'meta'->'size' IS NULL
@@ -321,7 +322,7 @@ exports.reinspect = function(data) {
 				AND r.child_id = block._id AND site._id = r.parent_id AND site.type = 'site'
 				${site.id ? ' AND site.id = ?' : ''}
 				AND href._parent_id = site._id`, site.id),
-			All.api.Block.raw(`UPDATE block
+			trx.raw(`UPDATE block
 				SET data = jsonb_set(block.data, '{meta,mime}', to_jsonb(href.mime))
 				FROM href, block AS site, relation AS r WHERE block.type = 'image'
 				AND block.data->'meta'->'mime' IS NULL

@@ -57,7 +57,7 @@ exports.subscribe = function(req, data) {
 			}
 
 			return All.run(blockMeth, req, resa).then(function(resa) {
-				return eventDate.$query(req.site.trx).patch({
+				return eventDate.$query(req.trx).patch({
 					'data:reservations': total
 				}).then(function() {
 					if (!data.url) return resa; // can't send confirmation email
@@ -208,9 +208,9 @@ exports.unsubscribe.schema = {
 };
 exports.unsubscribe.external = true;
 
-exports.reservations = function({site}, data) {
+exports.reservations = function({site, trx}, data) {
 	// given an event_date, retrieve reservations, user settings and email
-	return site.$relatedQuery('children')
+	return site.$relatedQuery('children', trx)
 	.where('block.type', 'event_date')
 	.where('block.id', data.id)
 	.select().first().throwIfNotFound()

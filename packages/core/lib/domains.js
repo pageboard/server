@@ -87,7 +87,7 @@ Domains.prototype.init = function(req, res, next) {
 				domain: host.name
 			};
 			if (id) data.id = id; // search by domain and id
-			return All.site.get(data).select('_id');
+			return All.site.get({}, data).select('_id');
 		}).then(function(site) {
 			var version = site.data && site.data.server || All.opt.version;
 			if (version != All.opt.version) {

@@ -83,7 +83,7 @@ function init(All) {
 			}
 			res.status(200).send(msg);
 		}).then(function() {
-			if (version != null) return All.site.save(site).then(function() {
+			if (version != null) return All.site.save(req, site).then(function() {
 				if (pusher) All.mail.to({
 					to: {
 						name: pusher.name,

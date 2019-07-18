@@ -9,9 +9,9 @@ function init() {
 
 }
 
-function QueryUser(data) {
+function QueryUser({trx}, data) {
 	var Block = All.api.Block;
-	var q = Block.query().alias('user').select()
+	var q = Block.query(trx).alias('user').select()
 	.first().throwIfNotFound().where('user.type', 'user');
 	if (!data.id && !data.email) throw new HttpError.BadRequest("Missing id or email");
 	if (data.id) {
@@ -22,8 +22,8 @@ function QueryUser(data) {
 	return q;
 }
 
-exports.get = function(data) {
-	return QueryUser(data);
+exports.get = function(req, data) {
+	return QueryUser(req, data);
 };
 exports.get.schema = {
 	$action: 'read',
@@ -47,14 +47,14 @@ exports.get.schema = {
 	}
 };
 
-exports.add = function(data) {
-	return QueryUser({
+exports.add = function(req, data) {
+	return QueryUser(req, {
 		email: data.email
 	}).then(function(user) {
 		return user;
 	}).catch(function(err) {
 		if (err.status != 404) throw err;
-		return All.api.Block.query().insert({
+		return All.api.Block.query(req.trx).insert({
 			data: { email: data.email },
 			type: 'user'
 		}).returning('id');
@@ -73,8 +73,8 @@ exports.add.schema = {
 	}
 };
 
-exports.del = function(data) {
-	return QueryUser(data).del();
+exports.del = function(req, data) {
+	return QueryUser(req, data).del();
 };
 exports.del.schema = Object.assign({}, exports.get.schema, {
 	$action: 'del'

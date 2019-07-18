@@ -14,13 +14,13 @@ exports = module.exports = function(opt) {
 function init(All) {
 	All.app.put('/.api/site', All.auth.lock('webmaster'), function(req, res, next) {
 		var data = Object.assign(req.body, {id: req.site.id});
-		All.run('site.save', data).then(function(site) {
+		All.run('site.save', req, data).then(function(site) {
 			res.send(site);
 		}).catch(next);
 	});
 }
 
-function QuerySite(data) {
+function QuerySite({trx}, data) {
 	/* gets distinct typesin this site as json array
 	.select(
 		Block.query().from('block AS b')
@@ -31,7 +31,7 @@ function QuerySite(data) {
 	)
 	*/
 	var Block = All.api.Block;
-	var q = Block.query().alias('site')
+	var q = Block.query(trx).alias('site')
 	.first().throwIfNotFound()
 	.where('site.type', 'site').where(function(q) {
 		if (data.id) q.orWhere('site.id', data.id);
@@ -40,8 +40,8 @@ function QuerySite(data) {
 	return q;
 }
 
-exports.get = function(data) {
-	return QuerySite(data).select();
+exports.get = function(req, data) {
+	return QuerySite(req, data).select();
 };
 
 exports.get.schema = {
@@ -63,9 +63,9 @@ exports.get.schema = {
 	}]
 };
 
-exports.search = function(data) {
+exports.search = function({trx}, data) {
 	var Block = All.api.Block;
-	var q = Block.query().alias('site').select().where('site.type', 'site')
+	var q = Block.query(trx).alias('site').select().where('site.type', 'site')
 	.joinRelation('children', {alias: 'settings'})
 	.where('settings.type', 'settings');
 	if (data.grants) q.where(function(builder) {
@@ -119,8 +119,8 @@ exports.search.schema = {
 	}
 };
 
-exports.add = function(data) {
-	return QuerySite({id: data.id}).then(function(site) {
+exports.add = function(req, data) {
+	return QuerySite(req, {id: data.id}).then(function(site) {
 		console.info("There is already a site with this id", data.id);
 	}).catch(function(err) {
 		data.type = 'site';
@@ -134,7 +134,7 @@ exports.add = function(data) {
 				nositemap: true
 			}
 		}];
-		return All.api.Block.query().insertGraph(data);
+		return All.api.Block.query(req.trx).insertGraph(data);
 	});
 };
 
@@ -152,18 +152,16 @@ exports.add.schema = {
 	}
 };
 
-exports.save = function(data) {
+exports.save = function(req, data) {
 	fixSiteCoercion(data);
-	return All.api.transaction(function(trx) {
-		return exports.get(data).transacting(trx).then(function(site) {
-			lodashMerge(site.data, data.data);
-			return All.install(site).then(function(site) {
-				return site.$query(trx).patchObject({
-					type: site.type,
-					data: data.data
-				}).then(function() {
-					return site;
-				});
+	return exports.get(req, data).then(function(site) {
+		lodashMerge(site.data, data.data);
+		return All.install(site).then(function(site) {
+			return site.$query(req.trx).patchObject({
+				type: site.type,
+				data: data.data
+			}).then(function() {
+				return site;
 			});
 		});
 	});
@@ -183,27 +181,25 @@ exports.save.schema = {
 	}
 };
 
-exports.all = function() {
-	return All.api.Block.query().where('type', 'site').select();
+exports.all = function({trx}) {
+	return All.api.Block.query(trx).where('type', 'site').select();
 };
 exports.all.schema = {
 	$action: 'read',
 	properties: {}
 };
 
-exports.del = function(data) {
+exports.del = function({trx}, data) {
 	var Block = All.api.Block;
-	return All.api.transaction(function(trx) {
-		var counts = {};
-		return Block.query(trx).where('type', 'site')
-		.select('_id', Block.raw('recursive_delete(_id, TRUE) AS blocks'))
-		.where('id', data.id)
-		.first().throwIfNotFound().then(function(row) {
-			counts.blocks = row.blocks;
-			// no need to remove href thanks to delete cascade on href._parent_id
-		}).then(function() {
-			return counts;
-		});
+	var counts = {};
+	return Block.query(trx).where('type', 'site')
+	.select('_id', trx.raw('recursive_delete(_id, TRUE) AS blocks'))
+	.where('id', data.id)
+	.first().throwIfNotFound().then(function(row) {
+		counts.blocks = row.blocks;
+		// no need to remove href thanks to delete cascade on href._parent_id
+	}).then(function() {
+		return counts;
 	});
 };
 exports.del.schema = {
@@ -218,7 +214,7 @@ exports.del.schema = {
 };
 
 // export all data but files
-exports.export = function(data) {
+exports.export = function({trx}, data) {
 	var counts = {
 		site: 0,
 		blocks: 0,
@@ -227,7 +223,7 @@ exports.export = function(data) {
 		settings: 0,
 		reservations: 0
 	};
-	return exports.get(data).eager(`[children(lones)]`, {
+	return exports.get({trx}, data).eager(`[children(lones)]`, {
 		lones: function(builder) {
 			return builder.select('_id').where('standalone', true).orderByRaw("data->>'url' IS NOT NULL");
 		}
@@ -248,7 +244,7 @@ exports.export = function(data) {
 		// TODO extend to any non-standalone block that is child of user or settings
 		// TODO fix calendar so that reservations are made against a user, not against its settings
 		out.write(',\n"settings": [');
-		return site.$relatedQuery('children').where('block.type', 'settings')
+		return site.$relatedQuery('children', trx).where('block.type', 'settings')
 		.select().eager('[parents(user) as user]', {
 			user: function(builder) {
 				return builder.select(
@@ -277,7 +273,7 @@ exports.export = function(data) {
 			var prom = Promise.resolve();
 			return children.reduce(function(p, child, i) {
 				return p.then(function() {
-					return All.api.Block.query()
+					return All.api.Block.query(trx)
 					.select().omit(['tsv', '_id'])
 					.first().where('_id', child._id)
 					.eager('[children(notlones) as children,children(lones) as standalones]', {
@@ -305,7 +301,7 @@ exports.export = function(data) {
 		}).then(function() {
 			out.write('],\n"reservations": [');
 		}).then(function() {
-			return site.$relatedQuery('children').where('block.type', 'event_reservation')
+			return site.$relatedQuery('children', trx).where('block.type', 'event_reservation')
 			.select().eager('parents(notsite) as parents', {
 				notsite: function(builder) {
 					return builder.select('block.id', 'block.type')
@@ -321,7 +317,7 @@ exports.export = function(data) {
 			});
 		}).then(function() {
 			out.write('],\n"hrefs": [');
-			return All.api.Href.query().select()
+			return All.api.Href.query(trx).select()
 			.omit(['tsv', '_id', '_parent_id']).whereSite(site.id).then(function(hrefs) {
 				counts.hrefs = hrefs.length;
 				var last = hrefs.length - 1;
@@ -356,7 +352,7 @@ exports.export.schema = {
 };
 
 // import all data but files
-exports.import = function(data) {
+exports.import = function({trx}, data) {
 	var copy = data.copy;
 	var Block = All.api.Block;
 	var counts = {
@@ -368,188 +364,186 @@ exports.import = function(data) {
 		hrefs: 0,
 		reservations: 0
 	};
-	return All.api.transaction(function(trx) {
-		var p = Promise.resolve();
-		const fstream = createReadStream(Path.resolve(All.opt.cwd, data.file));
-		const pstream = new PassThrough({
-			objectMode: true,
-			highWaterMark: 1
-		});
-		var site;
-		var standalones = {};
-		var idMap = {};
-		var regMap = {};
-		pstream.on('data', function(obj) {
-			p = p.then(function() {
-				if (obj.site) {
-					if (copy) delete obj.site.data.domains;
-					Object.assign(obj.site.data, data.data || {});
-					fixSiteCoercion(obj.site);
-					upgradeBlock(obj.site);
-					obj.site.id = data.id;
-					return Block.query(trx).insert(obj.site).returning('*').then(function(copy) {
-						counts.site++;
-						site = copy;
+	var p = Promise.resolve();
+	const fstream = createReadStream(Path.resolve(All.opt.cwd, data.file));
+	const pstream = new PassThrough({
+		objectMode: true,
+		highWaterMark: 1
+	});
+	var site;
+	var standalones = {};
+	var idMap = {};
+	var regMap = {};
+	pstream.on('data', function(obj) {
+		p = p.then(function() {
+			if (obj.site) {
+				if (copy) delete obj.site.data.domains;
+				Object.assign(obj.site.data, data.data || {});
+				fixSiteCoercion(obj.site);
+				upgradeBlock(obj.site);
+				obj.site.id = data.id;
+				return Block.query(trx).insert(obj.site).returning('*').then(function(copy) {
+					counts.site++;
+					site = copy;
+				});
+			} else if (obj.lone) {
+				var lone = upgradeBlock(obj.lone);
+				return (!copy ? Promise.resolve() : Promise.all([
+					Block.genId().then(function(id) {
+						var old = lone.id;
+						lone.id = idMap[old] = id;
+						regMap[id] = new RegExp(`block-id="${old}"`, 'g');
+					})
+				].concat(lone.children.map(function(child) {
+					upgradeBlock(child);
+					return Block.genId().then(function(id) {
+						var old = child.id;
+						child.id = idMap[child.id] = id;
+						regMap[id] = new RegExp(`block-id="${old}"`, 'g');
 					});
-				} else if (obj.lone) {
-					var lone = upgradeBlock(obj.lone);
-					return (!copy ? Promise.resolve() : Promise.all([
-						Block.genId().then(function(id) {
-							var old = lone.id;
-							lone.id = idMap[old] = id;
-							regMap[id] = new RegExp(`block-id="${old}"`, 'g');
-						})
-					].concat(lone.children.map(function(child) {
-						upgradeBlock(child);
-						return Block.genId().then(function(id) {
-							var old = child.id;
-							child.id = idMap[child.id] = id;
-							regMap[id] = new RegExp(`block-id="${old}"`, 'g');
-						});
-					})))).then(function() {
-						var lones = lone.standalones;
-						var lonesRefs = [];
-						if (lones) {
-							delete lone.standalones;
-							lones.forEach(function(rlone) {
-								// relate lone to rlone
-								var id = !copy ? rlone.id : idMap[rlone.id];
-								if (!id) {
-									throw new Error("unknown standalone " + rlone.id);
-								}
-								if (copy) regMap[id] = new RegExp(`block-id="${rlone.id}"`, 'g');
-								var _id = standalones[id];
-								if (!_id) {
-									console.error(rlone, id);
-									throw new Error("standalone not yet inserted " + rlone.id);
-								}
-								lonesRefs.push({
-									"#dbRef": _id
-								});
-							});
-						}
-						lone.children.forEach(function(child) {
-							if (copy) {
-								replaceContent(regMap, child);
-								replaceLock(idMap, child);
+				})))).then(function() {
+					var lones = lone.standalones;
+					var lonesRefs = [];
+					if (lones) {
+						delete lone.standalones;
+						lones.forEach(function(rlone) {
+							// relate lone to rlone
+							var id = !copy ? rlone.id : idMap[rlone.id];
+							if (!id) {
+								throw new Error("unknown standalone " + rlone.id);
 							}
-							child.parents = [{
-								"#dbRef": site._id
-							}];
-						});
-						lone.children = lone.children.concat(lonesRefs);
-						if (copy) {
-							replaceContent(regMap, lone);
-							replaceLock(idMap, lone);
-						}
-					}).then(function() {
-						return site.$relatedQuery('children', trx).insertGraph(lone).then(function(obj) {
-							standalones[lone.id] = obj._id;
-							counts.standalones++;
-							counts.blocks += lone.children.length;
-						});
-					});
-				} else if (obj.href) {
-					var href = obj.href;
-					if (href.pathname) {
-						href.pathname = href.pathname.replace(/\/uploads\/[^/]+\//, `/uploads/${site.id}/`);
-					}
-					counts.hrefs++;
-					return site.$relatedQuery('hrefs', trx).insert(href).catch(function(err) {
-						console.error(err, href);
-						throw err;
-					});
-				} else if (obj.setting) {
-					var setting = upgradeBlock(obj.setting);
-					return Block.query(trx).where('type', 'user')
-					.whereJsonText('data:email', setting._email).select('_id')
-					.first().throwIfNotFound()
-					.catch(function(err) {
-						if (err.status != 404) throw err;
-						counts.users++;
-						return Block.query(trx).insert({
-							data: { email: setting._email },
-							type: 'user'
-						}).returning('_id');
-					}).then(function(user) {
-						return (!copy ? Promise.resolve() : Block.genId().then(function(id) {
-							setting.id = idMap[setting.id] = id;
-							replaceLock(idMap, setting);
-						})).then(function() {
-							setting.parents = [{'#dbRef': user._id}];
-							counts.settings++;
-							delete setting._email;
-							return site.$relatedQuery('children', trx).insertGraph(setting);
-						});
-					});
-				} else if (obj.reservation) {
-					var resa = upgradeBlock(obj.reservation);
-					var parents = resa.parents || [];
-					if (parents.length != 2) {
-						console.warn("Ignoring reservation", resa);
-						return;
-					}
-					if (copy) parents.forEach(function(block) {
-						block.id = idMap[block.id];
-					});
-					return (!copy ? Promise.resolve() : Block.genId().then(function(id) {
-						resa.id = idMap[resa.id] = id;
-						replaceLock(idMap, resa);
-					})).then(function() {
-						// get settings, date
-						return site.$relatedQuery('children', trx)
-						.select('_id')
-						.whereIn('block.id', parents.map(function(parent) {
-							return parent.id;
-						})).then(function(parents) {
-							resa.parents = parents.map(function(parent) {
-								return {"#dbRef": parent._id};
+							if (copy) regMap[id] = new RegExp(`block-id="${rlone.id}"`, 'g');
+							var _id = standalones[id];
+							if (!_id) {
+								console.error(rlone, id);
+								throw new Error("standalone not yet inserted " + rlone.id);
+							}
+							lonesRefs.push({
+								"#dbRef": _id
 							});
 						});
-					}).then(function() {
-						counts.reservations++;
-						return site.$relatedQuery('children', trx).insertGraph(resa);
+					}
+					lone.children.forEach(function(child) {
+						if (copy) {
+							replaceContent(regMap, child);
+							replaceLock(idMap, child);
+						}
+						child.parents = [{
+							"#dbRef": site._id
+						}];
 					});
+					lone.children = lone.children.concat(lonesRefs);
+					if (copy) {
+						replaceContent(regMap, lone);
+						replaceLock(idMap, lone);
+					}
+				}).then(function() {
+					return site.$relatedQuery('children', trx).insertGraph(lone).then(function(obj) {
+						standalones[lone.id] = obj._id;
+						counts.standalones++;
+						counts.blocks += lone.children.length;
+					});
+				});
+			} else if (obj.href) {
+				var href = obj.href;
+				if (href.pathname) {
+					href.pathname = href.pathname.replace(/\/uploads\/[^/]+\//, `/uploads/${site.id}/`);
 				}
-			});
+				counts.hrefs++;
+				return site.$relatedQuery('hrefs', trx).insert(href).catch(function(err) {
+					console.error(err, href);
+					throw err;
+				});
+			} else if (obj.setting) {
+				var setting = upgradeBlock(obj.setting);
+				return Block.query(trx).where('type', 'user')
+				.whereJsonText('data:email', setting._email).select('_id')
+				.first().throwIfNotFound()
+				.catch(function(err) {
+					if (err.status != 404) throw err;
+					counts.users++;
+					return Block.query(trx).insert({
+						data: { email: setting._email },
+						type: 'user'
+					}).returning('_id');
+				}).then(function(user) {
+					return (!copy ? Promise.resolve() : Block.genId().then(function(id) {
+						setting.id = idMap[setting.id] = id;
+						replaceLock(idMap, setting);
+					})).then(function() {
+						setting.parents = [{'#dbRef': user._id}];
+						counts.settings++;
+						delete setting._email;
+						return site.$relatedQuery('children', trx).insertGraph(setting);
+					});
+				});
+			} else if (obj.reservation) {
+				var resa = upgradeBlock(obj.reservation);
+				var parents = resa.parents || [];
+				if (parents.length != 2) {
+					console.warn("Ignoring reservation", resa);
+					return;
+				}
+				if (copy) parents.forEach(function(block) {
+					block.id = idMap[block.id];
+				});
+				return (!copy ? Promise.resolve() : Block.genId().then(function(id) {
+					resa.id = idMap[resa.id] = id;
+					replaceLock(idMap, resa);
+				})).then(function() {
+					// get settings, date
+					return site.$relatedQuery('children', trx)
+					.select('_id')
+					.whereIn('block.id', parents.map(function(parent) {
+						return parent.id;
+					})).then(function(parents) {
+						resa.parents = parents.map(function(parent) {
+							return {"#dbRef": parent._id};
+						});
+					});
+				}).then(function() {
+					counts.reservations++;
+					return site.$relatedQuery('children', trx).insertGraph(resa);
+				});
+			}
 		});
+	});
 
-		const jstream = require('oboe')(fstream);
-		jstream.node('!.site', function(data) {
-			pstream.write({site: data});
-		});
-		jstream.node('!.standalones[*]', function(data) {
-			pstream.write({lone: data});
-		});
-		jstream.node('!.hrefs[*]', function(data) {
-			pstream.write({href: data});
-		});
-		jstream.node('!.settings[*]', function(data) {
-			pstream.write({setting: data});
-		});
-		jstream.node('!.reservations[*]', function(data) {
-			pstream.write({reservation: data});
-		});
-		jstream.on('end', function() {
-			pstream.end();
-		});
-		jstream.on('fail', function(failObj) {
-			pstream.emit('error', failObj);
-		});
+	const jstream = require('oboe')(fstream);
+	jstream.node('!.site', function(data) {
+		pstream.write({site: data});
+	});
+	jstream.node('!.standalones[*]', function(data) {
+		pstream.write({lone: data});
+	});
+	jstream.node('!.hrefs[*]', function(data) {
+		pstream.write({href: data});
+	});
+	jstream.node('!.settings[*]', function(data) {
+		pstream.write({setting: data});
+	});
+	jstream.node('!.reservations[*]', function(data) {
+		pstream.write({reservation: data});
+	});
+	jstream.on('end', function() {
+		pstream.end();
+	});
+	jstream.on('fail', function(failObj) {
+		pstream.emit('error', failObj);
+	});
 
-		var q = new Promise(function(resolve, reject) {
-			pstream.on('error', function(err) {
-				reject(err);
-			});
-			pstream.on('finish', function() {
-				resolve();
-			});
+	var q = new Promise(function(resolve, reject) {
+		pstream.on('error', function(err) {
+			reject(err);
 		});
-		return q.then(function() {
-			return p;
-		}).then(function() {
-			return counts;
+		pstream.on('finish', function() {
+			resolve();
 		});
+	});
+	return q.then(function() {
+		return p;
+	}).then(function() {
+		return counts;
 	});
 };
 exports.import.schema = {
@@ -631,9 +625,9 @@ function toJSON(obj) {
 	return JSON.stringify(obj, null, " ");
 }
 
-exports.gc = function() {
+exports.gc = function({trx}) {
 	// deletes all blocks that belong to no site
-	return All.api.Href.raw(`DELETE FROM block
+	return trx.raw(`DELETE FROM block
 WHERE block.type NOT IN ('site', 'user') AND NOT EXISTS (SELECT c._id FROM block c, relation r, block p
 WHERE c._id = block._id AND r.child_id = c._id AND p._id = r.parent_id AND p.type IN ('site', 'user')
 GROUP BY c._id HAVING count(*) >= 1)`);

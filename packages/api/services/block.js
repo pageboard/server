@@ -33,7 +33,7 @@ function init(All) {
 }
 
 exports.get = function(req, data) {
-	var q = req.site.$relatedQuery('children').select()
+	var q = req.site.$relatedQuery('children', req.trx).select()
 	.where('block.id', data.id);
 	if (data.type) q.where('block.type', data.type);
 	if (data.standalone) q.eager('[children(childrenFilter)]', {
@@ -62,8 +62,7 @@ exports.get.schema = {
 	}
 };
 
-exports.search = function(req, data) {
-	var site = req.site;
+exports.search = function({site, trx}, data) {
 	var schemas = {};
 	if (data.type) {
 		schemas[data.type] = site.$schema(data.type);
@@ -86,7 +85,7 @@ exports.search = function(req, data) {
 		children = null;
 	}
 	var valid = false;
-	var q = site.$relatedQuery('children');
+	var q = site.$relatedQuery('children', trx);
 	if (data.parent) {
 		var parentList = data.parent.parents;
 		if (parentList && Array.isArray(parentList)) {
@@ -128,11 +127,11 @@ exports.search = function(req, data) {
 			delete qchildren.count;
 			delete qchildren.limit;
 			delete qchildren.offset;
-			var qc = site.$relatedQuery('children').alias('children');
+			var qc = site.$relatedQuery('children', trx).alias('children');
 			whereSub(qc, qchildren, schemas[children.type], 'children');
 			qc.joinRelation('parents', {alias: 'parents'})
 			.where('parents._id', ref('block._id'));
-			q.select(All.api.Block.query().count().from(qc.as('sub')).as('childrenCount'));
+			q.select(All.api.Block.query(trx).count().from(qc.as('sub')).as('childrenCount'));
 		} else {
 			eagers.push('children(childrenFilter) as children');
 		}
@@ -462,18 +461,18 @@ delete exports.find.schema.properties.limit;
 delete exports.find.schema.properties.offset;
 exports.find.external = true;
 
-exports.add = function({site}, data) {
+exports.add = function({site, trx}, data) {
 	var parents = data.parents || [];
 	delete data.parents;
 
-	return site.$relatedQuery('children').insert(data).then(function(child) {
+	return site.$relatedQuery('children', trx).insert(data).then(function(child) {
 		if (parents.length == 0) return child;
-		return site.$relatedQuery('children')
+		return site.$relatedQuery('children', trx)
 		.whereIn(['block.id', 'block.type'], parents.map(function(item) {
 			if (!item.type || !item.id) throw new HttpError.BadRequest("Parents must have id, type");
 			return [item.id, item.type];
 		})).then(function(ids) {
-			return child.$relatedQuery('parents', site.trx).relate(ids);
+			return child.$relatedQuery('parents', trx).relate(ids);
 		}).then(function() {
 			return child;
 		});
@@ -516,7 +515,7 @@ exports.save = function(req, data) {
 			data: data.data
 		};
 		if (data.lock) obj.lock = data.lock;
-		return block.$query(req.site.trx).patchObject(obj).then(function() {
+		return block.$query(req.trx).patchObject(obj).then(function() {
 			if (!block) throw new Error(`Block not found for update ${data.id}`);
 			return block;
 		});
@@ -554,9 +553,9 @@ exports.save.schema = {
 };
 exports.save.external = true;
 
-exports.del = function({site}, data) {
-	return site.$relatedQuery('children')
-	.select(site.$raw('recursive_delete(block._id, FALSE) AS count'))
+exports.del = function({site, trx}, data) {
+	return site.$relatedQuery('children', trx)
+	.select(trx.raw('recursive_delete(block._id, FALSE) AS count'))
 	.where('block.id', data.id)
 	.where('block.type', data.type).first().throwIfNotFound();
 };
@@ -628,9 +627,9 @@ exports.write.schema = {
 exports.write.external = true;
 
 
-exports.gc = function(days) {
+exports.gc = function({trx}, days) {
 	// this might prove useless
-	return All.api.Block.raw(`DELETE FROM block USING (
+	return trx.raw(`DELETE FROM block USING (
 		SELECT count(relation.child_id), b._id FROM block AS b
 			LEFT OUTER JOIN relation ON (relation.child_id = b._id)
 			LEFT JOIN block AS p ON (p._id = relation.parent_id AND p.type='site')

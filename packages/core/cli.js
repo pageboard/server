@@ -46,13 +46,14 @@ pageboard.init(config).catch(function(err) {
 			}
 		}
 		if (All.opt.site) {
-			return All.site.get({id: All.opt.site}).select('_id').then(function(site) {
+			return All.site.get({}, {id: All.opt.site}).select('_id').then(function(site) {
 				return All.install(site).then(function(site) {
 					args.push({site});
 					if (config.data !== undefined) args.push(config.data);
 				});
 			});
 		} else {
+			args.push({});
 			if (config.data !== undefined) args.push(config.data);
 		}
 	}).then(function() {

@@ -11,8 +11,8 @@ function init() {
 
 }
 
-exports.get = function({site}, data) {
-	return site.$relatedQuery('children')
+exports.get = function({site, trx}, data) {
+	return site.$relatedQuery('children', trx)
 	.where('block.type', 'settings')
 	.where('block.id', data.id).first().throwIfNotFound().select()
 	.eager('[parents(userFilter) as user]', {
@@ -39,8 +39,8 @@ exports.get.schema = {
 };
 exports.get.external = true;
 
-exports.find = function({site}, data) {
-	var q = site.$relatedQuery('children').alias('settings')
+exports.find = function({site, trx}, data) {
+	var q = site.$relatedQuery('children', trx).alias('settings')
 	.where('settings.type', 'settings').first().throwIfNotFound().select().select(ref('user.data:email').as('email'))
 	.joinRelation('parents', {alias: 'user'}).where('user.type', 'user');
 	if (!data.id && !data.email) throw new HttpError.BadRequest("Missing id or email");
@@ -54,8 +54,8 @@ Object.defineProperty(exports.find, 'schema', {
 	}
 });
 
-exports.search = function({site}, data) {
-	var q = site.$relatedQuery('children').alias('settings')
+exports.search = function({site, trx}, data) {
+	var q = site.$relatedQuery('children', trx).alias('settings')
 	.where('settings.type', 'settings').first().throwIfNotFound().select().select(ref('user.data:email').as('email'))
 	.joinRelation('parents', {alias: 'user'}).where('user.type', 'user');
 	q.whereJsonText('user.data:email', 'in', data.email);
@@ -80,14 +80,14 @@ exports.search.schema = {
 exports.save = function(req, data) {
 	var site = req.site;
 	return All.run('settings.find', req, data).then(function(settings) {
-		return settings.$query(site.trx).patchObject({data: data.data}).then(function() {
+		return settings.$query(req.trx).patchObject({data: data.data}).then(function() {
 			return settings;
 		});
 	}).catch(function(err) {
 		if (err.statusCode != 404) throw err;
-		return All.run('user.get', {email: data.email}).catch(function(err) {
+		return All.run('user.get', req, {email: data.email}).catch(function(err) {
 			if (err.statusCode != 404) throw err;
-			return All.run('user.add', {email: data.email});
+			return All.run('user.add', req, {email: data.email});
 		}).then(function(user) {
 			var block = {
 				type: 'settings',
@@ -96,7 +96,7 @@ exports.save = function(req, data) {
 			};
 			return site.$beforeInsert.call(block).then(function() {
 				block.lock = {read: [`id-${block.id}`]};
-				return site.$model.query(site.trx).insertGraph(block, {
+				return site.$query(req.trx).insertGraph(block, {
 					relate: ['parents']
 				}).then(function(settings) {
 					delete settings.parents;

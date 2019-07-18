@@ -30,7 +30,7 @@ function init(All) {
 	});
 }
 
-function userPriv(user, trx) {
+function userPriv({trx}, user) {
 	return user.$relatedQuery('children', trx).alias('privs')
 	.where('privs.type', 'priv')
 	.first().throwIfNotFound().select().catch(function(err) {
@@ -46,13 +46,13 @@ function userPriv(user, trx) {
 	});
 }
 
-function generate(site, data) {
+function generate(req, data) {
 	return Promise.resolve().then(function() {
-		if (data.register) return All.user.add({email: data.email});
+		if (data.register) return All.user.add(req, {email: data.email});
 	}).then(function() {
-		return All.user.get({email: data.email}).select('_id');
+		return All.user.get(req, {email: data.email}).select('_id');
 	}).then(function(user) {
-		return userPriv(user);
+		return userPriv(req, user);
 	}).then(function(priv) {
 		return otp.generate(priv.data.otp.secret);
 	});
@@ -63,7 +63,7 @@ exports.send = function(req, data) {
 	if (!site.href) {
 		return "login.send requires a hostname. Use login.link";
 	}
-	return generate(site, data).then(function(token) {
+	return generate(req, data).then(function(token) {
 		var p = Promise.resolve();
 		var settings = data.settings;
 		if (settings) {
@@ -215,8 +215,8 @@ exports.grant.schema = {
 
 exports.grant.external = true;
 
-exports.link = function({site}, data) {
-	return generate(site, data).then(function(token) {
+exports.link = function(req, data) {
+	return generate(req, data).then(function(token) {
 		return URL.format({
 			pathname: "/.api/login",
 			query: {
@@ -252,7 +252,7 @@ exports.link.schema = {
 };
 
 
-exports.clear = function({site}, data) {
+exports.clear = function(req, data) {
 	return {
 		cookies: {
 			bearer: {}
@@ -269,8 +269,8 @@ exports.clear.schema = {
 exports.clear.external = true;
 
 exports.key = function(req, data) {
-	return All.user.get({email: data.email}).then(function(user) {
-		return userPriv(user).then(function(priv) {
+	return All.user.get(req, {email: data.email}).then(function(user) {
+		return userPriv(req, user).then(function(priv) {
 			var uri = otp.keyuri(user.data.email, All.opt.name, priv.data.otp.secret);
 			if (data.qr) {
 				return qrcode(uri, {
