@@ -151,13 +151,13 @@ function init(All) {
 }
 
 
-function check(fun, data) {
-	if (!fun.schema || fun.schema.additionalProperties) return data;
+function check(fun, schema, data) {
+	if (!schema || schema.additionalProperties) return data;
 	if (!fun.validate) {
-		if (fun.schema.defaults === false) {
-			fun.validate = ajvApiWithNoDefaults.compile(fun.schema);
+		if (schema.defaults === false) {
+			fun.validate = ajvApiWithNoDefaults.compile(schema);
 		} else {
-			fun.validate = ajvApiWithDefaults.compile(fun.schema);
+			fun.validate = ajvApiWithDefaults.compile(schema);
 		}
 	}
 	// coerceTypes mutates data
@@ -177,15 +177,22 @@ All.run = function(apiStr, req, data) {
 		var api = apiStr.split('.');
 		var modName = api[0];
 		var funName = api[1];
-		var mod = All[modName];
-		if (!mod) throw new HttpError.BadRequest(`Unknown api module ${modName}`);
-		var fun = mod[funName];
-		if (!fun) throw new HttpError.BadRequest(`Unknown api method ${funName}`);
+		var mod = All.services[modName];
+		if (!mod) throw new HttpError.BadRequest(Text`
+			Unknown api module ${modName}
+				${Object.getOwnPropertyNames(All.services).sort().join(', ')}
+		`);
+		var schema = mod[funName];
+		var fun = All[modName][funName];
+		if (!fun) throw new HttpError.BadRequest(Text`
+			Unknown api method ${apiStr}
+				${Object.getOwnPropertyNames(mod).sort().join(', ')}
+		`);
 		if (data == null) data = {};
 		try {
-			data = check(fun, data);
+			data = check(fun, schema, data);
 		} catch(err) {
-			err.message += require('./lib/json-doc')(fun.schema);
+			err.message += '\n' + require('./lib/json-doc')(schema);
 			throw err;
 		}
 		// start a transaction on set trx object on site

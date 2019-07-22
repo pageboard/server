@@ -1,29 +1,33 @@
 const traverse = require('json-schema-traverse');
+const {table, getBorderCharacters} = require('table');
 
 module.exports = function(schema) {
 	if (!schema) return;
-	var indent = 1;
-	var lines = [''];
+	var lines = [];
 
 	traverse(schema, {
 		cb: cb
 	});
 
 	function cb(schema, pointer, root, parentPointer, keyword, parent, name) {
-		var line = (new Array(indent + 1)).join(' ');
-		if (!pointer && schema.required) {
-			line += `required: ${schema.required.join(', ')}`;
-		} else if (keyword == "properties") {
+		if (keyword == "properties") {
+			var required = (parent && parent.required || []).includes(name);
 			if (schema.title) {
 				var type = schema.type;
-				if (typeof type == "string") type = `<${type}>`;
-				else type = '<object>';
-				line += `${name}\t${type} \t ${schema.title}`;
+				if (typeof type != "string") type = 'object';
+				else if (type == "object" && schema.properties) type = "";
+				var path = pointer.split('/').slice(1).filter((x) => x != 'properties').join('.');
+				lines.push([path + (required ? ' *' : ''), type, schema.title]);
 			}
 		}
-		lines.push(line);
 	}
-	return lines.join('\n');
+	return table(lines, {
+		drawHorizontalLine: (index, size) => {
+			if (index == 0 || index == size) return true;
+			return lines[index][1] === "";
+		},
+		border: getBorderCharacters('norc')
+	});
 };
 
 
