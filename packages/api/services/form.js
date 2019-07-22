@@ -63,7 +63,7 @@ exports.submit = function(req, data) {
 
 		return All.run(method, req, body).catch(function(err) {
 			return {
-				status: err.status,
+				status: err.status || 500,
 				item: {
 					type: 'error',
 					data: {
