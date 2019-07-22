@@ -132,32 +132,30 @@ exports.send.schema = {
 exports.send.external = true;
 
 
-function verifyToken(email, token) {
-	return All.api.transaction(function(trx) {
-		return All.user.get({email: email}).then(function(user) {
-			return userPriv(user, trx).then(function(priv) {
-				var tries = (priv.data.otp.tries || 0) + 1;
-				if (tries >= 5) {
-					var at = Date.parse(priv.data.otp.checked_at);
-					if (!isNaN(at) && Date.now() - at < 1000 * otp.options.step / 2) {
-						throw new HttpError.TooManyRequests();
-					}
+function verifyToken(req, {email, token}) {
+	return All.user.get(req, {email: email}).then(function(user) {
+		return userPriv({req}, user).then(function(priv) {
+			var tries = (priv.data.otp.tries || 0) + 1;
+			if (tries >= 5) {
+				var at = Date.parse(priv.data.otp.checked_at);
+				if (!isNaN(at) && Date.now() - at < 1000 * otp.options.step / 2) {
+					throw new HttpError.TooManyRequests();
 				}
-				token = token.replace(/\s/g, '');
-				var verified = otp.check(token, priv.data.otp.secret);
-				return priv.$query(trx).patch({
-					'data:otp.checked_at': new Date().toISOString(),
-					'data:otp.tries': verified ? 0 : tries
-				}).then(function() {
-					return verified;
-				});
+			}
+			token = token.replace(/\s/g, '');
+			var verified = otp.check(token, priv.data.otp.secret);
+			return priv.$query(req.trx).patch({
+				'data:otp.checked_at': new Date().toISOString(),
+				'data:otp.tries': verified ? 0 : tries
+			}).then(function() {
+				return verified;
 			});
 		});
 	});
 }
 
 exports.grant = function(req, data) {
-	return verifyToken(data.email, data.token).then(function(verified) {
+	return verifyToken(req, data).then(function(verified) {
 		if (!verified) throw new HttpError.BadRequest("Bad token");
 		return All.run('settings.find', req, {
 			email: data.email
