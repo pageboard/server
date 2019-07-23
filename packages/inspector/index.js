@@ -1,4 +1,4 @@
-var inspector = require('url-inspector');
+var inspector = require.lazy('url-inspector');
 var URL = require('url');
 
 exports = module.exports = function(opt) {

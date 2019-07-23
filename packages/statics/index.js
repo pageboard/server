@@ -1,4 +1,4 @@
-var serveStatic = require('serve-static');
+var serveStatic = require.lazy('serve-static');
 var URL = require('url');
 var Path = require('path');
 var pify = require('util').promisify;
@@ -12,8 +12,8 @@ var fs = {
 var mkdirp = pify(require('mkdirp'));
 
 var bundlers = {
-	js: require('postinstall-js'),
-	css: require('postinstall-css')
+	js: require.lazy('postinstall-js'),
+	css: require.lazy('postinstall-css')
 };
 
 var debug = require('debug')('pageboard:statics');

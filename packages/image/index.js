@@ -1,11 +1,10 @@
-var sharpie = require('sharpie');
-var sharp = sharpie.sharp;
+var sharpie = require.lazy('sharpie');
 var pify = require('util').promisify;
 var fs = {
 	rename: pify(require('fs').rename)
 };
 
-var DataUri = require('datauri');
+var DataUri = require.lazy('datauri');
 var allowedParameters = {
 	rs: true,
 	ex: true,
@@ -14,7 +13,6 @@ var allowedParameters = {
 };
 
 exports = module.exports = function(opt) {
-	sharp.simd(true);
 	if (!opt.image) opt.image = {};
 	if (!opt.image.dir) opt.image.dir = ".image";
 
@@ -32,6 +30,7 @@ exports = module.exports = function(opt) {
 };
 
 function initFile(All) {
+	sharpie.sharp.simd(true);
 	var opt = All.opt;
 	var uploadDir = opt.upload && opt.upload.dir;
 	if (uploadDir) {
@@ -97,9 +96,9 @@ function request(url) {
 exports.thumbnail = function(url) {
 	var pipeline;
 	if (url.startsWith('file://')) {
-		pipeline = sharp(url.substring(7));
+		pipeline = sharpie.sharp(url.substring(7));
 	} else {
-		pipeline = sharp();
+		pipeline = sharpie.sharp();
 		request(url).pipe(pipeline);
 	}
 	return pipeline
@@ -130,12 +129,12 @@ exports.upload = function(file) {
 		if (!mime.startsWith('image/')) return;
 		if (mime.startsWith('image/svg')) return;
 		var format = mime.split('/').pop();
-		if (!sharp.format[format]) {
+		if (!sharpie.sharp.format[format]) {
 			console.warn("image.upload cannot process", mime);
 			return;
 		}
 		var dst = file.path + ".tmp";
-		return sharp(file.path)
+		return sharpie.sharp(file.path)
 		.toFormat(format, {quality:93})
 		.toFile(dst).then(function() {
 			return fs.rename(dst, file.path);

@@ -1,25 +1,29 @@
+const importLazy = require('import-lazy');
+Object.getPrototypeOf(require).lazy = function(str) {
+	return importLazy(this)(str);
+};
 var util = require('util');
-var pify = util.promisify;
-if (!pify) pify = util.promisify = require('util-promisify');
+const pify = util.promisify = util.promisify || require('util-promisify');
 if (!Promise.prototype.finally) require('promise.prototype.finally').shim();
-var Path = require('path');
-var express = require('express');
-var morgan = require('morgan');
-var pad = require('pad');
-var prettyBytes = require('pretty-bytes');
-var rc = require('rc');
-var mkdirp = pify(require('mkdirp'));
-var xdg = require('xdg-basedir');
-var resolvePkg = require('resolve-pkg');
-var debug = require('debug')('pageboard:core');
-var http = require('http');
+const Path = require('path');
+const express = require('express');
+const morgan = require('morgan');
+const pad = require('pad');
+const prettyBytes = require('pretty-bytes');
+const rc = require('rc');
+const mkdirp = pify(require('mkdirp'));
+const xdg = require('xdg-basedir');
+const resolvePkg = require('resolve-pkg');
+const debug = require('debug')('pageboard:core');
+const http = require.lazy('http');
+const Cron = require.lazy("cron");
 
 util.inspect.defaultOptions.depth = 10;
 
-var Domains = require('./lib/domains');
-var Install = require('./lib/install');
+const Domains = require.lazy('./lib/domains');
+const Install = require('./lib/install');
 
-var fs = {
+const fs = {
 	writeFile: pify(require('fs').writeFile),
 	readFile: pify(require('fs').readFile),
 	readdir: pify(require('fs').readdir),
@@ -116,7 +120,9 @@ exports.init = function(opt) {
 					plugin = null;
 					continue;
 				}
-				if (typeof plugin != "function") continue;
+				if (typeof plugin != "function") {
+					continue;
+				}
 				var obj = plugin(opt) || {};
 				obj.plugin = plugin;
 				plugins.push(obj);
@@ -151,27 +157,31 @@ exports.init = function(opt) {
 
 function install(site) {
 	var All = this;
-	All.domains.promote(site);
-	All.domains.hold(site);
+	if (site.href) {
+		All.domains.promote(site);
+		All.domains.hold(site);
+	}
 
 	return Install.install(site, All.opt).then(function(pkg) {
-		return All.api.install(site, pkg, All).then(function() {
-			return All.statics.install(site, pkg, All).then(function() {
-				return All.api.validate(site, pkg);
+		return All.api.install(site, pkg, All).then(function(standalones) {
+			if (site.href) return All.statics.install(site, pkg, All).then(function() {
+				return All.api.validate(site, pkg, standalones);
 			});
 		}).then(function() {
 			return All.auth.install(site);
 		}).then(function() {
-			return All.cache.install(site);
+			if (site.href) return All.cache.install(site);
 		}).then(function() {
 			return Install.clean(site, pkg, All.opt);
 		});
 	}).then(function(pkg) {
-		All.domains.replace(site);
-		All.domains.release(site);
+		if (site.href) {
+			All.domains.replace(site);
+			All.domains.release(site);
+		}
 		return site;
 	}).catch(function(err) {
-		All.domains.error(site, err);
+		if (site.href) All.domains.error(site, err);
 		if (All.opt.env == "development") console.error(err);
 		throw err;
 	});
@@ -351,7 +361,7 @@ function initDumps(All) {
  every ${opt.interval} days
  for ${opt.keep} days
  to ${opt.dir}`);
-	var job = new (require("cron").CronJob)({
+	var job = new Cron.CronJob({
 		cronTime: `0 3 */${opt.interval} * *`,
 		onTick: function() {
 			doDump(All, opt.dir, opt.interval * opt.keep * day);

@@ -1,11 +1,6 @@
-const otp = require('otplib').authenticator;
-const qrcode = require('qrcode').toString;
+const otp = require.lazy('otplib');
+const qrcode = require.lazy('qrcode');
 const URL = require('url');
-
-otp.options = {
-	step: 30, // do not change this value, we want third-party otp apps to work with us
-	window: [40, 1] // ten minutes-old tokens are still valid
-};
 
 exports = module.exports = function(opt) {
 	return {
@@ -15,6 +10,10 @@ exports = module.exports = function(opt) {
 };
 
 function init(All) {
+	otp.authenticator.options = {
+		step: 30, // do not change this value, we want third-party otp apps to work with us
+		window: [40, 1] // ten minutes-old tokens are still valid
+	};
 	All.app.get("/.api/login", function(req, res, next) {
 		All.run('login.grant', req, req.query).then(function(data) {
 			data.location = "back";
@@ -39,7 +38,7 @@ function userPriv({trx}, user) {
 			type: 'priv',
 			data: {
 				otp: {
-					secret: otp.generateSecret()
+					secret: otp.authenticator.generateSecret()
 				}
 			}
 		}).returning('*');
@@ -54,7 +53,7 @@ function generate(req, data) {
 	}).then(function(user) {
 		return userPriv(req, user);
 	}).then(function(priv) {
-		return otp.generate(priv.data.otp.secret);
+		return otp.authenticator.generate(priv.data.otp.secret);
 	});
 }
 
@@ -138,12 +137,12 @@ function verifyToken(req, {email, token}) {
 			var tries = (priv.data.otp.tries || 0) + 1;
 			if (tries >= 5) {
 				var at = Date.parse(priv.data.otp.checked_at);
-				if (!isNaN(at) && Date.now() - at < 1000 * otp.options.step / 2) {
+				if (!isNaN(at) && Date.now() - at < 1000 * otp.authenticator.options.step / 2) {
 					throw new HttpError.TooManyRequests();
 				}
 			}
 			token = token.replace(/\s/g, '');
-			var verified = otp.check(token, priv.data.otp.secret);
+			var verified = otp.authenticator.check(token, priv.data.otp.secret);
 			return priv.$query(req.trx).patch({
 				'data:otp.checked_at': new Date().toISOString(),
 				'data:otp.tries': verified ? 0 : tries
@@ -269,9 +268,9 @@ exports.clear.external = true;
 exports.key = function(req, data) {
 	return All.user.get(req, {email: data.email}).then(function(user) {
 		return userPriv(req, user).then(function(priv) {
-			var uri = otp.keyuri(user.data.email, All.opt.name, priv.data.otp.secret);
+			var uri = otp.authenticator.keyuri(user.data.email, All.opt.name, priv.data.otp.secret);
 			if (data.qr) {
-				return qrcode(uri, {
+				return qrcode.toString(uri, {
 					type: 'terminal',
 					errorCorrectionLevel: 'L'
 				});

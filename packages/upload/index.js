@@ -1,12 +1,12 @@
-const multer = require('multer');
+const multer = require.lazy('multer');
 const Path = require('path');
-const crypto = require('crypto');
+const crypto = require.lazy('crypto');
 const mkdirp = require('mkdirp');
 const typeis = require('type-is');
-const mime = require('mime-types');
+const mime = require.lazy('mime-types');
 const pify = require('util').promisify;
 const mkdirpp = pify(mkdirp);
-const speaking = require('speakingurl');
+const speaking = require.lazy('speakingurl');
 const fs = {
 	unlink: pify(require('fs').unlink)
 };

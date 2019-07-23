@@ -1,15 +1,15 @@
 const Path = require('path');
-const NodeMailer = require('nodemailer');
-const AddressParser = require('nodemailer/lib/addressparser');
-const Mailgun = require('nodemailer-mailgun-transport');
-const got = require('got');
+const NodeMailer = require.lazy('nodemailer');
+const AddressParser = require.lazy('nodemailer/lib/addressparser');
+const Mailgun = require.lazy('nodemailer-mailgun-transport');
+const got = require.lazy('got');
 
 // TODO https://nodemailer.com/dkim/
 // TODO https://postmarkapp.com/blog/differences-in-delivery-between-transactional-and-bulk-email
 // use a different domain for transactional and for bulk sending
 
-const multipart = require('./lib/multipart.js');
-const validateMailgun = require('./lib/validate-mailgun.js');
+const multipart = require.lazy('./lib/multipart.js');
+const validateMailgun = require.lazy('./lib/validate-mailgun.js');
 
 var mailer, defaultSender, mailDomain;
 
@@ -34,9 +34,6 @@ exports = module.exports = function(opt) {
 		console.warn('Missing mail.sender');
 		return;
 	}
-	mailer = NodeMailer.createTransport(Mailgun(opt.mail.mailgun));
-	defaultSender = opt.mail.sender;
-	mailDomain = opt.mail.domain;
 
 	return {
 		priority: 1, // after read plugin
@@ -52,6 +49,11 @@ exports = module.exports = function(opt) {
 };
 
 function init(All) {
+	const opt = All.opt.mail;
+	mailer = NodeMailer.createTransport(Mailgun(opt.mailgun));
+	defaultSender = opt.sender;
+	mailDomain = opt.domain;
+
 	All.app.post('/.api/mail', multipart, function(req, res, next) {
 		All.run('mail.receive', req.body).then(function(ok) {
 			// https://documentation.mailgun.com/en/latest/user_manual.html#receiving-messages-via-http-through-a-forward-action

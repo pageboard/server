@@ -5,7 +5,7 @@ var ajv = require('ajv');
 var AjvKeywords = require('ajv-keywords');
 var ajvMetaSchema = require('ajv/lib/refs/json-schema-draft-06.json');
 
-var bodyParserJson = require('body-parser').json();
+var bodyParser = require.lazy('body-parser');
 
 var dba = require('./lib/dba');
 var imports = require('./lib/imports');
@@ -146,7 +146,7 @@ function init(All) {
 		// invalid site by site
 		All.cache.tag('data-:site'),
 		// parse json bodies
-		bodyParserJson
+		bodyParser.json()
 	);
 }
 

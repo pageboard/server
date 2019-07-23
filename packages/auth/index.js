@@ -1,4 +1,4 @@
-const UpcacheLock = require('upcache').lock;
+const Upcache = require.lazy('upcache');
 
 exports = module.exports = function(opt) {
 	opt.plugins.unshift(
@@ -24,7 +24,7 @@ function init(All) {
 
 	return require('./lib/keygen')(All).then(function(keys) {
 		Object.assign(opt.lock, keys);
-		var lock = UpcacheLock(opt.lock);
+		var lock = Upcache.lock(opt.lock);
 
 		All.auth.restrict = lock.restrict.bind(lock);
 		All.auth.vary = lock.vary;

@@ -1,4 +1,4 @@
-const {tag, map} = require('upcache');
+const Upcache = require.lazy('upcache');
 var pify = require('util').promisify;
 var fs = {
 	readFile: pify(require('fs').readFile),
@@ -6,17 +6,13 @@ var fs = {
 	statSync: pify(require('fs').statSync)
 };
 var Path = require('path');
-var Stringify = require('fast-json-stable-stringify');
+var Stringify = require.lazy('fast-json-stable-stringify');
 var crypto = require('crypto');
-var got = require('got');
+var got = require.lazy('got');
 
 var state = new CacheState();
 
 exports = module.exports = function(opt) {
-	exports.map = map;
-	exports.tag = paramSiteWrap(tag);
-	exports.for = paramSiteWrap(tag.for);
-	exports.disable = tag.disable;
 	exports.install = state.install.bind(state);
 	return {
 		init: init,
@@ -25,8 +21,12 @@ exports = module.exports = function(opt) {
 };
 
 function init(All) {
+	All.cache.map = Upcache.map;
+	All.cache.tag = paramSiteWrap(Upcache.tag);
+	All.cache.for = paramSiteWrap(Upcache.tag.for);
+	All.cache.disable = Upcache.tag.disable;
 	return state.init(All).then(function() {
-		All.app.get('*', tag('app'));
+		All.app.get('*', Upcache.tag('app'));
 		All.app.post('/.well-known/upcache', state.mw.bind(state), function(req, res) {
 			res.sendStatus(204);
 		});
@@ -118,7 +118,7 @@ CacheState.prototype.mw = function(req, res, next) {
 		console.info("detected application change");
 	}
 	tags.push('app-:site');
-	exports.tag.apply(null, tags)(req, res, next);
+	All.cache.tag.apply(null, tags)(req, res, next);
 	if (doSave) me.save();
 };
 

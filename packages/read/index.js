@@ -1,5 +1,5 @@
 const Path = require('path');
-const got = require('got').extend({retry: 0, throwHttpErrors: false});
+const got = require.lazy('got');
 const { pipeline } = require('stream');
 
 module.exports = function(opt) {
@@ -52,7 +52,10 @@ function prerender(dom) {
 			path = path.slice(0, -ext.length - 1);
 		}
 		if (urlRegex.test(path) == false) {
-			pipeline(got.stream(req.site.href + '/.well-known/404'), res, function(err) {
+			pipeline(got.stream(req.site.href + '/.well-known/404', {
+				retry: 0,
+				throwHttpErrors: false
+			}), res, function(err) {
 				if (err) next(err);
 			});
 		} else {

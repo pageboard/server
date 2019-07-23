@@ -34,50 +34,45 @@ exports.install = function(site, pkg, All) {
 		});
 
 		var eltsMap = {};
+		var pageTypes = [];
+		var standalones = [];
 		names.forEach(function(name) {
 			var elt = Object.assign({}, elts[name]); // drop proxy
+			if (elt.group == "page") pageTypes.push(name);
+			elt.name = name;
 			eltsMap[name] = elt;
+			if (elt.standalone) standalones.push(elt);
 		});
 		var Block = All.api.Block.extendSchema(id, eltsMap);
 		if (id) {
 			pkg.Block = Block;
 			pkg.eltsMap = eltsMap;
+			site.$pagetypes = pageTypes;
+			site.$standalones = {};
+			site.constructor = Block; // gni ?
 		} else {
 			All.api.Block = Block;
 		}
+		return standalones;
 	}).catch(function(err) {
 		console.error(err);
 		throw err;
 	});
 };
 
-exports.validate = function(site, pkg) {
-	return Promise.resolve().then(function() {
-		var eltsMap = pkg.eltsMap;
-		var standalones = [];
-		site.$pagetypes = [];
-		Object.keys(eltsMap).forEach(function(key) {
-			var el = eltsMap[key];
-			if (!el.name) el.name = key;
-			if (el.standalone) {
-				standalones.push(el);
-				if (el.group == "page") site.$pagetypes.push(el.name);
-			}
-		});
-		site.$standalones = {};
-		return Promise.all(standalones.map(function(el) {
-			el = eltsMap[el.name] = Object.assign({}, el);
-			return bundle(site, pkg, el);
-		})).then(function() {
-			return bundleSource(site, pkg, '', 'services', All.services).then(function(path) {
-				site.$services = path;
-			});
+exports.validate = function(site, pkg, standalones) {
+	var eltsMap = pkg.eltsMap;
+	return Promise.all(standalones.map(function(el) {
+		el = eltsMap[el.name] = Object.assign({}, el);
+		return bundle(site, pkg, el);
+	})).then(function() {
+		return bundleSource(site, pkg, '', 'services', All.services).then(function(path) {
+			site.$services = path;
 		});
 	}).then(function() {
 		site.$scripts = pkg.eltsMap.site.scripts;
 		site.$resources = pkg.eltsMap.site.resources;
 		site.$stylesheets = pkg.eltsMap.site.stylesheets;
-		site.constructor = pkg.Block;
 		delete pkg.eltsMap;
 		delete pkg.Block;
 	});
@@ -150,9 +145,7 @@ function bundleSource(site, pkg, prefix, name, obj) {
 	if (version == null) version = site.branch;
 	var fileurl = `/.files/${version}/_${filename}`;
 	var fileruntime = All.statics.resolve(site.id, fileurl);
-
 	var str = `Pageboard.${name} = Object.assign(Pageboard.${name} || {}, ${toSource(obj)});`;
-
 	return fs.writeFile(fileruntime, str).then(function() {
 		return All.statics.bundle(site, pkg, [fileurl], filename);
 	}).then(function(paths) {

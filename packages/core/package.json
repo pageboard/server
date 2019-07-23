@@ -22,6 +22,7 @@
     "debug": "^4.1.1",
     "express": "^4.16.4",
     "http-errors": "^1.7.2",
+    "import-lazy": "^4.0.0",
     "mkdirp": "^0.5.1",
     "morgan": "^1.9.1",
     "outdent": "^0.7.0",
