@@ -101,8 +101,9 @@ function locked(req, list) {
 		list = list.read;
 	}
 	if (list == null) return false;
-	if (typeof list == "string") list = [list];
-	if (list === true || list.length == 0) return false;
+	else if (typeof list == "string") list = [list];
+	else if (list === true) return true;
+	else if (list.length == 0) return false;
 	var minLevel = Infinity;
 	var grants = user.grants || [];
 	grants.forEach(function(grant) {
