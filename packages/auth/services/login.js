@@ -132,7 +132,7 @@ exports.send.external = true;
 
 
 function verifyToken(req, {email, token}) {
-	return All.user.get(req, {email: email}).then(function(user) {
+	return All.user.get(req, {email}).then(function(user) {
 		return userPriv({req}, user).then(function(priv) {
 			var tries = (priv.data.otp.tries || 0) + 1;
 			if (tries >= 5) {
