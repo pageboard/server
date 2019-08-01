@@ -168,7 +168,7 @@ function asPaths(obj, ret, pre, first, schema) {
 			cur = key;
 		}
 		if (Array.isArray(val) || val == null || typeof val != "object") {
-			if (val && typeof val == "string" && schem.type == "string" && schem.format == "date-time") {
+			if (val && typeof val == "string" && schem.type == "string" && (schem.format == "date-time" || schem.format == "date")) {
 				try { val = partialDate(val); } catch(err) { /**/ }
 			} else if (schem.type == "boolean" && typeof val != "boolean") {
 				if (val == "false" || val == 0 || !val) val = false;
