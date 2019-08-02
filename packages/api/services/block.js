@@ -68,21 +68,21 @@ exports.search = function({site, trx}, data) {
 		schemas[data.type] = site.$schema(data.type);
 	}
 
-	var parents = data.parents || {};
-	if (parents.type) {
-		schemas[parents.type] = site.$schema(parents.type);
-	} else if (parents.id) {
-		// ok
-	} else {
-		parents = null;
+	var parents = data.parents;
+	if (parents) {
+		if (parents.type) {
+			schemas[parents.type] = site.$schema(parents.type);
+		} else if (parents.id) {
+			// ok
+		} else {
+			parents = null;
+		}
 	}
-	var children = data.children || {};
-	if (children.type) {
-		schemas[children.type] = site.$schema(children.type);
-	} else if (children.id) {
-		// ok
-	} else {
-		children = null;
+	var children = data.children;
+	if (children) {
+		if (children.type) {
+			schemas[children.type] = site.$schema(children.type);
+		}
 	}
 	var valid = false;
 	var q = site.$relatedQuery('children', trx);
@@ -141,7 +141,7 @@ exports.search = function({site, trx}, data) {
 			filterSub(query, parents, schemas[parents.type]);
 		},
 		childrenFilter: function(query) {
-			filterSub(query, children, schemas[children.type]);
+			filterSub(query, children, children.type ? schemas[children.type] : null);
 		}
 	});
 
@@ -252,6 +252,7 @@ exports.search.schema = {
 		parents: {
 			title: 'Parents',
 			type: 'object',
+			nullable: true,
 			properties: {
 				first: {
 					title: 'Single',
@@ -321,6 +322,7 @@ exports.search.schema = {
 		children: {
 			title: 'Children',
 			type: 'object',
+			nullable: true,
 			properties: {
 				first: {
 					title: 'Single',
@@ -401,7 +403,7 @@ function whereSub(q, data, schema, alias = 'block') {
 	if (data.type) {
 		valid = true;
 		q.where(`${alias}.type`, data.type);
-	} else {
+	} else if (schema) {
 		if (!data.type) throw new HttpError.BadRequest("Missing type");
 	}
 	if (data.id) {
