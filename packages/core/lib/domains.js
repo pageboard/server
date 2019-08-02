@@ -69,7 +69,10 @@ Domains.prototype.init = function(req, res, next) {
 			if (!site.data) site.data = {};
 
 			// there was a miss, so update domains list
-			var domains = (site.data.domains || []).concat(pageboardNames.map(function(hn) {
+			var domains = site.data.domains;
+			if (domains == null) domains = [];
+			else if (typeof domains == "string") domains = [domains];
+			var domains = domains.concat(pageboardNames.map(function(hn) {
 				return host.id + hn;
 			}));
 			domains.forEach(function(domain) {
