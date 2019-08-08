@@ -13,7 +13,7 @@ function init(All) {
 	All.app.get('/.api/page', function(req, res, next) {
 		var isWebmaster = !All.auth.locked(req, ['webmaster']);
 		var dev = req.query.develop == "write";
-		var $write = req.site.$standalones.write;
+		var $write = req.site.$bundles.write;
 		delete req.query.develop;
 		if (isWebmaster && !dev) {
 			All.send(res, {
@@ -43,7 +43,7 @@ function init(All) {
 			// webmaster want to see those anyway
 			// this must not be confused with page.lock
 			req.query.drafts = true;
-			if (!req.query.type) req.query.type = req.site.$pagetypes;
+			if (!req.query.type) req.query.type = req.site.$pages;
 		}
 
 		var action = req.query.text != null ? 'page.search' : 'page.all';
@@ -132,7 +132,7 @@ function QueryPageHref({site, trx}, url) {
 	.join('block AS page', {
 		'page._id': 'r.parent_id'
 	})
-	.whereIn('page.type', site.$pagetypes)
+	.whereIn('page.type', site.$pages)
 	.whereJsonText('page.data:url', url)
 	.join('relation as rp', {
 		'rp.child_id': 'page._id'
@@ -148,7 +148,7 @@ exports.get = function(req, data) {
 	};
 	var wkp = /^\/\.well-known\/(\d{3})$/.exec(data.url);
 	if (wkp) obj.status = parseInt(wkp[1]);
-	return QueryPage(req).whereIn('page.type', site.$pagetypes)
+	return QueryPage(req).whereIn('page.type', site.$pages)
 	.whereJsonText("page.data:url", data.url)
 	.select(
 		QueryPageHref(req, data.url).as('hrefs')
@@ -177,7 +177,7 @@ exports.get = function(req, data) {
 		Object.assign(obj, {
 			item: page,
 			items: page.children.concat(page.standalones),
-			meta: site.$standalones[page.type],
+			meta: site.$bundles[page.type],
 			links: links,
 			hrefs: page.hrefs
 		});
@@ -396,7 +396,7 @@ exports.all = function(req, data) {
 			obj.item = pages.shift();
 			if (obj.item && obj.item.data.url != data.parent) delete obj.item;
 		} else {
-			req.site.$pagetypes.forEach(function(type) {
+			req.site.$pages.forEach(function(type) {
 				var schema = req.site.$schema(type);
 				els[type] = schema;
 			});
@@ -488,7 +488,7 @@ exports.save = function(req, changes) {
 	var returning = {};
 	return req.site.$relatedQuery('children', req.trx)
 	.select('block.id', ref('block.data:url').as('url'))
-	.whereIn('block.type', req.site.$pagetypes)
+	.whereIn('block.type', req.site.$pages)
 	.whereNotNull(ref('block.data:url')).then(function(dbPages) {
 		pages.all.forEach(function(page) {
 			if (!page.data.url) {
@@ -622,7 +622,7 @@ function applyAdd({site, trx}, list) {
 
 function applyUpdate(req, list) {
 	return Promise.all(list.map(function(block) {
-		if (req.site.$pagetypes.includes(block.type)) {
+		if (req.site.$pages.includes(block.type)) {
 			return updatePage(req, block);
 		} else if (!block.updated_at) {
 			throw new HttpError.BadRequest(`Block is missing 'updated_at' ${block.id}`);
@@ -645,7 +645,7 @@ function applyUpdate(req, list) {
 
 function updatePage({site, trx}, page) {
 	return site.$relatedQuery('children', trx).where('block.id', page.id)
-	.whereIn('block.type', page.type ? [page.type] : site.$pagetypes)
+	.whereIn('block.type', page.type ? [page.type] : site.$pages)
 	.select(ref('block.data:url').as('url')).first().throwIfNotFound().then(function(dbPage) {
 		var oldUrl = dbPage.url;
 		var newUrl = page.data.url;

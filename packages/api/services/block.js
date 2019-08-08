@@ -148,8 +148,8 @@ exports.search = function({site, trx}, data) {
 	return q.then(function(rows) {
 		var metas = [];
 		Object.keys(schemas).forEach(function(type) {
-			var meta = site.$standalones[type];
-			if (meta && !site.$pagetypes[type]) metas.push(meta);
+			var meta = site.$bundles[type];
+			if (meta && !site.$pages[type]) metas.push(meta);
 		});
 		var obj = {
 			items: rows,

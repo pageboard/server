@@ -34,35 +34,44 @@ exports.install = function(site, pkg, All) {
 		});
 
 		var eltsMap = {};
-		var pageTypes = [];
-		var standalones = [];
+		var groups = {};
+		var bundles = [];
 		names.forEach(function(name) {
-			var elt = Object.assign({}, elts[name]); // drop proxy
-			if (elt.group == "page") pageTypes.push(name);
-			elt.name = name;
-			eltsMap[name] = elt;
-			if (elt.standalone) standalones.push(elt);
+			var el = Object.assign({}, elts[name]); // drop proxy
+			el.name = name;
+			eltsMap[name] = el;
+			var isPage = false;
+			if (el.group) el.group.split(/\s+/).forEach(function(gn) {
+				if (gn == "page") isPage = true;
+				var group = groups[gn];
+				if (!group) group = groups[gn] = [];
+				if (!group.includes(name)) group.push(name);
+			});
+			if (isPage) el.standalone = el.bundle = true;
+			if (el.bundle) bundles.push(el);
 		});
+
 		var Block = All.api.Block.extendSchema(id, eltsMap);
 		if (id) {
 			pkg.Block = Block;
 			pkg.eltsMap = eltsMap;
-			site.$pagetypes = pageTypes;
-			site.$standalones = {};
+			pkg.groups = groups;
+			site.$pages = groups.page;
+			site.$bundles = {};
 			site.constructor = Block; // gni ?
 		} else {
 			All.api.Block = Block;
 		}
-		return standalones;
+		return bundles;
 	}).catch(function(err) {
 		console.error(err);
 		throw err;
 	});
 };
 
-exports.validate = function(site, pkg, standalones) {
+exports.validate = function(site, pkg, bundles) {
 	var eltsMap = pkg.eltsMap;
-	return Promise.all(standalones.map(function(el) {
+	return Promise.all(bundles.map(function(el) {
 		el = eltsMap[el.name] = Object.assign({}, el);
 		return bundle(site, pkg, el);
 	})).then(function() {
@@ -92,12 +101,12 @@ function sortPriority(list) {
 }
 
 function bundle(site, pkg, rootEl) {
-	var list = listDependencies(rootEl.group, pkg.eltsMap, rootEl);
+	var list = listDependencies(pkg, rootEl.group, rootEl);
 	list.sort(function(a, b) {
 		return (a.priority || 0) - (b.priority || 0);
 	});
-	var scripts = filter(list, 'scripts');
-	var styles = filter(list, 'stylesheets');
+	var scripts = sortElements(list, 'scripts');
+	var styles = sortElements(list, 'stylesheets');
 	var prefix = `${rootEl.name}-`;
 
 	var eltsMap = {};
@@ -109,7 +118,7 @@ function bundle(site, pkg, rootEl) {
 		}
 		eltsMap[elt.name] = elt;
 	});
-	var metaEl = site.$standalones[rootEl.name] = {
+	var metaEl = site.$bundles[rootEl.name] = {
 		group: rootEl.group
 	};
 
@@ -153,51 +162,47 @@ function bundleSource(site, pkg, prefix, name, obj) {
 	});
 }
 
-function listDependencies(rootGroup, eltsMap, el, list=[], sieve={}) {
+function listDependencies(pkg, rootGroup, el, list=[], gDone={}, eDone={}) {
 	var word;
+	var elts = pkg.eltsMap;
+	var group;
 	if (typeof el == "string") {
 		word = el;
-		el = eltsMap[word];
-		if (!el) {
-			var isGroup = false;
-			Object.keys(eltsMap).forEach(function(key) {
-				var gel = eltsMap[key];
-				if (!gel.group) {
-					// non-rendering elements
-					if (rootGroup == "page" && !gel.render && !gel.html && (gel.stylesheets || gel.scripts)) {
-						listDependencies(rootGroup, eltsMap, gel, list, sieve);
-					}
-				} else if (gel.standalone) {
-					// prevent loops
-				} else if (gel.group.split(" ").includes(word)) {
-					isGroup = true;
-					listDependencies(rootGroup, eltsMap, gel, list, sieve);
-				}
-			});
-			if (!isGroup) console.error(`Element '${word}' is not in a group`);
+		el = elts[word];
+		group = pkg.groups[word];
+		if (group) {
+			if (!gDone[word]) {
+				gDone[word] = true;
+				group.forEach((name) => {
+					listDependencies(pkg, rootGroup, elts[name], list, gDone, eDone);
+				});
+			}
+		} else if (!el) {
+			console.error(`'${word}' is not an element nor a group`);
 		}
 	}
-	if (!el || sieve[el.name]) return list;
+	if (!el || eDone[el.name]) return list;
 	list.push(el);
-	sieve[el.name] = true;
+	eDone[el.name] = true; // FIXME this might be a group name, and sometimes we actually want
+	// to iterate over group names
 	var contents = All.api.Block.normalizeContents(el.contents);
-	if (!contents) {
-		if (el.standalone && el.group) contents = [{nodes:el.group}];
-		else return list;
-	}
+	if (!contents) return list;
 	contents.forEach(function(content) {
 		if (!content.nodes) return;
 		content.nodes.split(/\W+/).filter(x => !!x).forEach(function(word) {
-			if (word == "text" || word == "page") return;
-			if (!sieve[word]) {
-				listDependencies(rootGroup, eltsMap, word, list, sieve);
+			if (word == rootGroup) {
+				console.warn("contents contains root group", rootGroup, el.name, contents);
+				return;
 			}
+			if (word == "text") return;
+			if (eDone[word] && (!pkg.groups[word] || gDone[word])) return;
+			listDependencies(pkg, rootGroup, word, list, gDone, eDone);
 		});
 	});
 	return list;
 }
 
-function filter(elements, prop) {
+function sortElements(elements, prop) {
 	var map = {};
 	var res = [];
 	elements.forEach(function(el) {
