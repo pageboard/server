@@ -31,8 +31,13 @@ exports.plugin = function(page, settings, request, response) {
 					topic = topic.trim();
 					if (topic && !categories.includes(topic)) categories.push(topic);
 				});
+				var title = node.querySelector('[block-content="title"]');
+				if (!title) return;
+				var desc = node.querySelector('[block-content="description"]');
+				if (!desc) return;
 				return {
-					title: node.querySelector('[data-label="title"]').innerText,
+					title: title.innerText,
+					description: desc.innerText,
 					link: absolute(node.getAttribute('feed-url')),
 					date: node.getAttribute('feed-publication'),
 					content: node.querySelector('[block-content="section"]').innerHTML,
@@ -60,6 +65,7 @@ exports.plugin = function(page, settings, request, response) {
 			settings.output = false;
 			const feed = new Feed(obj.feed);
 			obj.feeds.forEach((item) => {
+				if (!item || !item.title) return;
 				item.date = new Date(item.date);
 				feed.addItem(item);
 			});
