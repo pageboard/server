@@ -110,7 +110,6 @@ exports.bundle = function(site, pkg, list, filename) {
 		if (ext != "js" && ext != "css") throw new Error("Bundles only .js or .css extensions");
 		return bundlers[ext](inputs, output, {
 			minify: site.data.env == "production",
-			browsers: opts.browsers,
 			cacheDir: cacheDir
 		}).catch(function(err) {
 			delete err.input;
