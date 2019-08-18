@@ -346,7 +346,7 @@ function runPostinstall(dir, name, opt) {
 	return getDependencies(dir, name, list).then(function() {
 		var firstError;
 		return Promise.all(list.reverse().map(function({pkg, dir}) {
-			// if (!pkg.postinstall) return;
+			if (!pkg.postinstall) return;
 			try {
 				return postinstall.process(pkg.postinstall, {
 					cwd: dir,
