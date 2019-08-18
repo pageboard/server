@@ -65,7 +65,7 @@ function init(All) {
 				if (mod.tag && refs.tag != mod.tag) {
 					msg = `Site module restricted to tag "${mod.tag}"`;
 					stop = true;
-				} else if (!version) {
+				} else if (!version && site.data.env == "production") {
 					version = refs.tag;
 				}
 			}
