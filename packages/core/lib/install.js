@@ -344,18 +344,28 @@ function getDependencies(root, name, list, deps) {
 function runPostinstall(dir, name, opt) {
 	var list = [];
 	return getDependencies(dir, name, list).then(function() {
+		var firstError;
 		return Promise.all(list.reverse().map(function({pkg, dir}) {
-			return postinstall.process(pkg.postinstall, {
-				cwd: dir,
-				allow: opt.postinstall || [
-					'link',
-					'copy',
-					'concat',
-					'js',
-					'css',
-					'browserify'
-				]
-			});
-		}));
+			// if (!pkg.postinstall) return;
+			try {
+				return postinstall.process(pkg.postinstall, {
+					cwd: dir,
+					allow: opt.postinstall || [
+						'link',
+						'copy',
+						'concat',
+						'js',
+						'css',
+						'browserify'
+					]
+				}).catch((err) => {
+					if (!firstError) firstError = err;
+				});
+			} catch(err) {
+				if (!firstError) firstError = err;
+			}
+		})).then(function() {
+			if (firstError) throw firstError;
+		});
 	});
 }
