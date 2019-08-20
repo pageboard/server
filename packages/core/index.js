@@ -16,7 +16,6 @@ const xdg = require('xdg-basedir');
 const resolvePkg = require('resolve-pkg');
 const debug = require('debug')('pageboard:core');
 const http = require.lazy('http');
-const Cron = require.lazy("cron");
 
 util.inspect.defaultOptions.depth = 10;
 
@@ -150,7 +149,6 @@ exports.init = function(opt) {
 	}).then(function() {
 		return All.cache.install(null, All.opt, All);
 	}).then(function() {
-		if (Object.keys(opt.upstreams)[0] == opt.version) initDumps(All);
 		return All;
 	});
 };
@@ -191,9 +189,6 @@ exports.start = function(All) {
 	var server = http.createServer(All.app);
 	server.listen(All.opt.port);
 	console.info(`Listening on port ${All.opt.port}`);
-	setTimeout(function() {
-		All.api.gc(All);
-	}, 1000);
 };
 
 function initDirs(dirs) {
@@ -348,42 +343,4 @@ function viewsError(err, req, res, next) {
 //	res.redirect(req.app.settings.errorLocation + '?code=' + code);
 }
 
-function initDumps(All) {
-	var opt = All.opt.database.dump;
-	if (!opt) return;
-	var day = 1000 * 60 * 60 * 24;
-	opt = All.opt.database.dump = Object.assign({
-		interval: 1,
-		dir: Path.join(All.opt.dirs.data, 'dumps'),
-		keep: 15
-	}, opt);
-	console.info(`Dumps db
- every ${opt.interval} days
- for ${opt.keep} days
- to ${opt.dir}`);
-	var job = new Cron.CronJob({
-		cronTime: `0 3 */${opt.interval} * *`,
-		onTick: function() {
-			doDump(All, opt.dir, opt.interval * opt.keep * day);
-		}
-	});
-	job.start();
-}
-
-function doDump(All, dir, keep) {
-	All.api.dump();
-	var now = Date.now();
-	mkdirp(dir).then(function() {
-		fs.readdir(dir).then(function(files) {
-			files.forEach(function(file) {
-				file = Path.join(dir, file);
-				fs.stat(file).then(function(stat) {
-					if (stat.mtime.getTime() < now - keep - 1000) {
-						fs.unlink(file);
-					}
-				});
-			});
-		});
-	});
-}
 

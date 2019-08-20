@@ -1,5 +1,4 @@
 var objection = require('objection');
-var knex = require('knex');
 
 var ajv = require('ajv');
 var AjvKeywords = require('ajv-keywords');
@@ -7,7 +6,6 @@ var ajvMetaSchema = require('ajv/lib/refs/json-schema-draft-06.json');
 
 var bodyParser = require.lazy('body-parser');
 
-var dba = require('./lib/dba');
 var imports = require('./lib/imports');
 var utils = require('./lib/utils');
 var common = require('./models/common');
@@ -62,8 +60,7 @@ exports = module.exports = function(opt) {
 
 function init(All) {
 	var opt = All.opt;
-	var dbOpt = dba.knexConfig(opt);
-	var knexInst = knex(dbOpt);
+	var knexInst = All.db.knex;
 
 	common.Model.createValidator = function() {
 		return new objection.AjvValidator({
@@ -120,11 +117,6 @@ function init(All) {
 		if (fn) return knexInst.transaction(fn);
 		else return objection.transaction.start(knexInst);
 	};
-
-	exports.migrate = dba.migrate.bind(null, knexInst, opt.migrations);
-	exports.seed = dba.seed.bind(null, knexInst, opt.seeds);
-	exports.dump = dba.dump.bind(null, dbOpt.connection, opt);
-	exports.gc = dba.gc;
 
 	Object.keys(utils).forEach(function(key) {
 		if (All.utils[key]) throw new Error(`Cannot reassign All.utils.${key}`);

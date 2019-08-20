@@ -18,7 +18,6 @@
   },
   "homepage": "https://github.com/pageboard/server",
   "dependencies": {
-    "cron": "^1.7.0",
     "debug": "^4.1.1",
     "express": "^4.16.4",
     "http-errors": "^1.7.2",

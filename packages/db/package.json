@@ -1,0 +1,23 @@
+{
+  "name": "@pageboard/db",
+  "version": "0.7.0",
+  "description": "",
+  "main": "index.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/pageboard/server.git"
+  },
+  "author": "Jérémy Lal <kapouer@melix.org>",
+  "license": "MIT",
+  "bugs": {
+    "url": "https://github.com/pageboard/server/issues"
+  },
+  "homepage": "https://github.com/pageboard/server#readme",
+  "dependencies": {
+    "cron": "^1.7.0"
+  },
+  "pageboard": true
+}
