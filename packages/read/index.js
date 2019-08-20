@@ -52,12 +52,16 @@ function prerender(dom) {
 			path = path.slice(0, -ext.length - 1);
 		}
 		if (urlRegex.test(path) == false) {
-			pipeline(got.stream(req.site.href + '/.well-known/404', {
-				retry: 0,
-				throwHttpErrors: false
-			}), res, function(err) {
-				if (err) next(err);
-			});
+			if (req.xhr || !req.accepts('text/html')) {
+				throw new HttpError.NotFound("Malformed path");
+			} else {
+				pipeline(got.stream(req.site.href + '/.well-known/404', {
+					retry: 0,
+					throwHttpErrors: false
+				}), res, function(err) {
+					if (err) next(err);
+				});
+			}
 		} else {
 			if (req.query.develop !== undefined) {
 				All.cache.map(res, '/.well-known/200');
