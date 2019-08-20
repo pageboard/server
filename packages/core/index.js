@@ -129,6 +129,12 @@ exports.init = function(opt) {
 		All.app.use(All.log);
 		return initPlugins.call(All, plugins, 'service');
 	}).then(function() {
+		All.app.use(function(req, res, next) {
+			if (req.url.startsWith('/.api/')) {
+				throw new HttpError.NotFound("Unknown api url");
+			}
+			next();
+		});
 		All.app.use(servicesError);
 		return initPlugins.call(All, plugins, 'view');
 	}).then(function() {
@@ -287,14 +293,6 @@ function createApp(All) {
 		res.setHeader('X-Frame-Options', 'sameorigin');
 		res.setHeader('X-Content-Type-Options', 'nosniff');
 		next();
-	});
-	// FIXME this handler must be set AFTER all the other ones !!!
-	app.use(function(err, req, res, next) {
-		var handler;
-		if (req.url.startsWith('/.api/') || req.url.startsWith('/.well-known/')) handler = servicesError;
-		else if (req.url.startsWith('/.')) handler = filesError;
-		else handler = viewsError;
-		handler(err, req, res, next);
 	});
 	return app;
 }
