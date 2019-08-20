@@ -1,5 +1,5 @@
-var matchdom = require('matchdom');
-var flat = require('flat');
+const matchdom = require('matchdom');
+const flat = require('flat');
 
 
 exports.unflatten = function(query) {

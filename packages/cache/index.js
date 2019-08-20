@@ -1,16 +1,11 @@
 const Upcache = require.lazy('upcache');
-var pify = require('util').promisify;
-var fs = {
-	readFile: pify(require('fs').readFile),
-	writeFile: pify(require('fs').writeFile),
-	statSync: pify(require('fs').statSync)
-};
-var Path = require('path');
-var Stringify = require.lazy('fast-json-stable-stringify');
-var crypto = require('crypto');
-var got = require.lazy('got');
+const fs = require('fs').promises;
+const Path = require('path');
+const Stringify = require.lazy('fast-json-stable-stringify');
+const crypto = require('crypto');
+const got = require.lazy('got');
 
-var state = new CacheState();
+const state = new CacheState();
 
 exports = module.exports = function(opt) {
 	exports.install = state.install.bind(state);

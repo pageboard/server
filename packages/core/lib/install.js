@@ -1,21 +1,12 @@
-var Path = require('path');
-var pify = require('util').promisify;
-var mkdirp = pify(require('mkdirp'));
-var semverRegex = require('semver-regex');
-var rimraf = pify(require('rimraf'));
-var debug = require('debug')('pageboard:core');
-var exec = pify(require('child_process').exec);
-var postinstall = require('postinstall');
+const Path = require('path');
+const pify = require('util').promisify;
+const semverRegex = require('semver-regex');
+const rimraf = pify(require('rimraf'));
+const debug = require('debug')('pageboard:core');
+const exec = pify(require('child_process').exec);
+const postinstall = require('postinstall');
 
-var fs = {
-	writeFile: pify(require('fs').writeFile),
-	readFile: pify(require('fs').readFile),
-	readdir: pify(require('fs').readdir),
-	stat: pify(require('fs').stat),
-	lstat: pify(require('fs').lstat),
-	unlink: pify(require('fs').unlink),
-	symlink: pify(require('fs').symlink)
-};
+const fs = require('fs').promises;
 
 exports.install = function(site, opt) {
 	if (!site.data.module) {
@@ -264,7 +255,9 @@ function doInstall(site, pkg, opt) {
 }
 
 function prepareDir(pkg) {
-	return mkdirp(pkg.dir).then(function() {
+	return fs.mkdir(pkg.dir, {
+		recursive: true
+	}).then(function() {
 		return fs.writeFile(pkg.path, JSON.stringify({
 			"private": true,
 			"dependencies": {} // installation of main module populates it for us

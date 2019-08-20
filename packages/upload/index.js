@@ -1,15 +1,10 @@
 const multer = require.lazy('multer');
 const Path = require('path');
 const crypto = require.lazy('crypto');
-const mkdirp = require('mkdirp');
 const typeis = require('type-is');
 const mime = require.lazy('mime-types');
-const pify = require('util').promisify;
-const mkdirpp = pify(mkdirp);
 const speaking = require.lazy('speakingurl');
-const fs = {
-	unlink: pify(require('fs').unlink)
-};
+const fs = require('fs').promises;
 
 exports = module.exports = function(opt) {
 	if (!opt.upload) opt.upload = {};
@@ -28,7 +23,7 @@ exports = module.exports = function(opt) {
 	return {
 		name: 'upload',
 		service: function(All) {
-			return mkdirpp(dest).then(function() {
+			return fs.mkdir(dest, {recursive: true}).then(function() {
 				return init(All);
 			});
 		}
@@ -42,10 +37,9 @@ function init(All) {
 			var date = (new Date()).toISOString().split('T').shift().substring(0, 7);
 			var curDest = Path.join(upload.path, req.site.id, date);
 
-			mkdirp(curDest, function(err) {
-				if (err) return cb(err);
+			fs.mkdir(curDest, {recursive: true}).then(function() {
 				cb(null, curDest);
-			});
+			}).catch(cb);
 		},
 		filename: function (req, file, cb) {
 			var parts = file.originalname.split('.');

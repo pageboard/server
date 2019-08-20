@@ -1,8 +1,8 @@
-var objection = require('objection');
-var DbErrors = require('objection-db-errors').DbErrors;
-var ref = objection.ref;
-var Model = objection.Model;
-var QueryBuilder = objection.QueryBuilder;
+const objection = require('objection');
+const DbErrors = require('objection-db-errors').DbErrors;
+const ref = objection.ref;
+const Model = objection.Model;
+const QueryBuilder = objection.QueryBuilder;
 
 const { isKnexRaw, isKnexQueryBuilder } = require(
 	require('path').join(
@@ -12,7 +12,7 @@ const { isKnexRaw, isKnexQueryBuilder } = require(
 	)
 );
 
-var UpdateOperation = require(
+const UpdateOperation = require(
 	require('path').join(
 		require.resolve('objection'),
 		'..',
@@ -20,7 +20,7 @@ var UpdateOperation = require(
 	)
 ).UpdateOperation;
 
-var InstanceUpdateOperation = require(
+const InstanceUpdateOperation = require(
 	require('path').join(
 		require.resolve('objection'),
 		'..',

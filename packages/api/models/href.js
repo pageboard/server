@@ -1,6 +1,6 @@
-var objection = require('objection');
-var Model = objection.Model;
-var common = require('./common');
+const objection = require('objection');
+const Model = objection.Model;
+const common = require('./common');
 
 class Href extends common.Model {}
 

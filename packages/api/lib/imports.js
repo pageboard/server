@@ -1,13 +1,9 @@
-var Path = require('path');
-var pify = require('util').promisify;
-var toSource = require('tosource');
+const Path = require('path');
+const toSource = require('tosource');
 
-var fs = {
-	readFile: pify(require('fs').readFile),
-	writeFile: pify(require('fs').writeFile)
-};
-var vm = require('vm');
-var debug = require('debug')('pageboard:imports');
+const fs = require('fs').promises;
+const vm = require('vm');
+const debug = require('debug')('pageboard:imports');
 
 exports.install = function(site, pkg, All) {
 	var elements = pkg.elements;

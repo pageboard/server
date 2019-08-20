@@ -1,22 +1,14 @@
-var serveStatic = require.lazy('serve-static');
-var URL = require('url');
-var Path = require('path');
-var pify = require('util').promisify;
-var fs = {
-	symlink: pify(require('fs').symlink),
-	unlink: pify(require('fs').unlink),
-	stat: pify(require('fs').stat),
-	copyFile: pify(require('fs').copyFile)
-};
+const serveStatic = require.lazy('serve-static');
+const URL = require('url');
+const Path = require('path');
+const fs = require('fs').promises;
 
-var mkdirp = pify(require('mkdirp'));
-
-var bundlers = {
+const bundlers = {
 	js: require.lazy('postinstall-js'),
 	css: require.lazy('postinstall-css')
 };
 
-var debug = require('debug')('pageboard:statics');
+const debug = require('debug')('pageboard:statics');
 
 exports = module.exports = function(opt) {
 	if (!opt.statics) opt.statics = {};
@@ -40,7 +32,9 @@ function init(All) {
 	var statics = All.opt.statics;
 	var app = All.app;
 
-	return mkdirp(statics.runtime).then(function() {
+	return fs.mkdir(statics.runtime, {
+		recursive: true
+	}).then(function() {
 		console.info(`Static directories are served from symlinks in ${statics.runtime}`);
 
 		app.get(
@@ -99,7 +93,10 @@ exports.bundle = function(site, pkg, list, filename) {
 	var outUrl = `/.files/${version}/${filename}`;
 	var output = urlToPath(opts, site.id, outUrl);
 
-	return Promise.all([mkdirp(buildDir), mkdirp(cacheDir)]).then(function() {
+	return Promise.all([
+		fs.mkdir(buildDir, {recursive: true}),
+		fs.mkdir(cacheDir, {recursive: true})
+	]).then(function() {
 		if (version != site.branch) return fs.stat(buildPath).catch(function(err) {})
 		.then(function(stat) {
 			return !!stat;
@@ -154,7 +151,9 @@ exports.install = function(site, {directories}, All) {
 	if (site) {
 		var dir = Path.join("files", site.id);
 		var runSiteDir = Path.join(All.opt.statics.runtime, dir);
-		p = mkdirp(runSiteDir);
+		p = fs.mkdir(runSiteDir, {
+			recursive: true
+		});
 	}
 	directories.forEach(function(mount) {
 		p = p.then(function() {
@@ -178,7 +177,9 @@ function mountPath(src, dst) {
 
 	debug(`Mount ${src} to ${absDst}`);
 
-	return mkdirp(Path.dirname(absDst)).then(function() {
+	return fs.mkdir(Path.dirname(absDst), {
+		recursive: true
+	}).then(function() {
 		return fs.unlink(absDst).catch(function(err) {}).then(function() {
 			return fs.symlink(src, absDst);
 		});

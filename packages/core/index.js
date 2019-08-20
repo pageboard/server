@@ -2,7 +2,7 @@ const importLazy = require('import-lazy');
 Object.getPrototypeOf(require).lazy = function(str) {
 	return importLazy(this)(str);
 };
-var util = require('util');
+const util = require('util');
 const pify = util.promisify = util.promisify || require('util-promisify');
 if (!Promise.prototype.finally) require('promise.prototype.finally').shim();
 const Path = require('path');
@@ -11,25 +11,16 @@ const morgan = require('morgan');
 const pad = require('pad');
 const prettyBytes = require('pretty-bytes');
 const rc = require('rc');
-const mkdirp = pify(require('mkdirp'));
 const xdg = require('xdg-basedir');
 const resolvePkg = require('resolve-pkg');
 const debug = require('debug')('pageboard:core');
 const http = require.lazy('http');
+const fs = require('fs').promises;
 
 util.inspect.defaultOptions.depth = 10;
 
 const Domains = require.lazy('./lib/domains');
 const Install = require('./lib/install');
-
-const fs = {
-	writeFile: pify(require('fs').writeFile),
-	readFile: pify(require('fs').readFile),
-	readdir: pify(require('fs').readdir),
-	stat: pify(require('fs').stat),
-	unlink: pify(require('fs').unlink),
-	symlink: pify(require('fs').symlink)
-};
 
 // exceptional but so natural
 global.HttpError = require('http-errors');
@@ -194,7 +185,9 @@ exports.start = function(All) {
 function initDirs(dirs) {
 	return Promise.all(Object.keys(dirs).map(function(key) {
 		debug("init dir", dirs[key]);
-		return mkdirp(dirs[key]);
+		return fs.mkdir(dirs[key], {
+			recursive: true
+		});
 	}));
 }
 

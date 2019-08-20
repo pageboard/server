@@ -1,16 +1,16 @@
-var objection = require('objection');
+const objection = require('objection');
 
-var ajv = require('ajv');
-var AjvKeywords = require('ajv-keywords');
-var ajvMetaSchema = require('ajv/lib/refs/json-schema-draft-06.json');
+const ajv = require('ajv');
+const AjvKeywords = require('ajv-keywords');
+const ajvMetaSchema = require('ajv/lib/refs/json-schema-draft-06.json');
 
-var bodyParser = require.lazy('body-parser');
+const bodyParser = require.lazy('body-parser');
 
-var imports = require('./lib/imports');
-var utils = require('./lib/utils');
-var common = require('./models/common');
+const imports = require('./lib/imports');
+const utils = require('./lib/utils');
+const common = require('./models/common');
 
-var ajvApiSettings = {
+const ajvApiSettings = {
 	$data: true,
 	allErrors: true,
 	validateSchema: true,
@@ -25,11 +25,11 @@ var ajvApiSettings = {
 	},
 	invalidDefaults: 'log'
 };
-var ajvApiWithDefaults = AjvKeywords(ajv(Object.assign({}, ajvApiSettings, {
+const ajvApiWithDefaults = AjvKeywords(ajv(Object.assign({}, ajvApiSettings, {
 	useDefaults: 'empty'
 })).addMetaSchema(ajvMetaSchema));
 
-var ajvApiWithNoDefaults = AjvKeywords(ajv(Object.assign({}, ajvApiSettings, {
+const ajvApiWithNoDefaults = AjvKeywords(ajv(Object.assign({}, ajvApiSettings, {
 	useDefaults: false
 })).addMetaSchema(ajvMetaSchema));
 

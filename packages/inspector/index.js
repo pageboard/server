@@ -1,5 +1,5 @@
-var inspector = require.lazy('url-inspector');
-var URL = require('url');
+const inspector = require.lazy('url-inspector');
+const URL = require('url');
 
 exports = module.exports = function(opt) {
 	if (!opt.inspector) opt.inspector = {};

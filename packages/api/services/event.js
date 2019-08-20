@@ -1,4 +1,4 @@
-var ref = require('objection').ref;
+const ref = require('objection').ref;
 
 exports = module.exports = function(opt) {
 	return {

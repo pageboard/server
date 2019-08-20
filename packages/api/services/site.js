@@ -1,4 +1,4 @@
-var lodashMerge = require.lazy('lodash.merge');
+const lodashMerge = require.lazy('lodash.merge');
 const {ref} = require('objection');
 const {PassThrough} = require('stream');
 const {createReadStream, createWriteStream} = require('fs');

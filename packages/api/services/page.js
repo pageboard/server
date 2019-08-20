@@ -1,6 +1,6 @@
-var ref = require('objection').ref;
-var raw = require('objection').raw;
-var URL = require('url');
+const ref = require('objection').ref;
+const raw = require('objection').raw;
+const URL = require('url');
 
 exports = module.exports = function(opt) {
 	return {

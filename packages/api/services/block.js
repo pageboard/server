@@ -1,5 +1,5 @@
-var ref = require('objection').ref;
-var raw = require('objection').raw;
+const ref = require('objection').ref;
+const raw = require('objection').raw;
 
 exports = module.exports = function() {
 	return {

@@ -1,7 +1,7 @@
-var common = require('./common');
-var Model = common.Model;
+const common = require('./common');
+const Model = common.Model;
 
-var crypto = require('crypto');
+const crypto = require('crypto');
 
 class Block extends Model {
 	$beforeInsert() {

@@ -1,10 +1,6 @@
 const Path = require('path');
+const fs = require('fs').promises;
 const pify = require('util').promisify;
-const fs = {
-	writeFile: pify(require('fs').writeFile),
-	readFile: pify(require('fs').readFile),
-	chmod: pify(require('fs').chmod)
-};
 const generateKeyPair = pify(require('crypto').generateKeyPair);
 
 module.exports = function(All) {

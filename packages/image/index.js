@@ -1,11 +1,8 @@
-var sharpie = require.lazy('sharpie');
-var pify = require('util').promisify;
-var fs = {
-	rename: pify(require('fs').rename)
-};
+const sharpie = require.lazy('sharpie');
+const fs = require('fs').promises;
 
-var DataUri = require.lazy('datauri');
-var allowedParameters = {
+const DataUri = require.lazy('datauri');
+const allowedParameters = {
 	rs: true,
 	ex: true,
 	q: true,
