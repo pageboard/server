@@ -60,7 +60,7 @@ function init(All) {
 				fallthrough: true
 			}),
 			function(req, res, next) {
-				if (/^(get|head)$/i.test(req.method)) {
+				if (req.method == "GET" || req.method == "HEAD") {
 					next(new HttpError.NotFound("Static file not found"));
 				} else {
 					next();
