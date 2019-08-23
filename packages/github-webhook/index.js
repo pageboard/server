@@ -9,7 +9,6 @@ exports = module.exports = function(opt) {
 };
 
 function init(All) {
-	console.info("Setting up /.api/github webhook");
 	All.app.post('/.api/github', function(req, res, next) {
 		var site = req.site;
 		var pusher;
