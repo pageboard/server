@@ -1,4 +1,3 @@
-const Path = require('path');
 const NodeMailer = require.lazy('nodemailer');
 const AddressParser = require.lazy('nodemailer/lib/addressparser');
 const Mailgun = require.lazy('nodemailer-mailgun-transport');
@@ -36,15 +35,8 @@ exports = module.exports = function(opt) {
 	}
 
 	return {
-		priority: 1, // after read plugin
 		name: 'mail',
-		service: init,
-		view: function(All) {
-			var path = Path.join(__dirname, './lib/mail');
-			All.opt.prerender.helpers.unshift(path);
-			All.opt.prerender.plugins.push(path);
-			All.opt.read.helpers.push('mail');
-		}
+		service: init
 	};
 };
 
@@ -61,7 +53,6 @@ function init(All) {
 			else res.sendStatus(200);
 		}).catch(next);
 	});
-	All.opt.extnames.push('mail');
 }
 
 exports.receive = function(data) {

@@ -32,8 +32,16 @@ exports.install = function(site, pkg, All) {
 		var eltsMap = {};
 		var groups = {};
 		var bundles = [];
+		var exts = {};
 		names.forEach(function(name) {
 			var el = Object.assign({}, elts[name]); // drop proxy
+			if (name.startsWith('.')) {
+				name = name.substring(1);
+				exts[name] = el;
+				el.name = `ext-${name}`;
+				bundles.push(el);
+				return;
+			}
 			el.name = name;
 			eltsMap[name] = el;
 			var isPage = false;
@@ -43,7 +51,9 @@ exports.install = function(site, pkg, All) {
 				if (!group) group = groups[gn] = [];
 				if (!group.includes(name)) group.push(name);
 			});
-			if (isPage) el.standalone = el.bundle = true;
+			if (isPage) {
+				el.standalone = el.bundle = true;
+			}
 			if (el.bundle) bundles.push(el);
 		});
 
@@ -71,7 +81,7 @@ exports.validate = function(site, pkg, bundles) {
 		el = eltsMap[el.name] = Object.assign({}, el);
 		return bundle(site, pkg, el);
 	})).then(function() {
-		return bundleSource(site, pkg, '', 'services', All.services).then(function(path) {
+		return bundleSource(site, pkg, null, 'services', All.services).then(function(path) {
 			site.$services = path;
 		});
 	}).then(function() {
@@ -103,21 +113,18 @@ function bundle(site, pkg, rootEl) {
 	});
 	var scripts = sortElements(list, 'scripts');
 	var styles = sortElements(list, 'stylesheets');
-	var prefix = `${rootEl.name}-`;
+	var prefix = rootEl.name;
 
 	var eltsMap = {};
-	list.forEach(function(elt) {
-		if (!elt.standalone) {
-			elt = Object.assign({}, elt);
-			delete elt.scripts;
-			delete elt.stylesheets;
+	list.forEach(function(el) {
+		if (!el.standalone) {
+			el = Object.assign({}, el);
+			delete el.scripts;
+			delete el.stylesheets;
 		}
-		eltsMap[elt.name] = elt;
+		eltsMap[el.name] = el;
 	});
-	var metaEl = site.$bundles[rootEl.name] = {
-		group: rootEl.group
-	};
-
+	var metaEl = site.$bundles[rootEl.name] = Object.assign({}, rootEl);
 	var p;
 
 	if (site.data.env == "dev" || !pkg.dir || !site.href) {
@@ -127,8 +134,8 @@ function bundle(site, pkg, rootEl) {
 		]);
 	} else {
 		p = Promise.all([
-			All.statics.bundle(site, pkg, scripts, `${prefix}scripts.js`),
-			All.statics.bundle(site, pkg, styles, `${prefix}styles.css`)
+			All.statics.bundle(site, pkg, scripts, `${prefix}.js`),
+			All.statics.bundle(site, pkg, styles, `${prefix}.css`)
 		]);
 	}
 	return p.then(function([scripts, styles]) {
@@ -136,7 +143,7 @@ function bundle(site, pkg, rootEl) {
 		rootEl.stylesheets = styles;
 
 		return bundleSource(site, pkg, prefix, 'elements', eltsMap).then(function(path) {
-			metaEl.bundle = path;
+			if (path) metaEl.bundle = path;
 			metaEl.scripts = rootEl.group != "page" ? rootEl.scripts : [];
 			metaEl.stylesheets = rootEl.group != "page" ? rootEl.stylesheets : [];
 			metaEl.resources = rootEl.resources;
@@ -145,7 +152,8 @@ function bundle(site, pkg, rootEl) {
 }
 
 function bundleSource(site, pkg, prefix, name, obj) {
-	var filename = `${prefix}${name}.js`;
+	if (prefix && prefix.startsWith('ext-')) return Promise.resolve();
+	var filename = [prefix, name].filter(Boolean).join('-') + '.js';
 	var version = site.data.version;
 	if (version == null) version = site.branch;
 	var fileurl = `/.files/${version}/_${filename}`;

@@ -54,7 +54,6 @@ exports.config = function(pkgOpt) {
 			log: ':method :status :time :size :site:url'
 		},
 		report: {},
-		extnames: [],
 		upstreams: {}
 	});
 	opt.upstream = opt.upstreams[opt.version];
