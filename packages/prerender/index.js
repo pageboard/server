@@ -198,7 +198,7 @@ function prerender(req, res, next) {
 		if (req.query.develop !== undefined) {
 			All.cache.map(res, '/.well-known/200');
 		}
-		var plugins = opt.read.plugins;
+		var plugins = opt.read.plugins.slice();
 		var settings = {
 			extensions: {
 				allow: false,
