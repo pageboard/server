@@ -6,6 +6,6 @@ module.exports = function(opt) {
 };
 
 function init(All) {
-	All.opt.prerender.plugins.push(require.resolve('express-dom-pdf'));
+	All.opt.prerender.plugins.push(require.resolve('./lib/pdf'));
 }
 

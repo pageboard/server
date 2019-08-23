@@ -1,2 +1,2 @@
-exports.plugin = require.resolve('express-dom-pdf').plugin;
+exports.plugin = require('express-dom-pdf').plugin;
 
