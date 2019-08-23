@@ -24,14 +24,12 @@
     "@pageboard/cache": "link:./packages/cache",
     "@pageboard/core": "link:./packages/core",
     "@pageboard/db": "link:./packages/db",
-    "@pageboard/feed": "link:./packages/feed",
     "@pageboard/github-webhook": "link:./packages/github-webhook",
     "@pageboard/image": "link:./packages/image",
     "@pageboard/inspector": "link:./packages/inspector",
     "@pageboard/mail": "link:./packages/mail",
     "@pageboard/pdf": "link:./packages/pdf",
     "@pageboard/prerender": "link:./packages/prerender",
-    "@pageboard/read": "link:./packages/read",
     "@pageboard/statics": "link:./packages/statics",
     "@pageboard/upload": "link:./packages/upload"
   }

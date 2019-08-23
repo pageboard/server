@@ -87,6 +87,9 @@ class FakeResponse extends PassThrough {
 		else list += "," + val;
 		this.headers[name] = list;
 	}
+	type(val) {
+		this.headers['Content-Type'] = val;
+	}
 }
 
 var initialized = false;
@@ -129,13 +132,17 @@ function run(params) {
 		if (fn) dom.settings.helpers.push(fn);
 		else console.error("Prerender missing helper", name);
 	});
-	dom(function(mw, settings) {
+	dom(function(mw, settings, request, response) {
 		settings.view = params.view;
 		settings.load.plugins = params.plugins.map(function(name) {
 			var fn = dom.plugins[name];
 			if (fn) return fn;
 			else console.error("Prerender missing plugin", name);
 		});
+		Object.assign(settings, params.settings);
+		if (settings.mime) {
+			response.type(settings.mime);
+		}
 	}).load()(req, res, function(err) {
 		res.ipc(err);
 	});
