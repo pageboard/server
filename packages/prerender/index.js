@@ -195,6 +195,17 @@ function prerender(req, res, next) {
 			});
 		}
 	} else {
+		var invalid = false;
+		Object.keys(req.query).forEach(function(key) {
+			if (/^[\w.]+$/.test(key) === false) {
+				invalid = true;
+				delete req.query[key];
+			}
+		});
+		if (invalid) return res.redirect(URL.format({
+			pathname: path,
+			query: req.query
+		}));
 		if (req.query.develop !== undefined) {
 			All.cache.map(res, '/.well-known/200');
 		}
