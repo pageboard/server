@@ -51,7 +51,7 @@ exports.config = function(pkgOpt) {
 		plugins: [],
 		dependencies: pkgOpt.dependencies || {},
 		core: {
-			log: ':method :status :time :size :site:url'
+			log: ':method :status :time :size :site :url'
 		},
 		report: {},
 		upstreams: {}
