@@ -506,6 +506,8 @@ exports.import = function({trx}, data) {
 					return site.$relatedQuery('children', trx).insertGraph(resa);
 				});
 			}
+		}).catch(function(ex) {
+			pstream.emit('error', ex);
 		});
 	});
 
