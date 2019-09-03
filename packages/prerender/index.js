@@ -242,8 +242,9 @@ function prerender(req, res, next) {
 		}
 		plugins.push('serialize');
 
-		var scripts = req.site.$resources
-		.concat(extBundle.scripts || []).map(function(src) {
+		var scripts = (req.site.$resources || [])
+		.concat(extBundle.scripts || [])
+		.map(function(src) {
 			return `<script src="${src}" defer></script>`;
 		});
 
