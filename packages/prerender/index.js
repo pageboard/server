@@ -3,6 +3,7 @@ const got = require.lazy('got');
 const { pipeline } = require('stream');
 const { Pool } = require('tarn');
 const fork = require('child_process').fork;
+const URL = require('url');
 
 var pool;
 
@@ -197,7 +198,7 @@ function prerender(req, res, next) {
 	} else {
 		var invalid = false;
 		Object.keys(req.query).forEach(function(key) {
-			if (/^[\w.]+$/.test(key) === false) {
+			if (/^[a-zA-Z][\w.]*$/.test(key) === false) {
 				invalid = true;
 				delete req.query[key];
 			}
