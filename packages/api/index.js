@@ -190,16 +190,13 @@ All.run = function(apiStr, req, data) {
 		// start a transaction on set trx object on site
 		var hadTrx = false;
 		return Promise.resolve().then(function() {
-			if (!req.site) {
-				return;
-			}
 			if (req.trx) {
 				hadTrx = true;
 				return;
 			}
 			return exports.transaction().then(function(trx) {
-				req.site = req.site.$clone();
 				req.trx = trx;
+				if (req.site) req.site = req.site.$clone();
 			});
 		}).then(function() {
 			var args = [data];
