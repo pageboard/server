@@ -26,11 +26,11 @@ function init(All) {
 			});
 		} else {
 			All.run('page.get', req, req.query).then(function(data) {
-				if (dev && $write.resources.length == 6) {
-					data.meta.scripts.unshift($write.resources[2]);
+				if (dev && $write.resources.develop) {
+					data.meta.scripts.unshift($write.resources.develop);
 					data.meta.writes = {
-						scripts: $write.resources.slice(3, 5),
-						stylesheets: $write.resources.slice(5)
+						scripts: [$write.resources.editor, $write.resources.readScript],
+						stylesheets: [$write.resources.readStyle]
 					};
 				}
 				All.send(res, data);

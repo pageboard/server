@@ -252,22 +252,27 @@ function getMountPath(eltPath, id, directories) {
 }
 
 function absolutePaths(list, file) {
-	if (!list) return [];
+	if (!list) return;
 	if (typeof list == "string") list = [list];
-	return list.map(function(path) {
+	var obj = Array.isArray(list) ? null : {};
+	var arr = Object.entries(list).map(function([key, path]) {
 		if (path == null) {
 			console.warn("null path in", file);
 			return;
 		}
 		if (path.startsWith('/') || /^(http|https|data):/.test(path)) {
-			return path;
-		}
-		if (!file.mount) {
+			// do nothing
+		} else if (!file.mount) {
 			console.error("Cannot mount", path, "from element defined in", file.path);
 			return;
+		} else {
+			path = Path.join(file.mount, path);
 		}
-		return Path.join(file.mount, path);
-	}).filter(x => !!x);
+		if (obj) obj[key] = path;
+		else return path;
+	});
+	if (obj) return obj;
+	else return arr.filter(x => !!x);
 }
 
 function loadFromFile(buf, elts, names, context) {
@@ -286,7 +291,7 @@ function loadFromFile(buf, elts, names, context) {
 		timeout: 1000
 	});
 
-	ArrProxy.create(context);
+	AbsoluteProxy.create(context);
 	var elt;
 	for (var name in elts) {
 		elt = elts[name];
@@ -296,17 +301,18 @@ function loadFromFile(buf, elts, names, context) {
 		}
 
 		names.push(name);
-
-		['scripts', 'stylesheets', 'resources'].forEach(function(what) {
-			elt[what] = new Proxy(absolutePaths(elt[what], context), new ArrProxy(context));
-		});
-
+		elt = new Proxy(elt, new EltProxy(name, context));
 		Object.defineProperty(elts, name, {
-			value: new Proxy(elt, new EltProxy(name, context)),
+			value: elt,
 			writable: false,
 			enumerable: false,
 			configurable: false
 		});
+		if (name != "user" && name != "priv") {
+			elt.scripts = elt.scripts || [];
+			elt.stylesheets = elt.stylesheets || [];
+			elt.resources = elt.resources || {};
+		}
 	}
 }
 
@@ -339,13 +345,13 @@ class EltProxy {
 			return false;
 		}
 		if (key == "scripts" || key == "stylesheets" || key == "resources") {
-			val = new Proxy(absolutePaths(val, this.context), new ArrProxy(this.context));
+			val = new Proxy(absolutePaths(val, this.context), new AbsoluteProxy(this.context));
 		}
 		return Reflect.set(elt, key, val);
 	}
 }
 
-class ArrProxy {
+class AbsoluteProxy {
 	static create(context) {
 		return new this(context);
 	}
