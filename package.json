@@ -1,7 +1,7 @@
 {
   "name": "pageboard",
   "version": "0.7.0",
-  "description": "Web pages content management",
+  "description": "Website hosting and editing",
   "main": "index.js",
   "scripts": {
     "test": "echo \"Error: no test specified\" && exit 1",
