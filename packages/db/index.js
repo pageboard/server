@@ -74,7 +74,7 @@ exports.restore = function(opt, stamp) {
 };
 
 function knexConfig(opt) {
-	if (!process.env.HOME) process.env.HOME = require('passwd-user').sync(process.getuid()).homedir;
+	if (!process.env.HOME) process.env.HOME = require('passwd-user').sync().homeDirectory;
 	var dbName = opt.database.name || opt.name;
 	var dbOpts = Object.assign({}, {
 		url: `postgres://localhost/${dbName}`

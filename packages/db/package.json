@@ -17,7 +17,8 @@
   },
   "homepage": "https://github.com/pageboard/server#readme",
   "dependencies": {
-    "cron": "^1.7.0"
+    "cron": "^1.7.0",
+    "passwd-user": "^3.0.0"
   },
   "pageboard": true
 }
