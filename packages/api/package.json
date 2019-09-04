@@ -30,7 +30,7 @@
     "objection": "^1.6.8",
     "objection-db-errors": "^1.0.0",
     "oboe": "^2.1.4",
-    "passwd-user": "^2.1.0",
+    "passwd-user": "^3.0.0",
     "pg": "^7.9.0",
     "table": "^5.4.4",
     "tosource": "^1.0.0"
