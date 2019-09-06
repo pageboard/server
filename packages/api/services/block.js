@@ -236,7 +236,7 @@ exports.search.schema = {
 			type: 'integer',
 			minimum: 0,
 			maximum: 1000,
-			default: 10
+			nullable: true
 		},
 		offset: {
 			title: 'Offset',
@@ -309,7 +309,7 @@ exports.search.schema = {
 					type: 'integer',
 					minimum: 0,
 					maximum: 1000,
-					default: 10
+					nullable: true
 				},
 				offset: {
 					title: 'Offset',
@@ -379,7 +379,7 @@ exports.search.schema = {
 					type: 'integer',
 					minimum: 0,
 					maximum: 1000,
-					default: 10
+					nullable: true
 				},
 				offset: {
 					title: 'Offset',
@@ -436,7 +436,8 @@ function filterSub(q, data, schema, alias) {
 		seen[col.column] = true;
 		q.orderBy(col, dir);
 	});
-	q.offset(data.offset).limit(data.limit);
+	q.offset(data.offset);
+	if (data.limit != null) q.limit(data.limit);
 	return valid;
 }
 
