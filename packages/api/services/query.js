@@ -40,7 +40,7 @@ exports.query = function(req, data) {
 		params = All.utils.mergeObjects(params, fd.action.parameters);
 		return All.run(method, req, params).catch(function(err) {
 			return {
-				status: err.status || 500,
+				status: err.status || 400,
 				item: {
 					type: 'error',
 					data: {
