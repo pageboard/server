@@ -158,11 +158,6 @@ function decideInstall(dataDir, site) {
 			pkg.install = true;
 			return pkg;
 		}
-		if (site.data.version == null) {
-			// something is installed
-			// if you want to update call site.save data.version...
-			return pkg;
-		}
 		var siteModuleDir = Path.join(siteDir, 'node_modules', pkg.name);
 		return fs.lstat(siteModuleDir).catch(function() {}).then(function(stat) {
 			if (stat && stat.isSymbolicLink()) {
