@@ -22,7 +22,8 @@ function init(All) {
 	// TODO Cron exports.gc...
 }
 
-exports.migrate = function(opt) {
+exports.migrate = function() {
+	var opt = All.opt;
 	var dirs = opt && opt.migrations || null;
 	if (!dirs) throw new Error("Missing `migrations` directory option");
 	return Promise.all(dirs.map(function(dir) {
@@ -36,7 +37,8 @@ exports.migrate = function(opt) {
 	}));
 };
 
-exports.seed = function(opt) {
+exports.seed = function() {
+	var opt = All.opt;
 	var dirs = opt && opt.seeds || null;
 	if (!dirs) throw new Error("Missing `seeds` directory option");
 	return Promise.all(dirs.map(function(dir) {
@@ -50,7 +52,8 @@ exports.seed = function(opt) {
 	}));
 };
 
-exports.dump = function(opt, stamp) {
+exports.dump = function(stamp) {
+	var opt = All.opt;
 	var dumpDir = opt.database.dump && opt.database.dump.dir;
 	if (!dumpDir) throw new HttpError.BadRequest("Missing database.dump.dir config");
 	var file = Path.join(dumpDir, `${opt.db.database}-${stamp}.dump`);
@@ -59,7 +62,8 @@ exports.dump = function(opt, stamp) {
 	});
 };
 
-exports.restore = function(opt, stamp) {
+exports.restore = function(stamp) {
+	var opt = All.opt;
 	var dumpDir = opt.database.dump && opt.database.dump.dir;
 	if (!dumpDir) throw new HttpError.BadRequest("Missing database.dump.dir config");
 	var db = `${opt.db.database}-${stamp}`;
@@ -161,28 +165,28 @@ function initDumps(All) {
 	var job = new Cron.CronJob({
 		cronTime: `0 3 */${opt.interval} * *`,
 		onTick: function() {
-			doDump(All, opt.dir, opt.interval * opt.keep * day);
+			doDump(opt.dir, opt.interval * opt.keep * day);
 		}
 	});
 	job.start();
 }
 
-function doDump(All, dir, keep) {
+function doDump(dir, keep) {
 	return fs.mkdir(dir, {
 		recursive: true
 	}).then(function() {
-		All.api.dump((new Date).toISOString().split('.')[0].replace(/[-:]/g, '')).then(function() {
+		exports.dump((new Date).toISOString().split('.')[0].replace(/[-:]/g, '')).then(function() {
 			var now = Date.now();
 			fs.readdir(dir).then(function(files) {
-				files.forEach(function(file) {
+				return Promise.all(files.map(function(file) {
 					file = Path.join(dir, file);
-					fs.stat(file).then(function(stat) {
+					return fs.stat(file).then(function(stat) {
 						if (stat.mtime.getTime() < now - keep - 1000) {
-							fs.unlink(file);
+							return fs.unlink(file);
 							// TODO dropdb -U ${conn.user} ${conn.database}-${stamp}
 						}
 					});
-				});
+				}));
 			});
 		});
 	});
