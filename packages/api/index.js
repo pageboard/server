@@ -190,7 +190,9 @@ All.run = function(apiStr, req, data) {
 		// start a transaction on set trx object on site
 		var hadTrx = false;
 		return Promise.resolve().then(function() {
-			if (req.trx) {
+			if (!req) {
+				return;
+			} else if (req.trx) {
 				hadTrx = true;
 				return;
 			}
@@ -203,7 +205,7 @@ All.run = function(apiStr, req, data) {
 			if (req) args.unshift(req);
 			return fun.apply(mod, args);
 		}).then(function(obj) {
-			if (!hadTrx && req.trx) {
+			if (!hadTrx && req && req.trx) {
 				try {
 					return req.trx.commit().then(function() {
 						return obj;
@@ -216,7 +218,7 @@ All.run = function(apiStr, req, data) {
 		}).catch(function(err) {
 			console.error("api method:", apiStr);
 			if (req && req.user && req.user.id) console.error("by user", req.user.id, req.user.grants);
-			if (!hadTrx && req.trx) {
+			if (!hadTrx && req && req.trx) {
 				try {
 					return req.trx.rollback().then(function() {
 						throw err;
