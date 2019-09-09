@@ -699,7 +699,15 @@ function applyRelate({site, trx}, obj) {
 		.first().throwIfNotFound().then(function(parent) {
 			return site.$relatedQuery('children', trx)
 			.whereIn('block.id', obj[parentId]).then(function(ids) {
-				if (ids.length == 0) throw new HttpError.NotFound("Missing children");
+				if (ids.length != obj[parentId].length) {
+					var missing = obj[parentId].reduce(function(list, id) {
+						if (!ids.some(function(item) {
+							return item.id === id;
+						})) list.push(id);
+						return list;
+					}, []);
+					throw new HttpError.NotFound("Missing children: " + missing.join(', '));
+				}
 				return parent.$relatedQuery('children', trx).relate(ids);
 			});
 		});
