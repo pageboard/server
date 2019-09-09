@@ -305,7 +305,9 @@ function servicesError(err, req, res, next) {
 		code = 500;
 	}
 	if (All.opt.env == "development" || code >= 500) console.error(err);
-	if (msg) res.status(code).send(msg);
+	if (msg) res.status(code).send({
+		message: msg
+	});
 	else res.sendStatus(code);
 }
 
