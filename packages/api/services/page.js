@@ -176,7 +176,7 @@ exports.get = function(req, data) {
 		var links = {};
 		Object.assign(obj, {
 			item: page,
-			items: page.children.concat(page.standalones),
+			items: (page.children || []).concat(page.standalones || []),
 			meta: site.$bundles[page.type],
 			links: links,
 			hrefs: page.hrefs
