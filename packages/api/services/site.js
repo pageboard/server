@@ -156,7 +156,7 @@ exports.save = function(req, data) {
 	fixSiteCoercion(data);
 	return exports.get(req, data).then(function(site) {
 		lodashMerge(site.data, data.data);
-		if (req.site.href) site.href = req.site.href;
+		if (req.site && req.site.href) site.href = req.site.href;
 		return All.install(site).then(function(site) {
 			return site.$query(req.trx).patchObject({
 				type: site.type,
