@@ -75,7 +75,7 @@ function init(All) {
 	});
 
 	All.app.get('/.well-known/sitemap.txt', function(req, res, next) {
-		All.run('page.all', req, {}).then(function(obj) {
+		All.run('page.all', req, {robot:true}).then(function(obj) {
 			res.type('text/plain');
 			All.auth.filter(req, obj);
 			res.send(obj.items.map(page => req.site.href + page.data.url).join('\n'));
@@ -259,6 +259,13 @@ function listPages({site, trx}, data) {
 			.orWhereNot(ref('block.data:nositemap'), true);
 		});
 	}
+	if (data.robot) {
+		q.where(function() {
+			this.whereNull(ref('block.data:noindex'))
+			.orWhereNot(ref('block.data:noindex'), true);
+		});
+	}
+
 	if (data.parent) {
 		var regexp = data.home ? `^${data.parent}(/[^/]+)?$` : `^${data.parent}/[^/]+$`;
 		if (data.home) q.orderByRaw("block.data->>'url' = ? DESC", data.parent);
@@ -440,7 +447,12 @@ exports.all.schema = {
 			default: 0
 		},
 		drafts: {
-			title: 'Show pages that are not in sitemap',
+			title: 'List pages that are not in sitemap',
+			type: 'boolean',
+			default: false
+		},
+		robot: {
+			title: 'List pages for robots',
 			type: 'boolean',
 			default: false
 		},
