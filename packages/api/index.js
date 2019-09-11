@@ -269,7 +269,7 @@ All.send = function(res, obj) {
 		delete obj.status;
 	}
 	if (obj.location) {
-		res.redirect(obj.location);
+		res.json(obj);
 	} else {
 		obj = All.auth.filterResponse(req, obj);
 		if (obj.item && !obj.item.type) {

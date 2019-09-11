@@ -16,14 +16,12 @@ function init(All) {
 	};
 	All.app.get("/.api/login", function(req, res, next) {
 		All.run('login.grant', req, req.query).then(function(data) {
-			data.location = "back";
 			All.send(res, data);
 		}).catch(next);
 	});
 
 	All.app.get("/.api/logout", function(req, res, next) {
 		All.run('login.clear', req, req.query).then(function(data) {
-			data.location = "back";
 			All.send(res, data);
 		}).catch(next);
 	});
