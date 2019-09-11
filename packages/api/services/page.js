@@ -146,6 +146,7 @@ exports.get = function(req, data) {
 		status: 200,
 		site: site.data
 	};
+
 	var wkp = /^\/\.well-known\/(\d{3})$/.exec(data.url);
 	if (wkp) obj.status = parseInt(wkp[1]);
 	return QueryPage(site).whereIn('page.type', site.$pagetypes)
@@ -184,12 +185,11 @@ exports.get = function(req, data) {
 		delete page.standalones;
 		delete page.children;
 		delete page.hrefs;
-		if (page.data.url == null) return obj;
 
 		return Promise.all([
 			getParents(site, data.url),
 			listPages(site, {
-				parent: data.url.split('/').slice(0, -1).join('/') || '/'
+				parent: data.url.split('/').slice(0, -1).join('/')
 			}).clearSelect().select([
 				ref('block.data:url').as('url'),
 				ref('block.data:redirect').as('redirect'),
@@ -198,9 +198,14 @@ exports.get = function(req, data) {
 		]).then(function(list) {
 			links.up = list[0].map(redUrl);
 			var siblings = list[1];
+			var found;
 			var position = siblings.findIndex(function(item) {
-				return item.url == data.url;
+				var same = item.url == data.url;
+				if (same) found = true;
+				else if (!found && item.url.startsWith(data.url)) found = item.url;
+				return same;
 			});
+			if (found && found !== true) links.found = found;
 			if (position > 0) links.prev = redUrl(siblings[position - 1]);
 			if (position < siblings.length - 1) links.next = redUrl(siblings[position + 1]);
 			if (siblings.length > 1) {
