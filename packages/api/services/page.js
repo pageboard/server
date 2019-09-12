@@ -270,6 +270,9 @@ function listPages({site, trx}, data) {
 			.orWhereNot(ref('block.data:noindex'), true);
 		});
 	}
+	if (data.disallow) {
+		q.where(ref('block.data:noindex'), true);
+	}
 
 	if (data.parent != null) {
 		var regexp = data.home ? `^${data.parent}(/[^/]+)?$` : `^${data.parent}/[^/]+$`;
@@ -779,14 +782,22 @@ exports.del.schema = {
 	}
 };
 
-exports.robots = function({site}) {
-	var lines = ["User-agent: *"];
-	if (site.data.env == "production") {
-		lines.push("Allow : /");
-		lines.push(`Sitemap: ${site.href}/.well-known/sitemap.txt`);
+exports.robots = function(req) {
+	var lines = [];
+	var p;
+	if (req.site.data.env == "production") {
+		lines.push(`Sitemap: ${req.site.href}/.well-known/sitemap.txt`);
+		p = listPages(req, {disallow: true}).then(function(pages) {
+			pages.forEach(function(page) {
+				lines.push(`Disallow: ${page.data.url}`);
+			});
+		});
 	} else {
+		p = Promise.resolve();
 		lines.push("Disallow: /");
 	}
-	return Promise.resolve(lines.join('\n'));
+	return p.then(function() {
+		return lines.join('\n');
+	});
 };
 
