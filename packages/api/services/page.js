@@ -455,12 +455,10 @@ exports.all.schema = {
 			default: 0
 		},
 		drafts: {
-			title: 'List pages that are not in sitemap',
 			type: 'boolean',
 			default: false
 		},
 		robot: {
-			title: 'List pages for robots',
 			type: 'boolean',
 			default: false
 		},
