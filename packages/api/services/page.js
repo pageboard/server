@@ -188,7 +188,7 @@ exports.get = function(req, data) {
 
 		return Promise.all([
 			getParents(site, data.url),
-			listPages(req, {
+			listPages(site, {
 				parent: data.url.split('/').slice(0, -1).join('/') || '/'
 			}).clearSelect().select([
 				ref('block.data:url').as('url'),
@@ -246,7 +246,7 @@ function getParents(site, url) {
 	.orderByRaw("length(block.data->>'url') DESC");
 }
 
-function listPages({site, trx}, data) {
+function listPages(site, data) {
 	var q = site.$relatedQuery('children')
 	.select()
 	.omit(['content'])
@@ -396,9 +396,8 @@ exports.search.schema = {
 };
 exports.search.external = true;
 
-exports.all = function(req, data) {
-	var site = req.site;
-	return listPages(req, data).then(function(pages) {
+exports.all = function({site}, data) {
+	return listPages(site, data).then(function(pages) {
 		var els = {};
 		var obj = {
 			items: pages
