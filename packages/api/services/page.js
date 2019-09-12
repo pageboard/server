@@ -74,8 +74,8 @@ function init(All) {
 		}).catch(next);
 	});
 
-		All.run('page.all', req, {}).then(function(obj) {
 	All.app.get('/.well-known/sitemap.txt', All.cache.tag('data-:site'), function(req, res, next) {
+		All.run('page.all', req, {robot:true}).then(function(obj) {
 			res.type('text/plain');
 			All.auth.filter(req, obj);
 			res.send(obj.items.map(page => req.site.href + page.data.url).join('\n'));
@@ -259,7 +259,17 @@ function listPages(site, data) {
 			.orWhereNot(ref('block.data:nositemap'), true);
 		});
 	}
-	if (data.parent) {
+	if (data.robot) {
+		q.where(function() {
+			this.whereNull(ref('block.data:noindex'))
+			.orWhereNot(ref('block.data:noindex'), true);
+		});
+	}
+	if (data.disallow) {
+		q.where(ref('block.data:noindex'), true);
+	}
+
+	if (data.parent != null) {
 		var regexp = data.home ? `^${data.parent}(/[^/]+)?$` : `^${data.parent}/[^/]+$`;
 		if (data.home) q.orderByRaw("block.data->>'url' = ? DESC", data.parent);
 		q.whereJsonText('block.data:url', '~', regexp)
@@ -441,6 +451,10 @@ exports.all.schema = {
 		},
 		drafts: {
 			title: 'Show pages that are not in sitemap',
+			type: 'boolean',
+			default: false
+		},
+		robot: {
 			type: 'boolean',
 			default: false
 		},
@@ -754,14 +768,22 @@ exports.del.schema = {
 	}
 };
 
-exports.robots = function({site}) {
-	var lines = ["User-agent: *"];
-	if (site.data.env == "production") {
-		lines.push("Allow : /");
-		lines.push(`Sitemap: ${site.href}/.well-known/sitemap.txt`);
+exports.robots = function(req) {
+	var lines = [];
+	var p;
+	if (req.site.data.env == "production") {
+		lines.push(`Sitemap: ${req.site.href}/.well-known/sitemap.txt`);
+		p = listPages(req, {disallow: true}).then(function(pages) {
+			pages.forEach(function(page) {
+				lines.push(`Disallow: ${page.data.url}`);
+			});
+		});
 	} else {
+		p = Promise.resolve();
 		lines.push("Disallow: /");
 	}
-	return Promise.resolve(lines.join('\n'));
+	return p.then(function() {
+		return lines.join('\n');
+	});
 };
 
