@@ -85,18 +85,20 @@ exports.save = function(req, data) {
 		});
 	}).catch(function(err) {
 		if (err.statusCode != 404) throw err;
-		return All.run('user.get', req, {email: data.email}).catch(function(err) {
+		return All.user.get(req, {email: data.email}).select('_id').catch(function(err) {
 			if (err.statusCode != 404) throw err;
-			return All.run('user.add', req, {email: data.email});
+			return All.user.add(req, {email: data.email}).then(function(user) {
+				return All.user.get(req, {email: data.email}).select('_id');
+			});
 		}).then(function(user) {
 			var block = {
 				type: 'settings',
 				data: data.data,
-				parents: [site, user]
+				parents: [user]
 			};
 			return site.$beforeInsert.call(block).then(function() {
 				block.lock = {read: [`id-${block.id}`]};
-				return site.$query(req.trx).insertGraph(block, {
+				return site.$relatedQuery('children', req.trx).insertGraph(block, {
 					relate: ['parents']
 				}).then(function(settings) {
 					delete settings.parents;
