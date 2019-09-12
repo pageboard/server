@@ -450,7 +450,6 @@ exports.all.schema = {
 			default: 0
 		},
 		drafts: {
-			title: 'Show pages that are not in sitemap',
 			type: 'boolean',
 			default: false
 		},
