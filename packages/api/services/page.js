@@ -767,12 +767,12 @@ exports.del.schema = {
 	}
 };
 
-exports.robots = function(req) {
+exports.robots = function({site}) {
 	var lines = [];
 	var p;
-	if (req.site.data.env == "production") {
-		lines.push(`Sitemap: ${req.site.href}/.well-known/sitemap.txt`);
-		p = listPages(req, {disallow: true}).then(function(pages) {
+	if (site.data.env == "production") {
+		lines.push(`Sitemap: ${site.href}/.well-known/sitemap.txt`);
+		p = listPages(site, {disallow: true}).then(function(pages) {
 			pages.forEach(function(page) {
 				lines.push(`Disallow: ${page.data.url}`);
 			});
