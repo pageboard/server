@@ -50,8 +50,6 @@ exports.get.schema = {
 exports.add = function(req, data) {
 	return QueryUser(req, {
 		email: data.email
-	}).then(function(user) {
-		return user;
 	}).catch(function(err) {
 		if (err.status != 404) throw err;
 		return All.api.Block.query(req.trx).insert({
