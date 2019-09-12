@@ -67,14 +67,14 @@ function init(All) {
 		}).catch(next);
 	});
 
-	All.app.get('/robots.txt', All.cache.tag('api'), function(req, res, next) {
+	All.app.get('/robots.txt', All.cache.tag('data-:site'), function(req, res, next) {
 		All.run('page.robots', req).then(function(txt) {
 			res.type('text/plain');
 			res.send(txt);
 		}).catch(next);
 	});
 
-	All.app.get('/.well-known/sitemap.txt', function(req, res, next) {
+	All.app.get('/.well-known/sitemap.txt', All.cache.tag('data-:site'), function(req, res, next) {
 		All.run('page.all', req, {robot:true}).then(function(obj) {
 			res.type('text/plain');
 			All.auth.filter(req, obj);
