@@ -202,7 +202,7 @@ exports.get = function(req, data) {
 			var position = siblings.findIndex(function(item) {
 				var same = item.url == data.url;
 				if (same) found = true;
-				else if (!found && item.url.startsWith(data.url)) found = item.url;
+				else if (!found && data.url.length > 1 && item.url.startsWith(data.url)) found = item.url;
 				return same;
 			});
 			if (found && found !== true) links.found = found;
