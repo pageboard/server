@@ -6,10 +6,9 @@ var fs = {
 	symlink: pify(require('fs').symlink),
 	unlink: pify(require('fs').unlink),
 	stat: pify(require('fs').stat),
-	copyFile: pify(require('fs').copyFile)
+	copyFile: pify(require('fs').copyFile),
+	mkdir: pify(require('fs').mkdir)
 };
-
-var mkdirp = pify(require('mkdirp'));
 
 var bundlers = {
 	js: require('postinstall-js'),
@@ -40,7 +39,9 @@ function init(All) {
 	var statics = All.opt.statics;
 	var app = All.app;
 
-	return mkdirp(statics.runtime).then(function() {
+	return fs.mkdir(statics.runtime, {
+		recursive: true
+	}).then(function() {
 		console.info(`Static directories are served from symlinks in ${statics.runtime}`);
 
 		app.get(
@@ -66,7 +67,7 @@ function init(All) {
 				fallthrough: true
 			}),
 			function(req, res, next) {
-				if (/^(get|head)$/i.test(req.method)) {
+				if (req.method == "GET" || req.method == "HEAD") {
 					next(new HttpError.NotFound("Static file not found"));
 				} else {
 					next();
@@ -99,7 +100,10 @@ exports.bundle = function(site, pkg, list, filename) {
 	var outUrl = `/.files/${version}/${filename}`;
 	var output = urlToPath(opts, site.id, outUrl);
 
-	return Promise.all([mkdirp(buildDir), mkdirp(cacheDir)]).then(function() {
+	return Promise.all([
+		fs.mkdir(buildDir, {recursive: true}),
+		fs.mkdir(cacheDir, {recursive: true})
+	]).then(function() {
 		if (version != site.branch) return fs.stat(buildPath).catch(function(err) {})
 		.then(function(stat) {
 			return !!stat;
@@ -110,7 +114,6 @@ exports.bundle = function(site, pkg, list, filename) {
 		if (ext != "js" && ext != "css") throw new Error("Bundles only .js or .css extensions");
 		return bundlers[ext](inputs, output, {
 			minify: site.data.env == "production",
-			browsers: opts.browsers,
 			cacheDir: cacheDir
 		}).catch(function(err) {
 			delete err.input;
@@ -155,7 +158,9 @@ exports.install = function(site, {directories}, All) {
 	if (site) {
 		var dir = Path.join("files", site.id);
 		var runSiteDir = Path.join(All.opt.statics.runtime, dir);
-		p = mkdirp(runSiteDir);
+		p = fs.mkdir(runSiteDir, {
+			recursive: true
+		});
 	}
 	directories.forEach(function(mount) {
 		p = p.then(function() {
@@ -179,7 +184,9 @@ function mountPath(src, dst) {
 
 	debug(`Mount ${src} to ${absDst}`);
 
-	return mkdirp(Path.dirname(absDst)).then(function() {
+	return fs.mkdir(Path.dirname(absDst), {
+		recursive: true
+	}).then(function() {
 		return fs.unlink(absDst).catch(function(err) {}).then(function() {
 			return fs.symlink(src, absDst);
 		});

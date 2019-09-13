@@ -18,9 +18,8 @@
   "homepage": "https://github.com/pageboard/server#readme",
   "dependencies": {
     "debug": "^3.1.0",
-    "mkdirp": "^0.5.1",
-    "postinstall-css": "^0.4.1",
-    "postinstall-js": "^0.4.4",
+    "postinstall-css": "^0.5.0",
+    "postinstall-js": "^0.5.0",
     "serve-static": "^1.13.2"
   },
   "pageboard": true
