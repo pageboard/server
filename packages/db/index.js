@@ -16,8 +16,14 @@ exports = module.exports = function() {
 
 function init(All) {
 	var opt = All.opt;
-	opt.db = knexConfig(opt);
-	exports.knex = knex(opt.db);
+	exports.knex = knex(knexConfig(opt));
+	// normalize options
+	var dbOpts = exports.knex.client.config.connection;
+	Object.assign(opt.database, {
+		user: dbOpts.user,
+		name: dbOpts.database,
+		host: dbOpts.host
+	});
 	if (Object.keys(opt.upstreams)[0] == opt.version) initDumps(All);
 	// TODO Cron exports.gc...
 }
@@ -52,34 +58,57 @@ exports.seed = function() {
 	}));
 };
 
-exports.dump = function(stamp) {
-	var opt = All.opt;
-	var dumpDir = opt.database.dump && opt.database.dump.dir;
+exports.dump = function({trx}, {name}) {
+	var opt = All.opt.database;
+	var dumpDir = opt.dump && opt.dump.dir;
 	if (!dumpDir) throw new HttpError.BadRequest("Missing database.dump.dir config");
-	var file = Path.join(dumpDir, `${opt.db.database}-${stamp}.dump`);
-	return exec(`pg_dump --format=custom --file=${file} --username=${opt.db.user} ${opt.db.database}`, {}).then(function() {
+	var file = Path.join(Path.resolve(All.opt.dir, dumpDir), `${opt.name}-${name}.dump`);
+	return exec(`pg_dump --format=custom --file=${file} --username=${opt.user} ${opt.name}`, {}).then(function() {
 		return file;
 	});
 };
+exports.dump.schema = {
+	$action: 'read',
+	required: ['name'],
+	properties: {
+		name: {
+			title: 'Name',
+			type: 'string',
+			pattern: '^\\w+$'
+		}
+	}
+};
 
-exports.restore = function(stamp) {
-	var opt = All.opt;
-	var dumpDir = opt.database.dump && opt.database.dump.dir;
+exports.restore = function({trx}, {name}) {
+	var opt = All.opt.database;
+	var dumpDir = opt.dump && opt.dump.dir;
 	if (!dumpDir) throw new HttpError.BadRequest("Missing database.dump.dir config");
-	var db = `${opt.db.database}-${stamp}`;
-	var file = Path.join(dumpDir, `${db}.dump`);
-	return exec(`createdb -U ${opt.db.user} -T template1 ${db}`, {}).then(function() {
-		return exec(`pg_restore -d ${db} -U ${opt.db.user} ${file}`, {}).then(function() {
+	var db = `${opt.name}-${name}`;
+	var file = Path.join(Path.resolve(All.opt.dir, dumpDir), `${db}.dump`);
+	return exec(`createdb -U ${opt.user} -T template1 ${db}`, {}).then(function() {
+		return exec(`pg_restore -d ${db} -U ${opt.user} ${file}`, {}).then(function() {
 			return file;
 		});
 	}).catch(function(err) {
-		return exec(`dropdb -U ${opt.db.user} ${db}`, {});
+		return exec(`dropdb -U ${opt.user} ${db}`, {});
 	});
+};
+exports.restore.schema = {
+	$action: 'write',
+	required: ['name'],
+	properties: {
+		name: {
+			title: 'Name',
+			type: 'string',
+			pattern: '^\\w+$'
+		}
+	}
 };
 
 function knexConfig(opt) {
 	if (!process.env.HOME) process.env.HOME = require('passwd-user').sync().homeDirectory;
-	var dbName = opt.database.name || opt.name;
+	var dbName = opt.database.name;
+	if (!dbName) dbName = opt.database.name = opt.name;
 	var dbOpts = Object.assign({}, {
 		url: `postgres://localhost/${dbName}`
 	}, opt.database);
@@ -158,10 +187,6 @@ function initDumps(All) {
 		dir: Path.join(All.opt.dirs.data, 'dumps'),
 		keep: 15
 	}, opt);
-	console.info(`Dumps db
- every ${opt.interval} days
- for ${opt.keep} days
- to ${opt.dir}`);
 	var job = new Cron.CronJob({
 		cronTime: `0 3 */${opt.interval} * *`,
 		onTick: function() {
@@ -172,10 +197,13 @@ function initDumps(All) {
 }
 
 function doDump(dir, keep) {
+	console.info("cron: db.dump to", dir, "for the last", keep, "days");
 	return fs.mkdir(dir, {
 		recursive: true
 	}).then(function() {
-		exports.dump((new Date).toISOString().split('.')[0].replace(/[-:]/g, '')).then(function() {
+		return All.run('db.dump', {
+			name: (new Date()).toISOString().split('.')[0].replace(/[-:]/g, '')
+		}).then(function() {
 			var now = Date.now();
 			fs.readdir(dir).then(function(files) {
 				return Promise.all(files.map(function(file) {
