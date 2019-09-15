@@ -98,7 +98,8 @@ exports.send = function(req, data) {
 				${site.href}
 				and can be ignored.`;
 		}
-		return All.mail.to(mail).then(function() {
+		return All.mail.to(req, mail).then(function() {
+			// do not return information about that
 			return {};
 		});
 	});

@@ -47,7 +47,7 @@ function init(All) {
 	mailDomain = opt.domain;
 
 	All.app.post('/.api/mail', multipart, function(req, res, next) {
-		All.run('mail.receive', req.body).then(function(ok) {
+		All.run('mail.receive', req, req.body).then(function(ok) {
 			// https://documentation.mailgun.com/en/latest/user_manual.html#receiving-messages-via-http-through-a-forward-action
 			if (!ok) res.sendStatus(406);
 			else res.sendStatus(200);
@@ -55,7 +55,7 @@ function init(All) {
 	});
 }
 
-exports.receive = function(data) {
+exports.receive = function(req, data) {
 	// https://documentation.mailgun.com/en/latest/user_manual.html#parsed-messages-parameters
 	if (!validateMailgun(All.opt.mail.mailgun, data.timestamp, data.token, data.signature)) {
 		return false;
@@ -72,12 +72,13 @@ exports.receive = function(data) {
 		if (parts.pop() != mailDomain) return false;
 		parts = parts[0].split('.');
 		if (parts.length != 2) return false;
-		return All.run('site.get', {id: parts[0]}).then(function(site) {
-			return Promise.all(All.run('settings.search', site, {
+		return All.run('site.get', req, {id: parts[0]}).then(function(site) {
+			req.site = site;
+			return Promise.all(All.run('settings.search', req, {
 				email: senders
-			}), All.run('settings.get', site, {id: parts[1]})).then(function([senders, settings]) {
+			}), All.run('settings.get', req, {id: parts[1]})).then(function([senders, settings]) {
 				if (senders.length == 0) throw new HttpError.NotFound("No known sender");
-				return exports.to({
+				return exports.to(req, {
 					from: {
 						name: site.data.title,
 						address: `${site.id}.${senders[0].id}@${mailDomain}`
@@ -103,7 +104,7 @@ exports.receive = function(data) {
 	});
 };
 
-exports.to = function(data) {
+exports.to = function(req, data) {
 	if (!data.from) data.from = defaultSender;
 	return mailer.sendMail(data);
 };
@@ -154,7 +155,7 @@ exports.send = function(req, data) {
 		data: {url: data.url}
 	})];
 	var mailOpts = {
-		from: defaultSender,
+		from: defaultSender
 	};
 	if (data.replyTo) mailOpts.replyTo = data.replyTo;
 	if (data.from) {
@@ -205,7 +206,7 @@ exports.send = function(req, data) {
 			// 	filename: 'test.txt', // optional
 			// 	contentType: 'text/plain' // optional
 			// }];
-			return exports.to(mailOpts);
+			return exports.to(req, mailOpts);
 		});
 	});
 };
