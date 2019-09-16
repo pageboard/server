@@ -83,7 +83,7 @@ function init(All) {
 			res.status(200).send(msg);
 		}).then(function() {
 			if (version != null) return All.site.save(req, site).then(function() {
-				if (pusher) All.mail.to({
+				if (pusher) All.mail.to(req, {
 					to: {
 						name: pusher.name,
 						address: pusher.email
@@ -96,7 +96,7 @@ function init(All) {
 				});
 			});
 		}).catch(function(err) {
-			if (pusher) All.mail.to({
+			if (pusher) All.mail.to(req, {
 				to: {
 					name: pusher.name,
 					address: pusher.email
