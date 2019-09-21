@@ -268,19 +268,16 @@ All.send = function(res, obj) {
 		res.status(obj.status);
 		delete obj.status;
 	}
-	if (obj.location) {
-		res.json(obj);
-	} else {
-		obj = All.auth.filterResponse(req, obj);
-		if (obj.item && !obj.item.type) {
-			// 401 Unauthorized: missing or bad authentication
-			// 403 Forbidden: authenticated but not authorized
-			res.status(req.user.id ? 403 : 401);
-		}
-		if (req.granted) res.set('X-Granted', 1);
-		All.auth.headers(res, req.locks);
-		res.json(obj);
+
+	obj = All.auth.filterResponse(req, obj);
+	if (obj.item && !obj.item.type) {
+		// 401 Unauthorized: missing or bad authentication
+		// 403 Forbidden: authenticated but not authorized
+		res.status(req.user.id ? 403 : 401);
 	}
+	if (req.granted) res.set('X-Granted', 1);
+	All.auth.headers(res, req.locks);
+	res.json(obj);
 };
 
 
