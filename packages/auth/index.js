@@ -154,7 +154,7 @@ function filter(req, item) {
 	var schema = req.site.$schema(item.type) || {};
 
 	var $lock = schema.$lock || {};
-	if (typeof $lock == "string" || Array.isArray($lock)) $lock = {'*': $lock};
+	if (typeof $lock == "boolean" || typeof $lock == "string" || Array.isArray($lock)) $lock = {'*': $lock};
 	var lock = (item.lock || {}).read || [];
 
 	if (Object.keys($lock).length == 0 && lock.length == 0) return item;
