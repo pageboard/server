@@ -190,14 +190,17 @@ function initDumps(All) {
 	var job = new Cron.CronJob({
 		cronTime: `0 3 */${opt.interval} * *`,
 		onTick: function() {
-			doDump(opt.dir, opt.interval * opt.keep * day);
-		}
+			doDump(opt.dir, opt.interval * opt.keep * day).then(() => {
+				console.info("cron: db.dump to", opt.dir);
+			}).catch((err) => {
+				console.error("cron: db.dump to", opt.dir, err);
+			});
+		},
 	});
 	job.start();
 }
 
 function doDump(dir, keep) {
-	console.info("cron: db.dump to", dir, "for the last", keep, "days");
 	return fs.mkdir(dir, {
 		recursive: true
 	}).then(function() {
