@@ -344,6 +344,15 @@ class EltProxy {
 		}
 		return Reflect.set(elt, key, val);
 	}
+	get(elt, key) {
+		var val = Reflect.get(elt, key);
+		if (key == "scripts" || key == "stylesheets") {
+			if (val == null) this[key] = val = [];
+		} else if (key == "resources" || key == "properties") {
+			if (val == null) this[key] = val = {};
+		}
+		return val;
+	}
 }
 
 class ArrProxy {
