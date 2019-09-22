@@ -180,7 +180,10 @@ All.run = function(apiStr, req, data) {
 			Unknown api method ${apiStr}
 				${Object.getOwnPropertyNames(mod).sort().join(', ')}
 		`);
-		if (data == null) data = {};
+		if (data == null && req != null) {
+			data = req;
+			req = null;
+		}
 		try {
 			data = check(fun, schema, data);
 		} catch(err) {
