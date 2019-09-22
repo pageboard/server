@@ -219,7 +219,7 @@ All.run = function(apiStr, req, data) {
 			}
 			return obj;
 		}).catch(function(err) {
-			console.error("api method:", apiStr);
+			console.error("Error from api:", apiStr);
 			if (req && req.user && req.user.id) console.error("by user", req.user.id, req.user.grants);
 			if (!hadTrx && req && req.trx) {
 				try {
