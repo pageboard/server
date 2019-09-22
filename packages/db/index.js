@@ -58,7 +58,7 @@ exports.seed = function() {
 	}));
 };
 
-exports.dump = function({trx}, {name}) {
+exports.dump = function({name}) {
 	var opt = All.opt.database;
 	var dumpDir = opt.dump && opt.dump.dir;
 	if (!dumpDir) throw new HttpError.BadRequest("Missing database.dump.dir config");
@@ -79,7 +79,7 @@ exports.dump.schema = {
 	}
 };
 
-exports.restore = function({trx}, {name}) {
+exports.restore = function({name}) {
 	var opt = All.opt.database;
 	var dumpDir = opt.dump && opt.dump.dir;
 	if (!dumpDir) throw new HttpError.BadRequest("Missing database.dump.dir config");
