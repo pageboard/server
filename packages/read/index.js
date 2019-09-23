@@ -26,7 +26,7 @@ function init(All) {
 		'nomedia',
 		'prerender',
 		'redirect',
-		'html'
+		'serialize'
 	];
 	if (opt.env != "development") {
 		opt.read.helpers.push('report');

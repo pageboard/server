@@ -22,7 +22,8 @@ module.exports = function(opt) {
 		'./plugins/form',
 		'./plugins/upcache',
 		'./plugins/bearer',
-		'./plugins/report'
+		'./plugins/report',
+		'./plugins/serialize'
 	];
 
 	const workerPath = Path.join(__dirname, 'worker.js');
