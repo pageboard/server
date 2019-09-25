@@ -17,6 +17,7 @@
   },
   "homepage": "https://github.com/pageboard/server#readme",
   "dependencies": {
+    "@irrelon/path": "^2.3.5",
     "ajv": "^6.10.0",
     "ajv-keywords": "^3.4.0",
     "body-parser": "^1.18.3",

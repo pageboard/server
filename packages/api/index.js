@@ -9,6 +9,7 @@ const bodyParser = require.lazy('body-parser');
 const imports = require('./lib/imports');
 const utils = require('./lib/utils');
 const common = require('./models/common');
+const jsonPath = require.lazy('@irrelon/path');
 
 const ajvApiSettings = {
 	$data: true,
@@ -272,7 +273,7 @@ All.send = function(res, obj) {
 		delete obj.status;
 	}
 
-	obj = All.auth.filterResponse(req, obj);
+	obj = All.auth.filterResponse(req, obj, itemFn);
 	if (obj.item && !obj.item.type) {
 		// 401 Unauthorized: missing or bad authentication
 		// 403 Forbidden: authenticated but not authorized
@@ -283,4 +284,17 @@ All.send = function(res, obj) {
 	res.json(obj);
 };
 
-
+function itemFn(schema, block) {
+	if (schema.upgrade) {
+		Object.entries(schema.upgrade).forEach(function([src, dst]) {
+			var path = src.split('.');
+			var key = path.pop();
+			src = path.join('.');
+			var parent = jsonPath.get(block, src) || {};
+			if (Object.prototype.hasOwnProperty.call(parent, key)) {
+				jsonPath.set(block, dst, parent[key]);
+				delete parent[key];
+			}
+		});
+	}
+}
