@@ -50,17 +50,17 @@ exports.lock = lockMw;
 exports.locked = locked;
 exports.filter = filter;
 
-exports.filterResponse = function(req, obj) {
+exports.filterResponse = function(req, obj, fn) {
 	var {item, items} = obj;
 	if (!item && !items) {
-		return filter(req, obj);
+		return filter(req, obj, fn);
 	}
 	if (item) {
-		obj.item = filter(req, item);
+		obj.item = filter(req, item, fn);
 		if (!obj.item.type) delete obj.items;
 	}
 	if (obj.items) obj.items = obj.items.map(function(item) {
-		return filter(req, item);
+		return filter(req, item, fn);
 	});
 	return obj;
 };
@@ -131,27 +131,28 @@ function locked(req, list) {
 	return !granted;
 }
 
-function filter(req, item) {
+function filter(req, item, fn) {
 	if (!item.type) return item;
 	var {children, child, parents, parent} = item;
 	if (children) {
 		item.children = children.filter(function(item) {
-			return filter(req, item);
+			return filter(req, item, fn);
 		});
 	}
 	if (parents) {
 		item.parents = parents.filter(function(item) {
-			return filter(req, item);
+			return filter(req, item, fn);
 		});
 	}
 	if (child) {
-		item.child = filter(req, child);
+		item.child = filter(req, child, fn);
 	}
 	if (parent) {
-		item.parent = filter(req, parent);
+		item.parent = filter(req, parent, fn);
 	}
 	// old types might not have schema
 	var schema = req.site.$schema(item.type) || {};
+	if (fn && schema) fn(schema, item);
 
 	var $lock = schema.$lock || {};
 	if (typeof $lock == "boolean" || typeof $lock == "string" || Array.isArray($lock)) $lock = {'*': $lock};
