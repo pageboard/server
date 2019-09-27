@@ -716,7 +716,14 @@ function applyRelate({site, trx}, obj) {
 		return site.$relatedQuery('children', trx).where('block.id', parentId)
 		.first().throwIfNotFound().then(function(parent) {
 			return site.$relatedQuery('children', trx)
-			.whereIn('block.id', obj[parentId]).then(function(ids) {
+			.whereIn('block.id', obj[parentId])
+			.select('block.id', 'block._id', 'block.standalone', 'rel.child_id')
+			.leftOuterJoin('relation as rel', function() {
+				this.on('rel.parent_id', '=', parent._id)
+				.andOn('rel.child_id', '=', 'block._id');
+			}).then(function(ids) {
+				// do not relate again
+				var unrelateds = ids.filter(item => !item.child_id);
 				if (ids.length != obj[parentId].length) {
 					var missing = obj[parentId].reduce(function(list, id) {
 						if (!ids.some(function(item) {
@@ -726,7 +733,7 @@ function applyRelate({site, trx}, obj) {
 					}, []);
 					throw new HttpError.NotFound("Missing children: " + missing.join(', '));
 				}
-				return parent.$relatedQuery('children', trx).relate(ids);
+				return parent.$relatedQuery('children', trx).relate(unrelateds);
 			});
 		});
 	}));
