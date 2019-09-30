@@ -190,10 +190,11 @@ function initDumps(All) {
 	var job = new Cron.CronJob({
 		cronTime: `0 3 */${opt.interval} * *`,
 		onTick: function() {
-			doDump(opt.dir, opt.interval * opt.keep * day).then(() => {
-				console.info("cron: db.dump to", opt.dir);
+			var dir = Path.resolve(All.opt.dir, opt.dir);
+			doDump(dir, opt.interval * opt.keep * day).then(() => {
+				console.info("cron: db.dump to", dir);
 			}).catch((err) => {
-				console.error("cron: db.dump to", opt.dir, err);
+				console.error("cron: db.dump to", dir, err);
 			});
 		},
 	});
