@@ -120,7 +120,7 @@ exports.search.schema = {
 		limit: {
 			type: 'integer',
 			minimum: 0,
-			maximum: 50,
+			maximum: 1000,
 			default: 10
 		},
 		offset: {
