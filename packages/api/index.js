@@ -181,6 +181,7 @@ All.run = function(apiStr, req, data) {
 			Unknown api method ${apiStr}
 				${Object.getOwnPropertyNames(mod).sort().join(', ')}
 		`);
+		if (!schema) throw new HttpError.BadRequest(`Internal api method ${apiStr}`);
 		if (data == null && req != null) {
 			data = req;
 			req = null;
