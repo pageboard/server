@@ -119,6 +119,47 @@ exports.search.schema = {
 	}
 };
 
+exports.create = function({trx}, data) {
+	return All.run('site.import', {trx}, {
+		id: data.id,
+		copy: true,
+		file: './data/site.json',
+		data: Object.assign(data.data, {
+			server: All.opt.version
+		})
+	}).then(function() {
+		return All.run('site.get', {trx}, {id: data.id});
+	}).then(function(site) {
+		return All.run('settings.save', {site, trx}, {
+			email: data.email,
+			grants: 'webmaster'
+		});
+	});
+};
+exports.create.schema = {
+	title: 'Create site with default pages',
+	$action: 'add',
+	required: ['id', 'email'],
+	properties: {
+		id: {
+			title: 'New site id',
+			type: 'string',
+			format: 'id'
+		},
+		email: {
+			title: 'User email',
+			type: 'string',
+			format: 'email',
+			transform: ['trim', 'toLowerCase']
+		},
+		data: {
+			title: 'Data',
+			type: 'object',
+			nullable: true
+		}
+	}
+};
+
 exports.add = function(req, data) {
 	return QuerySite(req, {id: data.id}).then(function(site) {
 		console.info("There is already a site with this id", data.id);
