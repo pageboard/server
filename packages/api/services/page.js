@@ -102,44 +102,6 @@ function QueryPage({site, trx}) {
 	});
 }
 
-function QueryPageHref({site, trx}, url) {
-	var hrefs = site.$model.hrefs;
-	return All.api.Href.query(trx).select(
-		trx.raw(`jsonb_object_agg(
-			href.url,
-			jsonb_set(href.meta, '{mime}', to_jsonb(href.mime))
-		) AS hrefs`)
-	)
-	.joinRelation('parent', {alias: 'site'})
-	.where('site._id', site._id)
-	.join('block as b', function() {
-		if (Object.keys(hrefs).map(function(type) {
-			this.orOn(function() {
-				this.on('b.type', site.$lit(type));
-				var list = hrefs[type];
-				this.on(function() {
-					list.forEach(function(path) {
-						this.orOn(ref(`b.data:${path}`).castText(), 'href.url');
-					}, this);
-				});
-			});
-		}, this).length == 0) this.on('b.type', site.$lit(null));
-	})
-	.where('b.standalone', false)
-	.join('relation AS r', {
-		'r.child_id': 'b._id'
-	})
-	.join('block AS page', {
-		'page._id': 'r.parent_id'
-	})
-	.whereIn('page.type', site.$pages)
-	.whereJsonText('page.data:url', url)
-	.join('relation as rp', {
-		'rp.child_id': 'page._id'
-	})
-	.where('rp.parent_id', site._id);
-}
-
 exports.get = function(req, data) {
 	var {site} = req;
 	var obj = {
@@ -152,7 +114,7 @@ exports.get = function(req, data) {
 	return QueryPage(req).whereIn('page.type', site.$pages)
 	.whereJsonText("page.data:url", data.url)
 	.select(
-		QueryPageHref(req, data.url).as('hrefs')
+		All.href.select(req, {url: data.url}).as('hrefs')
 	).then(function(page) {
 		if (!page) {
 			obj.status = 404;
@@ -165,7 +127,7 @@ exports.get = function(req, data) {
 			.where('page.type', 'page')
 			.whereJsonText("page.data:url", statusUrl)
 			.select(
-				QueryPageHref(req, statusUrl).as('hrefs')
+				All.href.select(req, {url: statusUrl}).as('hrefs')
 			).then(function(page) {
 				if (!page) throw new HttpError[obj.status]();
 				return page;

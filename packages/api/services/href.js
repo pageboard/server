@@ -245,6 +245,50 @@ exports.del.schema = {
 	}
 };
 
+exports.select = function({site, trx}, data={}) {
+	var hrefs = site.$model.hrefs;
+	var q = All.api.Href.query(trx).select(
+		trx.raw(`jsonb_object_agg(
+			href.url,
+			jsonb_set(href.meta, '{mime}', to_jsonb(href.mime))
+		) AS hrefs`)
+	)
+	.joinRelation('parent', {alias: 'site'})
+	.where('site._id', site._id)
+	.join('block as b', function() {
+		if (Object.keys(hrefs).map(function(type) {
+			this.orOn(function() {
+				this.on('b.type', site.$lit(type));
+				var list = hrefs[type];
+				this.on(function() {
+					list.forEach(function(path) {
+						this.orOn(ref(`b.data:${path}`).castText(), 'href.url');
+					}, this);
+				});
+			});
+		}, this).length == 0) this.on('b.type', site.$lit(null));
+	})
+	.where('b.standalone', false)
+	.join('relation AS r', {
+		'r.child_id': 'b._id'
+	})
+	.join('block AS shared', {
+		'shared._id': 'r.parent_id'
+	});
+	if (data.url) {
+		q.whereIn('shared.type', site.$pages)
+		.whereJsonText('shared.data:url', data.url);
+	} else if (data.id != null) {
+		var list = data.id;
+		if (!Array.isArray(list)) list = [data.id];
+		q.whereIn('shared.id', list);
+	}
+	return q.join('relation as rp', {
+		'rp.child_id': 'shared._id'
+	})
+	.where('rp.parent_id', site._id);
+};
+
 exports.gc = function({trx}, days) {
 	return Promise.resolve([]);
 	// TODO use sites schemas to known which paths to check:
