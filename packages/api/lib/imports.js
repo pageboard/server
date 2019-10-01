@@ -321,7 +321,7 @@ class MapProxy {
 		this.context = context;
 	}
 	set(obj, key, val) {
-		if (obj.hasOwnProperty(key)) {
+		if (Object.prototype.hasOwnProperty.call(obj, key)) {
 			if (key == "user" || key == "priv") {
 				console.error(`Modifying ${key} element is not allowed`);
 				return false;
