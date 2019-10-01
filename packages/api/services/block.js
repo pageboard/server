@@ -153,19 +153,23 @@ exports.search = function({site, trx}, data) {
 			limit: data.limit,
 			metas: metas
 		};
-		if (parents && parents.first || children && children.first) {
-			rows.forEach(function(row) {
-				if (parents && parents.first) {
-					if (row.parents && row.parents.length) row.parent = row.parents[0];
-					delete row.parents;
-				}
-				if (children && children.first) {
-					if (row.children && row.children.length) row.child = row.children[0];
-					delete row.children;
-				}
-			});
-		}
-		return obj;
+		var ids = [];
+		rows.forEach(function(row) {
+			ids.push(row.id);
+			if (parents && parents.first) {
+				if (row.parents && row.parents.length) row.parent = row.parents[0];
+				delete row.parents;
+			}
+			if (children && children.first) {
+				if (row.children && row.children.length) row.child = row.children[0];
+				delete row.children;
+			}
+		});
+		if (!ids.length) return obj;
+		return All.href.select({site, trx}, {id: ids}).first().then(function(hrow) {
+			obj.hrefs = hrow.hrefs;
+			return obj;
+		});
 	});
 };
 exports.search.schema = {
