@@ -1,6 +1,6 @@
-var ref = require('objection').ref;
 var Path = require('path');
 var URL = require('url');
+const {ref, raw} = require('objection');
 
 exports = module.exports = function(opt) {
 	this.opt = opt;
@@ -65,10 +65,7 @@ exports.search = function(req, data) {
 	if (data.url) {
 		q.where('url', data.url);
 	} else if (data.text) {
-		q.from(Href.raw([
-			Href.raw("websearch_to_tsquery('unaccent', ?) AS query", [data.text]),
-			'href'
-		]));
+		q.from(raw("websearch_to_tsquery('unaccent', ?) AS query, ??", [data.text, 'href']));
 		q.where('href.visible', true);
 		q.whereRaw('query @@ href.tsv');
 		q.orderByRaw('ts_rank(href.tsv, query) DESC');
