@@ -416,20 +416,24 @@ exports.import = function({trx}, data) {
 	var standalones = {};
 	var idMap = {};
 	var regMap = {};
+	var fromVersion, toVersion;
 	pstream.on('data', function(obj) {
 		p = p.then(function() {
 			if (obj.site) {
+				if (!obj.site.data) obj.site.data = {};
 				if (copy) delete obj.site.data.domains;
+				fromVersion = obj.site.data.server;
 				Object.assign(obj.site.data, data.data || {});
+				toVersion = obj.site.data.server;
 				fixSiteCoercion(obj.site);
-				upgradeBlock(obj.site);
+				upgradeBlock(fromVersion, toVersion, obj.site);
 				obj.site.id = data.id;
 				return Block.query(trx).insert(obj.site).returning('*').then(function(copy) {
 					counts.site++;
 					site = copy;
 				});
 			} else if (obj.lone) {
-				var lone = upgradeBlock(obj.lone);
+				var lone = upgradeBlock(fromVersion, toVersion, obj.lone);
 				return (!copy ? Promise.resolve() : Promise.all([
 					Block.genId().then(function(id) {
 						var old = lone.id;
@@ -437,7 +441,7 @@ exports.import = function({trx}, data) {
 						regMap[id] = new RegExp(`block-id="${old}"`, 'g');
 					})
 				].concat(lone.children.map(function(child) {
-					upgradeBlock(child);
+					upgradeBlock(fromVersion, toVersion, child);
 					return Block.genId().then(function(id) {
 						var old = child.id;
 						child.id = idMap[child.id] = id;
@@ -497,7 +501,7 @@ exports.import = function({trx}, data) {
 					throw err;
 				});
 			} else if (obj.setting) {
-				var setting = upgradeBlock(obj.setting);
+				var setting = upgradeBlock(fromVersion, toVersion, obj.setting);
 				return Block.query(trx).where('type', 'user')
 				.whereJsonText('data:email', setting._email).select('_id')
 				.first().throwIfNotFound()
@@ -520,7 +524,7 @@ exports.import = function({trx}, data) {
 					});
 				});
 			} else if (obj.reservation) {
-				var resa = upgradeBlock(obj.reservation);
+				var resa = upgradeBlock(fromVersion, toVersion, obj.reservation);
 				var parents = resa.parents || [];
 				if (parents.length != 2) {
 					console.warn("Ignoring reservation", resa);
@@ -643,19 +647,11 @@ function replaceLock(map, block) {
 	});
 }
 
-function upgradeBlock(block) {
-	if (block.type == "notfound") {
-		block.type = "page";
-		block.data = Object.assign(block.data || {}, {
-			url: '/.well-known/404',
-			noindex: true,
-			nositemap: true
-		});
-	}
-	var locks = block.lock && block.lock.read;
-	if (locks) locks.forEach(function(lock, i) {
-		locks[i] = lock.replace(/^user-/, "id-");
-	});
+function upgradeBlock(fromVersion, toVersion, block) {
+	if (fromVersion == toVersion || !fromVersion || !toVersion) return block;
+	var upgrader = require(`../upgrades/from-${fromVersion}-to-${toVersion}`);
+	upgrader.any(block);
+	if (upgrader[block.type]) upgrader[block.type](block);
 	return block;
 }
 
