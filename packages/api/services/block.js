@@ -1,5 +1,4 @@
-const ref = require('objection').ref;
-const raw = require('objection').raw;
+const {ref, raw} = require('objection');
 
 exports = module.exports = function() {
 	return {
@@ -537,7 +536,7 @@ exports.save.external = true;
 
 exports.del = function({site, trx}, data) {
 	return site.$relatedQuery('children', trx)
-	.select(trx.raw('recursive_delete(block._id, FALSE) AS count'))
+	.select(raw('recursive_delete(block._id, FALSE) AS count'))
 	.where('block.id', data.id)
 	.where('block.type', data.type).first().throwIfNotFound();
 };
