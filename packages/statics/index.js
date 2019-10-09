@@ -81,6 +81,9 @@ function init(All) {
 
 exports.bundle = function(site, pkg, list, filename) {
 	if (list.length == 0) return [];
+	if (site.data.env == "dev" || !pkg.dir || !site.href) {
+		return Promise.resolve(list);
+	}
 	var buildDir = Path.join(pkg.dir, "builds");
 	var cacheDir = Path.join(All.opt.dirs.cache, "statics");
 	var buildPath = Path.join(buildDir, filename);

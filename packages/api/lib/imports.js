@@ -125,20 +125,10 @@ function bundle(site, pkg, rootEl) {
 		eltsMap[el.name] = el;
 	});
 	var metaEl = site.$bundles[rootEl.name] = Object.assign({}, rootEl);
-	var p;
-
-	if (site.data.env == "dev" || !pkg.dir || !site.href) {
-		p = Promise.resolve([
-			scripts,
-			styles
-		]);
-	} else {
-		p = Promise.all([
-			All.statics.bundle(site, pkg, scripts, `${prefix}.js`),
-			All.statics.bundle(site, pkg, styles, `${prefix}.css`)
-		]);
-	}
-	return p.then(function([scripts, styles]) {
+	return Promise.all([
+		All.statics.bundle(site, pkg, scripts, `${prefix}.js`),
+		All.statics.bundle(site, pkg, styles, `${prefix}.css`)
+	]).then(function([scripts, styles]) {
 		rootEl.scripts = scripts;
 		rootEl.stylesheets = styles;
 
