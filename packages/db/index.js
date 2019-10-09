@@ -106,7 +106,6 @@ exports.restore.schema = {
 };
 
 function knexConfig(opt) {
-	if (!process.env.HOME) process.env.HOME = require('passwd-user').sync().homeDirectory;
 	var dbName = opt.database.name;
 	if (!dbName) dbName = opt.database.name = opt.name;
 	var dbOpts = Object.assign({}, {

@@ -25,6 +25,7 @@
     "morgan": "^1.9.1",
     "outdent": "^0.7.0",
     "pad": "^2.2.3",
+    "passwd-user": "^3.0.0",
     "postinstall": "^0.4.1",
     "pretty-bytes": "^5.1.0",
     "promise.prototype.finally": "^3.1.0",

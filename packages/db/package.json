@@ -19,7 +19,6 @@
   "dependencies": {
     "cron": "^1.7.0",
     "knex": "^0.16.5",
-    "passwd-user": "^3.0.0"
   },
   "pageboard": true
 }
