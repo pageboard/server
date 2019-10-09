@@ -294,6 +294,7 @@ exports.gc = function({trx}, days) {
 	// TODO href.site IS NULL used to be p.data->>'domain' = href.site
 	// BOTH are wrong since they won't touch external links...
 	// TODO the outer join on url is also a bit wrong since it does not use href._parent !!!
+	/*
 	return trx.raw(`DELETE FROM href USING (
 		SELECT count(block.*) AS count, href._id FROM href
 		LEFT OUTER JOIN block ON (block.data->>'url' = href.url)
@@ -307,6 +308,7 @@ exports.gc = function({trx}, days) {
 	]).then(function(result) {
 		return result.rows;
 	});
+	*/
 };
 
 exports.reinspect = function({trx}, data) {
