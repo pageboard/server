@@ -1,6 +1,6 @@
-const ref = require('objection').ref;
 const Path = require('path');
 const URL = require('url');
+const {ref, raw} = require('objection');
 
 exports = module.exports = function(opt) {
 	this.opt = opt;
@@ -65,10 +65,7 @@ exports.search = function({site, trx}, data) {
 	if (data.url) {
 		q.where('url', data.url);
 	} else if (data.text) {
-		q.from(Href.raw([
-			Href.raw("websearch_to_tsquery('unaccent', ?) AS query", [data.text]),
-			'href'
-		]));
+		q.from(raw("websearch_to_tsquery('unaccent', ?) AS query, ??", [data.text, 'href']));
 		q.where('href.visible', true);
 		q.whereRaw('query @@ href.tsv');
 		q.orderByRaw('ts_rank(href.tsv, query) DESC');
@@ -248,7 +245,7 @@ exports.del.schema = {
 exports.select = function({site, trx}, data={}) {
 	var hrefs = site.$model.hrefs;
 	var q = All.api.Href.query(trx).select(
-		trx.raw(`jsonb_object_agg(
+		raw(`jsonb_object_agg(
 			href.url,
 			jsonb_set(href.meta, '{mime}', to_jsonb(href.mime))
 		) AS hrefs`)
