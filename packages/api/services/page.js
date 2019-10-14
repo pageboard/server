@@ -767,4 +767,6 @@ exports.robots = function(req) {
 		return lines.join('\n');
 	});
 };
-
+exports.robots.schema = {
+	$action: 'read'
+};
