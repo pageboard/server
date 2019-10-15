@@ -242,7 +242,7 @@ exports.del.schema = {
 	}
 };
 
-exports.select = function({site, trx}, data={}) {
+exports.collect = function({site, trx}, data={}) {
 	var hrefs = site.$model.hrefs;
 	var q = All.api.Href.query(trx).select(
 		raw(`jsonb_object_agg(
@@ -250,40 +250,31 @@ exports.select = function({site, trx}, data={}) {
 			jsonb_set(href.meta, '{mime}', to_jsonb(href.mime))
 		) AS hrefs`)
 	)
-	.joinRelation('parent', {alias: 'site'})
-	.where('site._id', site._id)
-	.join('block as b', function() {
-		if (Object.keys(hrefs).map(function(type) {
-			this.orOn(function() {
-				this.on('b.type', site.$lit(type));
-				var list = hrefs[type];
-				this.on(function() {
-					list.forEach(function(path) {
-						this.orOn(ref(`b.data:${path}`).castText(), 'href.url');
-					}, this);
-				});
-			});
-		}, this).length == 0) this.on('b.type', site.$lit(null));
-	})
-	.where('b.standalone', false)
-	.join('relation AS r', {
-		'r.child_id': 'b._id'
-	})
-	.join('block AS shared', {
-		'shared._id': 'r.parent_id'
-	});
+	.joinRelation('parent as site.children as root.children as block')
+	.where('site._id', site._id);
 	if (data.url) {
-		q.whereIn('shared.type', site.$pages)
-		.whereJsonText('shared.data:url', data.url);
+		q.whereIn('site:root.type', site.$pages)
+		.where(ref('data:url').from('site:root').castText(), data.url);
 	} else if (data.id != null) {
 		var list = data.id;
 		if (!Array.isArray(list)) list = [data.id];
-		q.whereIn('shared.id', list);
+		q.whereIn('site:root.id', list);
 	}
-	return q.join('relation as rp', {
-		'rp.child_id': 'shared._id'
-	})
-	.where('rp.parent_id', site._id);
+	q.where('site:root:block.standalone', false)
+	.where(function() {
+		if (Object.keys(hrefs).map(function(type) {
+			this.orWhere(function() {
+				this.where('site:root:block.type', site.$lit(type));
+				var list = hrefs[type];
+				this.where(function() {
+					list.forEach(function(path) {
+						this.orWhere(ref(`data:${path}`).from('site:root:block').castText(), ref('href.url'));
+					}, this);
+				});
+			});
+		}, this).length == 0) this.where('site:root:block.type', site.$lit(null));
+	});
+	return q;
 };
 
 exports.gc = function({trx}, days) {

@@ -165,7 +165,7 @@ exports.search = function({site, trx}, data) {
 			}
 		});
 		if (!ids.length) return obj;
-		return All.href.select({site, trx}, {id: ids}).first().then(function(hrow) {
+		return All.href.collect({site, trx}, {id: ids}).first().then(function(hrow) {
 			obj.hrefs = hrow.hrefs;
 			return obj;
 		});
