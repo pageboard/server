@@ -94,10 +94,9 @@ exports.QueryBuilder = class CommonQueryBuilder extends QueryBuilder {
 		this._patchObjectOperationFactory = factory;
 		return this;
 	}
-	whereJsonText(a) {
-		var args = Array.from(arguments).slice(1);
+	whereJsonText(a, ...args) {
 		args.unshift(ref(a).castText());
-		return this.where.apply(this, args);
+		return this.where(...args);
 	}
 	patchObject(obj) {
 		var patchObjectOperation = this._patchObjectOperationFactory();
