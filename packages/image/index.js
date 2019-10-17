@@ -1,5 +1,6 @@
 const sharpie = require.lazy('sharpie');
 const fs = require('fs').promises;
+const Path = require('path');
 
 const DataUri = require.lazy('datauri');
 const allowedParameters = {
@@ -131,11 +132,33 @@ exports.upload = function(file) {
 			console.warn("image.upload cannot process", mime);
 			return;
 		}
-		var dst = file.path + ".tmp";
+
+		var dst = file.path + '.tmp';
 		return sharpie.sharp(file.path)
-		.toFormat(format, {quality:93})
+		.resize({
+			fit: "inside",
+			withoutEnlargement: true,
+			fastShrinkOnLoad: false,
+			width: 2560,
+			height: 2560
+		})
+		.toFormat("webp", {
+			quality: 100,
+			lossless: true,
+			smartSubsample: true,
+			reductionEffort: 2
+		})
 		.toFile(dst).then(function() {
-			return fs.rename(dst, file.path);
+			file.mimetype = "image/webp";
+			var pathObj = Path.parse(file.path);
+			file.filename = pathObj.name + '.webp';
+			file.path = Path.format({
+				dir: pathObj.dir,
+				base: file.filename
+			});
+			return fs.rename(dst, file.path).then(function() {
+				return file;
+			});
 		});
 	});
 };
