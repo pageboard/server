@@ -88,7 +88,7 @@ exports.QueryBuilder = class CommonQueryBuilder extends QueryBuilder {
 			var table = this.tableRefFor(model);
 			args = model.columns.map(col => `${table}.${col}`);
 		}
-		return super.select(args);
+		return super.select(...args);
 	}
 	patchObjectOperationFactory(factory) {
 		this._patchObjectOperationFactory = factory;
