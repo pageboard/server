@@ -243,39 +243,83 @@ exports.del.schema = {
 };
 
 exports.collect = function({site, trx}, data={}) {
-	var hrefs = site.$model.hrefs;
-	var q = All.api.Href.query(trx).select(
+	var q = All.api.Href.query(trx)
+	.select(
 		raw(`jsonb_object_agg(
 			href.url,
 			jsonb_set(href.meta, '{mime}', to_jsonb(href.mime))
 		) AS hrefs`)
-	)
-	.joinRelation('parent as site.children as root.children as block')
-	.where('site._id', site._id);
-	if (data.url) {
-		q.whereIn('site:root.type', site.$pages)
-		.where(ref('data:url').from('site:root').castText(), data.url);
-	} else if (data.id != null) {
-		var list = data.id;
-		if (!Array.isArray(list)) list = [data.id];
-		q.whereIn('site:root.id', list);
-	}
-	q.where('site:root:block.standalone', false)
-	.where(function() {
-		if (Object.keys(hrefs).map(function(type) {
-			this.orWhere(function() {
-				this.where('site:root:block.type', site.$lit(type));
-				var list = hrefs[type];
-				this.where(function() {
-					list.forEach(function(path) {
-						this.orWhere(ref(`data:${path}`).from('site:root:block').castText(), ref('href.url'));
-					}, this);
-				});
-			});
-		}, this).length == 0) this.where('site:root:block.type', site.$lit(null));
+	).from((builder) => {
+		builder.union([
+			collectHrefs({site, trx}, data),
+			collectHrefs({site, trx}, data, true)
+		]).as('href');
 	});
 	return q;
 };
+
+function collectHrefs({site, trx}, data, shared) {
+	var q = All.api.Block.query(trx).where('block._id', site._id)
+	.select('href.url', 'href.meta', 'href.mime');
+	const hrefs = site.$model.hrefs;
+	const types = ['image']; // Object.keys(hrefs)
+
+	var blockRelation = {
+		$relation: 'children',
+		$modify: [(q) => {
+			q.where('standalone', false);
+			q.whereIn('type', types);
+		}]
+	};
+	var rel = {
+		href: {
+			$relation: 'hrefs'
+		},
+		root: {
+			$relation: 'children',
+			block: blockRelation,
+			$modify: [(q) => {
+				q.where('standalone', true);
+			}]
+		}
+	};
+	if (shared) {
+		rel.root.shared = {
+			$relation: 'children',
+			block: blockRelation,
+			$modify: [(q) => {
+				q.where('standalone', true);
+			}]
+		};
+		delete rel.root.block;
+	}
+	q.joinRelation(rel);
+	if (data.url) {
+		q.where('root.type', 'page')
+		.where(ref('root.data:url').castText(), data.url);
+	} else if (data.id != null) {
+		var list = data.id;
+		if (!Array.isArray(list)) list = [data.id];
+		q.whereIn('root.id', list);
+	}
+
+	var table = shared ? 'root:shared:block' : 'root:block';
+	q.where(function() {
+		Object.entries(hrefs).forEach(([type, list]) => {
+			if (type != 'image') return;
+			this.orWhere(function() {
+				this.where(table + '.type', type);
+				this.where(function() {
+					list.forEach((path) => {
+						this.orWhere('href.url', ref(`data:${path}`).from(table).castText());
+					});
+				});
+			});
+		});
+	});
+	return q;
+}
+
 
 exports.gc = function({trx}, days) {
 	return Promise.resolve([]);
