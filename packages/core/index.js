@@ -112,7 +112,11 @@ exports.init = function(opt) {
 				if (typeof plugin != "function") {
 					continue;
 				}
-				var obj = plugin(opt) || {};
+				var obj = plugin(opt);
+				if (!obj) {
+					console.warn("plugin not configured", module);
+					continue;
+				}
 				obj.plugin = plugin;
 				plugins.push(obj);
 			}
