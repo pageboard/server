@@ -342,9 +342,15 @@ class EltProxy {
 	get(elt, key) {
 		var val = Reflect.get(elt, key);
 		if (key == "scripts" || key == "stylesheets") {
-			if (val == null) this[key] = val = [];
+			if (val == null) {
+				val = [];
+				Reflect.set(elt, key, val);
+			}
 		} else if (key == "resources" || key == "properties") {
-			if (val == null) this[key] = val = {};
+			if (val == null) {
+				val = {};
+				Reflect.set(elt, key, val);
+			}
 		}
 		return val;
 	}
