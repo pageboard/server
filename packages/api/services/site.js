@@ -2,6 +2,7 @@ const lodashMerge = require.lazy('lodash.merge');
 const {ref} = require('objection');
 const {PassThrough} = require('stream');
 const {createReadStream, createWriteStream} = require('fs');
+
 const Path = require('path');
 
 exports = module.exports = function(opt) {
@@ -124,7 +125,7 @@ exports.create = function({trx}, data) {
 		id: data.id,
 		copy: true,
 		file: './data/site.json',
-		data: Object.assign(data.data, {
+		data: Object.assign(data.data || {}, {
 			server: All.opt.version
 		})
 	}).then(function() {
@@ -417,6 +418,7 @@ exports.import = function({trx}, data) {
 	var idMap = {};
 	var regMap = {};
 	var fromVersion, toVersion;
+	var upgrader;
 	pstream.on('data', function(obj) {
 		p = p.then(function() {
 			if (obj.site) {
@@ -425,15 +427,16 @@ exports.import = function({trx}, data) {
 				fromVersion = obj.site.data.server;
 				Object.assign(obj.site.data, data.data || {});
 				toVersion = obj.site.data.server;
+				upgrader = getUpgrader(fromVersion, toVersion);
 				fixSiteCoercion(obj.site);
-				upgradeBlock(fromVersion, toVersion, obj.site);
+				upgrader(obj.site);
 				obj.site.id = data.id;
 				return Block.query(trx).insert(obj.site).returning('*').then(function(copy) {
 					counts.site++;
 					site = copy;
 				});
 			} else if (obj.lone) {
-				var lone = upgradeBlock(fromVersion, toVersion, obj.lone);
+				var lone = upgrader(obj.lone);
 				return (!copy ? Promise.resolve() : Promise.all([
 					Block.genId().then(function(id) {
 						var old = lone.id;
@@ -441,7 +444,7 @@ exports.import = function({trx}, data) {
 						regMap[id] = new RegExp(`block-id="${old}"`, 'g');
 					})
 				].concat(lone.children.map(function(child) {
-					upgradeBlock(fromVersion, toVersion, child);
+					upgrader(child);
 					return Block.genId().then(function(id) {
 						var old = child.id;
 						child.id = idMap[child.id] = id;
@@ -501,7 +504,7 @@ exports.import = function({trx}, data) {
 					throw err;
 				});
 			} else if (obj.setting) {
-				var setting = upgradeBlock(fromVersion, toVersion, obj.setting);
+				var setting = upgrader(obj.setting);
 				return Block.query(trx).where('type', 'user')
 				.whereJsonText('data:email', setting._email).select('_id')
 				.first().throwIfNotFound()
@@ -524,7 +527,7 @@ exports.import = function({trx}, data) {
 					});
 				});
 			} else if (obj.reservation) {
-				var resa = upgradeBlock(fromVersion, toVersion, obj.reservation);
+				var resa = upgrader(obj.reservation);
 				var parents = resa.parents || [];
 				if (parents.length != 2) {
 					console.warn("Ignoring reservation", resa);
@@ -647,12 +650,22 @@ function replaceLock(map, block) {
 	});
 }
 
-function upgradeBlock(fromVersion, toVersion, block) {
-	if (fromVersion == toVersion || !fromVersion || !toVersion) return block;
-	var upgrader = require(`../upgrades/from-${fromVersion}-to-${toVersion}`);
-	upgrader.any(block);
-	if (upgrader[block.type]) upgrader[block.type](block);
-	return block;
+function getUpgrader(fromVersion, toVersion) {
+	if (fromVersion == toVersion || !fromVersion || !toVersion) return (block) => block;
+	var mod;
+	try {
+		mod = require(__dirname + `/../upgrades/from-${fromVersion}-to-${toVersion}`);
+	} catch(ex) {
+		if (ex.code != "MODULE_NOT_FOUND") {
+			throw ex;
+		}
+		return (block) => block;
+	}
+	return (block) => {
+		mod.any(block);
+		if (mod[block.type]) mod[block.type](block);
+		return block;
+	};
 }
 
 function fixSiteCoercion(site) {
