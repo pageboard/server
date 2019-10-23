@@ -2,7 +2,7 @@
 
 var pkgOpt = {};
 if (process.env.APPNAME) pkgOpt.name = process.env.APPNAME;
-if (!process.env.HOME) process.env.HOME = require('passwd-user').sync().homeDirectory;
+if (!process.env.HOME) throw new Error("Missing HOME environment variable");
 
 if (process.argv.length > 2) {
 	var thenData = false;
