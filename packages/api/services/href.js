@@ -61,9 +61,41 @@ exports.search = function({site, trx}, data) {
 	if (data.maxHeight) {
 		q.where(ref('href.meta:height'), '<=', data.maxHeight);
 	}
+	q.offset(data.offset).limit(data.limit);
 
 	if (data.url) {
-		q.where('url', data.url);
+		const [url, hash] = data.url.split('#');
+		q.where('url', url);
+		if (url.startsWith('/') && hash != null) {
+			q = q.first().then(function(href) {
+				if (!href) return [];
+
+				return All.run('block.find', {site, trx}, {
+					type: 'page',
+					data: {
+						url: url
+					},
+					children: {
+						offset: data.offset,
+						limit: data.limit,
+						data: {
+							linkable: true
+						}
+					}
+				}).then(function(obj) {
+					var rows = [];
+					obj.item.children.forEach((child) => {
+						if (child.data.id && child.data.id.startsWith(hash)) {
+							rows.push(Object.assign({}, href, {
+								title: href.title + ' - ' + child.content.text,
+								url: href.url + '#' + child.data.id
+							}));
+						}
+					});
+					return rows;
+				});
+			});
+		}
 	} else if (data.text) {
 		if (/^\w+$/.test(data.text)) {
 			q.from(raw("to_tsquery('unaccent', ?) AS query, ??", [data.text + ':*', 'href']));
@@ -79,7 +111,6 @@ exports.search = function({site, trx}, data) {
 		q.where('href.visible', true);
 		q.orderBy('updated_at', 'desc');
 	}
-	q.offset(data.offset).limit(data.limit);
 	return q.then(function(rows) {
 		return {
 			data: rows,
