@@ -134,10 +134,18 @@ exports.search.schema = {
 };
 
 exports.add = function(req, data) {
+	return All.run('href.search', req, data).then(function(obj) {
+		if (obj.data.length > 0) {
+			return obj.data[0];
+		} else {
+			return blindAdd(req, data);
+		}
+	});
+};
+
+function blindAdd(req, data) {
 	var {site, trx} = req;
-
 	var Href = All.api.Href;
-
 	var url = data.url;
 	var objUrl = URL.parse(url);
 	var isLocal = false;
@@ -185,7 +193,7 @@ exports.add = function(req, data) {
 			}
 		});
 	});
-};
+}
 
 exports.add.schema = {
 	$action: 'add',
