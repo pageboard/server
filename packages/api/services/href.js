@@ -87,7 +87,7 @@ exports.search = function({site, trx}, data) {
 					obj.item.children.forEach((child) => {
 						if (child.data.id && child.data.id.startsWith(hash)) {
 							rows.push(Object.assign({}, href, {
-								title: href.title + ' - ' + child.content.text,
+								title: href.title + ' #' + child.data.id,
 								url: href.url + '#' + child.data.id
 							}));
 						}
