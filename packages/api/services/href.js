@@ -65,10 +65,15 @@ exports.search = function({site, trx}, data) {
 	if (data.url) {
 		q.where('url', data.url);
 	} else if (data.text) {
-		q.from(raw("websearch_to_tsquery('unaccent', ?) AS query, ??", [data.text, 'href']));
-		q.where('href.visible', true);
+		if (/^\w+$/.test(data.text)) {
+			q.from(raw("to_tsquery('unaccent', ?) AS query, ??", [data.text + ':*', 'href']));
+		} else {
+			q.from(raw("websearch_to_tsquery('unaccent', href_tsv_url(?)) AS query, ??", [data.text, 'href']));
+		}
 		q.whereRaw('query @@ href.tsv');
 		q.orderByRaw('ts_rank(href.tsv, query) DESC');
+		q.orderBy(ref('href.url'));
+		q.where('href.visible', true);
 		q.orderBy('updated_at', 'desc');
 	} else {
 		q.where('href.visible', true);
