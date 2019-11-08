@@ -165,27 +165,35 @@ function check(fun, schema, data) {
 	}
 }
 
+function getApiMethodSchema(apiStr) {
+	const [modName, funName] = apiStr.split('.');
+	var mod = All.services[modName];
+	if (!mod) throw new HttpError.BadRequest(Text`
+		Unknown api module ${modName}
+			${Object.getOwnPropertyNames(All.services).sort().join(', ')}
+	`);
+	var schema = mod[funName];
+	var fun = All[modName][funName];
+	if (!fun) throw new HttpError.BadRequest(Text`
+		Unknown api method ${apiStr}
+			${Object.getOwnPropertyNames(mod).sort().join(', ')}
+	`);
+	if (!schema) throw new HttpError.BadRequest(`Internal api method ${apiStr}`);
+	return [schema, mod, fun];
+}
+
+All.help = function(apiStr) {
+	const [schema] = getApiMethodSchema(apiStr);
+	return require('./lib/json-doc')(schema);
+};
+
 All.run = function(apiStr, req, data) {
 	return Promise.resolve().then(function() {
-		var api = apiStr.split('.');
-		var modName = api[0];
-		var funName = api[1];
-		var mod = All.services[modName];
-		if (!mod) throw new HttpError.BadRequest(Text`
-			Unknown api module ${modName}
-				${Object.getOwnPropertyNames(All.services).sort().join(', ')}
-		`);
-		var schema = mod[funName];
-		var fun = All[modName][funName];
-		if (!fun) throw new HttpError.BadRequest(Text`
-			Unknown api method ${apiStr}
-				${Object.getOwnPropertyNames(mod).sort().join(', ')}
-		`);
-		if (!schema) throw new HttpError.BadRequest(`Internal api method ${apiStr}`);
 		if (data == null && req != null) {
 			data = req;
 			req = null;
 		}
+		const [schema, mod, fun] = getApiMethodSchema(apiStr);
 		try {
 			data = check(fun, schema, data);
 		} catch(err) {
