@@ -662,8 +662,13 @@ function getUpgrader(fromVersion, toVersion) {
 		return (block) => block;
 	}
 	return (block) => {
-		mod.any(block);
-		if (mod[block.type]) mod[block.type](block);
+		try {
+			mod.any(block);
+			if (mod[block.type]) mod[block.type](block);
+		} catch(ex) {
+			console.error(ex, block);
+			throw new Error("Upgrader error");
+		}
 		return block;
 	};
 }
