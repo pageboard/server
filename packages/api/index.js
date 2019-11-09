@@ -197,7 +197,7 @@ All.run = function(apiStr, req, data) {
 		try {
 			data = check(fun, schema, data);
 		} catch(err) {
-			err.message += '\n' + require('./lib/json-doc')(schema);
+			err.message += '\n ' + apiStr + '\n' + require('./lib/json-doc')(schema);
 			throw err;
 		}
 		// start a transaction on set trx object on site
