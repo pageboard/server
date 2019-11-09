@@ -235,7 +235,7 @@ function initPlugins(plugins, type) {
 				if (to[key] !== undefined) throw new Error(`module conflict ${obj.name || 'All'}.${key}`);
 				to[key] = plugin[key];
 				delete plugin[key]; // we made a copy before
-				if (type == "service" && obj.name != "api" && to[key].hasOwnProperty('schema')) {
+				if (type == "service" && obj.name != "api" && Object.prototype.hasOwnProperty.call(to[key], 'schema')) {
 					if (!All.services[obj.name]) All.services[obj.name] = {};
 					Object.defineProperty(All.services[obj.name], key, {
 						enumerable: to[key].external,
