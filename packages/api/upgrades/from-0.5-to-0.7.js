@@ -24,10 +24,7 @@ exports.notfound = function(block) {
 exports.form = function(block) {
 	var data = {};
 	var old = block.data;
-	var method = old.action && old.action.method;
-	if (!method) {
-		throw new Error("Cannot import form block, missing data.action.method");
-	}
+	var method = old.action && old.action.method || 'get';
 	var expr = {};
 	if (method == "get") {
 		block.type = "query_form";
@@ -39,7 +36,8 @@ exports.form = function(block) {
 				throw new Error("Cannot convert action.consts for query_form");
 			}
 			if (old.action.vars) {
-				throw new Error("Cannot convert action.vars for query_form");
+				var keys = Object.keys(old.action.vars);
+				if (keys.length) console.warn("ignoring form.action.vars ", old);
 			}
 		}
 	} else if (method == "post") {
