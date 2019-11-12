@@ -324,7 +324,9 @@ exports.export = function({trx}, data) {
 							return builder.select().omit(['tsv', '_id']).where('standalone', false);
 						},
 						lones: function(builder) {
-							return builder.select('block.id').where('standalone', true);
+							return builder.select('block.id')
+							.where('standalone', true)
+							.orderByRaw("block.data->>'url' IS NOT NULL ASC");
 						}
 					}).then(function(lone) {
 						if (lone.standalones.length > 0) {
