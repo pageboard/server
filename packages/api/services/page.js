@@ -754,6 +754,7 @@ exports.robots = function(req) {
 	var p;
 	if (req.site.data.env == "production") {
 		lines.push(`Sitemap: ${req.site.href}/.well-known/sitemap.txt`);
+		lines.push('User-agent: *');
 		p = listPages(req, {disallow: true}).then(function(pages) {
 			pages.forEach(function(page) {
 				lines.push(`Disallow: ${page.data.url}`);
@@ -761,6 +762,7 @@ exports.robots = function(req) {
 		});
 	} else {
 		p = Promise.resolve();
+		lines.push('User-agent: *');
 		lines.push("Disallow: /");
 	}
 	return p.then(function() {
