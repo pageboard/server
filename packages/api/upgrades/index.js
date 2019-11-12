@@ -60,13 +60,18 @@ module.exports = class Upgrader {
 		}
 		Object.entries(block.content).forEach(([key,str]) => {
 			if (!str) return;
+			var bad = false;
 			block.content[key] = str.replace(/block-id="(\w+)"/g, (match, id, pos, str) => {
 				var cid = this.idMap[id];
 				if (cid) return cid;
 				console.warn(`Cannot replace id: '${id}' in content
-					${str.substring(pos - 10, pos + 30)}`);
-				return id;
+					${str.substring(pos - 5, pos + 35)}`);
+				bad = true;
+				return "X";
 			});
+			if (bad) {
+				block.content[key] = str.replace(/<\w+ block-id="X"><\/\w+>/g, '');
+			}
 		});
 	}
 	copyLock(block) {
