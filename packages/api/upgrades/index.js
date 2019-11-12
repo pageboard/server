@@ -3,13 +3,16 @@ module.exports = class Upgrader {
 		this.copy = !!opts.copy;
 		this.Block = Block;
 		this.idMap = {};
-		if (this.from != this.to && this.from && this.to) {
+		if (opts.from != opts.to && opts.from && opts.to) {
 			try {
-				this.module = require(`from-${this.from}-to-${this.to}`);
+				this.module = require(`./from-${opts.from}-to-${opts.to}`);
 			} catch(ex) {
 				if (ex.code != "MODULE_NOT_FOUND") {
 					throw ex;
 				}
+			}
+			if (this.module) {
+				console.warn("found import", opts.from, "to", opts.to);
 			}
 		}
 	}
