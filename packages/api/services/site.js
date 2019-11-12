@@ -2,6 +2,7 @@ const lodashMerge = require.lazy('lodash.merge');
 const {ref} = require('objection');
 const {PassThrough} = require('stream');
 const {createReadStream, createWriteStream} = require('fs');
+const Upgrader = require('../upgrades');
 
 const Path = require('path');
 
@@ -395,7 +396,6 @@ exports.export.schema = {
 
 // import all data but files
 exports.import = function({trx}, data) {
-	var copy = data.copy;
 	var Block = All.api.Block;
 	var counts = {
 		site: 0,
@@ -414,82 +414,60 @@ exports.import = function({trx}, data) {
 	});
 	var site;
 	var standalones = {};
-	var idMap = {};
-	var regMap = {};
-	var fromVersion, toVersion;
 	var upgrader;
 	pstream.on('data', function(obj) {
 		p = p.then(function() {
 			if (obj.site) {
 				if (!obj.site.data) obj.site.data = {};
-				if (copy) delete obj.site.data.domains;
-				fromVersion = obj.site.data.server;
+				var fromVersion = obj.site.data.server;
 				Object.assign(obj.site.data, data.data || {});
-				toVersion = obj.site.data.server;
-				upgrader = getUpgrader(fromVersion, toVersion);
-				upgrader(obj.site);
+				upgrader = new Upgrader(Block, {
+					copy: data.copy,
+					from: fromVersion,
+					to: obj.site.data.server
+				});
+				upgrader.process(obj.site);
+				upgrader.finish(obj.site);
 				obj.site.id = data.id;
-				return Block.query(trx).insert(obj.site).returning('*').then(function(copy) {
+				return Block.query(trx).insert(obj.site).returning('*').then(function(siteCopy) {
 					counts.site++;
-					site = copy;
+					site = siteCopy;
 				});
 			} else if (obj.lone) {
-				var lone = upgrader(obj.lone);
-				return (!copy ? Promise.resolve() : Promise.all([
-					Block.genId().then(function(id) {
-						var old = lone.id;
-						lone.id = idMap[old] = id;
-						regMap[id] = new RegExp(`block-id="${old}"`, 'g');
-					})
-				].concat(lone.children.map(function(child) {
-					upgrader(child);
-					return Block.genId().then(function(id) {
-						var old = child.id;
-						child.id = idMap[child.id] = id;
-						regMap[id] = new RegExp(`block-id="${old}"`, 'g');
-					});
-				})))).then(function() {
-					var lones = lone.standalones;
-					var lonesRefs = [];
-					if (lones) {
-						delete lone.standalones;
-						lones.forEach(function(rlone) {
-							// relate lone to rlone
-							var id = !copy ? rlone.id : idMap[rlone.id];
-							if (!id) {
-								throw new Error("unknown standalone " + rlone.id);
-							}
-							if (copy) regMap[id] = new RegExp(`block-id="${rlone.id}"`, 'g');
-							var _id = standalones[id];
-							if (!_id) {
-								console.error(rlone, id);
-								throw new Error("standalone not yet inserted " + rlone.id);
-							}
-							lonesRefs.push({
-								"#dbRef": _id
-							});
-						});
-					}
-					lone.children.forEach(function(child) {
-						if (copy) {
-							replaceContent(regMap, child);
-							replaceLock(idMap, child);
+				var lone = upgrader.process(obj.lone, site);
+				// FIXME process ALL "lone" THEN do the insertions ?
+				// problem is that exported json uses standalones in content
+				// of standalones, and the order cannot be guaranteed
+				// initial code used many Promises here so i guess data events all happened before then()
+				var lones = lone.standalones;
+				var lonesRefs = [];
+				if (lones) {
+					delete lone.standalones;
+					lones.forEach(function(rlone) {
+						// relate lone to rlone
+						var id = upgrader.get(rlone.id);
+						if (!id) throw new Error("unknown standalone " + rlone.id);
+						var _id = standalones[id];
+						if (!_id) {
+							console.error(rlone, id);
+							throw new Error("standalone not yet inserted " + rlone.id);
 						}
-						child.parents = [{
-							"#dbRef": site._id
-						}];
+						lonesRefs.push({
+							"#dbRef": _id
+						});
 					});
-					lone.children = lone.children.concat(lonesRefs);
-					if (copy) {
-						replaceContent(regMap, lone);
-						replaceLock(idMap, lone);
-					}
-				}).then(function() {
-					return site.$relatedQuery('children', trx).insertGraph(lone).then(function(obj) {
-						standalones[lone.id] = obj._id;
-						counts.standalones++;
-						counts.blocks += lone.children.length;
-					});
+				}
+				lone.children.forEach(function(child) {
+					child.parents = [{
+						"#dbRef": site._id
+					}];
+				});
+				upgrader.finish(lone);
+				lone.children = lone.children.concat(lonesRefs);
+				return site.$relatedQuery('children', trx).insertGraph(lone).then(function(obj) {
+					standalones[lone.id] = obj._id;
+					counts.standalones++;
+					counts.blocks += lone.children.length;
 				});
 			} else if (obj.href) {
 				var href = obj.href;
@@ -502,7 +480,8 @@ exports.import = function({trx}, data) {
 					throw err;
 				});
 			} else if (obj.setting) {
-				var setting = upgrader(obj.setting);
+				var setting = upgrader.process(obj.setting, obj.site);
+				upgrader.finish(setting);
 				return Block.query(trx).where('type', 'user')
 				.whereJsonText('data:email', setting._email).select('_id')
 				.first().throwIfNotFound()
@@ -514,39 +493,27 @@ exports.import = function({trx}, data) {
 						type: 'user'
 					}).returning('_id');
 				}).then(function(user) {
-					return (!copy ? Promise.resolve() : Block.genId().then(function(id) {
-						setting.id = idMap[setting.id] = id;
-						replaceLock(idMap, setting);
-					})).then(function() {
-						setting.parents = [{'#dbRef': user._id}];
-						counts.settings++;
-						delete setting._email;
-						return site.$relatedQuery('children', trx).insertGraph(setting);
-					});
+					setting.parents = [{'#dbRef': user._id}];
+					counts.settings++;
+					delete setting._email;
+					return site.$relatedQuery('children', trx).insertGraph(setting);
 				});
 			} else if (obj.reservation) {
-				var resa = upgrader(obj.reservation);
+				var resa = upgrader.process(obj.reservation, obj.site);
+				upgrader.finish(resa);
 				var parents = resa.parents || [];
 				if (parents.length != 2) {
 					console.warn("Ignoring reservation", resa);
 					return;
 				}
-				if (copy) parents.forEach(function(block) {
-					block.id = idMap[block.id];
-				});
-				return (!copy ? Promise.resolve() : Block.genId().then(function(id) {
-					resa.id = idMap[resa.id] = id;
-					replaceLock(idMap, resa);
-				})).then(function() {
-					// get settings, date
-					return site.$relatedQuery('children', trx)
-					.select('_id')
-					.whereIn('block.id', parents.map(function(parent) {
-						return parent.id;
-					})).then(function(parents) {
-						resa.parents = parents.map(function(parent) {
-							return {"#dbRef": parent._id};
-						});
+				// get settings, date
+				return site.$relatedQuery('children', trx)
+				.select('_id')
+				.whereIn('block.id', parents.map(function(parent) {
+					return parent.id;
+				})).then(function(parents) {
+					resa.parents = parents.map(function(parent) {
+						return {"#dbRef": parent._id};
 					});
 				}).then(function() {
 					counts.reservations++;
@@ -621,55 +588,6 @@ exports.import.schema = {
 	}
 };
 
-function replaceContent(map, block) {
-	if (!block.content) return;
-	if (typeof block.content != "object") {
-		console.error(block);
-		throw new Error("content not object");
-	}
-	Object.entries(block.content).forEach(function([key,str]) {
-		if (!str) return;
-		for (var id in map) {
-			str = str.replace(map[id], `block-id="${id}"`);
-		}
-		block.content[key] = str;
-	});
-}
-
-function replaceLock(map, block) {
-	var locks = block.lock && block.lock.read;
-	if (!locks) return;
-	locks.forEach(function(item, i) {
-		item = item.split('-');
-		if (item.length != 2) return;
-		var id = map[item[1]];
-		if (id) item[1] = id;
-		locks[i] = item.join('-');
-	});
-}
-
-function getUpgrader(fromVersion, toVersion) {
-	if (fromVersion == toVersion || !fromVersion || !toVersion) return (block) => block;
-	var mod;
-	try {
-		mod = require(__dirname + `/../upgrades/from-${fromVersion}-to-${toVersion}`);
-	} catch(ex) {
-		if (ex.code != "MODULE_NOT_FOUND") {
-			throw ex;
-		}
-		return (block) => block;
-	}
-	return (block) => {
-		try {
-			mod.any(block);
-			if (mod[block.type]) mod[block.type](block);
-		} catch(ex) {
-			console.error(ex, block);
-			throw new Error("Upgrader error");
-		}
-		return block;
-	};
-}
 
 function toJSON(obj) {
 	return JSON.stringify(obj, null, " ");
