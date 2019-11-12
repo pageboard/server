@@ -63,14 +63,14 @@ module.exports = class Upgrader {
 			var bad = false;
 			block.content[key] = str.replace(/block-id="(\w+)"/g, (match, id, pos, str) => {
 				var cid = this.idMap[id];
-				if (cid) return cid;
+				if (cid) return `block-id="${cid}"`;
 				console.warn(`Cannot replace id: '${id}' in content
 					${str.substring(pos - 5, pos + 35)}`);
 				bad = true;
-				return "X";
+				return "block-strip";
 			});
 			if (bad) {
-				block.content[key] = str.replace(/<\w+ block-id="X"><\/\w+>/g, '');
+				block.content[key] = block.content[key].replace(/<\w+ block-strip><\/\w+>/g, '');
 			}
 		});
 	}
