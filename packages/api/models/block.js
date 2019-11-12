@@ -275,6 +275,11 @@ Block.genId = function(length) {
 	});
 };
 
+Block.genIdSync = function(length) {
+	if (!length) length = 8;
+	return crypto.randomBytes(length).toString('hex');
+};
+
 Block.QueryBuilder = class BlockQueryBuilder extends common.QueryBuilder {
 	whereSite(siteId) {
 		return this.joinRelation('parents')
