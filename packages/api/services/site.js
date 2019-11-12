@@ -415,50 +415,50 @@ exports.import = function({trx}, data) {
 		highWaterMark: 1
 	});
 	var site;
-	var standalones = {};
+	var queues = {};
+	var mp = [];
 	var upgrader;
 	pstream.on('data', function(obj) {
-		p = p.then(function() {
-			if (obj.site) {
-				if (!obj.site.data) obj.site.data = {};
-				var fromVersion = obj.site.data.server;
-				Object.assign(obj.site.data, data.data || {});
-				upgrader = new Upgrader(Block, {
-					copy: data.copy,
-					from: fromVersion,
-					to: obj.site.data.server
-				});
-				upgrader.process(obj.site);
-				upgrader.finish(obj.site);
-				obj.site.id = data.id;
+		if (obj.site) {
+			if (!obj.site.data) obj.site.data = {};
+			var fromVersion = obj.site.data.server;
+			Object.assign(obj.site.data, data.data || {});
+			upgrader = new Upgrader(Block, {
+				copy: data.copy,
+				from: fromVersion,
+				to: obj.site.data.server
+			});
+			upgrader.process(obj.site);
+			upgrader.finish(obj.site);
+			obj.site.id = data.id;
+			p = p.then(function() {
 				return Block.query(trx).insert(obj.site).returning('*').then(function(siteCopy) {
 					counts.site++;
 					site = siteCopy;
 				});
-			} else if (obj.lone) {
-				var lone = upgrader.process(obj.lone, site);
-				// FIXME process ALL "lone" THEN do the insertions ?
-				// problem is that exported json uses standalones in content
-				// of standalones, and the order cannot be guaranteed
-				// initial code used many Promises here so i guess data events all happened before then()
+			});
+		} else if (obj.lone) {
+			var lone = upgrader.process(obj.lone, site);
+			var doneLone;
+			queues[lone.id] = new Promise(function(resolve) {
+				doneLone = resolve;
+			});
+			var lonesRefs = [];
+			mp.push(p.then(function() {
 				var lones = lone.standalones;
-				var lonesRefs = [];
-				if (lones) {
-					delete lone.standalones;
-					lones.forEach(function(rlone) {
-						// relate lone to rlone
-						var id = upgrader.get(rlone.id);
-						if (!id) throw new Error("unknown standalone " + rlone.id);
-						var _id = standalones[id];
-						if (!_id) {
-							console.error(rlone, id);
-							throw new Error("standalone not yet inserted " + rlone.id);
-						}
+				if (!lones) return;
+				delete lone.standalones;
+				return Promise.all(lones.map(function(rlone) {
+					// relate lone to rlone
+					var id = upgrader.get(rlone.id);
+					if (!id) throw new Error("unknown standalone " + rlone.id);
+					return queues[id].then(function(_id) {
 						lonesRefs.push({
 							"#dbRef": _id
 						});
 					});
-				}
+				}));
+			}).then(function() {
 				lone.children.forEach(function(child) {
 					child.parents = [{
 						"#dbRef": site._id
@@ -467,11 +467,13 @@ exports.import = function({trx}, data) {
 				upgrader.finish(lone);
 				lone.children = lone.children.concat(lonesRefs);
 				return site.$relatedQuery('children', trx).insertGraph(lone).then(function(obj) {
-					standalones[lone.id] = obj._id;
 					counts.standalones++;
 					counts.blocks += lone.children.length;
+					doneLone(obj._id);
 				});
-			} else if (obj.href) {
+			}));
+		} else if (obj.href) {
+			p = p.then(function() {
 				var href = obj.href;
 				if (href.pathname) {
 					href.pathname = href.pathname.replace(/\/uploads\/[^/]+\//, `/uploads/${site.id}/`);
@@ -481,8 +483,10 @@ exports.import = function({trx}, data) {
 					console.error(err, href);
 					throw err;
 				});
-			} else if (obj.setting) {
-				var setting = upgrader.process(obj.setting, obj.site);
+			});
+		} else if (obj.setting) {
+			var setting = upgrader.process(obj.setting, obj.site);
+			p = p.then(function() {
 				upgrader.finish(setting);
 				return Block.query(trx).where('type', 'user')
 				.whereJsonText('data:email', setting._email).select('_id')
@@ -500,8 +504,10 @@ exports.import = function({trx}, data) {
 					delete setting._email;
 					return site.$relatedQuery('children', trx).insertGraph(setting);
 				});
-			} else if (obj.reservation) {
-				var resa = upgrader.process(obj.reservation, obj.site);
+			});
+		} else if (obj.reservation) {
+			var resa = upgrader.process(obj.reservation, obj.site);
+			p = p.then(function() {
 				upgrader.finish(resa);
 				var parents = resa.parents || [];
 				if (parents.length != 2) {
@@ -521,8 +527,9 @@ exports.import = function({trx}, data) {
 					counts.reservations++;
 					return site.$relatedQuery('children', trx).insertGraph(resa);
 				});
-			}
-		}).catch(function(ex) {
+			});
+		}
+		p.catch(function(ex) {
 			pstream.emit('error', ex);
 		});
 	});
@@ -559,7 +566,8 @@ exports.import = function({trx}, data) {
 		});
 	});
 	return q.then(function() {
-		return p;
+		mp.push(p);
+		return Promise.all(mp);
 	}).then(function() {
 		return counts;
 	});
