@@ -195,7 +195,6 @@ exports.add.schema = {
 };
 
 exports.save = function(req, data) {
-	fixSiteCoercion(data);
 	return exports.get(req, data).then(function(site) {
 		lodashMerge(site.data, data.data);
 		if (req.site && req.site.href) site.href = req.site.href;
@@ -428,7 +427,6 @@ exports.import = function({trx}, data) {
 				Object.assign(obj.site.data, data.data || {});
 				toVersion = obj.site.data.server;
 				upgrader = getUpgrader(fromVersion, toVersion);
-				fixSiteCoercion(obj.site);
 				upgrader(obj.site);
 				obj.site.id = data.id;
 				return Block.query(trx).insert(obj.site).returning('*').then(function(copy) {
@@ -671,12 +669,6 @@ function getUpgrader(fromVersion, toVersion) {
 		}
 		return block;
 	};
-}
-
-function fixSiteCoercion(site) {
-	if (site.data.domains === "") site.data.domains = null;
-	if (site.data.version === "") site.data.version = null;
-	return site;
 }
 
 function toJSON(obj) {

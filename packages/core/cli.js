@@ -47,6 +47,7 @@ pageboard.init(config).catch(function(err) {
 	}
 
 	var args = [command];
+	if (config.data != null) config.data = nullCoercion(config.data);
 	return Promise.resolve().then(function() {
 		if (config.data !== undefined && typeof config.data.data == "string") {
 			try {
@@ -78,4 +79,12 @@ pageboard.init(config).catch(function(err) {
 	process.exit(1);
 });
 
-
+function nullCoercion(data) {
+	var obj = {};
+	Object.entries(data).forEach(function([key, val]) {
+		if (val === "") obj[key] = null;
+		else if (val != null && typeof val == "object") obj[key] = nullCoercion(val);
+		else obj[key] = val;
+	});
+	return obj;
+}
