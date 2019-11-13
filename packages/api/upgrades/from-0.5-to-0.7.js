@@ -101,9 +101,12 @@ exports.query = function(block) {
 		if (old.query.vars) {
 			block.expr = {
 				action: {
-					parameters: old.query.vars
+					parameters: {}
 				}
 			};
+			Object.entries(old.query.vars).forEach(function([key, val]) {
+				block.expr.action.parameters[key] = `[$query.${val}]`;
+			});
 		}
 	}
 	block.data = data;
