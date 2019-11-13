@@ -25,9 +25,9 @@ module.exports = class Upgrader {
 			var old = block.id;
 			block.id = this.idMap[old] = this.Block.genIdSync();
 			if (block.parents) block.parents.forEach((parent) => {
-				console.log("reattributing parent", parent.id);
-				parent.id = this.idMap[parent.id];
-				console.log("to", parent.id);
+				var id = parent.id;
+				parent.id = this.idMap[id];
+				console.warn("remap parent", id, "to", parent.id);
 			});
 			if (block.type == "site") delete block.data.domains;
 		}
