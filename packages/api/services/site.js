@@ -1,5 +1,5 @@
 const lodashMerge = require.lazy('lodash.merge');
-const {ref} = require('objection');
+const {ref, raw} = require('objection');
 const {PassThrough} = require('stream');
 const {createReadStream, createWriteStream} = require('fs');
 const Upgrader = require('../upgrades');
@@ -236,7 +236,7 @@ exports.del = function({trx}, data) {
 	var Block = All.api.Block;
 	var counts = {};
 	return Block.query(trx).where('type', 'site')
-	.select('_id', trx.raw('recursive_delete(_id, TRUE) AS blocks'))
+	.select('_id', raw('recursive_delete(_id, TRUE) AS blocks'))
 	.where('id', data.id)
 	.first().throwIfNotFound().then(function(row) {
 		counts.blocks = row.blocks;
