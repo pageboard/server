@@ -722,18 +722,27 @@ exports.add.schema = {
 };
 
 exports.del = function({site, trx}, data) {
-	var counts = {};
-	return site.$relatedQuery('children', trx)
-	.where('block.id', data.id)
-	.join('href', 'href.url', "block.data->>'url'")
-	.where('href._parent_id', site._id).del().then(function(count) {
-		counts.hrefs = count;
+	return All.run('block.get', {site, trx}, data).then(function(page) {
 		return site.$relatedQuery('children', trx)
-		.where('block.id', data.id)
-		.first().throwIfNotFound()
-		.select(trx.raw('recursive_delete(block._id, FALSE) AS count')).then(function(row) {
-			counts.blocks = row.count;
-			return counts;
+		.select('block.id', 'block.type', 'block.content', ref('parents.id').as('parentId'), ref('parents.data:url').as('parentUrl'))
+		.where(ref('block.data:url').castText(), page.data.url)
+		.joinRelation('parents')
+		.whereNot('parents.type', 'site')
+		.whereNot('parents.id', page.id)
+		.then(function(links) {
+			if (links.length > 0) {
+				throw new HttpError.Conflict(Text`
+					There are ${links.length} referrers to this page:
+					${JSON.stringify(links, null, ' ')}
+				`);
+			}
+			return All.api.Href.query(trx).where('url', page.data.url).del();
+		})
+		.then(function() {
+			return All.run('block.del', {site, trx}, {
+				id: page.id,
+				type: page.type
+			});
 		});
 	});
 };
