@@ -52,7 +52,18 @@ exports.form = function(block) {
 				method: old.action.call,
 				parameters: old.action.consts || {}
 			};
-			if (old.action.vars) {
+			if (data.action.method == "auth.login") {
+				data.action.method = "login.send";
+				data.action.parameters = {
+					grant: "webmaster"
+				};
+				expr.hidden = "[$query.email|!?|bmagnet:*]";
+				expr.redirection = {
+					parameters: {
+						email: "[$request.email]"
+					}
+				};
+			} else if (old.action.vars) {
 				block.expr = {
 					action: {
 						parameters: old.action.vars
