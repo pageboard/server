@@ -3,6 +3,11 @@ exports.any = function(block) {
 	if (locks) locks.forEach(function(lock, i) {
 		locks[i] = lock.replace(/^user-/, "id-");
 	});
+	if (block.content) Object.entries(block.content).forEach(function([key, str]) {
+		block.content[key] = str
+		.replaceAll('<element-query', '<element-template')
+		.replaceAll('</element-query>', '</element-template>');
+	});
 };
 
 exports.site = function(site) {
