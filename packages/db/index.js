@@ -205,7 +205,7 @@ function doDump(dir, keep) {
 		recursive: true
 	}).then(function() {
 		return All.run('db.dump', {
-			name: (new Date()).toISOString().split('.')[0].replace(/[-:]/g, '')
+			name: (new Date()).toISOString().split('.')[0].replaceAll(/[-:]/, '')
 		}).then(function() {
 			var now = Date.now();
 			fs.readdir(dir).then(function(files) {

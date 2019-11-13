@@ -1,10 +1,13 @@
+require('promise.prototype.finally').shim();
+require('string.prototype.replaceall').shim();
+
 const importLazy = require('import-lazy');
 Object.getPrototypeOf(require).lazy = function(str) {
 	return importLazy(this)(str);
 };
+
 const util = require('util');
 const pify = util.promisify = util.promisify || require('util-promisify');
-if (!Promise.prototype.finally) require('promise.prototype.finally').shim();
 const Path = require('path');
 const express = require('express');
 const morgan = require('morgan');
@@ -269,7 +272,7 @@ function initLog(opt) {
 	});
 	morgan.token('size', function(req, res) {
 		var len = parseInt(res.get('Content-Length'));
-		return pad(6, (len && prettyBytes(len) || '0 B').replace(/ /g, ''));
+		return pad(6, (len && prettyBytes(len) || '0 B').replaceAll(' ', ''));
 	});
 	morgan.token('site', function(req, res) {
 		return pad(req.site && req.site.id && req.site.id.substring(0, 8) || req.hostname, 8);

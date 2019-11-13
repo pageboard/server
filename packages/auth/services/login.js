@@ -83,7 +83,7 @@ exports.send = function(req, data) {
 				address: data.email
 			}
 		};
-		var tokenStr = token.toString().replace(/\B(?=(\d{2})+(?!\d))/g, " ");
+		var tokenStr = token.toString().replaceAll(/\B(?=(\d{2})+(?!\d))/, " ");
 		var prefix = site.data.title ? site.data.title + ' - ' : '';
 		if (site.data.lang == "fr") {
 			mail.subject = `${prefix}code de vérification: ${tokenStr}`;
@@ -140,7 +140,7 @@ function verifyToken(req, {email, token}) {
 					throw new HttpError.TooManyRequests();
 				}
 			}
-			token = token.replace(/\s/g, '');
+			token = token.replaceAll(/\s/, '');
 			var verified = otp.authenticator.check(token, priv.data.otp.secret);
 			return priv.$query(req.trx).patch({
 				'data:otp.checked_at': new Date().toISOString(),
