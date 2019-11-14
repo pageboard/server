@@ -90,10 +90,14 @@ exports.bundle = function(site, pkg, list, filename) {
 	var opts = All.opt.statics;
 	var version = site.data.version;
 	if (version == null) version = site.branch;
-	var inputs = list.map(function(url) {
-		return urlToPath(opts, site.id, url);
+	var outList = [];
+	var inputs = [];
+	list.forEach(function(url) {
+		if (/^https?:\/\//.test(url)) outList.push(url);
+		else inputs.push(urlToPath(opts, site.id, url));
 	});
 	var outUrl = `/.files/${version}/${filename}`;
+	outList.push(outUrl);
 	var output = urlToPath(opts, site.id, outUrl);
 
 	return Promise.all([
@@ -134,7 +138,7 @@ exports.bundle = function(site, pkg, list, filename) {
 			]);
 		}
 	}).then(function() {
-		return [outUrl];
+		return outList;
 	});
 };
 
