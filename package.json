@@ -1,6 +1,6 @@
 {
   "name": "pageboard",
-  "version": "0.7.0",
+  "version": "0.7.1",
   "description": "Website hosting and editing",
   "main": "index.js",
   "scripts": {
