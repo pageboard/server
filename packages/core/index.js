@@ -295,7 +295,7 @@ function createApp(All) {
 	app.use(All.domains.init);
 	app.use(function(req, res, next) {
 		res.setHeader('Referrer-Policy', 'strict-origin-when-cross-origin');
-		res.setHeader('Content-Security-Policy', "default-src 'self'");
+		res.setHeader('Content-Security-Policy', "default-src 'self' data:");
 		res.setHeader('X-XSS-Protection','1;mode=block');
 		res.setHeader('X-Frame-Options', 'sameorigin');
 		res.setHeader('X-Content-Type-Options', 'nosniff');
