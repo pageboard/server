@@ -341,10 +341,12 @@ function viewsError(err, req, res, next) {
 	if (isNaN(code) || code < 200 || code >= 600) {
 		code = 500;
 	}
-	if (All.opt.env == "development" || code >= 500) console.error(err);
-	res.write(err.toString());
-	if (res.headersSent) res.status(code).end();
-	else res.sendStatus(code);
+	if (res.headersSent) {
+		console.error(err);
+	} else {
+		res.status(code);
+	}
+	res.end(err.toString());
 //	res.redirect(req.app.settings.errorLocation + '?code=' + code);
 }
 
