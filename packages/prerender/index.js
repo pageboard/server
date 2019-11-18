@@ -166,6 +166,7 @@ function objToError(obj) {
 	var err = new Error(obj.message);
 	err.name = obj.name;
 	err.stack = obj.stack;
+	err.statusCode = obj.statusCode || 500;
 	return err;
 }
 
