@@ -607,7 +607,7 @@ exports.import.schema = {
 		copy: {
 			title: 'Generate new ids',
 			type: 'boolean',
-			default: false
+			default: true
 		},
 		data: {
 			title: 'Data',
