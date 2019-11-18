@@ -27,7 +27,8 @@ function init(All) {
 		} else {
 			All.run('page.get', req, req.query).then(function(data) {
 				if (dev && $write.resources.develop) {
-					data.meta.scripts.unshift($write.resources.develop);
+					if (!data.meta) data.meta = {scripts: []};
+					data.meta.scripts.unshift($write.resources.develop, req.site.$bundles.user.bundle);
 					data.meta.writes = {
 						scripts: [$write.resources.editor, $write.resources.readScript],
 						stylesheets: [$write.resources.readStyle]
