@@ -81,7 +81,11 @@ function init(All) {
 
 exports.bundle = function(site, pkg, list, filename) {
 	if (list.length == 0) return [];
-	if (site.data.env == "dev" || !pkg.dir || !site.href) {
+	var suffix = site.data.env;
+	if (suffix == "production") suffix = ".min";
+	else if (suffix == "staging") suffix = ".max";
+	else suffix = "";
+	if (!suffix || !pkg.dir || !site.href) {
 		return Promise.resolve(list);
 	}
 	var buildDir = Path.join(pkg.dir, "builds");
@@ -96,7 +100,12 @@ exports.bundle = function(site, pkg, list, filename) {
 		if (/^https?:\/\//.test(url)) outList.push(url);
 		else inputs.push(urlToPath(opts, site.id, url));
 	});
-	var outUrl = `/.files/${version}/${filename}`;
+
+	const fileObj = Path.parse(filename);
+	delete fileObj.base;
+	fileObj.name += suffix;
+
+	var outUrl = `/.files/${version}/${Path.format(fileObj)}`;
 	outList.push(outUrl);
 	var output = urlToPath(opts, site.id, outUrl);
 
@@ -110,7 +119,7 @@ exports.bundle = function(site, pkg, list, filename) {
 		});
 	}).then(function(exists) {
 		if (exists) return;
-		var ext = Path.extname(filename).substring(1);
+		var ext = fileObj.ext.substring(1);
 		if (ext != "js" && ext != "css") throw new Error("Bundles only .js or .css extensions");
 		return bundlers[ext](inputs, output, {
 			minify: site.data.env == "production",

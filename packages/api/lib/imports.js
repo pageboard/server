@@ -143,18 +143,14 @@ function bundle(site, pkg, rootEl) {
 
 function bundleSource(site, pkg, prefix, name, obj) {
 	if (prefix && prefix.startsWith('ext-')) return Promise.resolve();
-	var filename = [prefix, name].filter(Boolean).join('-');
+	var filename = [prefix, name].filter(Boolean).join('-') + '.js';
 	var version = site.data.version;
 	if (version == null) version = site.branch;
-	var sourceUrl = `/.files/${version}/${filename}.js`;
+	var sourceUrl = `/.files/${version}/${filename}`;
 	var sourcePath = All.statics.resolve(site.id, sourceUrl);
-	var suffix = site.data.env;
-	if (suffix == "production") suffix = ".min";
-	else if (suffix == "staging") suffix = ".max";
-	else suffix = "";
 	var str = `Pageboard.${name} = Object.assign(Pageboard.${name} || {}, ${toSource(obj)});`;
 	return fs.writeFile(sourcePath, str).then(function() {
-		return All.statics.bundle(site, pkg, [sourceUrl], filename + suffix + '.js');
+		return All.statics.bundle(site, pkg, [sourceUrl], filename);
 	}).then(function(paths) {
 		return paths[0];
 	});
