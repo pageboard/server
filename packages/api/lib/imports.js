@@ -44,7 +44,7 @@ exports.install = function(site, pkg, All) {
 			}
 			el.name = name;
 			eltsMap[name] = el;
-			var isPage = false;
+			var isPage = false; // backward compatibility with < client@0.7
 			if (el.group) el.group.split(/\s+/).forEach(function(gn) {
 				if (gn == "page") isPage = true;
 				var group = groups[gn];
