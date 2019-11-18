@@ -157,42 +157,40 @@ function bundleSource(site, pkg, prefix, name, obj) {
 }
 
 function listDependencies(pkg, rootGroup, el, list=[], gDone={}, eDone={}) {
-	var word;
-	var elts = pkg.eltsMap;
-	var group;
-	if (typeof el == "string") {
-		word = el;
-		el = elts[word];
-		group = pkg.groups[word];
-		if (group) {
-			if (!gDone[word]) {
-				gDone[word] = true;
-				group.forEach((name) => {
-					listDependencies(pkg, rootGroup, elts[name], list, gDone, eDone);
-				});
-			}
-		} else if (!el) {
-			console.error(`'${word}' is not an element nor a group`);
-		}
-	}
 	if (!el || eDone[el.name]) return list;
+	var elts = pkg.eltsMap;
 	list.push(el);
-	eDone[el.name] = true; // FIXME this might be a group name, and sometimes we actually want
-	// to iterate over group names
+	eDone[el.name] = true;
 	var contents = All.api.Block.normalizeContents(el.contents);
-	if (!contents) return list;
-	contents.forEach(function(content) {
+	if (contents) contents.forEach(function(content) {
 		if (!content.nodes) return;
-		content.nodes.split(/\W+/).filter(x => !!x).forEach(function(word) {
+		content.nodes.split(/\W+/).filter(Boolean).forEach(function(word) {
 			if (word == rootGroup) {
 				console.warn("contents contains root group", rootGroup, el.name, contents);
 				return;
 			}
 			if (word == "text") return;
-			if (eDone[word] && (!pkg.groups[word] || gDone[word])) return;
-			listDependencies(pkg, rootGroup, word, list, gDone, eDone);
+			var group = pkg.groups[word];
+			if (group) {
+				if (gDone[word]) return;
+				gDone[word] = true;
+			} else {
+				group = [word];
+			}
+			group.forEach((sub) => {
+				listDependencies(pkg, rootGroup, elts[sub], list, gDone, eDone);
+			});
 		});
 	});
+	else if (el.name == rootGroup) {
+		var group = pkg.groups[el.name];
+		if (group) {
+			gDone[el.name] = true;
+			group.forEach((sub) => {
+				listDependencies(pkg, rootGroup, elts[sub], list, gDone, eDone);
+			});
+		}
+	}
 	return list;
 }
 
