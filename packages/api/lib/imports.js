@@ -146,13 +146,15 @@ function bundleSource(site, pkg, prefix, name, obj) {
 	var filename = [prefix, name].filter(Boolean).join('-');
 	var version = site.data.version;
 	if (version == null) version = site.branch;
-	var fileurl = `/.files/${version}/${filename}`;
-	if (site.data.env != "dev") fileurl += `-${site.data.env}`;
-	fileurl += '.js';
-	var fileruntime = All.statics.resolve(site.id, fileurl);
+	var sourceUrl = `/.files/${version}/${filename}.js`;
+	var sourcePath = All.statics.resolve(site.id, sourceUrl);
+	var suffix = site.data.env;
+	if (suffix == "production") suffix = ".min";
+	else if (suffix == "staging") suffix = ".max";
+	else suffix = "";
 	var str = `Pageboard.${name} = Object.assign(Pageboard.${name} || {}, ${toSource(obj)});`;
-	return fs.writeFile(fileruntime, str).then(function() {
-		return All.statics.bundle(site, pkg, [fileurl], filename + '.js');
+	return fs.writeFile(sourcePath, str).then(function() {
+		return All.statics.bundle(site, pkg, [sourceUrl], filename + suffix + '.js');
 	}).then(function(paths) {
 		return paths[0];
 	});
