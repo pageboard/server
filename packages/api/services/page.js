@@ -11,9 +11,9 @@ exports = module.exports = function(opt) {
 
 function init(All) {
 	All.app.get('/.api/page', function(req, res, next) {
+		var site = req.site;
 		var isWebmaster = !All.auth.locked(req, ['webmaster']);
 		var dev = req.query.develop == "write";
-		var $write = req.site.$bundles.write;
 		delete req.query.develop;
 		if (isWebmaster && !dev) {
 			All.send(res, {
@@ -21,17 +21,21 @@ function init(All) {
 					type: 'write',
 					data: {}
 				},
-				meta: Object.assign({services: req.site.$services}, $write),
-				site: req.site.data
+				meta: Object.assign({services: site.$services}, site.$bundles.write),
+				site: site.data
 			});
 		} else {
 			All.run('page.get', req, req.query).then(function(data) {
-				if (dev && $write.resources.develop) {
+				var resources = site.$bundles.write.resources;
+				if (dev && resources.develop) {
 					if (!data.meta) data.meta = {scripts: []};
-					data.meta.scripts.unshift($write.resources.develop, req.site.$bundles.user.bundle);
+					if (site.$bundles.user) {
+						data.meta.scripts.unshift(site.$bundles.user.bundle);
+					}
+					data.meta.scripts.unshift(resources.develop);
 					data.meta.writes = {
-						scripts: [$write.resources.editor, $write.resources.readScript],
-						stylesheets: [$write.resources.readStyle]
+						scripts: [resources.editor, resources.readScript],
+						stylesheets: [resources.readStyle]
 					};
 				}
 				All.send(res, data);
