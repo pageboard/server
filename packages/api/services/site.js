@@ -47,13 +47,16 @@ exports.get = function(req, data) {
 };
 
 exports.get.schema = {
+	title: 'Get site',
 	$action: 'read',
 	properties: {
 		id: {
+			title: 'ID',
 			type: 'string',
 			format: 'id'
 		},
 		domain: {
+			title: 'Domain',
 			type: 'string',
 			format: 'hostname'
 		}
@@ -93,14 +96,17 @@ exports.search = function({trx}, data) {
 	});
 };
 exports.search.schema = {
+	title: 'Search user sites',
 	$action: 'read',
 	required: ['email'],
 	properties: {
 		email: {
+			title: 'Email',
 			type: 'string',
 			format: 'email'
 		},
 		grants: {
+			title: 'Grants',
 			type: 'array',
 			items: {
 				type: 'string',
@@ -108,12 +114,14 @@ exports.search.schema = {
 			}
 		},
 		limit: {
+			title: 'Limit',
 			type: 'integer',
 			minimum: 0,
 			maximum: 50,
 			default: 10
 		},
 		offset: {
+			title: 'Offset',
 			type: 'integer',
 			minimum: 0,
 			default: 0
@@ -144,12 +152,12 @@ exports.create.schema = {
 	required: ['id', 'email'],
 	properties: {
 		id: {
-			title: 'New site id',
+			title: 'New ID',
 			type: 'string',
 			format: 'id'
 		},
 		email: {
-			title: 'User email',
+			title: 'Email',
 			type: 'string',
 			format: 'email',
 			transform: ['trim', 'toLowerCase']
@@ -182,14 +190,17 @@ exports.add = function(req, data) {
 };
 
 exports.add.schema = {
+	title: 'Add site',
 	$action: 'add',
 	required: ['id', 'data'],
 	properties: {
 		id: {
+			title: 'ID',
 			type: 'string',
 			format: 'id'
 		},
 		data: {
+			title: 'Data',
 			type: 'object'
 		}
 	}
@@ -210,14 +221,17 @@ exports.save = function(req, data) {
 	});
 };
 exports.save.schema = {
+	title: 'Save site',
 	$action: 'save',
 	required: ['id', 'data'],
 	properties: {
 		id: {
+			title: 'ID',
 			type: 'string',
 			format: 'id'
 		},
 		data: {
+			title: 'Data',
 			type: 'object',
 			default: {}
 		}
@@ -228,8 +242,8 @@ exports.all = function({trx}) {
 	return All.api.Block.query(trx).where('type', 'site').select();
 };
 exports.all.schema = {
-	$action: 'read',
-	properties: {}
+	title: 'List all sites',
+	$action: 'read'
 };
 
 exports.del = function({trx}, data) {
@@ -246,10 +260,12 @@ exports.del = function({trx}, data) {
 	});
 };
 exports.del.schema = {
+	title: 'Delete a site',
 	$action: 'del',
 	required: ['id'],
 	properties: {
 		id: {
+			title: 'ID',
 			type: 'string',
 			format: 'id'
 		}
@@ -382,15 +398,17 @@ exports.export = function({trx}, data) {
 	});
 };
 exports.export.schema = {
+	title: 'Export site',
 	$action: 'read',
 	required: ['id', 'file'],
 	properties: {
 		id: {
-			title: 'Site id',
+			title: 'ID',
 			type: 'string',
 			format: 'id'
 		},
 		file: {
+			title: 'File path',
 			type: 'string'
 		}
 	}
@@ -573,11 +591,12 @@ exports.import = function({trx}, data) {
 	});
 };
 exports.import.schema = {
+	title: 'Import site',
 	$action: 'write',
 	required: ['id', 'file'],
 	properties: {
 		id: {
-			title: 'Site id',
+			title: 'ID',
 			type: 'string',
 			format: 'id'
 		},
@@ -591,7 +610,7 @@ exports.import.schema = {
 			default: false
 		},
 		data: {
-			title: 'Site data',
+			title: 'Data',
 			type: 'object',
 			default: {}
 		}
