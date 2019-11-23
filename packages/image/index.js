@@ -135,6 +135,7 @@ exports.upload = function(file) {
 
 		var dst = file.path + '.tmp';
 		return sharpie.sharp(file.path)
+		.withMetadata()
 		.resize({
 			fit: "inside",
 			withoutEnlargement: true,
