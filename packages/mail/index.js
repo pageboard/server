@@ -53,16 +53,16 @@ function init(All) {
 			else res.sendStatus(200);
 		}).catch(next);
 	});
-	All.app.post('/.api/mail/event', function(req, res, next) {
-		All.run('mail.event', req, req.body).then(function(ok) {
+	All.app.post('/.api/mail/report', function(req, res, next) {
+		All.run('mail.report', req, req.body).then(function(ok) {
 			// https://documentation.mailgun.com/en/latest/user_manual.html#webhooks
 			if (!ok) res.sendStatus(406);
 			else res.sendStatus(200);
-		});
+		}).catch(next);
 	});
 }
 
-exports.event = function(req, data) {
+exports.report = function(req, data) {
 	if (!validateMailgun(All.opt.mail.mailgun, data.timestamp, data.token, data.signature)) {
 		return false;
 	}
@@ -72,6 +72,10 @@ exports.event = function(req, data) {
 		subject: 'Pageboard mail delivery failure to ' + event.message.headers.to,
 		text: JSON.stringify(event, null, ' ')
 	});
+};
+exports.report.schema = {
+	$action: 'write',
+	additionalProperties: true
 };
 
 exports.receive = function(req, data) {
@@ -120,6 +124,10 @@ exports.receive = function(req, data) {
 		if (err.status == 404) return false;
 		else throw err;
 	});
+};
+exports.receive.schema = {
+	$action: 'write',
+	additionalProperties: true
 };
 
 exports.to = function(req, data) {
