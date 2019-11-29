@@ -46,17 +46,35 @@ function init(All) {
 	defaultSender = opt.sender;
 	mailDomain = opt.domain;
 
-	All.app.post('/.api/mail', multipart, function(req, res, next) {
+	All.app.post('/.api/mail/receive', multipart, function(req, res, next) {
 		All.run('mail.receive', req, req.body).then(function(ok) {
 			// https://documentation.mailgun.com/en/latest/user_manual.html#receiving-messages-via-http-through-a-forward-action
 			if (!ok) res.sendStatus(406);
 			else res.sendStatus(200);
 		}).catch(next);
 	});
+	All.app.post('/.api/mail/event', function(req, res, next) {
+		All.run('mail.event', req, req.body).then(function(ok) {
+			// https://documentation.mailgun.com/en/latest/user_manual.html#webhooks
+			if (!ok) res.sendStatus(406);
+			else res.sendStatus(200);
+		});
+	});
 }
 
+exports.event = function(req, data) {
+	if (!validateMailgun(All.opt.mail.mailgun, data.timestamp, data.token, data.signature)) {
+		return false;
+	}
+	var event = data['event-data'];
+	return All.run('mail.to', req, {
+		to: [defaultSender],
+		subject: 'Pageboard mail delivery failure to ' + event.message.headers.to,
+		text: JSON.stringify(event, null, ' ')
+	});
+};
+
 exports.receive = function(req, data) {
-	// https://documentation.mailgun.com/en/latest/user_manual.html#parsed-messages-parameters
 	if (!validateMailgun(All.opt.mail.mailgun, data.timestamp, data.token, data.signature)) {
 		return false;
 	}

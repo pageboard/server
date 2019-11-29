@@ -6,6 +6,7 @@ const mailgunHashType = 'sha256';
 const mailgunSignatureEncoding = 'hex';
 
 module.exports = function validateMailgun(config, timestamp, token, signature) {
+	// https://documentation.mailgun.com/en/latest/user_manual.html#parsed-messages-parameters
 	if (!config.auth.api_key) {
 		console.warn("Cannot do mailgun validation without api_key");
 		return false;
