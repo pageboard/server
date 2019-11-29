@@ -63,7 +63,8 @@ function init(All) {
 }
 
 exports.report = function(req, data) {
-	if (!validateMailgun(All.opt.mail.mailgun, data.timestamp, data.token, data.signature)) {
+	var sign = data.signature;
+	if (!validateMailgun(All.opt.mail.mailgun, sign.timestamp, sign.token, sign.signature)) {
 		return false;
 	}
 	var event = data['event-data'];
