@@ -9,7 +9,7 @@ const bodyParser = require.lazy('body-parser');
 const imports = require('./lib/imports');
 const utils = require('./lib/utils');
 const common = require('./models/common');
-const jsonPath = require.lazy('@irrelon/path');
+const jsonPath = require.lazy('@kapouer/path');
 
 const ajvApiSettings = {
 	$data: true,
@@ -296,13 +296,10 @@ All.send = function(res, obj) {
 function itemFn(schema, block) {
 	if (schema.upgrade) {
 		Object.entries(schema.upgrade).forEach(function([src, dst]) {
-			var path = src.split('.');
-			var key = path.pop();
-			src = path.join('.');
-			var parent = jsonPath.get(block, src) || {};
-			if (Object.prototype.hasOwnProperty.call(parent, key)) {
-				jsonPath.set(block, dst, parent[key]);
-				delete parent[key];
+			var val = jsonPath.get(block, src);
+			if (val !== undefined) {
+				jsonPath.set(block, dst, val);
+				jsonPath.unSet(block, src);
 			}
 		});
 	}
