@@ -15,7 +15,7 @@ function init(All) {
 	});
 
 	All.app.get("/.api/blocks", function(req, res, next) {
-		All.run('block.search', req, req.query).then(function(data) {
+		All.run('block.search', req, All.utils.unflatten(req.query)).then(function(data) {
 			All.send(res, data);
 		}).catch(next);
 	});
