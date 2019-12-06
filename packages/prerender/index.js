@@ -107,6 +107,7 @@ function run(config, req, res, next) {
 	pool.acquire().promise.then(function(worker) {
 		worker.on("message", function(msg) {
 			if (msg.err) {
+				release(worker);
 				return next(objToError(msg.err));
 			}
 			if (msg.locks) All.auth.headers(res, msg.locks);
