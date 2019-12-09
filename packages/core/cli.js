@@ -35,7 +35,7 @@ pageboard.init(config).catch(function(err) {
 		console.error("Cannot process arguments", All.opt._);
 		process.exit(1);
 	}
-	if (All.opt._.length == 0) {
+	if (!All.opt.cli) {
 		return pageboard.start(All);
 	}
 

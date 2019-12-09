@@ -68,6 +68,7 @@ exports.config = function(pkgOpt) {
 	symlinkDir(opt, 'sites');
 	symlinkDir(opt, 'uploads');
 	symlinkDir(opt, 'dumps');
+	opt.cli = opt._.length > 0;
 	return opt;
 };
 
@@ -142,7 +143,7 @@ exports.init = function(opt) {
 			next();
 		});
 		All.app.use(servicesError);
-		return initPlugins.call(All, plugins, 'view');
+		if (!All.opt.cli) return initPlugins.call(All, plugins, 'view');
 	}).then(function() {
 		All.app.use(viewsError);
 	}).then(function() {
