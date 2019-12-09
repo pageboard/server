@@ -144,7 +144,7 @@ function run(config, req, res, next) {
 			}
 		});
 		worker.once("error", function(err) {
-			release(true);
+			release(worker, true);
 			next(err);
 		});
 		worker.send({
@@ -160,7 +160,7 @@ function run(config, req, res, next) {
 			cookies: req.cookies,
 			xhr: req.xhr
 		});
-		function release(kill) {
+		function release(worker, kill) {
 			worker.stdout.removeAllListeners('data');
 			worker.removeAllListeners("message");
 			worker.removeAllListeners("error");
