@@ -8,6 +8,7 @@ const URL = require('url');
 var pool;
 
 exports = module.exports = function(opt) {
+	if (opt.prerender.workers) opt.prerender.workers = parseInt(opt.prerender.workers);
 	opt.prerender = Object.assign({
 		cacheDir: Path.join(opt.dirs.cache, "prerender"),
 		stall: 20000,
