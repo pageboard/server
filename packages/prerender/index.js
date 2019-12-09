@@ -12,7 +12,8 @@ exports = module.exports = function(opt) {
 		cacheDir: Path.join(opt.dirs.cache, "prerender"),
 		stall: 20000,
 		allow: "same-origin",
-		console: true
+		console: true,
+		workers: 2
 	}, opt.prerender);
 
 	if (opt.develop) {
@@ -94,10 +95,15 @@ function init(All) {
 			if (!child.killed) child.kill();
 		},
 		acquireTimeoutMillis: 5000,
-		idleTimeoutMillis: 300000,
-		min: 0,
-		max: 8
+		idleTimeoutMillis: 10000,
+		min: opt.prerender.workers,
+		max: 2 * opt.prerender.workers
 	});
+	for (var i=0; i < opt.prerender.workers; i++) {
+		pool.acquire().promise.then(function(worker) {
+			pool.release(worker);
+		});
+	}
 	process.on('exit', function() {
 		return pool.destroy();
 	});
