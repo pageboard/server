@@ -100,11 +100,7 @@ function init(All) {
 		min: opt.prerender.workers,
 		max: 2 * opt.prerender.workers
 	});
-	for (var i=0; i < opt.prerender.workers; i++) {
-		pool.acquire().promise.then(function(worker) {
-			pool.release(worker);
-		});
-	}
+
 	process.on('exit', function() {
 		return pool.destroy();
 	});
