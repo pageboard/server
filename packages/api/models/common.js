@@ -1,7 +1,4 @@
-const objection = require('objection');
-const ref = objection.ref;
-const Model = objection.Model;
-const QueryBuilder = objection.QueryBuilder;
+const {ref, val, raw, Model, QueryBuilder} = require('objection');
 
 const { isKnexRaw, isKnexQueryBuilder } = require(
 	require('path').join(
@@ -54,15 +51,15 @@ exports.Model = class CommonModel extends Model {
 	}
 
 	$ref(str) {
-		return objection.ref(str);
+		return ref(str);
 	}
 
-	$lit(str) {
-		return objection.lit(str);
+	$val(str) {
+		return val(str);
 	}
 
 	$raw(str) {
-		return objection.raw(str);
+		return raw(str);
 	}
 
 	$formatJson(json) {
