@@ -333,11 +333,11 @@ exports.export = function({trx}, data) {
 			return children.reduce(function(p, child, i) {
 				return p.then(function() {
 					return All.api.Block.query(trx)
-					.select().omit(['tsv', '_id'])
+					.selectWithout('tsv', '_id')
 					.first().where('_id', child._id)
 					.eager('[children(notlones) as children,children(lones) as standalones]', {
 						notlones: function(builder) {
-							return builder.select().omit(['tsv', '_id']).where('standalone', false);
+							return builder.selectWithout('tsv', '_id').where('standalone', false);
 						},
 						lones: function(builder) {
 							return builder.select('block.id')
@@ -378,8 +378,8 @@ exports.export = function({trx}, data) {
 			});
 		}).then(function() {
 			out.write('],\n"hrefs": [');
-			return All.api.Href.query(trx).select()
-			.omit(['tsv', '_id', '_parent_id']).whereSite(site.id).then(function(hrefs) {
+			return All.api.Href.query(trx).selectWithout('tsv', '_id', '_parent_id')
+			.whereSite(site.id).then(function(hrefs) {
 				counts.hrefs = hrefs.length;
 				var last = hrefs.length - 1;
 				hrefs.forEach(function(href, i) {

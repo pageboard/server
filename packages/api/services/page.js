@@ -220,8 +220,7 @@ function getParents({site, trx}, url) {
 
 function listPages({site, trx}, data) {
 	var q = site.$relatedQuery('children', trx)
-	.select()
-	.omit(['content'])
+	.selectWithout('content')
 	.whereIn('block.type', data.type || ['page'])
 	.where('block.standalone', true);
 	if (!data.drafts) {
