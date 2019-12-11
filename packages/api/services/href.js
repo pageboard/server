@@ -337,7 +337,7 @@ function collectHrefs({site, trx}, data, shared) {
 		};
 		delete rel.root.block;
 	}
-	q.joinRelation(rel);
+	q.joinRelated(rel);
 	if (data.url) {
 		q.where('root.type', 'page')
 		.where(ref('root.data:url').castText(), data.url);
@@ -401,7 +401,7 @@ exports.reinspect = function({trx}, data) {
 		id: data.site
 	};
 	delete data.site;
-	var q = All.api.Href.query(trx).joinRelation('parent')
+	var q = All.api.Href.query(trx).joinRelated('parent')
 	.select('href.url', 'href._id', 'parent.id AS site')
 	.whereObject(data);
 	if (site.id) q.where('parent.id', site.id);

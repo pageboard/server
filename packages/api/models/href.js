@@ -108,7 +108,7 @@ Href.relationMappings = {
 
 Href.QueryBuilder = class HrefQueryBuilder extends common.QueryBuilder {
 	whereSite(id) {
-		return this.joinRelation('parent')
+		return this.joinRelated('parent')
 		.where('parent.type', 'site')
 		.where('parent.id', id);
 	}

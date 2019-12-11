@@ -71,14 +71,14 @@ exports.get.schema = {
 exports.search = function({trx}, data) {
 	var Block = All.api.Block;
 	var q = Block.query(trx).alias('site').select().where('site.type', 'site')
-	.joinRelation('children', {alias: 'settings'})
+	.joinRelated('children', {alias: 'settings'})
 	.where('settings.type', 'settings');
 	if (data.grants) q.where(function(builder) {
 		data.grants.forEach(function(grant) {
 			builder.orWhereJsonSupersetOf('settings.data:grants', [grant]);
 		});
 	});
-	return q.joinRelation('parents', {alias: 'user'})
+	return q.joinRelated('parents', {alias: 'user'})
 	.where('user.type', 'user')
 	.whereJsonText('user.data:email', data.email)
 	.orderBy('site.updated_at', 'site.desc')
@@ -310,7 +310,7 @@ exports.export = function({trx}, data) {
 					ref('data:email').castText().as('email')
 				).where('block.type', 'user');
 			}
-		}).joinRelation('parents', {alias: 'site'})
+		}).joinRelated('parents', {alias: 'site'})
 		.where('site.type', 'site').then(function(settings) {
 			var last = settings.length - 1;
 			settings.forEach(function(setting, i) {

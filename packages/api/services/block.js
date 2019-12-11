@@ -88,7 +88,7 @@ exports.search = function({site, trx}, data) {
 				valid = true;
 				parentList.forEach(function(item, i) {
 					var alias = 'parent_' + i;
-					q.joinRelation('parents', {alias: alias});
+					q.joinRelated('parents', {alias: alias});
 					if (!item.type) throw new HttpError.BadRequest("Missing parents.item.type");
 					schemas[item.type] = site.$schema(item.type);
 					q.whereObject(item, schemas[item.type], alias);
@@ -99,14 +99,14 @@ exports.search = function({site, trx}, data) {
 		if (Object.keys(data.parent).length) {
 			if (!data.parent.type) throw new HttpError.BadRequest("Missing parent.type");
 			valid = true;
-			q.joinRelation('parents', {alias: 'parent'});
+			q.joinRelated('parents', {alias: 'parent'});
 			schemas[data.parent.type] = site.$schema(data.parent.type);
 			q.whereObject(data.parent, schemas[data.parent.type], 'parent');
 		}
 	}
 	if (data.child && Object.keys(data.child).length) {
 		if (!data.child.type) throw new HttpError.BadRequest("Missing child.type");
-		q.joinRelation('children', {alias: 'child'});
+		q.joinRelated('children', {alias: 'child'});
 		schemas[data.child.type] = site.$schema(data.child.type);
 		q.whereObject(data.child, schemas[data.child.type], 'child');
 	}
@@ -124,7 +124,7 @@ exports.search = function({site, trx}, data) {
 			delete qchildren.offset;
 			var qc = site.$relatedQuery('children', trx).alias('children');
 			whereSub(qc, qchildren, schemas[children.type], 'children');
-			qc.joinRelation('parents', {alias: 'parents'})
+			qc.joinRelated('parents', {alias: 'parents'})
 			.where('parents._id', ref('block._id'));
 			q.select(All.api.Block.query(trx).count().from(qc.as('sub')).as('childrenCount'));
 		} else {

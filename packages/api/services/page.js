@@ -730,7 +730,7 @@ exports.del = function({site, trx}, data) {
 		return site.$relatedQuery('children', trx)
 		.select('block.id', 'block.type', 'block.content', ref('parents.id').as('parentId'), ref('parents.data:url').as('parentUrl'))
 		.where(ref('block.data:url').castText(), page.data.url)
-		.joinRelation('parents')
+		.joinRelated('parents')
 		.whereNot('parents.type', 'site')
 		.whereNot('parents.id', page.id)
 		.then(function(links) {

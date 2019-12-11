@@ -282,7 +282,7 @@ Block.genIdSync = function(length) {
 
 Block.QueryBuilder = class BlockQueryBuilder extends common.QueryBuilder {
 	whereSite(siteId) {
-		return this.joinRelation('parents')
+		return this.joinRelated('parents')
 		.where('parents.type', 'site')
 		.where('parents.id', siteId);
 	}
