@@ -182,9 +182,11 @@ exports.unsubscribe = function(req, data) {
 	return All.block.get(req, {
 		type: 'event_reservation',
 		id: data.reservation
-	}).eager('[parents(parentsFilter)]', {parentsFilter: function(q) {
-		q.whereIn('type', ['settings', 'event_date']).select('block.id', 'block.type');
-	}}).then(function(reservation) {
+	}).withGraphFetched('[parents(parentsFilter)]').modifiers({
+		parentsFilter(q) {
+			q.whereIn('type', ['settings', 'event_date']).select('block.id', 'block.type');
+		}
+	}).then(function(reservation) {
 		if (reservation.data.seats !== 0) return All.run('event.subscribe', req, {
 			parents: reservation.parents,
 			reservation: {
@@ -214,22 +216,22 @@ exports.reservations = function({site, trx}, data) {
 	.where('block.type', 'event_date')
 	.where('block.id', data.id)
 	.select().first().throwIfNotFound()
-	.eager(`[
+	.withGraphFetched(`[
 		parents(event) as parent,
 		children(reservations) as children
 		.parents(settings) as settings
 		.parents(user) as user
-	]`, {
-		event: function(q) {
+	]`).modifiers({
+		event(q) {
 			q.where('type', 'event').select();
 		},
-		reservations: function(q) {
+		reservations(q) {
 			q.where('type', 'event_reservation').select();
 		},
-		settings: function(q) {
+		settings(q) {
 			q.where('type', 'settings').select();
 		},
-		user: function(q) {
+		user(q) {
 			q.where('type', 'user').select(ref('data:email').as('email'));
 		}
 	}).then(function(eventDate) {

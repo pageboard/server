@@ -282,8 +282,8 @@ exports.export = function({trx}, data) {
 		settings: 0,
 		reservations: 0
 	};
-	return exports.get({trx}, data).eager(`[children(lones)]`, {
-		lones: function(builder) {
+	return exports.get({trx}, data).withGraphFetched(`[children(lones)]`).modifiers({
+		lones(builder) {
 			return builder.select('_id').where('standalone', true).orderByRaw("data->>'url' IS NOT NULL");
 		}
 	}).then(function(site) {
@@ -304,8 +304,8 @@ exports.export = function({trx}, data) {
 		// TODO fix calendar so that reservations are made against a user, not against its settings
 		out.write(',\n"settings": [');
 		return site.$relatedQuery('children', trx).where('block.type', 'settings')
-		.select().eager('[parents(user) as user]', {
-			user: function(builder) {
+		.select().withGraphFetched('[parents(user) as user]').modifiers({
+			user(builder) {
 				return builder.select(
 					ref('data:email').castText().as('email')
 				).where('block.type', 'user');
@@ -335,11 +335,12 @@ exports.export = function({trx}, data) {
 					return All.api.Block.query(trx)
 					.selectWithout('tsv', '_id')
 					.first().where('_id', child._id)
-					.eager('[children(notlones) as children,children(lones) as standalones]', {
-						notlones: function(builder) {
+					.withGraphFetched('[children(notlones) as children,children(lones) as standalones]')
+					.modifiers({
+						notlones(builder) {
 							return builder.selectWithout('tsv', '_id').where('standalone', false);
 						},
-						lones: function(builder) {
+						lones(builder) {
 							return builder.select('block.id')
 							.where('standalone', true)
 							.orderByRaw("block.data->>'url' IS NOT NULL ASC");
@@ -363,8 +364,8 @@ exports.export = function({trx}, data) {
 			out.write('],\n"reservations": [');
 		}).then(function() {
 			return site.$relatedQuery('children', trx).where('block.type', 'event_reservation')
-			.select().eager('parents(notsite) as parents', {
-				notsite: function(builder) {
+			.select().withGraphFetched('parents(notsite) as parents').modifiers({
+				notsite(builder) {
 					return builder.select('block.id', 'block.type')
 					.whereIn('block.type', ['settings', 'event_date']);
 				}

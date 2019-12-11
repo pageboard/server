@@ -1,5 +1,4 @@
-const ref = require('objection').ref;
-const raw = require('objection').raw;
+const {ref, raw} = require('objection');
 const URL = require('url');
 
 exports = module.exports = function(opt) {
@@ -94,14 +93,14 @@ function QueryPage({site, trx}) {
 	.first()
 	// eager load children (in which there are standalones)
 	// and children of standalones
-	.eager(`[
+	.withGraphFetched(`[
 		children(childrenFilter),
 		children(standalonesFilter) as standalones .children(childrenFilter)
-	]`, {
-		childrenFilter: function(query) {
+	]`).modifiers({
+		childrenFilter(query) {
 			return query.select().where('page.standalone', false);
 		},
-		standalonesFilter: function(query) {
+		standalonesFilter(query) {
 			return query.select().where('page.standalone', true);
 		}
 	});

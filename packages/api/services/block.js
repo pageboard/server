@@ -31,8 +31,8 @@ exports.get = function(req, data) {
 	var q = req.site.$relatedQuery('children', req.trx).select()
 	.where('block.id', data.id);
 	if (data.type) q.where('block.type', data.type);
-	if (data.standalone) q.eager('[children(childrenFilter)]', {
-		childrenFilter: function(query) {
+	if (data.standalone) q.withGraphFetched('[children(childrenFilter)]').modifiers({
+		childrenFilter(query) {
 			return query.select().where('block.standalone', false);
 		}
 	});
@@ -131,11 +131,11 @@ exports.search = function({site, trx}, data) {
 			eagers.push('children(childrenFilter) as children');
 		}
 	}
-	if (eagers.length) q.eager(`[${eagers.join(',')}]`, {
-		parentsFilter: function(query) {
+	if (eagers.length) q.withGraphFetched(`[${eagers.join(',')}]`).modifier({
+		parentsFilter(query) {
 			filterSub(query, parents, schemas[parents.type]);
 		},
-		childrenFilter: function(query) {
+		childrenFilter(query) {
 			filterSub(query, children, children.type ? schemas[children.type] : null);
 		}
 	});
