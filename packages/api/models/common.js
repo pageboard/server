@@ -82,6 +82,15 @@ exports.QueryBuilder = class CommonQueryBuilder extends QueryBuilder {
 			});
 		};
 	}
+	selectWithout(...args) {
+		var model = this.modelClass();
+		var table = this.tableRefFor(model);
+		var list = [];
+		model.columns.forEach((col) => {
+			if (args.includes(col) == false) list.push(`${table}.${col}`);
+		});
+		return super.select(...list);
+	}
 	select(...args) {
 		if (args.length == 0) {
 			var model = this.modelClass();
