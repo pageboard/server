@@ -48,11 +48,13 @@ exports.get.external = true;
 
 exports.find = function({site, trx}, data) {
 	var q = site.$relatedQuery('children', trx).alias('settings')
-	.where('settings.type', 'settings').first().throwIfNotFound().select().select(ref('user.data:email').as('email'))
+	.where('settings.type', 'settings')
+	.first().throwIfNotFound()
+	.select().select(ref('parent.data:email').as('email'))
 	.joinRelated('parents', {alias: 'parent'}).where('parent.type', 'user');
 	if (!data.id && !data.email) throw new HttpError.BadRequest("Missing id or email");
-	if (data.id) q.where('user.id', data.id);
-	else if (data.email) q.whereJsonText('user.data:email', data.email);
+	if (data.id) q.where('parent.id', data.id);
+	else if (data.email) q.whereJsonText('parent.data:email', data.email);
 	return q;
 };
 Object.defineProperty(exports.find, 'schema', {
@@ -63,9 +65,11 @@ Object.defineProperty(exports.find, 'schema', {
 
 exports.search = function({site, trx}, data) {
 	var q = site.$relatedQuery('children', trx).alias('settings')
-	.where('settings.type', 'settings').first().throwIfNotFound().select().select(ref('user.data:email').as('email'))
-	q.whereJsonText('user.data:email', 'in', data.email);
+	.where('settings.type', 'settings')
+	.first().throwIfNotFound()
+	.select().select(ref('parent.data:email').as('email'))
 	.joinRelated('parents', {alias: 'parent'}).where('parent.type', 'user');
+	q.whereJsonText('parent.data:email', 'in', data.email);
 	return q;
 };
 exports.search.schema = {
