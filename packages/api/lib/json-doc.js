@@ -1,7 +1,7 @@
 const traverse = require('json-schema-traverse');
 const {table, getBorderCharacters} = require('table');
 
-module.exports = function(schema) {
+module.exports = function(opt, schema) {
 	if (!schema) return;
 	var lines = [];
 
@@ -20,6 +20,7 @@ module.exports = function(schema) {
 		}
 	}
 	if (lines.length == 0) return "";
+	if (!opt.cli) return lines.join('\n');
 	return table(lines, {
 		drawHorizontalLine: (index, size) => {
 			if (index == 0 || index == size) return true;

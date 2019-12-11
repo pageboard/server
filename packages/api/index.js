@@ -5,11 +5,12 @@ const AjvKeywords = require('ajv-keywords');
 const ajvMetaSchema = require('ajv/lib/refs/json-schema-draft-06.json');
 
 const bodyParser = require.lazy('body-parser');
+const jsonPath = require.lazy('@kapouer/path');
 
 const imports = require('./lib/imports');
 const utils = require('./lib/utils');
 const common = require('./models/common');
-const jsonPath = require.lazy('@kapouer/path');
+const jsonDoc = require.lazy('./lib/json-doc');
 
 const ajvApiSettings = {
 	$data: true,
@@ -197,7 +198,7 @@ All.run = function(apiStr, req, data) {
 		try {
 			data = check(fun, schema, data);
 		} catch(err) {
-			err.message += '\n ' + apiStr + '\n' + require('./lib/json-doc')(schema);
+			err.message += '\n ' + apiStr + '\n' + jsonDoc(All.opt, schema);
 			throw err;
 		}
 		// start a transaction on set trx object on site
