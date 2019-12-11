@@ -484,7 +484,9 @@ exports.import = function({trx}, data) {
 				});
 				upgrader.finish(lone);
 				lone.children = lone.children.concat(lonesRefs);
-				return site.$relatedQuery('children', trx).insertGraph(lone).then(function(obj) {
+				return site.$relatedQuery('children', trx).insertGraph(lone, {
+					allowRefs: true
+				}).then(function(obj) {
 					counts.standalones++;
 					counts.blocks += lone.children.length;
 					doneLone(obj._id);
@@ -543,7 +545,9 @@ exports.import = function({trx}, data) {
 					});
 				}).then(function() {
 					counts.reservations++;
-					return site.$relatedQuery('children', trx).insertGraph(resa);
+					return site.$relatedQuery('children', trx).insertGraph(resa, {
+						allowRefs: true
+					});
 				});
 			});
 		}

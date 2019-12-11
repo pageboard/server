@@ -1,5 +1,4 @@
 const objection = require('objection');
-const DbErrors = require('objection-db-errors').DbErrors;
 const ref = objection.ref;
 const Model = objection.Model;
 const QueryBuilder = objection.QueryBuilder;
@@ -28,7 +27,7 @@ const InstanceUpdateOperation = require(
 	)
 ).InstanceUpdateOperation;
 
-exports.Model = class CommonModel extends DbErrors(Model) {
+exports.Model = class CommonModel extends Model {
 	$query(trx) {
 		if (this.trx && !trx) {
 			console.trace("transactions should be passed explicitely");
