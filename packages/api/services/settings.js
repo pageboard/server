@@ -8,19 +8,26 @@ exports = module.exports = function(opt) {
 };
 
 function init() {
-
+	All.app.get("/.api/settings", function(req, res, next) {
+		All.run('settings.get', req, Object.assign({
+			id: req.user.id
+		}, req.query)).then(function(data) {
+			All.send(res, data);
+		}).catch(next);
+	});
 }
 
 exports.get = function({site, trx}, data) {
 	return site.$relatedQuery('children', trx)
 	.where('block.type', 'settings')
 	.where('block.id', data.id).first().throwIfNotFound().select()
-	.eager('[parents(userFilter) as user]', {
-		userFilter: function(query) {
+	.withGraphFetched('[parents(userFilter) as parent]')
+	.modifiers({
+		userFilter(query) {
 			query.select().where('type', 'user');
 		}
 	}).then(function(settings) {
-		settings.user = settings.user[0];
+		settings.parent = settings.parent[0];
 		return settings;
 	});
 };
