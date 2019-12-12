@@ -25,7 +25,7 @@
     "express-dom": "^5.13.2",
     "got": "^9.6.0",
     "tarn": "^1.1.5",
-    "webkitgtk": "^4.10.0"
+    "webkitgtk": "^4.11.0"
   },
   "pageboard": true
 }
