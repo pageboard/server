@@ -131,7 +131,7 @@ exports.search = function({site, trx}, data) {
 			eagers.push('children(childrenFilter) as children');
 		}
 	}
-	if (eagers.length) q.withGraphFetched(`[${eagers.join(',')}]`).modifier({
+	if (eagers.length) q.withGraphFetched(`[${eagers.join(',')}]`).modifiers({
 		parentsFilter(query) {
 			filterSub(query, parents, schemas[parents.type]);
 		},
