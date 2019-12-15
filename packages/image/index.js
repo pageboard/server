@@ -33,8 +33,8 @@ function initFile(All) {
 	var uploadDir = opt.upload && opt.upload.dir;
 	if (uploadDir) {
 		uploadDir = "." + uploadDir;
-		const imageRoute = `/${uploadDir}/\\d{4}-\\d{2}/[\\w-]+.(png|jpe?g|gif|webp|tiff|svg)`;
 		console.info("image:\tresizable by upload at", "/" + uploadDir);
+		const imageRoute = `^/${uploadDir}/\\d{4}-\\d{2}/[\\w-.]+.(png|jpe?g|gif|webp|tiff|svg)$`;
 		All.app.get(`:url(${imageRoute})`, function(req, res, next) {
 			if (req.query.raw === "" || req.query.raw === null) {
 				if (Object.keys(req.query).length != 1) {
