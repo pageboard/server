@@ -20,7 +20,7 @@ exports = module.exports = function(opt) {
 	}
 
 	statics.nocache = opt.env == "development";
-	if (statics.nocache) console.info("Statics cache disabled for development");
+	if (statics.nocache) console.info("static:\tcache disabled for development");
 
 	return {
 		name: 'statics',
@@ -35,7 +35,7 @@ function init(All) {
 	return fs.mkdir(statics.runtime, {
 		recursive: true
 	}).then(function() {
-		console.info(`Static directories are served from symlinks in ${statics.runtime}`);
+		console.info(`static:\tdirectories are served from symlinks in ${statics.runtime}`);
 
 		app.get(
 			"/:dir(.files|.uploads)/*",

@@ -13,7 +13,7 @@ exports = module.exports = function(opt) {
 	if (!opt.upload.dir) opt.upload.dir = "uploads";
 
 	var dest = Path.resolve(opt.dirs.data, "uploads");
-	console.info("Upload to :", dest);
+	console.info(`upload:\t${dest}`);
 	opt.directories.push({
 		from: dest,
 		to: opt.upload.dir

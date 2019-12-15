@@ -33,8 +33,8 @@ function initFile(All) {
 	var uploadDir = opt.upload && opt.upload.dir;
 	if (uploadDir) {
 		uploadDir = "." + uploadDir;
-		console.info("Uploaded images resizable by upload at", "/" + uploadDir);
 		const imageRoute = `/${uploadDir}/\\d{4}-\\d{2}/[\\w-]+.(png|jpe?g|gif|webp|tiff|svg)`;
+		console.info("image:\tresizable by upload at", "/" + uploadDir);
 		All.app.get(`:url(${imageRoute})`, function(req, res, next) {
 			if (req.query.raw === "" || req.query.raw === null) {
 				if (Object.keys(req.query).length != 1) {
@@ -58,16 +58,16 @@ function initFile(All) {
 	return All.utils.which(opt.image.im).catch(function() {}).then(function(path) {
 		if (path) {
 			opt.image.im = path;
-			console.info("Using image converter", path);
+			console.info("image:\tconverter", path);
 		} else {
-			console.warn("Missing image converter", opt.image.im, "favicon disabled");
+			console.warn("image:\tmissing converter", opt.image.im, "favicon disabled");
 			delete opt.image.im;
 		}
 	});
 }
 
 function initService(All) {
-	console.info(`Remote images resizable by proxy at /.api/image`);
+	console.info(`image:\tproxy at /.api/image`);
 	All.app.get('/.api/image', function(req, res, next) {
 		console.warn("/.api/image is used", req.url);
 		next();

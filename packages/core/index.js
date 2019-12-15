@@ -95,7 +95,7 @@ exports.init = function(opt) {
 
 	var plugins = [];
 	return (opt.installer.path ? Promise.resolve(opt.installer.path) : All.utils.which(opt.installer.bin)).then(function(path) {
-		console.info("using installer.path", path);
+		console.info("core:\tinstaller.path", path);
 		opt.installer.path = path;
 	}).then(function() {
 		return Promise.all(Object.keys(opt.dependencies).map(function(module) {
