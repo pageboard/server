@@ -18,7 +18,7 @@
   "homepage": "https://github.com/pageboard/server#readme",
   "dependencies": {
     "datauri": "^2.0.0",
-    "sharpie": "4.3.0"
+    "sharpie": "4.3.1"
   },
   "pageboard": true
 }
