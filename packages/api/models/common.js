@@ -8,6 +8,14 @@ const { isKnexRaw, isKnexQueryBuilder } = require(
 	)
 );
 
+const { isObject } = require(
+	require('path').join(
+		require.resolve('objection'),
+		'..',
+		'utils/objectUtils'
+	)
+);
+
 const UpdateOperation = require(
 	require('path').join(
 		require.resolve('objection'),
@@ -257,6 +265,7 @@ class PatchObjectOperation extends UpdateOperation {
 					`jsonb_set_recursive(??, '${jsonRefs}', ${valuePlaceholder})`,
 					[convertedJson[parsed.column] || parsed.column, val]
 				);
+				delete this.model[key];
 			} else {
 				convertedJson[key] = val;
 			}
@@ -267,12 +276,13 @@ class PatchObjectOperation extends UpdateOperation {
 }
 
 class InstancePatchObjectOperation extends InstanceUpdateOperation {
-	onAfter2(builder, result) {
+	async onAfter2(builder, result) {
 		const clone = this.instance.$clone();
-		result = super.onAfter2(builder, result);
-		if (!result || typeof result != "object") {
+		result = await super.onAfter2(builder, result);
+
+		if (!isObject(result)) {
+			deepAssign(clone, this.model);
 			this.instance.$set(clone);
-			deepAssign(this.instance, this.model);
 		}
 		return result;
 	}
