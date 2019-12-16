@@ -26,7 +26,17 @@ exports.notfound = function(block) {
 	});
 };
 
-exports.form = function(block) {
+exports.page = function(block) {
+	var tr = block.data.transition;
+	if (tr) {
+		block.data.transition = {
+			open: tr.from ? tr.from.replace(/^from-/, 'tr-') : null,
+			close: tr.to ? tr.to.replace(/^to-/, 'tr-') : null
+		};
+	}
+};
+
+exports.form = function(block, parent) {
 	var data = {};
 	var old = block.data;
 	var method = old.action && old.action.method || 'get';
