@@ -13,7 +13,7 @@ function Domains(All) {
 	this.All = All;
 	this.sites = {}; // cache sites by id
 	this.hosts = {}; // cache hosts by hostname
-	this.init = this.init.bind(this);
+	this.mw = this.mw.bind(this);
 }
 
 /*
@@ -27,52 +27,118 @@ so adding an IP to pageboard and pointing a host to that IP needs a restart)
 - site installation calls upcache update url, which resolves the hanging promise
 - init returns for everyone
 */
-Domains.prototype.init = function(req, res, next) {
+Domains.prototype.mw = function(req, res, next) {
 	var All = this.All;
-	var hostname = req.hostname;
-	if (hostname == localhost4 && req.path == "/.well-known/pageboard") {
-		All.run('site.all', req).then(function(list) {
-			var map = {};
-			list.forEach(function(site) {
-				var upstream = All.opt.upstreams[site.data.server || All.opt.version];
-				var domains = site.data.domains;
-				if (!domains) domains = [];
-				else if (typeof domains == "string") domains = [domains];
-				var domain = domains.shift();
-				if (domain != null) {
-					domains = domains.slice();
-					domains.push(site.id);
-					domains.forEach(function(secondary) {
-						map[secondary] = '=' + domain;
-					});
-					map[domain] = upstream;
-				} else {
-					map[site.id] = upstream;
-				}
-			});
-			res.type('json').end(JSON.stringify({
-				domains: map
-			}, null, ' '));
-		}).catch(next);
-		return;
+	var path = req.path;
+	var host = this.init(req.hostname, path, req.headers);
+	var p;
+	if (path == "/.well-known/upcache") {
+		if (host.finalize) {
+			host.finalize();
+		}
+		p = host.installing;
+	} else if (path == "/.well-known/pageboard") {
+		if (req.accepts('json')) p = host.waiting;
+		else p = host.searching;
+	} else if (req.path == "/favicon.ico" || req.path.startsWith('/.files/') || req.path.startsWith('/.api/')) {
+		p = host.waiting;
+	} else if (host.isWaiting) {
+		p = new Promise(function(resolve) {
+			setTimeout(resolve, host.parked ? 0 : 2000);
+		}).then(function() {
+			if (host.isWaiting && !req.path.startsWith('/.') && All.opt.env != "development") {
+				next = null;
+				res.type('html').sendStatus(503);
+			} else {
+				return host.waiting;
+			}
+		});
+	} else {
+		p = host.waiting;
 	}
+	return p.then(() => {
+		if (!next) return;
+		if (host._error) throw host._error;
+		var site = this.sites[host.id];
+		if (!host.id || !site) {
+			// this should never actually happen !
+			throw new HttpError.ServiceUnavailable(`Missing host.id or site for ${host.name}`);
+		}
+		// calls to api use All.run which does site.$clone() to avoid concurrency issues
+		req.site = site;
+		return site;
+	}).then((site) => {
+		var path = req.path;
+		// FIXME do not redirect if host.domains[0] DNS has not been checked
+		if (req.hostname != host.domains[0] && (
+			!path.startsWith('/.well-known/') || /^.well-known\/\d{3}$/.test(path)
+		)) {
+			var rhost = this.init(host.domains[0], path, req.headers);
+			rhost.waiting.then(function() {
+				All.cache.tag('data-:site')(req, res, function() {
+					res.redirect(308, rhost.href +  req.url);
+				});
+			});
+			return site;
+		} else {
+			return site;
+		}
+	}).then((site) => {
+		// this sets the site hostname, shared amongst all sites
+		site.href = host.href;
+		site.hostname = host.name; // at this point it should be == host.domains[0]
+
+		if (path == "/.well-known/pageboard") {
+			// this is expected by proxy/statics/status.html
+			res.send({
+				errors: site.errors
+			});
+		} else {
+			next();
+		}
+	}).catch(next);
+};
+
+Domains.prototype.wkp = function(req, res, next) {
+	if (req.hostname != localhost4) return next();
+	All.run('site.all', req).then(function(list) {
+		var map = {};
+		list.forEach(function(site) {
+			var upstream = All.opt.upstreams[site.data.server || All.opt.version];
+			var domains = site.data.domains;
+			if (!domains) domains = [];
+			else if (typeof domains == "string") domains = [domains];
+			var domain = domains.shift();
+			if (domain != null) {
+				domains = domains.slice();
+				domains.push(site.id);
+				domains.forEach(function(secondary) {
+					map[secondary] = '=' + domain;
+				});
+				map[domain] = upstream;
+			} else {
+				map[site.id] = upstream;
+			}
+		});
+		res.type('json').end(JSON.stringify({
+			domains: map
+		}, null, ' '));
+	}).catch(next);
+};
+
+Domains.prototype.init = function(hostname, path, headers) {
 	var sites = this.sites;
 	var hosts = this.hosts;
 	var host = hosts[hostname];
 	if (!host) {
 		hosts[hostname] = host = {name: hostname};
-		var hostHeader = req.get('Host');
-		if (!hostHeader) {
-			console.error(req.headers);
-			return next(new HttpError.BadRequest('Missing Host header'));
-		}
-		hostUpdatePort(host, hostHeader);
-		host.protocol = req.get('X-Forwarded-Proto') || 'http';
+		hostUpdatePort(host, headers.host);
+		host.protocol = headers['x-forwarded-proto'] || 'http';
 	}
 	if (!host.searching && !host._error) {
 		delete host._error;
 		host.searching = Promise.resolve().then(function() {
-			return this.check(host, req);
+			return this.check(host, headers['x-forwarded-by']);
 		}.bind(this)).then(function(hostname) {
 			var site = host.id && sites[host.id];
 			if (site) return site;
@@ -126,83 +192,15 @@ Domains.prototype.init = function(req, res, next) {
 	if (!host.waiting && !host._error) {
 		doWait(host);
 	}
-	var p;
-	if (req.path == "/.well-known/upcache") {
-		if (host.finalize) {
-			host.finalize();
-		}
-		p = host.installing;
-	} else if (req.path == "/.well-known/pageboard") {
-		if (req.accepts('json')) p = host.waiting;
-		else p = host.searching;
-	} else if (req.path == "/favicon.ico" || req.path.startsWith('/.files/') || req.path.startsWith('/.api/')) {
-		p = host.waiting;
-	} else if (host.isWaiting) {
-		p = new Promise(function(resolve) {
-			setTimeout(resolve, host.parked ? 0 : 2000);
-		}).then(function() {
-			if (host.isWaiting && !req.path.startsWith('/.') && All.opt.env != "development") {
-				next = null;
-				res.type('html').sendStatus(503);
-			} else {
-				return host.waiting;
-			}
-		});
-	} else {
-		p = host.waiting;
-	}
-	return p.then(function() {
-		if (!next) return;
-		var site = sites[host.id];
-		if (host._error) {
-			next(host._error);
-			return;
-		}
-		if (!host.id || !site) {
-			// this should never actually happen !
-			next(new HttpError.ServiceUnavailable(`Missing host.id or site for ${host.name}`));
-			return;
-		}
-		// calls to api use All.run which does site.$clone() to avoid concurrency issues
-		req.site = site;
-		var path = req.path;
-		if (req.hostname != host.domains[0] && (
-			!path.startsWith('/.well-known/') || /^.well-known\/\d{3}$/.test(path)
-		)) {
-			All.cache.tag('data-:site')(req, res, function() {
-				res.redirect(308, host.href +  req.url);
-			});
-			return;
-		}
-
-		site.href = host.href;
-		site.hostname = host.name; // at this point it should be == host.domains[0]
-
-		if (req.path == "/.well-known/pageboard") {
-			// this is expected by proxy/statics/status.html
-			res.send({
-				errors: site.errors
-			});
-		} else {
-			next();
-		}
-	}).catch(next);
+	return host;
 };
 
-Domains.prototype.check = function(host, req) {
+Domains.prototype.check = function(host, forwardedBy) {
 	var fam = 4;
-	var ip = req.get('X-Forwarded-By');
-	if (ip) {
-		if (isIPv6(ip)) fam = 6;
-	} else {
-		var address = req.socket.address();
-		ip = address.address;
-		if (!ip) {
-			console.warn("Missing client socket IP", req.hostname, req.path);
-			ip = localhost4;
-		}
-		fam = address.family == 'IPv6' ? 6 : 4;
-	}
+	var ip = forwardedBy;
+	if (!ip) return Promise.reject(new Error("Missing X-Forwarded-By header"));
+	if (isIPv6(ip)) fam = 6;
+
 	var ips = {};
 	ips['ip' + fam] = ip;
 	var prefix = '::ffff:';

@@ -293,7 +293,8 @@ function createApp(All) {
 	app.set("env", opt.env);
 	app.disable('x-powered-by');
 	app.enable('trust proxy');
-	app.use(All.domains.init);
+	app.get("/.well-known/pageboard", All.domains.wkp);
+	app.use(All.domains.mw);
 	app.use(function(req, res, next) {
 		res.setHeader('Referrer-Policy', 'strict-origin-when-cross-origin');
 		res.setHeader('Content-Security-Policy', [
