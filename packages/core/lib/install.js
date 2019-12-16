@@ -206,7 +206,6 @@ function doInstall(site, pkg, opt) {
 				'--non-interactive',
 				'--ignore-optional',
 				'--no-progress',
-				// '--silent',
 				'add',
 				module
 			];
@@ -217,7 +216,6 @@ function doInstall(site, pkg, opt) {
 				'--no-optional',
 				'--no-progress',
 				'--production',
-				// '--silent',
 				'--no-audit',
 				'--save',
 				module
