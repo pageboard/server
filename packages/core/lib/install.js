@@ -221,12 +221,15 @@ function doInstall(site, pkg, opt) {
 				module
 			];
 		}
-		return exec(`${opt.installer.path} ${args.join(' ')}`, {
+		var command = `${opt.installer.path} ${args.join(' ')}`;
+		return exec(command, {
 			cwd: pkg.dir,
 			env: baseEnv,
 			shell: false,
 			timeout: opt.installer.timeout
 		}).catch(function(err) {
+			console.error(command);
+			console.error("in", pkg.dir);
 			throw new Error(err.stderr.toString() || err.stdout.toString());
 		});
 	}).then(function() {
