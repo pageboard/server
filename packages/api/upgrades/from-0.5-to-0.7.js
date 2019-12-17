@@ -165,3 +165,8 @@ exports.mail_query_template = function(block) {
 	block.type = 'mail_binding';
 	if (block.data.placeholder) delete block.data.placeholder;
 };
+
+exports.layout = function(block) {
+	if (block.data.height && !block.data.heightUnits) block.data.heightUnits = '%';
+};
+
