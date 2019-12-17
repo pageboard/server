@@ -62,7 +62,15 @@ exports.form = function(block, parent) {
 				method: old.action.call,
 				parameters: old.action.consts || {}
 			};
-			if (data.action.method == "auth.login") {
+			if (data.action.method == "mail.send") {
+				Object.entries(data.action.parameters).forEach(([key, val]) => {
+					var nkey = key.replace(/^query\./, 'body.');
+					if (nkey != key) {
+						data.action.parameters[nkey] = val;
+						delete data.action.parameters[key];
+					}
+				});
+			} else if (data.action.method == "auth.login") {
 				data.action.method = "login.send";
 				data.action.parameters = {
 					grant: "webmaster"
@@ -97,6 +105,18 @@ exports.form = function(block, parent) {
 			"": block.content.form
 		};
 	}
+};
+
+exports.input_text = function(block) {
+	if (block.data.name) {
+		// this is done regardless of the parent, but it actually targets the mail.send api_form
+		block.data.name = block.data.name.replace(/^query\./, 'body.');
+		if (block.data.name == "body.sender") block.data.name = 'replyTo';
+	}
+};
+
+exports.input_file = function(block) {
+	if (block.data.name) block.data.name = block.data.name.replace(/^query\./, 'body.');
 };
 
 exports.query = function(block) {
