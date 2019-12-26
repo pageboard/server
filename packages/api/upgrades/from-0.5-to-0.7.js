@@ -128,7 +128,7 @@ exports.query = function(block) {
 			method: old.query.call,
 			parameters: old.query.consts || {}
 		};
-		if (old.query.vars) {
+		if (old.query.vars && data.action.method) {
 			block.expr = {
 				action: {
 					parameters: {}
