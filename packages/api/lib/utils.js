@@ -19,6 +19,7 @@ function mergeParameters(params, obj) {
 	// the block data could be properly scoped and not mixed with request parameters.
 	var ret = Array.isArray(params) ? [] : {};
 	Object.entries(params).forEach(function([key, val]) {
+		if (val == null) return;
 		if (typeof val == "string") {
 			val = matchdom(val, obj, {'||': function(val, what) {
 				var path = what.scope.path.slice();
