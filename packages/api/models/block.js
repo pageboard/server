@@ -253,8 +253,14 @@ function findHrefs(schema, list, root) {
 	Object.keys(schema.properties).forEach(function(key) {
 		var prop = schema.properties[key];
 		if (root) key = `${root}.${key}`;
-		if (prop.$helper && prop.$helper.name == "href") {
-			list.push(key);
+		var helper = prop.$helper;
+		if (helper && helper.name == "href") {
+			var ftype = helper.filter && helper.filter.type || [];
+			if (!Array.isArray(ftype)) ftype = [ftype];
+			list.push({
+				path: key,
+				types: ftype
+			});
 		} else {
 			findHrefs(prop, list, key);
 		}

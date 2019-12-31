@@ -636,8 +636,8 @@ function updatePage({site, trx}, page) {
 		var hrefs = site.$model.hrefs;
 		// page.data.url is not a href input, see also page element.
 		return Promise.all(Object.keys(hrefs).map(function(type) {
-			return Promise.all(hrefs[type].map(function(key) {
-				key = 'block.data:' + key;
+			return Promise.all(hrefs[type].map(function(desc) {
+				var key = 'block.data:' + desc.key;
 				var field = ref(key).castText();
 				var args = field._createRawArgs(All.api.Block.query());
 				return site.$relatedQuery('children', trx).where('block.type', type)
@@ -646,7 +646,11 @@ function updatePage({site, trx}, page) {
 					.orWhere(field, oldUrl);
 				})
 				.patch({
-					[key]: raw(`overlay(${args[0]} placing ? from 1 for ${oldUrl.length})`, args[1], newUrl)
+					[key]: raw(
+						`overlay(${args[0]} placing ? from 1 for ${oldUrl.length})`,
+						args[1],
+						newUrl
+					)
 				}).skipUndefined();
 			}));
 		})).then(function() {

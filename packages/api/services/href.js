@@ -295,18 +295,19 @@ exports.collect = function({site, trx}, data={}) {
 		) AS hrefs`)
 	).from((builder) => {
 		builder.union([
-			collectHrefs({site, trx}, data),
-			collectHrefs({site, trx}, data, true)
+			collectHrefs({site, trx}, data, 0),
+			collectHrefs({site, trx}, data, 1),
+			collectHrefs({site, trx}, data, 2)
 		]).as('href');
 	});
 	return q;
 };
 
-function collectHrefs({site, trx}, data, shared) {
+function collectHrefs({site, trx}, data, level) {
 	var q = All.api.Block.query(trx).where('block._id', site._id)
 	.select('href.url', 'href.meta', 'href.mime');
 	const hrefs = site.$model.hrefs;
-	const types = ['image']; // Object.keys(hrefs)
+	const types = Object.keys(hrefs);
 
 	var blockRelation = {
 		$relation: 'children',
@@ -321,13 +322,15 @@ function collectHrefs({site, trx}, data, shared) {
 		},
 		root: {
 			$relation: 'children',
-			block: blockRelation,
 			$modify: [(q) => {
 				q.where('standalone', true);
 			}]
 		}
 	};
-	if (shared) {
+	if (level == 1) {
+		rel.root.block = blockRelation;
+	}
+	if (level == 2) {
 		rel.root.shared = {
 			$relation: 'children',
 			block: blockRelation,
@@ -347,15 +350,17 @@ function collectHrefs({site, trx}, data, shared) {
 		q.whereIn('root.id', list);
 	}
 
-	var table = shared ? 'root:shared:block' : 'root:block';
+	var table = ['root', 'root:block', 'root:shared:block'][level];
 	q.where(function() {
 		Object.entries(hrefs).forEach(([type, list]) => {
-			if (type != 'image') return;
+			if (!list.some((desc) => {
+				return desc.types.includes('image') || desc.types.includes('svg');
+			})) return;
 			this.orWhere(function() {
 				this.where(table + '.type', type);
 				this.where(function() {
-					list.forEach((path) => {
-						this.orWhere('href.url', ref(`data:${path}`).from(table).castText());
+					list.forEach((desc) => {
+						this.orWhere('href.url', ref(`data:${desc.path}`).from(table).castText());
 					});
 				});
 			});
