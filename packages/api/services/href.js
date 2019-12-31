@@ -1,6 +1,7 @@
 const Path = require('path');
 const URL = require('url');
-const {ref, raw} = require('objection');
+const {ref, raw, val} = require('objection');
+const jsonPath = require.lazy('@kapouer/path');
 
 exports = module.exports = function(opt) {
 	this.opt = opt;
@@ -69,7 +70,6 @@ exports.search = function({site, trx}, data) {
 		if (url.startsWith('/') && hash != null) {
 			q = q.first().then(function(href) {
 				if (!href) return [];
-
 				return All.run('block.find', {site, trx}, {
 					type: 'page',
 					data: {
@@ -395,87 +395,75 @@ exports.gc = function({trx}, days) {
 	*/
 };
 
-exports.reinspect = function({trx}, data) {
-	// usage
-	// to force reinspect
-	// UPDATE block SET data = jsonb_set(data, '{meta}', '{}'::jsonb) WHERE type='image';
-	// UPDATE href SET meta = '{}'::jsonb WHERE type='image';
-	// pageboard href.reinspect site=idsite type=image meta.width=
-	// (site is optional)
-	var site = {
-		id: data.site
-	};
-	delete data.site;
-	var q = All.api.Href.query(trx).joinRelated('parent')
-	.select('href.url', 'href._id', 'parent.id AS site')
-	.whereObject(data);
-	if (site.id) q.where('parent.id', site.id);
-	return q.then(function(rows) {
-		return Promise.all(rows.map(function(href) {
-			return callInspector(href.site, href.url)
-			.then(function(obj) {
-				return All.api.Href.query(trx).patchObject(obj).where('_id', href._id);
-			}).catch(function(err) {
-				console.error("Error inspecting", href, err);
+exports.reinspect = function({site, trx}, data) {
+	var hrefs = site.$model.hrefs;
+	var fhrefs = {};
+	Object.entries(hrefs).forEach(([type, list]) => {
+		var flist = list.filter((desc) => {
+			return !data.types.length || desc.types.some((type) => {
+				return data.types.includes(type);
 			});
-		}));
-	}).then(function(arr) {
-		console.info("Inspected", arr.length, "hrefs");
-		return Promise.all([
-			trx.raw(`UPDATE block
-				SET data = jsonb_set(block.data, '{meta,width}', href.meta->'width')
-				FROM href, block AS site, relation AS r WHERE block.type = 'image'
-				AND block.data->'meta'->'width' IS NULL
-				AND href.url = block.data->>'url'
-				AND href.meta->'width' IS NOT NULL
-				AND r.child_id = block._id AND site._id = r.parent_id AND site.type = 'site'
-				${site.id ? ' AND site.id = ?' : ''}
-				AND href._parent_id = site._id`, site.id),
-			trx.raw(`UPDATE block
-				SET data = jsonb_set(block.data, '{meta,height}', href.meta->'height')
-				FROM href, block AS site, relation AS r WHERE block.type = 'image'
-				AND block.data->'meta'->'height' IS NULL
-				AND href.url = block.data->>'url'
-				AND href.meta->'height' IS NOT NULL
-				AND r.child_id = block._id AND site._id = r.parent_id AND site.type = 'site'
-				${site.id ? ' AND site.id = ?' : ''}
-				AND href._parent_id = site._id`, site.id),
-			trx.raw(`UPDATE block
-				SET data = jsonb_set(block.data, '{meta,size}', href.meta->'size')
-				FROM href, block AS site, relation AS r WHERE block.type = 'image'
-				AND block.data->'meta'->'size' IS NULL
-				AND href.url = block.data->>'url'
-				AND href.meta->'size' IS NOT NULL
-				AND r.child_id = block._id AND site._id = r.parent_id AND site.type = 'site'
-				${site.id ? ' AND site.id = ?' : ''}
-				AND href._parent_id = site._id`, site.id),
-			trx.raw(`UPDATE block
-				SET data = jsonb_set(block.data, '{meta,mime}', to_jsonb(href.mime))
-				FROM href, block AS site, relation AS r WHERE block.type = 'image'
-				AND block.data->'meta'->'mime' IS NULL
-				AND href.url = block.data->>'url'
-				AND r.child_id = block._id AND site._id = r.parent_id AND site.type = 'site'
-				${site.id ? ' AND site.id = ?' : ''}
-				AND href._parent_id = site._id`, site.id)
-		]).then(function(counts) {
-			require('assert').equal(counts[0].rowCount, counts[1].rowCount, "not updated same number of meta.width and meta.height");
-			console.info("Updated", counts[0].rowCount, "image blocks meta dimensions");
+		});
+		if (flist.length) fhrefs[type] = flist;
+	});
+	return All.api.Block.query(trx).select().from(
+		site.$relatedQuery('children', trx).select('block._id')
+		.whereIn('block.type', Object.keys(fhrefs))
+		.leftOuterJoin('href', function() {
+			this.on('href._parent_id', site._id);
+			this.on(function() {
+				Object.entries(fhrefs).forEach(([type, list]) => {
+					this.orOn(function() {
+						this.on('block.type', val(type));
+						this.on(function() {
+							list.forEach((desc) => {
+								this.orOn('href.url', ref(`data:${desc.path}`).from('block').castText());
+							});
+						});
+					});
+				});
+			});
+		})
+		.groupBy('block._id')
+		.count({count: 'href.*'})
+		.as('sub')
+	).join('block', 'block._id', 'sub._id')
+	.where('sub.count', 0)
+	.then(function(rows) {
+		var urls = [];
+		rows.forEach((row) => {
+			hrefs[row.type].forEach((desc) => {
+				var url = jsonPath.get(row.data, desc.path);
+				if (url && !urls.includes(url)) urls.push(url);
+			});
+		});
+		return Promise.all(urls.map((url) => {
+			return All.run('href.add', {site, trx}, {url}).catch(function(err) {
+				console.error(err);
+				throw err;
+			});
+		})).then(function(list) {
+			return {missings: rows.length, added: list.length};
 		});
 	});
 };
 exports.reinspect.schema = {
 	$action: 'write',
-	required: ['type'],
-	get properties() {
-		return Object.assign({}, All.api.Href.jsonSchema.properties, {
-			site: {
-				type: 'string',
-				format: 'id'
+	properties: {
+		all: {
+			title: 'All',
+			type: 'boolean',
+			default: false
+		},
+		types: {
+			title: 'Types',
+			nullable: true,
+			type: 'array',
+			items: {
+				type: 'string'
 			}
-		});
-	},
-	additionalProperties: false,
-	defaults: false
+		}
+	}
 };
 
 function callInspector(siteId, url, local) {
