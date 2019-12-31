@@ -170,3 +170,22 @@ exports.layout = function(block) {
 	if (block.data.height && !block.data.heightUnits) block.data.heightUnits = '%';
 };
 
+exports.piercan_produit = function(block) {
+	var content = block.content || {};
+	block.content = {};
+	if (content.content) block.content.extra = content.content;
+	if (block.data.image) {
+		var imgBlock = {
+			id: this.Block.genIdSync(),
+			type: 'image',
+			data: {
+				url: block.data.image
+			}
+		};
+		delete block.data.image;
+		this.idMap[imgBlock.id] = imgBlock.id;
+		block.content.preview = `<div block-id="${imgBlock.id}"></div>`;
+		if (!block.children) block.children = [];
+		block.children.push(imgBlock);
+	}
+};
