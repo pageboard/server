@@ -142,7 +142,7 @@ exports.query = function(block) {
 	block.data = data;
 	if (block.content) {
 		block.content = {
-			template: (block.content.template) || '' + (block.content.messages || '')
+			template: (block.content.template || '') + (block.content.messages || '')
 		};
 	}
 };
