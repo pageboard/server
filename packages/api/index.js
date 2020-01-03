@@ -191,6 +191,7 @@ All.help = function(apiStr) {
 All.run = function(apiStr, req, data) {
 	return Promise.resolve().then(function() {
 		const [schema, mod, fun] = getApiMethodSchema(apiStr);
+		Log.api("run %s:\n%O", apiStr, data);
 		try {
 			data = check(fun, schema, data);
 		} catch(err) {
