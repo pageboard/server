@@ -128,15 +128,21 @@ exports.search = function({site, trx}, data) {
 			.where('parents._id', ref('block._id'));
 			q.select(All.api.Block.query(trx).count().from(qc.as('sub')).as('childrenCount'));
 		} else {
-			eagers.push('children(childrenFilter) as children');
+			eagers.push('children(standalonesFilter) as children');
 		}
+	}
+	if (data.content) {
+		eagers.push('children(childrenFilter) as children');
 	}
 	if (eagers.length) q.withGraphFetched(`[${eagers.join(',')}]`).modifiers({
 		parentsFilter(query) {
 			filterSub(query, parents, schemas[parents.type]);
 		},
-		childrenFilter(query) {
+		standalonesFilter(query) {
 			filterSub(query, children, children.type ? schemas[children.type] : null);
+		},
+		childrenFilter(query) {
+			query.select().where('standalone', false);
 		}
 	});
 
@@ -215,6 +221,11 @@ exports.search.schema = {
 			title: 'Filter by data',
 			type: 'object'
 		},
+		content: {
+			title: 'Content',
+			type: 'boolean',
+			default: false
+		},
 		order: {
 			title: 'Sort by',
 			type: 'array',
@@ -237,7 +248,7 @@ exports.search.schema = {
 			default: 0
 		},
 		count: {
-			title: 'Get count',
+			title: 'Count',
 			type: 'boolean',
 			default: false
 		},
@@ -280,6 +291,11 @@ exports.search.schema = {
 				data: {
 					title: 'Filter by data',
 					type: 'object'
+				},
+				content: {
+					title: 'Content',
+					type: 'boolean',
+					default: false
 				},
 				order: {
 					title: 'Sort by',
@@ -344,6 +360,11 @@ exports.search.schema = {
 					title: 'Filter by data',
 					type: 'object'
 				},
+				content: {
+					title: 'Content',
+					type: 'boolean',
+					default: false
+				},
 				order: {
 					title: 'Sort by',
 					type: 'array',
@@ -366,7 +387,7 @@ exports.search.schema = {
 					default: 0
 				},
 				count: {
-					title: 'Get count',
+					title: 'Count',
 					type: 'boolean',
 					default: false
 				}
