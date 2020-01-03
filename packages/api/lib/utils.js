@@ -21,6 +21,7 @@ function mergeParameters(params, obj) {
 	Object.entries(params).forEach(function([key, val]) {
 		if (val == null) return;
 		if (typeof val == "string") {
+			var pureval;
 			val = matchdom(val, obj, {'||': function(val, what) {
 				var path = what.scope.path.slice();
 				if (path[0] == "$query" || path[0] == "$body" || path[0] == "$response") {
@@ -29,8 +30,10 @@ function mergeParameters(params, obj) {
 					if (parent == null) return;
 					delete parent[last];
 				}
+				if (what.hits.length == 1) pureval = val;
 				return val;
 			}});
+			if (pureval !== undefined) val = pureval;
 			if (val != null) ret[key] = val;
 		} else if (typeof val == "object") {
 			ret[key] = mergeParameters(val, obj);
