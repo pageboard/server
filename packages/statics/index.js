@@ -8,8 +8,6 @@ const bundlers = {
 	css: require.lazy('postinstall-css')
 };
 
-const debug = require('debug')('pageboard:statics');
-
 exports = module.exports = function(opt) {
 	if (!opt.statics) opt.statics = {};
 	var statics = opt.statics;
@@ -51,7 +49,7 @@ function init(All) {
 					All.cache.tag('app-:site').for(statics.nocache ? null : '1 year')(req, res, next);
 					break;
 				}
-				debug("Static url", url, "rewritten to", req.url);
+				Log.statics("Static url", url, "rewritten to", req.url);
 			},
 			serveStatic(statics.runtime, {
 				index: false,
@@ -193,7 +191,7 @@ function mountPath(src, dst) {
 		return;
 	}
 
-	debug(`Mount ${src} to ${absDst}`);
+	Log.statics(`Mount ${src} to ${absDst}`);
 
 	return fs.mkdir(Path.dirname(absDst), {
 		recursive: true

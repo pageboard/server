@@ -21,7 +21,6 @@
     "ajv": "^6.10.2",
     "ajv-keywords": "^3.4.1",
     "body-parser": "^1.9.0",
-    "debug": "^2.6.8",
     "flat": "^4.1.0",
     "json-schema-traverse": "^0.4.1",
     "lodash.merge": "^4.6.2",

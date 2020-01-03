@@ -17,7 +17,6 @@
   },
   "homepage": "https://github.com/pageboard/server#readme",
   "dependencies": {
-    "debug": "^3.1.0",
     "postinstall-css": "^0.6.0",
     "postinstall-js": "^0.6.0",
     "serve-static": "^1.13.2"

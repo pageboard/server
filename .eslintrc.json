@@ -19,6 +19,7 @@
   "globals": {
     "All": true,
     "HttpError": true,
-    "Text": true
+    "Text": true,
+    "Log": true
   }
 }

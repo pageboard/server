@@ -16,7 +16,6 @@ const prettyBytes = require('pretty-bytes');
 const rc = require('rc');
 const xdg = require('xdg-basedir');
 const resolvePkg = require('resolve-pkg');
-const debug = require('debug')('pageboard:core');
 const http = require.lazy('http');
 const fs = require('fs').promises;
 
@@ -28,6 +27,7 @@ const Install = require('./lib/install');
 // exceptional but so natural
 global.HttpError = require('http-errors');
 global.Text = require('outdent');
+global.Log = require('./lib/log')('pageboard');
 
 exports.config = function(pkgOpt) {
 	var dir = Path.resolve(__dirname, '..', '..');
@@ -197,7 +197,7 @@ exports.start = function(All) {
 
 function initDirs(dirs) {
 	return Promise.all(Object.keys(dirs).map(function(key) {
-		debug("init dir", dirs[key]);
+		Log.core("init dir", dirs[key]);
 		return fs.mkdir(dirs[key], {
 			recursive: true
 		});

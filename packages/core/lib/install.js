@@ -2,7 +2,6 @@ const Path = require('path');
 const pify = require('util').promisify;
 const semverRegex = require('semver-regex');
 const rimraf = pify(require('rimraf'));
-const debug = require('debug')('pageboard:core');
 const exec = pify(require('child_process').exec);
 const postinstall = require('postinstall');
 
@@ -28,7 +27,7 @@ exports.install = function(site, opt) {
 };
 
 exports.config = function(moduleDir, id, module, config) {
-	debug("Module directory", module, moduleDir);
+	Log.install("Module directory", module, moduleDir);
 	if (moduleDir == null) throw new Error(`${id} has a missing module ${module}`);
 	return fs.readFile(Path.join(moduleDir, 'package.json')).then(function(buf) {
 		var meta = JSON.parse(buf);
@@ -47,7 +46,7 @@ exports.config = function(moduleDir, id, module, config) {
 		var dstDir = id != 'pageboard' ? Path.join('/', '.files', id, module) : '/.' + id;
 		var directories = modOpts.directories || [];
 		if (!Array.isArray(directories)) directories = [directories];
-		debug("processing directories from", moduleDir, directories);
+		Log.install("processing directories from", moduleDir, directories);
 		directories.forEach(function(mount) {
 			if (typeof mount == "string") mount = {
 				from: mount,
@@ -72,7 +71,7 @@ exports.config = function(moduleDir, id, module, config) {
 
 		var elements = modOpts.elements || [];
 		if (!Array.isArray(elements)) elements = [elements];
-		debug("processing elements from", moduleDir, elements);
+		Log.install("processing elements from", moduleDir, elements);
 		return Promise.all(elements.map(function(path) {
 			var absPath = Path.resolve(moduleDir, path);
 			return fs.stat(absPath).then(function(stat) {
@@ -238,7 +237,7 @@ function doInstall(site, pkg, opt) {
 			return npkg;
 		}).then(function(pkg) {
 			return runPostinstall(pkg.dir, pkg.name, opt).then(function(result) {
-				if (result) debug(result);
+				if (result) Log.install(result);
 				return pkg;
 			});
 		});

@@ -128,7 +128,7 @@ function knexConfig(opt) {
 		obj.client = dbOpts.client;
 		delete dbOpts.client;
 	}
-	obj.debug = require('debug').enabled('pageboard:sql');
+	obj.debug = Log.sql.enabled;
 	if (dbOpts.debug) {
 		obj.debug = dbOpts.debug;
 		delete dbOpts.debug;

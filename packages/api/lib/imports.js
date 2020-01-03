@@ -3,12 +3,11 @@ const toSource = require('tosource');
 
 const fs = require('fs').promises;
 const vm = require('vm');
-const debug = require('debug')('pageboard:imports');
 
 exports.install = function(site, pkg, All) {
 	var elements = pkg.elements;
 	var directories = pkg.directories;
-	debug("installing", id, elements, directories);
+	Log.imports("installing", id, elements, directories);
 	var id = site ? site.id : null;
 	var allDirs = id ? All.opt.directories.concat(directories) : directories;
 	var allElts = id ? All.opt.elements.concat(elements) : elements;
