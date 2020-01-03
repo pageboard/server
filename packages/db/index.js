@@ -58,7 +58,7 @@ exports.seed = function() {
 	}));
 };
 
-exports.dump = function({name}) {
+exports.dump = function({trx}, {name}) {
 	var opt = All.opt.database;
 	var dumpDir = opt.dump && opt.dump.dir;
 	if (!dumpDir) throw new HttpError.BadRequest("Missing database.dump.dir config");
@@ -79,7 +79,7 @@ exports.dump.schema = {
 	}
 };
 
-exports.restore = function({name}) {
+exports.restore = function({trx}, {name}) {
 	var opt = All.opt.database;
 	var dumpDir = opt.dump && opt.dump.dir;
 	if (!dumpDir) throw new HttpError.BadRequest("Missing database.dump.dir config");
@@ -204,7 +204,7 @@ function doDump(dir, keep) {
 	return fs.mkdir(dir, {
 		recursive: true
 	}).then(function() {
-		return All.run('db.dump', {
+		return All.run('db.dump', {trx: false}, {
 			name: (new Date()).toISOString().split('.')[0].replaceAll(/[-:]/g, '')
 		}).then(function() {
 			var now = Date.now();

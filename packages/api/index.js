@@ -190,10 +190,6 @@ All.help = function(apiStr) {
 
 All.run = function(apiStr, req, data) {
 	return Promise.resolve().then(function() {
-		if (data == null && req != null) {
-			data = req;
-			req = null;
-		}
 		const [schema, mod, fun] = getApiMethodSchema(apiStr);
 		try {
 			data = check(fun, schema, data);
