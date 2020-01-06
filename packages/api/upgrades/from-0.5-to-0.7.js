@@ -169,6 +169,10 @@ exports.mail_query_template = function(block) {
 exports.layout = function(block) {
 	if (block.data.height && !block.data.heightUnits) block.data.heightUnits = '%';
 };
+exports.grid = function(block) {
+	// that was the default in 0.5
+	block.data.responsive = 'stackable';
+};
 
 exports.piercan_produit = function(block) {
 	var content = block.content || {};
