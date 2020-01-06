@@ -47,9 +47,16 @@ function mergeObjects(data, expr) {
 	if (data == null) return expr;
 	var copy = Array.isArray(data) ? data.slice() : Object.assign({}, data);
 	if (expr != null) Object.entries(expr).forEach(function([key, val]) {
+		var sval = copy[key];
 		if (val == null) return;
 		else if (typeof val == "object") {
-			copy[key] = mergeObjects(copy[key], val);
+			if (Array.isArray(val)) {
+				if (sval == null) sval = [];
+				else if (!Array.isArray(sval)) sval = [sval];
+			} else if (sval == null) {
+				sval = {};
+			}
+			copy[key] = mergeObjects(sval, val);
 		} else {
 			copy[key] = val;
 		}
