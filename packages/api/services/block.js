@@ -150,7 +150,9 @@ exports.search = function({site, trx}, data) {
 		var metas = [];
 		Object.keys(schemas).forEach(function(type) {
 			var meta = site.$bundles[type];
-			if (meta && !site.$pages.includes(type)) metas.push(meta);
+			if (meta && !site.$pages.includes(type)) {
+				metas.push(meta);
+			}
 		});
 		var obj = {
 			items: rows,
