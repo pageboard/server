@@ -221,7 +221,8 @@ exports.search.schema = {
 		},
 		data: {
 			title: 'Filter by data',
-			type: 'object'
+			type: 'object',
+			nullable: true
 		},
 		content: {
 			title: 'Content',
@@ -292,7 +293,8 @@ exports.search.schema = {
 				},
 				data: {
 					title: 'Filter by data',
-					type: 'object'
+					type: 'object',
+					nullable: true
 				},
 				content: {
 					title: 'Content',
@@ -360,7 +362,8 @@ exports.search.schema = {
 				},
 				data: {
 					title: 'Filter by data',
-					type: 'object'
+					type: 'object',
+					nullable: true
 				},
 				content: {
 					title: 'Content',
