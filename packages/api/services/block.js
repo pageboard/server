@@ -449,7 +449,8 @@ exports.find = function(req, data) {
 		}
 		return {
 			item: obj.items[0],
-			metas: obj.metas
+			metas: obj.metas,
+			hrefs: obj.hrefs
 		};
 	});
 };
