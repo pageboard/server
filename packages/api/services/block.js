@@ -126,9 +126,9 @@ exports.search = function({site, trx}, data) {
 			whereSub(qc, qchildren, schemas[children.type], 'children');
 			qc.joinRelated('parents', {alias: 'parents'})
 			.where('parents._id', ref('block._id'));
-			q.select(All.api.Block.query(trx).count().from(qc.as('sub')).as('childrenCount'));
+			q.select(All.api.Block.query(trx).count().from(qc.as('sub')).as('itemsCount'));
 		} else {
-			eagers.push('children(standalonesFilter) as children');
+			eagers.push('children(itemsFilter) as items');
 		}
 	}
 	if (data.content) {
@@ -138,7 +138,7 @@ exports.search = function({site, trx}, data) {
 		parentsFilter(query) {
 			filterSub(query, parents, schemas[parents.type]);
 		},
-		standalonesFilter(query) {
+		itemsFilter(query) {
 			filterSub(query, children, children.type ? schemas[children.type] : null);
 		},
 		childrenFilter(query) {
@@ -166,8 +166,8 @@ exports.search = function({site, trx}, data) {
 				delete row.parents;
 			}
 			if (children && children.first) {
-				if (row.children && row.children.length) row.child = row.children[0];
-				delete row.children;
+				if (row.items && row.items.length) row.item = row.items[0];
+				delete row.items;
 			}
 		});
 		if (!ids.length) return obj;
