@@ -186,7 +186,10 @@ function prerender(req, res, next) {
 	if (ext) {
 		ext = ext.substring(1);
 		extBundle = req.site.$bundles[`ext-${ext}`];
-		if (extBundle) path = path.slice(0, -ext.length - 1);
+		if (extBundle) {
+			extBundle = extBundle.meta;
+			path = path.slice(0, -ext.length - 1);
+		}
 		// else the following regexp fails
 	}
 	if (urlRegex.test(path) == false) {
@@ -248,7 +251,7 @@ function prerender(req, res, next) {
 		}
 		plugins.push('serialize');
 
-		var siteBundle = req.site.$bundles.site;
+		var siteBundle = req.site.$bundles.site.meta;
 		var scripts = (siteBundle.scripts || [])
 		.concat(extBundle.scripts || [])
 		.map(function(src) {

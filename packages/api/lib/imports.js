@@ -123,7 +123,11 @@ function bundle(site, pkg, rootEl) {
 		}
 		eltsMap[el.name] = el;
 	});
-	var metaEl = site.$bundles[rootEl.name] = Object.assign({}, rootEl);
+	var metaEl = Object.assign({}, rootEl);
+	site.$bundles[rootEl.name] = {
+		meta: metaEl,
+		elements: Object.keys(eltsMap)
+	};
 	return Promise.all([
 		All.statics.bundle(site, pkg, scripts, `${prefix}.js`),
 		All.statics.bundle(site, pkg, styles, `${prefix}.css`)

@@ -20,16 +20,16 @@ function init(All) {
 					type: 'write',
 					data: {}
 				},
-				meta: Object.assign({services: site.$services}, site.$bundles.write),
+				meta: Object.assign({services: site.$services}, site.$bundles.write.meta),
 				site: site.data
 			});
 		} else {
 			All.run('page.get', req, req.query).then(function(data) {
-				var resources = site.$bundles.write.resources;
+				var resources = site.$bundles.write.meta.resources;
 				if (dev && resources.develop) {
 					if (!data.meta) data.meta = {scripts: []};
 					if (site.$bundles.user) {
-						data.meta.scripts.unshift(site.$bundles.user.bundle);
+						data.meta.scripts.unshift(site.$bundles.user.meta.bundle);
 					}
 					data.meta.scripts.unshift(resources.develop);
 					data.meta.writes = {
@@ -144,7 +144,7 @@ exports.get = function(req, data) {
 		Object.assign(obj, {
 			item: page,
 			items: (page.children || []).concat(page.standalones || []),
-			meta: site.$bundles[page.type],
+			meta: site.$bundles[page.type].meta,
 			links: links,
 			hrefs: page.hrefs
 		});

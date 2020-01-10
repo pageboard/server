@@ -147,18 +147,20 @@ exports.search = function({site, trx}, data) {
 	});
 
 	return q.then(function(rows) {
-		var metas = [];
+		var metas = {};
 		Object.keys(schemas).forEach(function(type) {
-			var meta = site.$bundles[type];
-			if (meta && !site.$pages.includes(type)) {
-				metas.push(meta);
+			var [bundleType, bundle] = Object.entries(site.$bundles).find(([key, bundle]) => {
+				return bundle.elements.includes(type);
+			});
+			if (bundleType && !metas[bundleType]) {
+				metas[bundleType] = bundle.meta;
 			}
 		});
 		var obj = {
 			items: rows,
 			offset: data.offset,
 			limit: data.limit,
-			metas: metas
+			metas: Object.values(metas)
 		};
 		var ids = [];
 		rows.forEach(function(row) {
