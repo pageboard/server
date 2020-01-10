@@ -9,7 +9,7 @@
     "linebreak-style": [2, "unix"],
     "semi": [2, "always"],
     "no-console": 0,
-    "no-unused-vars": ["error", { "args": "none" }]
+    "no-unused-vars": ["warn", { "args": "none" }]
   },
   "env": {
     "node": true,
