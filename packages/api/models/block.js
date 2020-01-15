@@ -179,6 +179,7 @@ Block.extendSchema = function extendSchema(name, schemas) {
 			$lock: element.$lock,
 			parents: element.parents,
 			upgrade: element.upgrade,
+			output: element.output,
 			properties: Object.assign({}, blockProps, standProp, {
 				data: Object.assign({}, blockProps.data, {
 					properties: element.properties,

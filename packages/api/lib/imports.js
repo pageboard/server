@@ -31,17 +31,12 @@ exports.install = function(site, pkg, All) {
 		var eltsMap = {};
 		var groups = {};
 		var bundles = [];
-		var exts = {};
+
 		names.forEach(function(name) {
 			var el = Object.assign({}, elts[name]); // drop proxy
-			if (name.startsWith('.')) {
-				name = name.substring(1);
-				exts[name] = el;
-				el.name = `ext-${name}`;
-				bundles.push(el);
-				return;
-			}
 			el.name = name;
+			// backward compatibility with 0.7 extensions names, dropped in favor of output
+			if (updateExtension(el, eltsMap)) return;
 			eltsMap[name] = el;
 			var isPage = false; // backward compatibility with < client@0.7
 			if (el.group) el.group.split(/\s+/).forEach(function(gn) {
@@ -73,6 +68,18 @@ exports.install = function(site, pkg, All) {
 		throw err;
 	});
 };
+
+function updateExtension(el, eltsMap) {
+	var extPage = {
+		'.mail': 'mail'
+	}[el.name];
+	if (!extPage) return;
+	var page = eltsMap[extPage];
+	page.scripts = (page.scripts || []).concat(el.scripts);
+	if (el.prerender) page.output = el.prerender;
+	if (el.print) page.output = Object.assign({}, page.output, {pdf: true});
+	return true;
+}
 
 exports.validate = function(site, pkg, bundles) {
 	var eltsMap = pkg.eltsMap;

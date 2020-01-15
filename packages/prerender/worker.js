@@ -140,9 +140,6 @@ function run(params) {
 			else console.error("Prerender missing plugin", name);
 		});
 		Object.assign(settings, params.settings);
-		if (settings.mime) {
-			response.type(settings.mime);
-		}
 	}).load()(req, res, function(err) {
 		res.ipc(err);
 	});

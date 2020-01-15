@@ -5,7 +5,10 @@ module.exports = function(page, settings, request, response) {
 			Page.init(function(state) {
 				state.queue.then(function(state) {
 					if (Page.serialize) return Page.serialize(state);
-					else return '<!DOCTYPE html>\n' + document.documentElement.outerHTML;
+					else return {
+						mime: "text/html",
+						body: '<!DOCTYPE html>\n' + document.documentElement.outerHTML
+					};
 				}).then(function(doc) {
 					done(null, doc);
 				}).catch(function(err) {
@@ -14,8 +17,14 @@ module.exports = function(page, settings, request, response) {
 			});
 		}).then(function(obj) {
 			if (!obj) throw new HttpError.BadRequest("Empty response");
+			// backward compatibility with old clients
+			if (typeof obj == "string") obj = {
+				mime: settings.mime || "text/html",
+				body: obj
+			};
 			settings.output = false;
-			response.send(obj);
+			if (obj.mime) response.type(obj.mime);
+			response.send(obj.body);
 		});
 	});
 };

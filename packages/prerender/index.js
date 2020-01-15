@@ -177,21 +177,21 @@ function objToError(obj) {
 function prerender(req, res, next) {
 	var opt = All.opt;
 	var el = req.site.$schema('page');
+
 	var pattern = el && el.properties.data && el.properties.data.properties.url.pattern;
 	if (!pattern) throw new Error("Missing page element missing schema for data.url.pattern");
 	var urlRegex = new RegExp(pattern);
 	var path = req.path;
+	// backward compat
 	var ext = Path.extname(path);
-	var extBundle = {};
 	if (ext) {
+		path = path.slice(0, -ext.length); // urlRegex does not allow extname
 		ext = ext.substring(1);
-		extBundle = req.site.$bundles[`ext-${ext}`];
-		if (extBundle) {
-			extBundle = extBundle.meta;
-			path = path.slice(0, -ext.length - 1);
-		}
-		// else the following regexp fails
+		var extEl = req.site.$schema(ext);
+		if (extEl) el = extEl;
+		else ext = null;
 	}
+
 	if (urlRegex.test(path) == false) {
 		if (req.xhr || !req.accepts('text/html')) {
 			throw new HttpError.NotFound("Malformed path");
@@ -215,10 +215,7 @@ function prerender(req, res, next) {
 			pathname: path,
 			query: req.query
 		}));
-		if (req.query.develop !== undefined) {
-			All.cache.map(res, '/.well-known/200');
-			res.set('Content-Security-Policy', "");
-		}
+
 		var plugins = opt.read.plugins.slice();
 		var settings = {
 			extensions: {
@@ -226,35 +223,47 @@ function prerender(req, res, next) {
 				list: []
 			}
 		};
-		var extOpts = settings.extensions;
-		var prOpts = extBundle.prerender || {};
-		if (prOpts.mime) settings.mime = prOpts.mime;
-		if (!prOpts.display) {
-			plugins.push('hide', 'prerender');
+		// backward compatibility with 0.7 clients using ext names
+		if (ext == "mail") settings.mime = "application/json";
+		else if (ext == "rss") settings.mime = "application/xml";
+
+		var outputOpts = el.output || {};
+
+		if (req.query.develop !== undefined) {
+			All.cache.map(res, '/.well-known/200');
+			// FIXME
+			// when editor will be loaded alongside the page (and not in an iframe with ?develop)
+			// it will make more sense to consolidate write element with page element's csp
+			// a very open CSP here
+			res.set('Content-Security-Policy', "");
+		} else {
+			if (outputOpts.pdf) {
+				// pdf plugin bypasses serialize
+				plugins.push('pdf');
+			}
+			if (outputOpts.mime) settings.mime = outputOpts.mime;
+			if (!outputOpts.medias) {
+				settings['auto-load-images'] = false;
+				settings.extensions.list.push('js', 'json', 'html', 'xml');
+				settings.extensions.allow = true; // whitelist
+			} else if (!outputOpts.fonts) {
+				settings.extensions.list.push('woff', 'woff2', 'ttf', 'eot', 'otf');
+			}
 		}
-		if (!prOpts.medias) {
-			settings['auto-load-images'] = false;
-			extOpts.list.push('js', 'json', 'html', 'xml');
-			extOpts.allow = true;
-		} else if (!prOpts.fonts) {
-			extOpts.list.push('woff', 'woff2', 'ttf', 'eot', 'otf');
-		}
-		if (extBundle.print) {
-			settings.pdf = extBundle.print;
-			plugins.push('pdf'); // pdf disables serialize anyway
-		}
-		if (!prOpts.mime || prOpts.mime == "text/html") {
+		if (!outputOpts.mime || outputOpts.mime == "text/html") {
 			plugins.push('redirect');
 			if (opt.env != "development") {
 				plugins.unshift('httplinkpreload', 'report');
 			}
 		}
+		if (!outputOpts.display) {
+			plugins.push('hide', 'prerender');
+		}
 		plugins.push('serialize');
 
 		var siteBundle = req.site.$bundles.site.meta;
-		var scripts = (siteBundle.scripts || [])
-		.concat(extBundle.scripts || [])
-		.map(function(src) {
+
+		var scripts = (siteBundle.scripts || []).map(function(src) {
 			return `<script src="${src}" defer></script>`;
 		});
 
