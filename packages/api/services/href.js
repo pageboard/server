@@ -47,6 +47,7 @@ exports.get.schema = {
 };
 
 exports.search = function({site, trx}, data) {
+	// TODO use .page() and/or .resultSize() see objection doc
 	var Href = All.api.Href;
 	var q = Href.query(trx).select().whereSite(site.id);
 
@@ -84,7 +85,7 @@ exports.search = function({site, trx}, data) {
 					}
 				}).then(function(obj) {
 					var rows = [];
-					obj.item.children.forEach((child) => {
+					obj.item.items.forEach((child) => {
 						if (child.data.id && child.data.id.startsWith(hash)) {
 							rows.push(Object.assign({}, href, {
 								title: href.title + ' #' + child.data.id,
