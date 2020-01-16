@@ -68,6 +68,7 @@ Domains.prototype.mw = function(req, res, next) {
 		req.site = site;
 		return site;
 	}).then((site) => {
+		if (!next) return;
 		var path = req.path;
 		// FIXME do not redirect if host.domains[0] DNS has not been checked
 		if (req.hostname != host.domains[0] && (
@@ -84,6 +85,7 @@ Domains.prototype.mw = function(req, res, next) {
 			return site;
 		}
 	}).then((site) => {
+		if (!next) return;
 		// this sets the site hostname, shared amongst all sites
 		site.href = host.href;
 		site.hostname = host.name; // at this point it should be == host.domains[0]
