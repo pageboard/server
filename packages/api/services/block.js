@@ -149,11 +149,11 @@ exports.search = function({site, trx}, data) {
 	return q.then(function(rows) {
 		var metas = {};
 		Object.keys(schemas).forEach(function(type) {
-			var [bundleType, bundle] = Object.entries(site.$bundles).find(([key, bundle]) => {
-				return bundle.elements.includes(type);
+			var bundleType = Object.keys(site.$bundles).find((key) => {
+				return site.$bundles[key].elements.includes(type);
 			});
 			if (bundleType && !metas[bundleType]) {
-				metas[bundleType] = bundle.meta;
+				metas[bundleType] = site.$bundles[bundleType].meta;
 			}
 		});
 		var obj = {
