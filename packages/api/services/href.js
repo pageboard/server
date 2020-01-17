@@ -361,7 +361,11 @@ function collectHrefs({site, trx}, data, level) {
 				this.where(table + '.type', type);
 				this.where(function() {
 					list.forEach((desc) => {
-						this.orWhere('href.url', ref(`data:${desc.path}`).from(table).castText());
+						if (desc.array) {
+							this.orWhere(ref(`data:${desc.path}`).from(table), '@>', raw('to_jsonb(href.url)'));
+						} else {
+							this.orWhere('href.url', ref(`data:${desc.path}`).from(table).castText());
+						}
 					});
 				});
 			});
@@ -397,7 +401,7 @@ exports.gc = function({trx}, days) {
 };
 
 exports.reinspect = function({site, trx}, data) {
-	var hrefs = site.$model.hrefs;
+	const hrefs = site.$model.hrefs;
 	var fhrefs = {};
 	Object.entries(hrefs).forEach(([type, list]) => {
 		var flist = list.filter((desc) => {
@@ -418,7 +422,11 @@ exports.reinspect = function({site, trx}, data) {
 						this.on('block.type', val(type));
 						this.on(function() {
 							list.forEach((desc) => {
-								this.orOn('href.url', ref(`data:${desc.path}`).from('block').castText());
+								if (desc.array) {
+									this.orWhere(ref(`data:${desc.path}`).from('block'), '@>', raw('to_jsonb(href.url)'));
+								} else {
+									this.orWhere('href.url', ref(`data:${desc.path}`).from('block').castText());
+								}
 							});
 						});
 					});

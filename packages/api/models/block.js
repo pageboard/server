@@ -249,19 +249,23 @@ function contentsNames(list) {
 	return props;
 }
 
-function findHrefs(schema, list, root) {
+function findHrefs(schema, list, root, isArray) {
 	if (!schema.properties) return;
 	Object.keys(schema.properties).forEach(function(key) {
 		var prop = schema.properties[key];
-		if (root) key = `${root}.${key}`;
+		if (isArray) key = root;
+		else if (root) key = `${root}.${key}`;
 		var helper = prop.$helper;
 		if (helper && helper.name == "href") {
 			var ftype = helper.filter && helper.filter.type || [];
 			if (!Array.isArray(ftype)) ftype = [ftype];
 			list.push({
 				path: key,
-				types: ftype
+				types: ftype,
+				array: isArray
 			});
+		} else if (prop.type == "array") {
+			findHrefs({properties: {items: prop.items}}, list, key, true);
 		} else {
 			findHrefs(prop, list, key);
 		}
