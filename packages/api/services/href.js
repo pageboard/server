@@ -343,7 +343,7 @@ function collectHrefs({site, trx}, data, level) {
 	}
 	q.joinRelated(rel);
 	if (data.url) {
-		q.where('root.type', 'page')
+		q.whereIn('root.type', site.$pages)
 		.where(ref('root.data:url').castText(), data.url);
 	} else if (data.id != null) {
 		var list = data.id;
