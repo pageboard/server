@@ -362,7 +362,7 @@ function collectHrefs({site, trx}, data, level) {
 				this.where(function() {
 					list.forEach((desc) => {
 						if (desc.array) {
-							this.orWhere(ref(`data:${desc.path}`).from(table), '@>', raw('to_jsonb(href.url)'));
+							this.orWhere(ref(`data:${desc.path}`).from(table), '@>', ref('href.url').castJson());
 						} else {
 							this.orWhere('href.url', ref(`data:${desc.path}`).from(table).castText());
 						}
@@ -423,7 +423,7 @@ exports.reinspect = function({site, trx}, data) {
 						this.on(function() {
 							list.forEach((desc) => {
 								if (desc.array) {
-									this.orWhere(ref(`data:${desc.path}`).from('block'), '@>', raw('to_jsonb(href.url)'));
+									this.orWhere(ref(`data:${desc.path}`).from('block'), '@>', ref('href.url').castJson());
 								} else {
 									this.orWhere('href.url', ref(`data:${desc.path}`).from('block').castText());
 								}
