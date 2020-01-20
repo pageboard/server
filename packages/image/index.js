@@ -7,7 +7,9 @@ const allowedParameters = {
 	rs: true,
 	ex: true,
 	q: true,
-	format: true
+	format: true,
+	fg: true,
+	bg: true
 };
 
 exports = module.exports = function(opt) {
@@ -30,31 +32,34 @@ exports = module.exports = function(opt) {
 function initFile(All) {
 	sharpie.sharp.simd(true);
 	var opt = All.opt;
-	var uploadDir = opt.upload && opt.upload.dir;
-	if (uploadDir) {
-		uploadDir = "." + uploadDir;
-		console.info("image:\tresizable by upload at", "/" + uploadDir);
-		const imageRoute = `^/${uploadDir}/\\d{4}-\\d{2}/[\\w-.]+.(png|jpe?g|gif|webp|tiff|svg)$`;
-		All.app.get(`:url(${imageRoute})`, function(req, res, next) {
-			if (req.query.raw === "" || req.query.raw === null) {
-				if (Object.keys(req.query).length != 1) {
-					res.sendStatus(400);
-				} else {
-					next('route');
-				}
+	All.app.get(/^\/\.(uploads|files)\//, function(req, res, next) {
+		Log.image("processing", req.url);
+		var extname = Path.extname(req.path);
+		if (!extname || /png|jpe?g|gif|webp|tiff|svg/.test(extname.substring(1)) == false) {
+			return next('route');
+		}
+		if (req.query.raw === "" || req.query.raw === null) {
+			if (Object.keys(req.query).length != 1) {
+				res.sendStatus(400);
 			} else {
-				var wrongParam = Object.keys(req.query).some(function(key) {
-					return !allowedParameters[key];
-				});
-				if (wrongParam) {
-					res.sendStatus(400);
-				} else {
-					req.params.url += req.params.url.includes('?') ? '&raw' : '?raw';
-					next();
-				}
+				next('route');
 			}
-		}, sharpie(All.opt.image));
-	}
+		} else {
+			var wrongParams = [];
+			Object.keys(req.query).some(function(key) {
+				if (!allowedParameters[key]) wrongParams.push(key);
+			});
+			if (wrongParams.length) {
+				Log.image("wrong image params", req.url, wrongParams);
+				res.sendStatus(400);
+			} else {
+				Log.image(req.url);
+				req.params.url = req.path + "?raw";
+				next();
+			}
+		}
+	}, sharpie(All.opt.image));
+
 	return All.utils.which(opt.image.im).catch(function() {}).then(function(path) {
 		if (path) {
 			opt.image.im = path;
