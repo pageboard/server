@@ -242,15 +242,6 @@ exports.send.schema = {
 	$action: 'write',
 	required: ['url', 'to'],
 	properties: {
-		url: {
-			title: 'Mail page',
-			type: "string",
-			format: "pathname",
-			$helper: {
-				name: 'page',
-				type: 'mail'
-			}
-		},
 		from: {
 			title: 'From',
 			description: 'User settings.id or email',
@@ -279,6 +270,15 @@ exports.send.schema = {
 				type: 'string',
 				format: 'email'
 			}]}
+		},
+		url: {
+			title: 'Mail page',
+			type: "string",
+			format: "pathname",
+			$helper: {
+				name: 'page',
+				type: 'mail'
+			}
 		},
 		subject: {
 			title: 'Subject',
