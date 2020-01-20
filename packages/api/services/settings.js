@@ -28,6 +28,9 @@ exports.get = function({site, trx}, data) {
 		}
 	}).then(function(settings) {
 		settings.parent = settings.parent[0];
+		settings.parent.lock = {
+			read: [`id-${settings.id}`]
+		};
 		return settings;
 	});
 };
