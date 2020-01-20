@@ -225,7 +225,7 @@ exports.send = function(req, data) {
 		}).then(function(response) {
 			return JSON.parse(response.body);
 		}).then(function(obj) {
-			mailOpts.subject = obj.title;
+			mailOpts.subject = data.subject || obj.title;
 			mailOpts.html = obj.html;
 			mailOpts.text = obj.text;
 			// mailOpts.attachments = [{
@@ -279,6 +279,12 @@ exports.send.schema = {
 				type: 'string',
 				format: 'email'
 			}]}
+		},
+		subject: {
+			title: 'Subject',
+			description: 'Defaults to mail page title',
+			type: 'string',
+			nullable: true
 		},
 		body: {
 			title: 'Body',
