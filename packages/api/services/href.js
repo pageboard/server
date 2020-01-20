@@ -477,10 +477,9 @@ exports.reinspect.schema = {
 
 function callInspector(siteId, url, local) {
 	var fileUrl = url;
-	var dir = All.opt.upload.dir;
-	if (local === undefined) local = url.startsWith(`/.${dir}/`);
+	if (local === undefined) local = url.startsWith(`/.uploads/`);
 	if (local) {
-		fileUrl = url.replace(`/.${dir}/`, `${dir}/${siteId}/`);
+		fileUrl = url.replace(`/.uploads/`, `uploads/${siteId}/`);
 		fileUrl = "file://" + Path.join(All.opt.dirs.data, fileUrl);
 	}
 	return All.inspector.get({

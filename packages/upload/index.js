@@ -10,13 +10,12 @@ exports = module.exports = function(opt) {
 	if (!opt.upload) opt.upload = {};
 	if (!opt.upload.files) opt.upload.files = 100;
 	if (!opt.upload.size) opt.upload.size = 50000000;
-	if (!opt.upload.dir) opt.upload.dir = "uploads";
 
 	var dest = Path.resolve(opt.dirs.data, "uploads");
 	console.info(`upload:\t${dest}`);
 	opt.directories.push({
 		from: dest,
-		to: opt.upload.dir
+		to: "uploads"
 	});
 	opt.upload.path = dest;
 
@@ -105,7 +104,7 @@ exports.file = function({site}, data) {
 
 	return All.image.upload(data).then(function() {
 		return '/.' + Path.join(
-			upload.dir,
+			"uploads",
 			Path.relative(dest, data.destination),
 			data.filename
 		);
@@ -135,11 +134,10 @@ exports.file.schema = {
 };
 
 exports.gc = function(id, pathname) {
-	var uploadDir = All.opt.upload.dir;
-	if (!id || !pathname.startsWith('/.' + uploadDir)) {
+	if (!id || !pathname.startsWith('/.uploads')) {
 		return Promise.resolve();
 	}
-	var file = Path.join(uploadDir, id, pathname);
+	var file = Path.join("uploads", id, pathname);
 	return fs.unlink(file).catch(function() {
 		// ignore error
 	}).then(function() {
