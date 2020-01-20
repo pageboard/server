@@ -163,7 +163,7 @@ function filter(req, item, fn) {
 	var locks = {
 		'*': lock
 	};
-	locks = Object.assign({}, locks, $lock);
+	locks = Object.assign({}, $lock, locks);
 	if (locked(req, locks['*'])) {
 		if (item.content != null) item.content = {};
 		if (item.data != null) item.data = {};
