@@ -35,7 +35,7 @@ exports.get = function({site, trx}, data) {
 	});
 };
 exports.get.schema = {
-	title: 'Get',
+	title: 'Get User',
 	$action: 'read',
 	required: ['id'],
 	properties: {
