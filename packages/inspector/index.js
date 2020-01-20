@@ -44,6 +44,8 @@ function filterResult(result) {
 	if (obj.type == "image" && obj.mime != "text/html") {
 		if (!obj.meta.thumbnail) obj.meta.thumbnail = obj.url;
 		if (!obj.meta.width || !obj.meta.height) throw new HttpError.BadRequest("Bad image.\nCheck it does not embed huge metadata (thumbnail, icc profile, ...).");
+		obj.meta.width = Math.round(obj.meta.width);
+		obj.meta.height = Math.round(obj.meta.height);
 	}
 	return obj;
 }
