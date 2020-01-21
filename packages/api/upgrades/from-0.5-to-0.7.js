@@ -28,10 +28,10 @@ exports.notfound = function(block) {
 
 exports.page = function(block) {
 	var tr = block.data.transition;
-	if (tr) {
+	if (tr && (tr.from || tr.to)) {
 		block.data.transition = {
-			open: tr.from ? tr.from.replace(/^from-/, 'tr-') : null,
-			close: tr.to ? tr.to.replace(/^to-/, 'tr-') : null
+			close: tr.from ? (tr.from == "fade-from" ? "fade" : tr.from.replace(/^(\w+)-from$/, 'tr-$1')) : null,
+			open: tr.to ? (tr.to == "fade-to" ? "fade" : tr.to.replace(/^(\w+)-to/, 'tr-$1')) : null
 		};
 	}
 };
