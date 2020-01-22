@@ -1,38 +1,36 @@
 const NodeMailer = require.lazy('nodemailer');
-const Mailgun = require.lazy('nodemailer-mailgun-transport');
-const got = require.lazy('got');
 const AddressParser = require.lazy('addressparser');
+const Transports = {
+	mailgun: require.lazy('nodemailer-mailgun-transport'),
+	postmark: require.lazy('nodemailer-postmark-transport')
+};
+const Mailers = {};
 
-// TODO https://nodemailer.com/dkim/
-// TODO https://postmarkapp.com/blog/differences-in-delivery-between-transactional-and-bulk-email
-// use a different domain for transactional and for bulk sending
+const got = require.lazy('got');
 
 const multipart = require.lazy('./lib/multipart.js');
 const validateMailgun = require.lazy('./lib/validate-mailgun.js');
 
-var mailer, defaultSender, mailDomain;
-
 exports = module.exports = function(opt) {
-	/*
-	opt.mail.transport
-	opt.mail.mailgun contains options auth.api_key, auth.domain
-	opt.mail.domain (the same as auth.domain but could be different)
-	opt.mail.sender (the name of default sender)
-	*/
-	// TODO support available transports (SMTP, sendmail, SES)
-	if (!opt.mail) return; // quietly return
-	if (!opt.mail.domain) {
-		console.warn('Missing mail.domain');
-		return;
-	}
-	if (opt.mail.transport != 'mailgun') {
-		console.warn("Only `mail.transport: mailgun` is supported");
-		return;
-	}
-	if (!opt.mail.sender) {
-		console.warn('Missing mail.sender');
-		return;
-	}
+	if (!opt.mail) return;
+	Object.entries(opt.mail).forEach(([type, conf]) => {
+		if (!Transports[conf.transport]) {
+			console.warn("mail transport not supported", type, conf.transport);
+			return;
+		}
+		if (!conf.domain) {
+			console.warn("mail domain must be set", type);
+			return;
+		}
+		if (!conf.sender) {
+			console.warn("mail sender must be set", type);
+			return;
+		}
+		if (!conf.auth) {
+			console.warn("mail auth be set", type);
+			return;
+		}
+	});
 
 	return {
 		name: 'mail',
@@ -41,10 +39,14 @@ exports = module.exports = function(opt) {
 };
 
 function init(All) {
-	const opt = All.opt.mail;
-	mailer = NodeMailer.createTransport(Mailgun(opt.mailgun));
-	defaultSender = opt.sender;
-	mailDomain = opt.domain;
+	Object.entries(All.opt.mail).forEach(([type, conf]) => {
+		Log.mail(type, conf);
+		Mailers[type] = {
+			transport: NodeMailer.createTransport(Transports[conf.transport]({auth: conf.auth})),
+			domain: conf.domain,
+			sender: AddressParser(conf.sender)[0]
+		};
+	});
 
 	All.app.post('/.api/mail/receive', multipart, function(req, res, next) {
 		All.run('mail.receive', req, req.body).then(function(ok) {
@@ -63,6 +65,10 @@ function init(All) {
 }
 
 exports.report = function(req, data) {
+	// TODO
+	console.log(data);
+	return;
+	/*
 	var sign = data.signature;
 	if (!validateMailgun(All.opt.mail.mailgun, sign.timestamp, sign.token, sign.signature)) {
 		return false;
@@ -73,6 +79,7 @@ exports.report = function(req, data) {
 		subject: 'Pageboard mail delivery failure to ' + event.message.headers.to,
 		text: JSON.stringify(event, null, ' ')
 	});
+	*/
 };
 exports.report.schema = {
 	$action: 'write',
@@ -80,6 +87,10 @@ exports.report.schema = {
 };
 
 exports.receive = function(req, data) {
+	// TODO
+	console.log(data);
+	return;
+	/*
 	if (!validateMailgun(All.opt.mail.mailgun, data.timestamp, data.token, data.signature)) {
 		return false;
 	}
@@ -125,6 +136,7 @@ exports.receive = function(req, data) {
 		if (err.status == 404) return false;
 		else throw err;
 	});
+	*/
 };
 exports.receive.schema = {
 	$action: 'write',
@@ -132,13 +144,34 @@ exports.receive.schema = {
 };
 
 exports.to = function(req, data) {
-	if (!data.from) data.from = defaultSender;
-	return mailer.sendMail(data);
+	var type = data.type;
+	data = Object.assign({}, data);
+	delete data.type;
+	var mailer = Mailers[type];
+	if (!mailer) throw new Error("Unknown mailer type " + type);
+	if (type == "transactional" && data.to.length > 1) {
+		throw new Error("Transactional mail only accepts one recipient");
+	}
+
+	data.from = buildAddress(AddressParser(data.from)[0], mailer.sender);
+	Log.mail("from", data.from);
+	return mailer.transport.sendMail(data);
 };
 exports.to.schema = {
 	$action: 'write',
 	required: ['subject', 'to', 'text'],
 	properties: {
+		type: {
+			title: 'Type',
+			anyOf: [{
+				title: "Transactional",
+				const: "transactional"
+			}, {
+				title: "Bulk",
+				const: "bulk"
+			}],
+			default: 'transactional'
+		},
 		subject: {
 			title: 'Subject',
 			type: 'string'
@@ -177,13 +210,17 @@ exports.to.schema = {
 };
 
 exports.send = function(req, data) {
+	var type = data.type;
+	data = Object.assign({}, data);
+	delete data.type;
+	const mailer = Mailers[type];
+	if (!mailer) throw new Error("Unknown mailer type " + type);
+
 	var list = [All.run('block.find', req, {
 		type: 'mail',
 		data: {url: data.url}
 	})];
-	var mailOpts = {
-		from: defaultSender
-	};
+	var mailOpts = {};
 	if (data.replyTo) mailOpts.replyTo = data.replyTo;
 	if (data.from) {
 		var p;
@@ -206,16 +243,17 @@ exports.send = function(req, data) {
 	})));
 
 	var site = req.site;
+
 	return Promise.all(list).then(function(rows) {
 		var emailPage = rows[0].item;
 		if (data.from) mailOpts.from = {
 			name: site.data.title,
-			address: `${site.id}.${rows[1]}@${mailDomain}`
+			address: `${site.id}.${rows[1]}@${mailer.domain}`
 		};
 		mailOpts.to = rows.slice(-1).pop();
 		var emailUrl = site.href + emailPage.data.url;
 
-		return got(emailUrl + ".mail", {
+		return got(emailUrl + ".mail", { // TODO when all 0.7 are migrated, drop .mail
 			headers: {
 				cookie: req.get('cookie')
 			},
@@ -242,6 +280,17 @@ exports.send.schema = {
 	$action: 'write',
 	required: ['url', 'to'],
 	properties: {
+		type: {
+			title: 'Type',
+			anyOf: [{
+				title: "Transactional",
+				const: "transactional"
+			}, {
+				title: "Bulk",
+				const: "bulk"
+			}],
+			default: 'transactional'
+		},
 		from: {
 			title: 'From',
 			description: 'User settings.id or email',
@@ -293,3 +342,15 @@ exports.send.schema = {
 	}
 };
 exports.send.external = true;
+
+function buildAddress(obj={}, def) {
+	obj = Object.assign({}, obj);
+	if (!obj.name) {
+		delete obj.name;
+		if (!obj.address) obj = def;
+	}	else if (!obj.address) {
+		obj.address = def.address;
+	}
+	if (!obj.name) return obj.address;
+	else return `"${obj.name}" <${obj.address}>`;
+}
