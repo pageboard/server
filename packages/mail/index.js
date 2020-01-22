@@ -1,42 +1,37 @@
 const Path = require('path');
 const NodeMailer = require('nodemailer');
-const AddressParser = require('nodemailer/lib/addressparser');
-const Mailgun = require('nodemailer-mailgun-transport');
-const got = require('got');
+const AddressParser = require('addressparser');
+const Transports = {
+	mailgun: require('nodemailer-mailgun-transport'),
+	postmark: require('nodemailer-postmark-transport')
+};
+const Mailers = {};
 
-// TODO https://nodemailer.com/dkim/
-// TODO https://postmarkapp.com/blog/differences-in-delivery-between-transactional-and-bulk-email
-// use a different domain for transactional and for bulk sending
+const got = require('got');
 
 const multipart = require('./lib/multipart.js');
 const validateMailgun = require('./lib/validate-mailgun.js');
 
-var mailer, defaultSender, mailDomain;
-
 exports = module.exports = function(opt) {
-	/*
-	opt.mail.transport
-	opt.mail.mailgun contains options auth.api_key, auth.domain
-	opt.mail.domain (the same as auth.domain but could be different)
-	opt.mail.sender (the name of default sender)
-	*/
-	// TODO support available transports (SMTP, sendmail, SES)
-	if (!opt.mail) return; // quietly return
-	if (!opt.mail.domain) {
-		console.warn('Missing mail.domain');
-		return;
-	}
-	if (opt.mail.transport != 'mailgun') {
-		console.warn("Only `mail.transport: mailgun` is supported");
-		return;
-	}
-	if (!opt.mail.sender) {
-		console.warn('Missing mail.sender');
-		return;
-	}
-	mailer = NodeMailer.createTransport(Mailgun(opt.mail.mailgun));
-	defaultSender = opt.mail.sender;
-	mailDomain = opt.mail.domain;
+	if (!opt.mail) return;
+	Object.entries(opt.mail).forEach(([type, conf]) => {
+		if (!Transports[conf.transport]) {
+			console.warn("mail transport not supported", type, conf.transport);
+			return;
+		}
+		if (!conf.domain) {
+			console.warn("mail domain must be set", type);
+			return;
+		}
+		if (!conf.sender) {
+			console.warn("mail sender must be set", type);
+			return;
+		}
+		if (!conf.auth) {
+			console.warn("mail auth be set", type);
+			return;
+		}
+	});
 
 	return {
 		priority: 1, // after read plugin
@@ -52,6 +47,15 @@ exports = module.exports = function(opt) {
 };
 
 function init(All) {
+	Object.entries(All.opt.mail).forEach(([type, conf]) => {
+		Log.mail(type, conf);
+		Mailers[type] = {
+			transport: NodeMailer.createTransport(Transports[conf.transport]({auth: conf.auth})),
+			domain: conf.domain,
+			sender: AddressParser(conf.sender)[0]
+		};
+	});
+
 	All.app.post('/.api/mail', multipart, function(req, res, next) {
 		All.run('mail.receive', req.body).then(function(ok) {
 			// https://documentation.mailgun.com/en/latest/user_manual.html#receiving-messages-via-http-through-a-forward-action
@@ -64,7 +68,7 @@ function init(All) {
 
 exports.receive = function(data) {
 	// https://documentation.mailgun.com/en/latest/user_manual.html#parsed-messages-parameters
-	if (!validateMailgun(All.opt.mail.mailgun, data.timestamp, data.token, data.signature)) {
+	if (!validateMailgun(Mailers.bulk.auth, data.timestamp, data.token, data.signature)) {
 		return false;
 	}
 	var senders = data.sender || '';
@@ -111,13 +115,33 @@ exports.receive = function(data) {
 };
 
 exports.to = function(data) {
-	if (!data.from) data.from = defaultSender;
-	return mailer.sendMail(data);
+	var type = data.type;
+	data = Object.assign({}, data);
+	delete data.type;
+	var mailer = Mailers[type];
+	if (!mailer) throw new Error("Unknown mailer type " + type);
+	if (type == "transactional" && data.to.length > 1) {
+		throw new Error("Transactional mail only accepts one recipient");
+	}
+
+	data.from = buildAddress(AddressParser(data.from)[0], mailer.sender);
+	return mailer.transport.sendMail(data);
 };
 exports.to.schema = {
 	$action: 'write',
 	required: ['subject', 'to', 'text'],
 	properties: {
+		type: {
+			title: 'Type',
+			anyOf: [{
+				title: "Transactional",
+				const: "transactional"
+			}, {
+				title: "Bulk",
+				const: "bulk"
+			}],
+			default: 'transactional'
+		},
 		subject: {
 			title: 'Subject',
 			type: 'string'
@@ -156,13 +180,17 @@ exports.to.schema = {
 };
 
 exports.send = function(req, data) {
+	var type = data.type;
+	data = Object.assign({}, data);
+	delete data.type;
+	const mailer = Mailers[type];
+	if (!mailer) throw new Error("Unknown mailer type " + type);
+
 	var list = [All.run('block.find', req, {
 		type: 'mail',
 		data: {url: data.url}
 	})];
-	var mailOpts = {
-		from: defaultSender,
-	};
+	var mailOpts = {};
 	if (data.replyTo) mailOpts.replyTo = data.replyTo;
 	if (data.from) {
 		var p;
@@ -189,7 +217,7 @@ exports.send = function(req, data) {
 		var emailPage = rows[0].item;
 		if (data.from) mailOpts.from = {
 			name: site.data.title,
-			address: `${site.id}.${rows[1]}@${mailDomain}`
+			address: `${site.id}.${rows[1]}@${mailer.domain}`
 		};
 		mailOpts.to = rows.slice(-1).pop();
 		var emailUrl = site.href + emailPage.data.url;
@@ -221,6 +249,17 @@ exports.send.schema = {
 	$action: 'write',
 	required: ['url', 'to'],
 	properties: {
+		type: {
+			title: 'Type',
+			anyOf: [{
+				title: "Transactional",
+				const: "transactional"
+			}, {
+				title: "Bulk",
+				const: "bulk"
+			}],
+			default: 'transactional'
+		},
 		url: {
 			title: 'Mail page',
 			type: "string",
@@ -266,3 +305,15 @@ exports.send.schema = {
 	}
 };
 exports.send.external = true;
+
+function buildAddress(obj={}, def) {
+	obj = Object.assign({}, obj);
+	if (!obj.name) {
+		delete obj.name;
+		if (!obj.address) obj = def;
+	}	else if (!obj.address) {
+		obj.address = def.address;
+	}
+	if (!obj.name) return obj.address;
+	else return `"${obj.name}" <${obj.address}>`;
+}
