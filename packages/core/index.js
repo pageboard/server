@@ -14,6 +14,7 @@ const morgan = require('morgan');
 const pad = require('pad');
 const prettyBytes = require('pretty-bytes');
 const rc = require('rc');
+const toml = require.lazy('toml');
 const xdg = require('xdg-basedir');
 const resolvePkg = require('resolve-pkg');
 const http = require.lazy('http');
@@ -58,7 +59,7 @@ exports.config = function(pkgOpt) {
 		},
 		report: {},
 		upstreams: {}
-	});
+	}, null, (str) => toml.parse(str));
 	opt.upstream = opt.upstreams[opt.version];
 	if (!opt.port) {
 		if (opt.upstream) opt.port = opt.upstream.split(':').pop();
