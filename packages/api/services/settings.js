@@ -15,6 +15,12 @@ function init() {
 			All.send(res, data);
 		}).catch(next);
 	});
+
+	All.app.put('/.api/settings', All.auth.lock('webmaster'), function(req, res, next) {
+		All.run('settings.save', req, req.body).then(function(data) {
+			All.send(res, data);
+		}).catch(next);
+	});
 }
 
 exports.get = function({site, trx}, data) {
