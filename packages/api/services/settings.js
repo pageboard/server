@@ -9,9 +9,9 @@ exports = module.exports = function(opt) {
 
 function init() {
 	All.app.get("/.api/settings", function(req, res, next) {
-		All.run('settings.get', req, Object.assign({
+		All.run('settings.get', req, {
 			id: req.user.id
-		}, req.query)).then(function(data) {
+		}).then(function(data) {
 			All.send(res, data);
 		}).catch(next);
 	});
@@ -111,6 +111,9 @@ exports.search.schema = {
 exports.save = function(req, data) {
 	var site = req.site;
 	return All.run('settings.find', req, data).then(function(settings) {
+		if (!data.data) return settings;
+		if (data.data.grants) delete data.data.grants;
+		if (Object.keys(data.data).length == 0) return settings;
 		return settings.$query(req.trx).patchObject({data: data.data}).then(function() {
 			return settings;
 		});
