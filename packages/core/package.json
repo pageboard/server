@@ -33,6 +33,7 @@
     "rimraf": "^3.0.0",
     "semver-regex": "^2.0.0",
     "string.prototype.replaceall": "^1.0.2",
+    "toml": "^3.0.0",
     "util-promisify": "^2.1.0",
     "which": "^2.0.1",
     "xdg-basedir": "^4.0.0"
