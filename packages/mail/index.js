@@ -13,21 +13,21 @@ const validateMailgun = require.lazy('./lib/validate-mailgun.js');
 
 exports = module.exports = function(opt) {
 	if (!opt.mail) return;
-	Object.entries(opt.mail).forEach(([type, conf]) => {
+	Object.entries(opt.mail).forEach(([purpose, conf]) => {
 		if (!Transports[conf.transport]) {
-			console.warn("mail transport not supported", type, conf.transport);
+			console.warn("mail transport not supported", purpose, conf.transport);
 			return;
 		}
 		if (!conf.domain) {
-			console.warn("mail domain must be set", type);
+			console.warn("mail domain must be set", purpose);
 			return;
 		}
 		if (!conf.sender) {
-			console.warn("mail sender must be set", type);
+			console.warn("mail sender must be set", purpose);
 			return;
 		}
 		if (!conf.auth) {
-			console.warn("mail auth be set", type);
+			console.warn("mail auth be set", purpose);
 			return;
 		}
 	});
@@ -39,9 +39,9 @@ exports = module.exports = function(opt) {
 };
 
 function init(All) {
-	Object.entries(All.opt.mail).forEach(([type, conf]) => {
-		Log.mail(type, conf);
-		Mailers[type] = {
+	Object.entries(All.opt.mail).forEach(([purpose, conf]) => {
+		Log.mail(purpose, conf);
+		Mailers[purpose] = {
 			transport: NodeMailer.createTransport(Transports[conf.transport]({auth: conf.auth})),
 			domain: conf.domain,
 			sender: AddressParser(conf.sender)[0]
@@ -112,7 +112,7 @@ exports.receive = function(req, data) {
 					},
 					to: {
 						name: settings.data.name || undefined,
-						address: settings.user.data.email
+						address: settings.parent.data.email
 					},
 					subject: data.subject,
 					html: data['stripped-html'],
@@ -136,25 +136,28 @@ exports.receive.schema = {
 };
 
 exports.to = function(req, data) {
-	var type = data.type;
+	var purpose = data.purpose;
 	data = Object.assign({}, data);
-	delete data.type;
-	var mailer = Mailers[type];
-	if (!mailer) throw new Error("Unknown mailer type " + type);
-	if (type == "transactional" && data.to.length > 1) {
+	delete data.purpose;
+	var mailer = Mailers[purpose];
+	if (!mailer) throw new Error("Unknown mailer purpose " + purpose);
+	if (purpose == "transactional" && data.to.length > 1) {
 		throw new Error("Transactional mail only accepts one recipient");
 	}
-
-	data.from = buildAddress(AddressParser(data.from)[0], mailer.sender);
-	Log.mail("from", data.from);
+	var exp = AddressParser(data.from)[0] || {};
+	var replyTo = AddressParser(data.replyTo)[0] || {};
+	if (!exp.name) exp.name = replyTo.name || replyTo.address || undefined;
+	if (replyTo.address) data.replyTo = buildAddress(replyTo);
+	data.from = buildAddress(exp, mailer.sender);
+	Log.mail("mail.to", data);
 	return mailer.transport.sendMail(data);
 };
 exports.to.schema = {
 	$action: 'write',
 	required: ['subject', 'to', 'text'],
 	properties: {
-		type: {
-			title: 'Type',
+		purpose: {
+			title: 'Purpose',
 			anyOf: [{
 				title: "Transactional",
 				const: "transactional"
@@ -202,36 +205,41 @@ exports.to.schema = {
 };
 
 exports.send = function(req, data) {
-	var type = data.type;
+	var purpose = data.purpose;
 	data = Object.assign({}, data);
-	delete data.type;
-	const mailer = Mailers[type];
-	if (!mailer) throw new Error("Unknown mailer type " + type);
+	delete data.purpose;
+	const mailer = Mailers[purpose];
+	if (!mailer) throw new Error("Unknown mailer purpose " + purpose);
 
 	var list = [All.run('block.find', req, {
 		type: 'mail',
 		data: {url: data.url}
 	})];
-	var mailOpts = {};
-	if (data.replyTo) mailOpts.replyTo = data.replyTo;
+	var mailOpts = {
+		purpose: purpose
+	};
 	if (data.from) {
-		var p;
 		if (data.from.indexOf('@') > 0) {
-			p = All.run('settings.find', req, {email: data.from});
+			list.push(All.run('settings.find', req, {email: data.from}));
 		} else {
-			p = All.run('settings.get', req, {id: data.from});
+			list.push(All.run('settings.get', req, {id: data.from}));
 		}
-		list.push(p.then(function(settings) {
-			return settings.id;
-		}));
 	}
+	if (data.replyTo) {
+		if (data.replyTo.indexOf('@') > 0) {
+			mailOpts.replyTo = data.replyTo;
+		} else {
+			list.push(All.run('settings.get', req, {
+				id: data.replyTo
+			}).then((settings) => {
+				mailOpts.replyTo = settings.parent.data.email;
+			}));
+		}
+	}
+
 	list.push(Promise.all(data.to.map(function(to) {
-		if (to.indexOf('@') > 0) return All.run('settings.find', req, {email:to}).then(function(settings) {
-			return settings.email;
-		});
-		else return All.run('settings.get', req, {id:to}).then(function(settings) {
-			return settings.user.data.email;
-		});
+		if (to.indexOf('@') > 0) return All.run('settings.save', req, {email: to});
+		else return All.run('settings.get', req, {id:to});
 	})));
 
 	var site = req.site;
@@ -240,9 +248,9 @@ exports.send = function(req, data) {
 		var emailPage = rows[0].item;
 		if (data.from) mailOpts.from = {
 			name: site.data.title,
-			address: `${site.id}.${rows[1]}@${mailer.domain}`
+			address: `${site.id}.${rows[1].id}@${mailer.domain}`
 		};
-		mailOpts.to = rows.slice(-1).pop();
+		mailOpts.to = rows.slice(-1).pop().map((settings) => settings.parent.data.email);
 		var emailUrl = site.href + emailPage.data.url;
 
 		return got(emailUrl + ".mail", { // TODO when all 0.7 are migrated, drop .mail
@@ -272,8 +280,8 @@ exports.send.schema = {
 	$action: 'write',
 	required: ['url', 'to'],
 	properties: {
-		type: {
-			title: 'Type',
+		purpose: {
+			title: 'Purpose',
 			anyOf: [{
 				title: "Transactional",
 				const: "transactional"
@@ -296,13 +304,18 @@ exports.send.schema = {
 		},
 		replyTo: {
 			title: 'Reply To',
-			description: 'Any email address',
-			type: 'string',
-			format: 'email'
+			description: 'Email address or user id',
+			anyOf: [{
+				type: 'string',
+				format: 'id'
+			}, {
+				type: 'string',
+				format: 'email'
+			}]
 		},
 		to: {
 			title: 'To',
-			description: 'List of users (settings.id or email)',
+			description: 'List of email addresses or users id',
 			type: 'array',
 			items: {anyOf: [{
 				type: 'string',

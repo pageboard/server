@@ -59,12 +59,23 @@ exports.find = function({site, trx}, data) {
 	var q = site.$relatedQuery('children', trx).alias('settings')
 	.where('settings.type', 'settings')
 	.first().throwIfNotFound()
-	.select().select(ref('parent.data:email').as('email'))
-	.joinRelated('parents', {alias: 'parent'}).where('parent.type', 'user');
+	.joinRelated('parents', {alias: 'parent'}).where('parent.type', 'user')
+	.withGraphFetched('[parents(userFilter) as parent]')
+	.modifiers({
+		userFilter(query) {
+			query.select().where('type', 'user');
+		}
+	});
 	if (!data.id && !data.email) throw new HttpError.BadRequest("Missing id or email");
 	if (data.id) q.where('parent.id', data.id);
 	else if (data.email) q.whereJsonText('parent.data:email', data.email);
-	return q;
+	return q.then(function(settings) {
+		settings.parent = settings.parent[0];
+		settings.parent.lock = {
+			read: [`id-${settings.id}`]
+		};
+		return settings;
+	});
 };
 Object.defineProperty(exports.find, 'schema', {
 	get: function() {
@@ -121,7 +132,9 @@ exports.save = function(req, data) {
 				return site.$relatedQuery('children', req.trx).insertGraph(block, {
 					relate: ['parents']
 				}).then(function(settings) {
+					settings.parent = settings.parents[0];
 					delete settings.parents;
+					settings.email = user.data.email;
 					return settings;
 				});
 			});
@@ -134,7 +147,8 @@ Object.defineProperty(exports.save, 'schema', {
 		schema.$action = 'save';
 		schema.properties = Object.assign({
 			data: {
-				type: 'object'
+				type: 'object',
+				default: {}
 			}
 		}, schema.properties);
 		return schema;
