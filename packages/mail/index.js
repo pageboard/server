@@ -48,7 +48,6 @@ exports = module.exports = function(opt) {
 
 function init(All) {
 	Object.entries(All.opt.mail).forEach(([type, conf]) => {
-		Log.mail(type, conf);
 		Mailers[type] = {
 			transport: NodeMailer.createTransport(Transports[conf.transport]({auth: conf.auth})),
 			domain: conf.domain,
