@@ -40,6 +40,8 @@ exports.submit = function(req, data) {
 		});
 		params = All.utils.mergeObjects(params, fd.action.parameters);
 
+		Log.api("form params", params, req.user, data.query);
+
 		// build body
 		var body = data.body;
 		if (params.type && Object.keys(body).length > 0) {
