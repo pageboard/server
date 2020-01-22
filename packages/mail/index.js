@@ -14,21 +14,21 @@ const validateMailgun = require('./lib/validate-mailgun.js');
 
 exports = module.exports = function(opt) {
 	if (!opt.mail) return;
-	Object.entries(opt.mail).forEach(([type, conf]) => {
+	Object.entries(opt.mail).forEach(([purpose, conf]) => {
 		if (!Transports[conf.transport]) {
-			console.warn("mail transport not supported", type, conf.transport);
+			console.warn("mail transport not supported", purpose, conf.transport);
 			return;
 		}
 		if (!conf.domain) {
-			console.warn("mail domain must be set", type);
+			console.warn("mail domain must be set", purpose);
 			return;
 		}
 		if (!conf.sender) {
-			console.warn("mail sender must be set", type);
+			console.warn("mail sender must be set", purpose);
 			return;
 		}
 		if (!conf.auth) {
-			console.warn("mail auth be set", type);
+			console.warn("mail auth be set", purpose);
 			return;
 		}
 	});
@@ -47,9 +47,10 @@ exports = module.exports = function(opt) {
 };
 
 function init(All) {
-	Object.entries(All.opt.mail).forEach(([type, conf]) => {
-		Mailers[type] = {
+	Object.entries(All.opt.mail).forEach(([purpose, conf]) => {
+		Mailers[purpose] = {
 			transport: NodeMailer.createTransport(Transports[conf.transport]({auth: conf.auth})),
+			auth: conf.auth,
 			domain: conf.domain,
 			sender: AddressParser(conf.sender)[0]
 		};
@@ -65,7 +66,7 @@ function init(All) {
 	All.opt.extnames.push('mail');
 }
 
-function send(mail) {
+function send(mailer, mail) {
 	return new Promise(function(resolve, reject) {
 		mailer.sendMail(mail, function (err, info) {
 			if (err) reject(err);
@@ -100,7 +101,7 @@ exports.receive = function(req, data) {
 				All.run('user.get', {id: userId}),
 				All.run('site.get', {id: siteId})
 			]).then(function([user, site]) {
-				return send({
+				return send(mailer, {
 					from: {
 						name: site.data.domains[0],
 						address: `${site.id}.${sender.id}@${mailer.domain}`
@@ -127,11 +128,9 @@ exports.receive = function(req, data) {
 };
 
 exports.send = function(site, data) {
-	var type = data.type;
-	data = Object.assign({}, data);
-	delete data.type;
-	const mailer = Mailers[type];
-	if (!mailer) throw new Error("Unknown mailer type " + type);
+	var purpose = "transactional";
+	var mailer = Mailers[purpose];
+	if (!mailer) throw new Error("Unknown mailer purpose " + purpose);
 
 	var list = [All.run('block.search', site, {
 		type: 'mail',
@@ -172,7 +171,7 @@ exports.send = function(site, data) {
 //					contentType: 'text/plain' // optional
 //				}]
 			};
-			return send(mail);
+			return send(mailer, mail);
 		});
 	});
 };
