@@ -66,9 +66,9 @@ function init(All) {
 	All.opt.extnames.push('mail');
 }
 
-exports.receive = function(data) {
-	// https://documentation.mailgun.com/en/latest/user_manual.html#parsed-messages-parameters
-	if (!validateMailgun(Mailers.bulk.auth, data.timestamp, data.token, data.signature)) {
+exports.receive = function(req, data) {
+	var mailer = Mailers.bulk;
+	if (!validateMailgun(mailer.auth, data.timestamp, data.token, data.signature)) {
 		return false;
 	}
 	var senders = data.sender || '';
@@ -80,7 +80,7 @@ exports.receive = function(data) {
 	}
 	return Promise.all(AddressParser(data.recipient).map(function(item) {
 		var parts = item.address.split('@');
-		if (parts.pop() != mailDomain) return false;
+		if (parts.pop() != mailer.domain) return false;
 		parts = parts[0].split('.');
 		if (parts.length != 2) return false;
 		return All.run('site.get', {id: parts[0]}).then(function(site) {
@@ -91,7 +91,7 @@ exports.receive = function(data) {
 				return exports.to({
 					from: {
 						name: site.data.title,
-						address: `${site.id}.${senders[0].id}@${mailDomain}`
+						address: `${site.id}.${senders[0].id}@${mailer.domain}`
 					},
 					to: {
 						name: settings.data.name || undefined,
