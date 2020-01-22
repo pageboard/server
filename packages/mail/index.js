@@ -65,21 +65,17 @@ function init(All) {
 }
 
 exports.report = function(req, data) {
-	// TODO
-	console.log(data);
-	return;
-	/*
+	var mailer = Mailers.bulk;
 	var sign = data.signature;
-	if (!validateMailgun(All.opt.mail.mailgun, sign.timestamp, sign.token, sign.signature)) {
+	if (!validateMailgun(mailer.auth, sign.timestamp, sign.token, sign.signature)) {
 		return false;
 	}
 	var event = data['event-data'];
 	return All.run('mail.to', req, {
-		to: [defaultSender],
+		to: [mailer.sender],
 		subject: 'Pageboard mail delivery failure to ' + event.message.headers.to,
 		text: JSON.stringify(event, null, ' ')
 	});
-	*/
 };
 exports.report.schema = {
 	$action: 'write',
@@ -87,11 +83,8 @@ exports.report.schema = {
 };
 
 exports.receive = function(req, data) {
-	// TODO
-	console.log(data);
-	return;
-	/*
-	if (!validateMailgun(All.opt.mail.mailgun, data.timestamp, data.token, data.signature)) {
+	var mailer = Mailers.bulk;
+	if (!validateMailgun(mailer.auth, data.timestamp, data.token, data.signature)) {
 		return false;
 	}
 	var senders = data.sender || '';
@@ -103,7 +96,7 @@ exports.receive = function(req, data) {
 	}
 	return Promise.all(AddressParser(data.recipient).map(function(item) {
 		var parts = item.address.split('@');
-		if (parts.pop() != mailDomain) return false;
+		if (parts.pop() != mailer.domain) return false;
 		parts = parts[0].split('.');
 		if (parts.length != 2) return false;
 		return All.run('site.get', req, {id: parts[0]}).then(function(site) {
@@ -115,7 +108,7 @@ exports.receive = function(req, data) {
 				return exports.to(req, {
 					from: {
 						name: site.data.title,
-						address: `${site.id}.${senders[0].id}@${mailDomain}`
+						address: `${site.id}.${senders[0].id}@${mailer.domain}`
 					},
 					to: {
 						name: settings.data.name || undefined,
@@ -136,7 +129,6 @@ exports.receive = function(req, data) {
 		if (err.status == 404) return false;
 		else throw err;
 	});
-	*/
 };
 exports.receive.schema = {
 	$action: 'write',
