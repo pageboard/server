@@ -8,6 +8,7 @@ var morgan = require('morgan');
 var pad = require('pad');
 var prettyBytes = require('pretty-bytes');
 var rc = require('rc');
+var toml = require('toml');
 var mkdirp = pify(require('mkdirp'));
 var xdg = require('xdg-basedir');
 var resolvePkg = require('resolve-pkg');
@@ -62,7 +63,7 @@ exports.config = function(pkgOpt) {
 		report: {},
 		extnames: [],
 		upstreams: {}
-	});
+	}, null, (str) => toml.parse(str));
 	opt.upstream = opt.upstreams[opt.version];
 	if (!opt.port) {
 		if (opt.upstream) opt.port = opt.upstream.split(':').pop();
