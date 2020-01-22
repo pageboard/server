@@ -83,11 +83,9 @@ function init(All) {
 			res.status(200).send(msg);
 		}).then(function() {
 			if (version != null) return All.site.save(req, site).then(function() {
-				if (pusher) All.mail.to(req, {
-					to: {
-						name: pusher.name,
-						address: pusher.email
-					},
+				if (pusher) All.run('mail.to', req, {
+					purpose: 'transactional',
+					to: [`"${pusher.name}" <${pusher.email}>`],
 					subject: `Pageboard deployed ${site.data.module} to ${req.site.href}`,
 					text: Text`
 						The version ${site.data.version} is immediately available at
@@ -96,11 +94,9 @@ function init(All) {
 				});
 			});
 		}).catch(function(err) {
-			if (pusher) All.mail.to(req, {
-				to: {
-					name: pusher.name,
-					address: pusher.email
-				},
+			if (pusher) All.run('mail.to', req, {
+				purpose: 'transactional',
+				to: [`"${pusher.name}" <${pusher.email}>`],
 				subject: `Pageboard error deploying ${site.data.module} to ${req.site.href}`,
 				text: Text`
 					An error occurred while deploying from repository:
