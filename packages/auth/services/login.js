@@ -245,6 +245,7 @@ exports.link.schema = {
 
 
 exports.clear = function(req, data) {
+	req.granted = true;
 	return {
 		cookies: {
 			bearer: {}
