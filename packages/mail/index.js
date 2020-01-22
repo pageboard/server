@@ -1,7 +1,7 @@
 const NodeMailer = require.lazy('nodemailer');
-const AddressParser = require.lazy('nodemailer/lib/addressparser');
 const Mailgun = require.lazy('nodemailer-mailgun-transport');
 const got = require.lazy('got');
+const AddressParser = require.lazy('addressparser');
 
 // TODO https://nodemailer.com/dkim/
 // TODO https://postmarkapp.com/blog/differences-in-delivery-between-transactional-and-bulk-email
