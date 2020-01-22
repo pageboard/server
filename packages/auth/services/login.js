@@ -78,9 +78,9 @@ exports.send = function(req, data) {
 		});
 	}).then(function(token) {
 		var mail = {
-			type: 'transactional',
+			purpose: 'transactional',
 			from: site.data.title,
-			to: data.email
+			to: [data.email]
 		};
 		var tokenStr = token.toString().replace(/\B(?=(\d{2})+(?!\d))/g, " ");
 		var prefix = site.data.title ? site.data.title + ' - ' : '';

@@ -14,21 +14,21 @@ const validateMailgun = require('./lib/validate-mailgun.js');
 
 exports = module.exports = function(opt) {
 	if (!opt.mail) return;
-	Object.entries(opt.mail).forEach(([type, conf]) => {
+	Object.entries(opt.mail).forEach(([purpose, conf]) => {
 		if (!Transports[conf.transport]) {
-			console.warn("mail transport not supported", type, conf.transport);
+			console.warn("mail transport not supported", purpose, conf.transport);
 			return;
 		}
 		if (!conf.domain) {
-			console.warn("mail domain must be set", type);
+			console.warn("mail domain must be set", purpose);
 			return;
 		}
 		if (!conf.sender) {
-			console.warn("mail sender must be set", type);
+			console.warn("mail sender must be set", purpose);
 			return;
 		}
 		if (!conf.auth) {
-			console.warn("mail auth be set", type);
+			console.warn("mail auth be set", purpose);
 			return;
 		}
 	});
@@ -47,9 +47,10 @@ exports = module.exports = function(opt) {
 };
 
 function init(All) {
-	Object.entries(All.opt.mail).forEach(([type, conf]) => {
-		Mailers[type] = {
+	Object.entries(All.opt.mail).forEach(([purpose, conf]) => {
+		Mailers[purpose] = {
 			transport: NodeMailer.createTransport(Transports[conf.transport]({auth: conf.auth})),
+			auth: conf.auth,
 			domain: conf.domain,
 			sender: AddressParser(conf.sender)[0]
 		};
@@ -114,24 +115,27 @@ exports.receive = function(req, data) {
 };
 
 exports.to = function(data) {
-	var type = data.type;
+	var purpose = data.purpose;
 	data = Object.assign({}, data);
-	delete data.type;
-	var mailer = Mailers[type];
-	if (!mailer) throw new Error("Unknown mailer type " + type);
-	if (type == "transactional" && data.to.length > 1) {
+	delete data.purpose;
+	var mailer = Mailers[purpose];
+	if (!mailer) throw new Error("Unknown mailer purpose " + purpose);
+	if (purpose == "transactional" && data.to.length > 1) {
 		throw new Error("Transactional mail only accepts one recipient");
 	}
-
-	data.from = buildAddress(AddressParser(data.from)[0], mailer.sender);
+	var exp = AddressParser(data.from)[0] || {};
+	var replyTo = AddressParser(data.replyTo)[0] || {};
+	if (!exp.name) exp.name = replyTo.name || replyTo.address || undefined;
+	if (replyTo.address) data.replyTo = buildAddress(replyTo);
+	data.from = buildAddress(exp, mailer.sender);
 	return mailer.transport.sendMail(data);
 };
 exports.to.schema = {
 	$action: 'write',
 	required: ['subject', 'to', 'text'],
 	properties: {
-		type: {
-			title: 'Type',
+		purpose: {
+			title: 'Purpose',
 			anyOf: [{
 				title: "Transactional",
 				const: "transactional"
@@ -179,17 +183,19 @@ exports.to.schema = {
 };
 
 exports.send = function(req, data) {
-	var type = data.type;
+	var purpose = data.purpose;
 	data = Object.assign({}, data);
-	delete data.type;
-	const mailer = Mailers[type];
-	if (!mailer) throw new Error("Unknown mailer type " + type);
+	delete data.purpose;
+	const mailer = Mailers[purpose];
+	if (!mailer) throw new Error("Unknown mailer purpose " + purpose);
 
 	var list = [All.run('block.find', req, {
 		type: 'mail',
 		data: {url: data.url}
 	})];
-	var mailOpts = {};
+	var mailOpts = {
+		purpose: purpose
+	};
 	if (data.replyTo) mailOpts.replyTo = data.replyTo;
 	if (data.from) {
 		var p;
@@ -248,8 +254,8 @@ exports.send.schema = {
 	$action: 'write',
 	required: ['url', 'to'],
 	properties: {
-		type: {
-			title: 'Type',
+		purpose: {
+			title: 'Purpose',
 			anyOf: [{
 				title: "Transactional",
 				const: "transactional"
