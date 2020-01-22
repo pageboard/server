@@ -43,6 +43,7 @@ function init(All) {
 		Log.mail(purpose, conf);
 		Mailers[purpose] = {
 			transport: NodeMailer.createTransport(Transports[conf.transport]({auth: conf.auth})),
+			auth: conf.auth,
 			domain: conf.domain,
 			sender: AddressParser(conf.sender)[0]
 		};
