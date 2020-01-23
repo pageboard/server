@@ -123,11 +123,12 @@ exports.to = function(data) {
 	if (purpose == "transactional" && data.to.length > 1) {
 		throw new Error("Transactional mail only accepts one recipient");
 	}
-	var exp = AddressParser(data.from)[0] || {};
-	var replyTo = AddressParser(data.replyTo)[0] || {};
-	if (!exp.name) exp.name = replyTo.name || replyTo.address || undefined;
-	if (replyTo.address) data.replyTo = buildAddress(replyTo);
-	data.from = buildAddress(exp, mailer.sender);
+	if (!data.from) data.from = mailer.sender;
+	else if (!data.from.address) data.from.address = mailer.sender.address;
+	if (data.replyTo) {
+		data.from.name = data.replyTo.name || data.replyTo.address;
+		if (!data.replyTo.address) delete data.replyTo;
+	}
 	return mailer.transport.sendMail(data);
 };
 exports.to.schema = {
@@ -158,25 +159,61 @@ exports.to.schema = {
 			type: 'string'
 		},
 		from: {
-			title: 'Sender email',
-			type: 'string',
-			format: 'email',
-			transform: ['trim']
+			title: 'Sender',
+			type: 'object',
+			properties: {
+				name: {
+					title: 'Name',
+					type: 'string',
+					format: 'singleline',
+					nullable: true
+				},
+				address: {
+					title: 'Address',
+					type: 'string',
+					format: 'email',
+					nullable: true
+				}
+			},
+			nullable: true
 		},
 		replyTo: {
 			title: 'Reply to',
-			type: 'string',
-			format: 'email',
-			transform: ['trim'],
+			type: 'object',
+			properties: {
+				name: {
+					title: 'Name',
+					type: 'string',
+					format: 'singleline',
+					nullable: true
+				},
+				address: {
+					title: 'Address',
+					type: 'string',
+					format: 'email',
+					nullable: true
+				}
+			},
 			nullable: true
 		},
 		to: {
-			title: 'Recipients emails',
+			title: 'Recipients',
 			type: 'array',
 			items: {
-				type: 'string',
-				format: 'email',
-				transform: ['trim']
+				type: 'object',
+				properties: {
+					name: {
+						title: 'Name',
+						type: 'string',
+						format: 'singleline',
+						nullable: true
+					},
+					address: {
+						title: 'Address',
+						type: 'string',
+						format: 'email'
+					}
+				}
 			}
 		}
 	}
@@ -196,7 +233,7 @@ exports.send = function(req, data) {
 	var mailOpts = {
 		purpose: purpose
 	};
-	if (data.replyTo) mailOpts.replyTo = data.replyTo;
+	if (data.replyTo) mailOpts.replyTo = AddressParser(data.replyTo)[0];
 	if (data.from) {
 		var p;
 		if (data.from.indexOf('@') > 0) {
@@ -224,7 +261,11 @@ exports.send = function(req, data) {
 			name: site.data.title,
 			address: `${site.id}.${rows[1]}@${mailer.domain}`
 		};
-		mailOpts.to = rows.slice(-1).pop();
+		mailOpts.to = rows.slice(-1).pop().map((email) => {
+			return {
+				address: email
+			};
+		});
 		var emailUrl = site.href + emailPage.data.url;
 
 		return got(emailUrl + ".mail", {
@@ -311,14 +352,3 @@ exports.send.schema = {
 };
 exports.send.external = true;
 
-function buildAddress(obj={}, def) {
-	obj = Object.assign({}, obj);
-	if (!obj.name) {
-		delete obj.name;
-		if (!obj.address) obj = def;
-	}	else if (!obj.address) {
-		obj.address = def.address;
-	}
-	if (!obj.name) return obj.address;
-	else return `"${obj.name}" <${obj.address}>`;
-}

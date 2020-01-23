@@ -65,11 +65,12 @@ exports.subscribe = function(req, data) {
 						delete req.site.trx;
 						var mail = {
 							url: data.url,
+							purpose: 'transactional',
 							body: {
 								date: eventDate.id,
 								reservation: resa.id
 							},
-							to: pSettings.id
+							to: [pSettings.id]
 						};
 						if (data.from) mail.from = data.from;
 						return All.run('mail.send', req, mail);
