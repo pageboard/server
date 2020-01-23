@@ -83,7 +83,7 @@ exports.send = function(req, data) {
 				address: data.email
 			}]
 		};
-		var tokenStr = token.toString().replaceAll(/\B(?=(\d{2})+(?!\d))/g, " ");
+		var tokenStr = token.toString();
 		var prefix = site.data.title ? site.data.title + ' - ' : '';
 		if (site.data.lang == "fr") {
 			mail.subject = `${prefix}code de vérification: ${tokenStr}`;
