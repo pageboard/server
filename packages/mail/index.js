@@ -106,7 +106,7 @@ exports.receive = function(req, data) {
 				email: senders
 			}), All.run('settings.get', req, {id: parts[1]})).then(function([senders, settings]) {
 				if (senders.length == 0) throw new HttpError.NotFound("No known sender");
-				return exports.to(req, {
+				return All.run('mail.to', req, {
 					from: {
 						name: site.data.title,
 						address: `${site.id}.${senders[0].id}@${mailer.domain}`
@@ -145,11 +145,8 @@ exports.to = function(req, data) {
 	if (purpose == "transactional" && data.to.length > 1) {
 		throw new Error("Transactional mail only accepts one recipient");
 	}
-	var exp = AddressParser(data.from)[0] || {};
-	var replyTo = AddressParser(data.replyTo)[0] || {};
-	if (!exp.name) exp.name = replyTo.name || replyTo.address || undefined;
-	if (replyTo.address) data.replyTo = buildAddress(replyTo);
-	data.from = buildAddress(exp, mailer.sender);
+	if (!data.from) data.from = mailer.sender;
+	if (data.replyTo) data.from.name = data.replyTo.name || data.replyTo.address;
 	Log.mail("mail.to", data);
 	return mailer.transport.sendMail(data);
 };
@@ -181,25 +178,59 @@ exports.to.schema = {
 			type: 'string'
 		},
 		from: {
-			title: 'Sender email',
-			type: 'string',
-			format: 'email',
-			transform: ['trim']
+			title: 'Sender',
+			type: 'object',
+			properties: {
+				name: {
+					title: 'Name',
+					type: 'string',
+					format: 'singleline',
+					nullable: true
+				},
+				address: {
+					title: 'Address',
+					type: 'string',
+					format: 'email'
+				}
+			},
+			nullable: true
 		},
 		replyTo: {
 			title: 'Reply to',
-			type: 'string',
-			format: 'email',
-			transform: ['trim'],
+			type: 'object',
+			properties: {
+				name: {
+					title: 'Name',
+					type: 'string',
+					format: 'singleline',
+					nullable: true
+				},
+				address: {
+					title: 'Address',
+					type: 'string',
+					format: 'email'
+				}
+			},
 			nullable: true
 		},
 		to: {
-			title: 'Recipients emails',
+			title: 'Recipients',
 			type: 'array',
 			items: {
-				type: 'string',
-				format: 'email',
-				transform: ['trim']
+				type: 'object',
+				properties: {
+					name: {
+						title: 'Name',
+						type: 'string',
+						format: 'singleline',
+						nullable: true
+					},
+					address: {
+						title: 'Address',
+						type: 'string',
+						format: 'email'
+					}
+				}
 			}
 		}
 	}
@@ -228,12 +259,14 @@ exports.send = function(req, data) {
 	}
 	if (data.replyTo) {
 		if (data.replyTo.indexOf('@') > 0) {
-			mailOpts.replyTo = data.replyTo;
+			mailOpts.replyTo = AddressParser(data.replyTo);
 		} else {
 			list.push(All.run('settings.get', req, {
 				id: data.replyTo
 			}).then((settings) => {
-				mailOpts.replyTo = settings.parent.data.email;
+				mailOpts.replyTo = {
+					address: settings.parent.data.email
+				};
 			}));
 		}
 	}
@@ -251,7 +284,11 @@ exports.send = function(req, data) {
 			name: site.data.title,
 			address: `${site.id}.${rows[1].id}@${mailer.domain}`
 		};
-		mailOpts.to = rows.slice(-1).pop().map((settings) => settings.parent.data.email);
+		mailOpts.to = rows.slice(-1).pop().map((settings) => {
+			return {
+				address: settings.parent.data.email
+			};
+		});
 		var emailUrl = site.href + emailPage.data.url;
 
 		return got(emailUrl + ".mail", { // TODO when all 0.7 are migrated, drop .mail
@@ -272,7 +309,7 @@ exports.send = function(req, data) {
 			// 	filename: 'test.txt', // optional
 			// 	contentType: 'text/plain' // optional
 			// }];
-			return exports.to(req, mailOpts);
+			return All.run('mail.to', req, mailOpts);
 		});
 	});
 };
@@ -349,14 +386,3 @@ exports.send.schema = {
 };
 exports.send.external = true;
 
-function buildAddress(obj={}, def) {
-	obj = Object.assign({}, obj);
-	if (!obj.name) {
-		delete obj.name;
-		if (!obj.address) obj = def;
-	}	else if (!obj.address) {
-		obj.address = def.address;
-	}
-	if (!obj.name) return obj.address;
-	else return `"${obj.name}" <${obj.address}>`;
-}
