@@ -76,8 +76,12 @@ exports.send = function(req, data) {
 	}).then(function(token) {
 		var mail = {
 			purpose: 'transactional',
-			from: site.data.title,
-			to: [data.email]
+			from: {
+				name: site.data.title
+			},
+			to: [{
+				address: data.email
+			}]
 		};
 		var tokenStr = token.toString().replaceAll(/\B(?=(\d{2})+(?!\d))/g, " ");
 		var prefix = site.data.title ? site.data.title + ' - ' : '';
@@ -94,7 +98,7 @@ exports.send = function(req, data) {
 				${site.href}
 				and can be ignored.`;
 		}
-		return All.mail.to(req, mail).then(function() {
+		return All.run('mail.to', req, mail).then(function() {
 			// do not return information about that
 			return {};
 		});

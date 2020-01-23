@@ -146,7 +146,11 @@ exports.to = function(req, data) {
 		throw new Error("Transactional mail only accepts one recipient");
 	}
 	if (!data.from) data.from = mailer.sender;
-	if (data.replyTo) data.from.name = data.replyTo.name || data.replyTo.address;
+	else if (!data.from.address) data.from.address = mailer.sender.address;
+	if (data.replyTo) {
+		data.from.name = data.replyTo.name || data.replyTo.address;
+		if (!data.replyTo.address) delete data.replyTo;
+	}
 	Log.mail("mail.to", data);
 	return mailer.transport.sendMail(data);
 };
@@ -190,7 +194,8 @@ exports.to.schema = {
 				address: {
 					title: 'Address',
 					type: 'string',
-					format: 'email'
+					format: 'email',
+					nullable: true
 				}
 			},
 			nullable: true
@@ -208,7 +213,8 @@ exports.to.schema = {
 				address: {
 					title: 'Address',
 					type: 'string',
-					format: 'email'
+					format: 'email',
+					nullable: true
 				}
 			},
 			nullable: true
