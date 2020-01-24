@@ -506,6 +506,21 @@ exports.add.schema = {
 		parents: { // updated by element filter
 			title: 'parents',
 			type: 'array',
+			items: [{
+				type: 'object',
+				properties: {
+					type: {
+						title: 'type',
+						type: 'string',
+						format: 'id'
+					},
+					id: {
+						title: 'id',
+						type: 'string',
+						format: 'id'
+					}
+				}
+			}],
 			nullable: true,
 			$filter: 'relation'
 		},
