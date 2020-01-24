@@ -115,7 +115,7 @@ exports.receive = function(req, data) {
 };
 
 exports.to = function(data) {
-	var purpose = data.purpose;
+	var purpose = data.purpose || "transactional";
 	data = Object.assign({}, data);
 	delete data.purpose;
 	var mailer = Mailers[purpose];
