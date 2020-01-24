@@ -101,7 +101,7 @@ exports.send = function(req, data) {
 				${site.href}
 				and can be ignored.`;
 		}
-		return All.run('mail.to', req, mail).then(function() {
+		return All.run('mail.to', mail).then(function() {
 			return {};
 		});
 	});
