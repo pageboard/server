@@ -24,7 +24,7 @@
   "dependencies": {
     "express-dom": "^5.13.2",
     "got": "^9.6.0",
-    "tarn": "^1.1.5",
+    "tarn": "^2.0.0",
     "webkitgtk": "^4.11.0"
   },
   "pageboard": true
