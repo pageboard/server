@@ -150,15 +150,15 @@ exports.to = function(req, data) {
 			data.to = data.replyTo || data.from || mailer.sender;
 		}
 	}
-	if (!data.from) {
-		data.from = mailer.sender;
-	} else if (!data.from.address) {
-		data.from.address = mailer.sender.address;
+	var sender = Object.assign({}, data.from || mailer.sender);
+	if (!sender.address) {
+		sender.address = mailer.sender.address;
 	}
 	if (data.replyTo) {
-		data.from.name = data.replyTo.name || data.replyTo.address;
+		sender.name = data.replyTo.name || data.replyTo.address;
 		if (!data.replyTo.address) delete data.replyTo;
 	}
+	data.from = sender;
 	Log.mail("mail.to", data);
 	return mailer.transport.sendMail(data);
 };
