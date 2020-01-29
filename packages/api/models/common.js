@@ -147,6 +147,10 @@ exports.QueryBuilder = class CommonQueryBuilder extends QueryBuilder {
 				]);
 			} else if (typeof cond == "object" && cond.op == "not") {
 				this.whereNot(refk.castText(), cond.val);
+			} else if (typeof cond =="object" && cond.range == "numeric") {
+				this.whereRaw('?? BETWEEN ? AND ?', [
+					refk, cond.start, cond.end
+				]);
 			} else {
 				this.where(refk.castText(), cond);
 			}
@@ -181,10 +185,12 @@ function asPaths(obj, ret, pre, first, schema) {
 		}
 		if (Array.isArray(val) || val == null || typeof val != "object") {
 			if (val && typeof val == "string" && schem.type == "string" && (schem.format == "date-time" || schem.format == "date")) {
-				try { val = partialDate(val); } catch(err) { /**/ }
+				try { val = dateRange(val); } catch(err) { /**/ }
 			} else if (schem.type == "boolean" && typeof val != "boolean") {
 				if (val == "false" || val == 0 || !val) val = false;
 				else val = true;
+			} else if (["integer", "number"].includes(schem.type) && typeof val == "string" && val.includes("~")) {
+				val = numericRange(val, schem.type);
 			}
 			if (op) ret[cur] = {
 				op: op,
@@ -198,7 +204,7 @@ function asPaths(obj, ret, pre, first, schema) {
 	return ret;
 }
 
-function partialDate(val) {
+function dateRange(val) {
 	var start = new Date(val);
 	var end = new Date(start);
 	var parts = val.split('-');
@@ -214,6 +220,15 @@ function partialDate(val) {
 		range: "date",
 		start: start.toISOString(),
 		end: end.toISOString()
+	};
+}
+
+function numericRange(val, type) {
+	var [start, end] = val.split('~').map((n) => (type == "integer" ? parseInt : parseFloat)(n));
+	return {
+		range: "numeric",
+		start: start,
+		end: end
 	};
 }
 
