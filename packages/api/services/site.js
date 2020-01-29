@@ -346,12 +346,7 @@ exports.export = function({trx}, data) {
 							.orderByRaw("block.data->>'url' IS NOT NULL ASC");
 						}
 					}).then(function(lone) {
-						if (lone.standalones.length > 0) {
-							if (lone.type != "notfound" && (!lone.data || !lone.data.url)) {
-								console.warn("standalone block without url has standalone children", lone);
-								delete lone.standalones;
-							}
-						} else {
+						if (lone.standalones.length == 0) {
 							delete lone.standalones;
 						}
 						counts.blocks += lone.children.length;
