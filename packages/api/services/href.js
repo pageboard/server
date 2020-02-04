@@ -313,7 +313,6 @@ function collectHrefs({site, trx}, data, level) {
 	var blockRelation = {
 		$relation: 'children',
 		$modify: [(q) => {
-			q.where('standalone', false);
 			q.whereIn('type', types);
 		}]
 	};
