@@ -18,7 +18,7 @@
   "homepage": "https://github.com/pageboard/server#readme",
   "dependencies": {
     "@kapouer/path": "^4.2.1",
-    "ajv": "^6.10.2",
+    "ajv": "^6.11.0",
     "ajv-keywords": "^3.4.1",
     "body-parser": "^1.9.0",
     "flat": "^4.1.0",
