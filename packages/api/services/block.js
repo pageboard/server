@@ -140,6 +140,7 @@ exports.search = function({site, trx}, data) {
 		},
 		itemsFilter(query) {
 			filterSub(query, children, children.type ? schemas[children.type] : null);
+			query.where('standalone', true);
 		},
 		childrenFilter(query) {
 			query.select().where('standalone', false);
