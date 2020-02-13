@@ -354,7 +354,9 @@ function collectHrefs({site, trx}, data, level) {
 	q.where(function() {
 		Object.entries(hrefs).forEach(([type, list]) => {
 			if (!list.some((desc) => {
-				return desc.types.includes('image') || desc.types.includes('svg') || desc.types.includes('video');
+				return desc.types.some((type) => {
+					return ['image', 'video', 'audio', 'svg'].includes(type);
+				});
 			})) return;
 			this.orWhere(function() {
 				this.where(table + '.type', type);
