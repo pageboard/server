@@ -133,9 +133,14 @@ function locked(req, list) {
 
 function filter(req, item, fn) {
 	if (!item.type) return item;
-	var {children, child, parents, parent} = item;
+	var {children, child, parents, parent, items} = item;
 	if (children) {
 		item.children = children.filter(function(item) {
+			return filter(req, item, fn);
+		});
+	}
+	if (items) {
+		item.items = items.filter(function(item) {
 			return filter(req, item, fn);
 		});
 	}
