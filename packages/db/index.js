@@ -128,6 +128,7 @@ function knexConfig(opt) {
 		obj.client = dbOpts.client;
 		delete dbOpts.client;
 	}
+	console.info(`db:\t${conn.database}`);
 	obj.debug = Log.sql.enabled;
 	if (dbOpts.debug) {
 		obj.debug = dbOpts.debug;

@@ -193,7 +193,7 @@ function install(site) {
 exports.start = function(All) {
 	var server = http.createServer(All.app);
 	server.listen(All.opt.port);
-	console.info(`Listening on port ${All.opt.port}`);
+	console.info(`port:\t${All.opt.port}`);
 };
 
 function initDirs(dirs) {
