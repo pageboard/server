@@ -25,7 +25,7 @@ if (config._.length == 1) {
 	console.info = function() {};
 }
 
-console.info(title);
+console.info(`server:\t${config.version}`);
 
 pageboard.init(config).catch(function(err) {
 	console.error(err);
