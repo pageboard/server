@@ -68,7 +68,7 @@ function init(All) {
 
 function send(mailer, mail) {
 	return new Promise(function(resolve, reject) {
-		mailer.sendMail(mail, function (err, info) {
+		mailer.transport.sendMail(mail, function (err, info) {
 			if (err) reject(err);
 			else resolve(info);
 		});
