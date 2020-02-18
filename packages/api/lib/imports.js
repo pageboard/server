@@ -30,7 +30,7 @@ exports.install = function(site, pkg, All) {
 
 		var eltsMap = {};
 		var groups = {};
-		var bundles = [];
+		var bundles = {};
 
 		names.forEach(function(name) {
 			var el = Object.assign({}, elts[name]); // drop proxy
@@ -48,7 +48,9 @@ exports.install = function(site, pkg, All) {
 			if (isPage) {
 				el.standalone = el.bundle = true;
 			}
-			if (el.bundle) bundles.push(el);
+			if (el.bundle) bundles[el.name] = {
+				meta: el
+			};
 		});
 
 		var Block = All.api.Block.extendSchema(id, eltsMap);
@@ -57,12 +59,11 @@ exports.install = function(site, pkg, All) {
 			pkg.eltsMap = eltsMap;
 			pkg.groups = groups;
 			site.$pages = groups.page;
-			site.$bundles = {};
+			site.$bundles = bundles;
 			site.constructor = Block; // gni ?
 		} else {
 			All.api.Block = Block;
 		}
-		return bundles;
 	}).catch(function(err) {
 		console.error(err);
 		throw err;
@@ -81,11 +82,9 @@ function updateExtension(el, eltsMap) {
 	return true;
 }
 
-exports.validate = function(site, pkg, bundles) {
-	var eltsMap = pkg.eltsMap;
-	return Promise.all(bundles.map(function(el) {
-		el = eltsMap[el.name] = Object.assign({}, el);
-		return bundle(site, pkg, el);
+exports.bundle = function(site, pkg) {
+	return Promise.all(Object.values(site.$bundles).map(function(bundle) {
+		return doBundle(site, pkg, bundle);
 	})).then(function() {
 		return bundleSource(site, pkg, null, 'services', All.services).then(function(path) {
 			site.$services = path;
@@ -112,14 +111,16 @@ function sortPriority(list) {
 	});
 }
 
-function bundle(site, pkg, rootEl) {
-	var list = listDependencies(pkg, rootEl.group, rootEl);
+function doBundle(site, pkg, bundle) {
+	var meta = bundle.meta;
+	var list = listDependencies(pkg, meta.group, meta);
 	list.sort(function(a, b) {
 		return (a.priority || 0) - (b.priority || 0);
 	});
+
 	var scripts = sortElements(list, 'scripts');
 	var styles = sortElements(list, 'stylesheets');
-	var prefix = rootEl.name;
+	var prefix = meta.name;
 
 	var eltsMap = {};
 	list.forEach(function(el) {
@@ -130,23 +131,24 @@ function bundle(site, pkg, rootEl) {
 		}
 		eltsMap[el.name] = el;
 	});
-	var metaEl = Object.assign({}, rootEl);
-	site.$bundles[rootEl.name] = {
-		meta: metaEl,
-		elements: Object.keys(eltsMap)
-	};
+	bundle.elements = Object.keys(eltsMap);
+
 	return Promise.all([
 		All.statics.bundle(site, pkg, scripts, `${prefix}.js`),
 		All.statics.bundle(site, pkg, styles, `${prefix}.css`)
-	]).then(function([scripts, styles]) {
-		rootEl.scripts = scripts;
-		rootEl.stylesheets = styles;
+	]).then(function([scripts, stylesheets]) {
+		// bundleSource will serialize bundle.meta, set these before
+		bundle.meta.scripts = scripts;
+		bundle.meta.stylesheets = stylesheets;
 
 		return bundleSource(site, pkg, prefix, 'elements', eltsMap).then(function(path) {
-			if (path) metaEl.bundle = path;
-			metaEl.scripts = rootEl.group != "page" ? rootEl.scripts : [];
-			metaEl.stylesheets = rootEl.group != "page" ? rootEl.stylesheets : [];
-			metaEl.resources = rootEl.resources;
+			// All.send looks into bundle.meta and return all deps - not needed for pages
+			Object.assign(bundle.meta, {
+				scripts: meta.group != "page" ? scripts : [],
+				stylesheets: meta.group != "page" ? stylesheets : [],
+				resources: meta.resources,
+				bundle: path
+			});
 		});
 	});
 }
