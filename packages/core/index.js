@@ -166,9 +166,9 @@ function install(site) {
 	}
 
 	return Install.install(site, All.opt).then(function(pkg) {
-		return All.api.install(site, pkg, All).then(function(bundles) {
+		return All.api.install(site, pkg, All).then(function() {
 			if (site.href) return All.statics.install(site, pkg, All).then(function() {
-				return All.api.validate(site, pkg, bundles);
+				return All.api.bundle(site, pkg);
 			});
 		}).then(function() {
 			return All.auth.install(site);

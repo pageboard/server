@@ -47,7 +47,7 @@ function init(All) {
 			// webmaster want to see those anyway
 			// this must not be confused with page.lock
 			req.query.drafts = true;
-			if (!req.query.type) req.query.type = req.site.$pages;
+			if (!req.query.type) req.query.type = req.site.$groups.page;
 		}
 
 		var action = req.query.text != null ? 'page.search' : 'page.all';
@@ -115,7 +115,7 @@ exports.get = function(req, data) {
 
 	var wkp = /^\/\.well-known\/(\d{3})$/.exec(data.url);
 	if (wkp) obj.status = parseInt(wkp[1]);
-	return QueryPage(req).whereIn('page.type', site.$pages)
+	return QueryPage(req).whereIn('page.type', site.$groups.page)
 	.whereJsonText("page.data:url", data.url)
 	.select(
 		All.href.collect(req, {url: data.url}).as('hrefs')
@@ -376,7 +376,7 @@ exports.all = function(req, data) {
 			obj.item = pages.shift();
 			if (obj.item && obj.item.data.url != data.parent) delete obj.item;
 		} else {
-			req.site.$pages.forEach(function(type) {
+			req.site.$groups.page.forEach(function(type) {
 				var schema = req.site.$schema(type);
 				els[type] = schema;
 			});
@@ -471,7 +471,7 @@ exports.save = function(req, changes) {
 	var returning = {};
 	return req.site.$relatedQuery('children', req.trx)
 	.select('block.id', ref('block.data:url').as('url'))
-	.whereIn('block.type', req.site.$pages)
+	.whereIn('block.type', req.site.$groups.page)
 	.whereNotNull(ref('block.data:url')).then(function(dbPages) {
 		pages.all.forEach(function(page) {
 			if (!page.data.url) {
@@ -605,7 +605,7 @@ function applyAdd({site, trx}, list) {
 
 function applyUpdate(req, list) {
 	return Promise.all(list.map(function(block) {
-		if (req.site.$pages.includes(block.type)) {
+		if (req.site.$groups.page.includes(block.type)) {
 			return updatePage(req, block);
 		} else if (!block.updated_at) {
 			throw new HttpError.BadRequest(`Block is missing 'updated_at' ${block.id}`);
@@ -628,7 +628,7 @@ function applyUpdate(req, list) {
 
 function updatePage({site, trx}, page) {
 	return site.$relatedQuery('children', trx).where('block.id', page.id)
-	.whereIn('block.type', page.type ? [page.type] : site.$pages)
+	.whereIn('block.type', page.type ? [page.type] : site.$groups.page)
 	.select(ref('block.data:url').as('url')).first().throwIfNotFound().then(function(dbPage) {
 		var oldUrl = dbPage.url;
 		var newUrl = page.data.url;

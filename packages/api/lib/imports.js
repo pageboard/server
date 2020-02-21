@@ -38,27 +38,33 @@ exports.install = function(site, pkg, All) {
 			// backward compatibility with 0.7 extensions names, dropped in favor of output
 			if (updateExtension(el, eltsMap)) return;
 			eltsMap[name] = el;
-			var isPage = false; // backward compatibility with < client@0.7
+
 			if (el.group) el.group.split(/\s+/).forEach(function(gn) {
-				if (gn == "page") isPage = true;
+				if (gn == "page") {
+					// backward compatibility with < client@0.7
+					el.standalone = el.bundle = true;
+				}
 				var group = groups[gn];
 				if (!group) group = groups[gn] = [];
 				if (!group.includes(name)) group.push(name);
 			});
-			if (isPage) {
-				el.standalone = el.bundle = true;
+			if (el.bundle === true) {
+				bundles[el.name] = {
+					meta: el,
+					list: []
+				};
+			} else if (typeof el.bundle == "string") {
+				var bundle = bundles[el.bundle];
+				if (!bundle) throw new Error(`${el.bundle} must be declared before ${el.name}`);
+				bundle.list.push(el);
 			}
-			if (el.bundle) bundles[el.name] = {
-				meta: el
-			};
 		});
 
 		var Block = All.api.Block.extendSchema(id, eltsMap);
 		if (id) {
 			pkg.Block = Block;
 			pkg.eltsMap = eltsMap;
-			pkg.groups = groups;
-			site.$pages = groups.page;
+			site.$groups = groups; // needed by All.send's filterResponse
 			site.$bundles = bundles;
 			site.constructor = Block; // gni ?
 		} else {
@@ -83,8 +89,10 @@ function updateExtension(el, eltsMap) {
 }
 
 exports.bundle = function(site, pkg) {
+	const gDone = {};
+	const eDone = {};
 	return Promise.all(Object.values(site.$bundles).map(function(bundle) {
-		return doBundle(site, pkg, bundle);
+		return doBundle(site, pkg, bundle, gDone, eDone);
 	})).then(function() {
 		return bundleSource(site, pkg, null, 'services', All.services).then(function(path) {
 			site.$services = path;
@@ -111,12 +119,19 @@ function sortPriority(list) {
 	});
 }
 
-function doBundle(site, pkg, bundle) {
+function doBundle(site, pkg, bundle, gDone, eDone) {
 	var meta = bundle.meta;
-	var list = listDependencies(pkg, meta.group, meta);
+	bundle.gDone = {};
+	bundle.eDone = {};
+	listDependencies(site, pkg.eltsMap, bundle, meta.name, gDone, eDone);
+	delete bundle.gDone;
+	delete bundle.eDone;
+	var list = bundle.list;
+	delete bundle.list;
 	list.sort(function(a, b) {
 		return (a.priority || 0) - (b.priority || 0);
 	});
+	console.log(meta.name, list.map((x) => x.name).join(", "));
 
 	var scripts = sortElements(list, 'scripts');
 	var styles = sortElements(list, 'stylesheets');
@@ -138,8 +153,8 @@ function doBundle(site, pkg, bundle) {
 		All.statics.bundle(site, pkg, styles, `${prefix}.css`)
 	]).then(function([scripts, stylesheets]) {
 		// bundleSource will serialize bundle.meta, set these before
-		bundle.meta.scripts = scripts;
-		bundle.meta.stylesheets = stylesheets;
+		meta.scripts = scripts;
+		meta.stylesheets = stylesheets;
 
 		return bundleSource(site, pkg, prefix, 'elements', eltsMap).then(function(path) {
 			// All.send looks into bundle.meta and return all deps - not needed for pages
@@ -168,42 +183,36 @@ function bundleSource(site, pkg, prefix, name, obj) {
 	});
 }
 
-function listDependencies(pkg, rootGroup, el, list=[], gDone={}, eDone={}) {
-	if (!el || eDone[el.name]) return list;
-	var elts = pkg.eltsMap;
-	list.push(el);
-	eDone[el.name] = true;
+function listDependencies(site, elts, bundle, name, gDone, eDone) {
+	var root = bundle.meta;
+	if (!name) name = root.name;
+	const el = elts[name];
+	if (!el || root.group != "page" && eDone[name] || bundle.eDone[name]) return;
+	if (el.bundle === true && name != root.name) return;
+	if (typeof el.bundle == "string" && el.bundle != root.name) return;
+	bundle.list.push(el);
+	bundle.eDone[name] = eDone[name] = true;
 	var contents = All.api.Block.normalizeContents(el.contents);
 	if (contents) contents.forEach(function(content) {
 		if (!content.nodes) return;
 		content.nodes.split(/\W+/).filter(Boolean).forEach(function(word) {
-			if (word == rootGroup) {
-				console.warn("contents contains root group", rootGroup, el.name, contents);
+			if (word == "text") return;
+			var wordGroup = site.$groups[word];
+			if (wordGroup) {
+				if (root.group != "page" && gDone[word] || bundle.gDone[word]) return;
+				bundle.gDone[name] = gDone[word] = true;
+			} else {
+				wordGroup = [word];
+			}
+			if (word == root.name) {
+				console.warn("contents contains root group", root.name, name, contents);
 				return;
 			}
-			if (word == "text") return;
-			var group = pkg.groups[word];
-			if (group) {
-				if (gDone[word]) return;
-				gDone[word] = true;
-			} else {
-				group = [word];
-			}
-			group.forEach((sub) => {
-				listDependencies(pkg, rootGroup, elts[sub], list, gDone, eDone);
+			wordGroup.forEach((sub) => {
+				listDependencies(site, elts, bundle, sub, gDone, eDone);
 			});
 		});
 	});
-	else if (el.name == rootGroup) {
-		var group = pkg.groups[el.name];
-		if (group) {
-			gDone[el.name] = true;
-			group.forEach((sub) => {
-				listDependencies(pkg, rootGroup, elts[sub], list, gDone, eDone);
-			});
-		}
-	}
-	return list;
 }
 
 function sortElements(elements, prop) {

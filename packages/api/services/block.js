@@ -148,20 +148,10 @@ exports.search = function({site, trx}, data) {
 	});
 
 	return q.then(function(rows) {
-		var metas = {};
-		Object.keys(schemas).forEach(function(type) {
-			var bundleType = Object.keys(site.$bundles).find((key) => {
-				return site.$bundles[key].elements.includes(type);
-			});
-			if (bundleType && !metas[bundleType]) {
-				metas[bundleType] = site.$bundles[bundleType].meta;
-			}
-		});
 		var obj = {
 			items: rows,
 			offset: data.offset,
-			limit: data.limit,
-			metas: Object.values(metas)
+			limit: data.limit
 		};
 		var ids = [];
 		rows.forEach(function(row) {
@@ -457,7 +447,6 @@ exports.find = function(req, data) {
 		}
 		return {
 			item: obj.items[0],
-			metas: obj.metas,
 			hrefs: obj.hrefs
 		};
 	});

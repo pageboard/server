@@ -279,8 +279,21 @@ All.send = function(res, obj) {
 		res.status(obj.status);
 		delete obj.status;
 	}
-
-	obj = All.auth.filterResponse(req, obj, itemFn);
+	var bundles = req.site.$bundles;
+	var metas = {};
+	obj = All.auth.filterResponse(req, obj, (schema, block) => {
+		if (block.type) {
+			var bundleType = Object.keys(bundles).find((key) => {
+				return bundles[key].elements.includes(block.type);
+			});
+			if (bundleType) {
+				metas[bundleType] = bundles[bundleType].meta;
+			}
+		}
+		return itemFn(schema, block);
+	});
+	obj.metas = Object.values(metas);
+	if (obj.metas.length == 0) delete obj.metas;
 	if (obj.item && !obj.item.type) {
 		// 401 Unauthorized: missing or bad authentication
 		// 403 Forbidden: authenticated but not authorized
