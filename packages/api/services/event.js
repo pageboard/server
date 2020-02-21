@@ -60,21 +60,18 @@ exports.subscribe = function(req, data) {
 				return eventDate.$query(req.trx).patch({
 					'data:reservations': total
 				}).then(function() {
-					if (!data.url) return resa; // can't send confirmation email
-					return req.site.trx.commit().then(function() {
-						delete req.site.trx;
-						var mail = {
-							url: data.url,
-							purpose: 'transactional',
-							body: {
-								date: eventDate.id,
-								reservation: resa.id
-							},
-							to: [pSettings.id]
-						};
-						if (data.from) mail.from = data.from;
-						return All.run('mail.send', req, mail);
-					});
+					if (!data.url) throw new Error("Missing url");
+					var mail = {
+						url: data.url,
+						purpose: 'transactional',
+						body: {
+							date: eventDate.id,
+							reservation: resa.id
+						},
+						to: [pSettings.id]
+					};
+					if (data.from) mail.from = data.from;
+					return All.run('mail.send', req, mail);
 				});
 			});
 		});
