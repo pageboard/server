@@ -131,7 +131,7 @@ function doBundle(site, pkg, bundle, gDone, eDone) {
 	list.sort(function(a, b) {
 		return (a.priority || 0) - (b.priority || 0);
 	});
-	console.log(meta.name, list.map((x) => x.name).join(", "));
+	Log.imports(meta.name, "contains:\n", list.map((x) => x.name).join("\n "));
 
 	var scripts = sortElements(list, 'scripts');
 	var styles = sortElements(list, 'stylesheets');
