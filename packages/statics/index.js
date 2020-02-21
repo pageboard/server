@@ -49,7 +49,6 @@ function init(All) {
 					All.cache.tag('app-:site').for(statics.nocache ? null : '1 year')(req, res, next);
 					break;
 				}
-				Log.statics("Static url", url, "rewritten to", req.url);
 			},
 			serveStatic(statics.runtime, {
 				index: false,
@@ -77,16 +76,18 @@ function init(All) {
 	});
 }
 
-exports.bundle = function(site, pkg, list, filename) {
+exports.bundle = function(site, siteDir, list, filename) {
 	if (list.length == 0) return [];
 	var suffix = site.data.env;
 	if (suffix == "production") suffix = ".min";
 	else if (suffix == "staging") suffix = ".max";
 	else suffix = "";
-	if (!suffix || !pkg.dir || !site.href) {
+	if (!suffix || !siteDir || !site.href) {
+		Log.statics("Not bundling", siteDir, filename, list);
 		return Promise.resolve(list);
 	}
-	var buildDir = Path.join(pkg.dir, "builds");
+	Log.statics("Bundling", siteDir, filename, list);
+	var buildDir = Path.join(siteDir, "builds");
 	var cacheDir = Path.join(All.opt.dirs.cache, "statics");
 	var buildPath = Path.join(buildDir, filename);
 	var opts = All.opt.statics;

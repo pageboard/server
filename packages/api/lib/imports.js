@@ -149,8 +149,8 @@ function doBundle(site, pkg, bundle, gDone, eDone) {
 	bundle.elements = Object.keys(eltsMap);
 
 	return Promise.all([
-		All.statics.bundle(site, pkg, scripts, `${prefix}.js`),
-		All.statics.bundle(site, pkg, styles, `${prefix}.css`)
+		All.statics.bundle(site, pkg.dir, scripts, `${prefix}.js`),
+		All.statics.bundle(site, pkg.dir, styles, `${prefix}.css`)
 	]).then(function([scripts, stylesheets]) {
 		// bundleSource will serialize bundle.meta, set these before
 		meta.scripts = scripts;
@@ -177,7 +177,7 @@ function bundleSource(site, pkg, prefix, name, obj) {
 	var sourcePath = All.statics.resolve(site.id, sourceUrl);
 	var str = `Pageboard.${name} = Object.assign(Pageboard.${name} || {}, ${toSource(obj)});`;
 	return fs.writeFile(sourcePath, str).then(function() {
-		return All.statics.bundle(site, pkg, [sourceUrl], filename);
+		return All.statics.bundle(site, pkg.dir, [sourceUrl], filename);
 	}).then(function(paths) {
 		return paths[0];
 	});
