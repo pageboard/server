@@ -281,13 +281,18 @@ All.send = function(res, obj) {
 	}
 	var bundles = req.site.$bundles;
 	var metas = {};
+	if (obj.metas) obj.metas.forEach((meta) => {
+		if (meta.name) metas[meta.name] = meta;
+	});
 	obj = All.auth.filterResponse(req, obj, (schema, block) => {
 		if (block.type) {
 			var bundleType = Object.keys(bundles).find((key) => {
 				return bundles[key].elements.includes(block.type);
 			});
 			if (bundleType) {
-				metas[bundleType] = bundles[bundleType].meta;
+				if ((!obj.meta || obj.meta.name != bundleType) && !metas[bundleType]) {
+					metas[bundleType] = bundles[bundleType].meta;
+				}
 			}
 		}
 		return itemFn(schema, block);

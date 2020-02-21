@@ -12,9 +12,9 @@ function init(All) {
 	All.app.get('/.api/page', function(req, res, next) {
 		var site = req.site;
 		var isWebmaster = !All.auth.locked(req, ['webmaster']);
-		var dev = req.query.develop == "write";
+		var write = req.query.develop == "write";
 		delete req.query.develop;
-		if (isWebmaster && !dev) {
+		if (isWebmaster && !write) {
 			All.send(res, {
 				item: {
 					type: 'write',
@@ -25,17 +25,22 @@ function init(All) {
 			});
 		} else {
 			All.run('page.get', req, req.query).then(function(data) {
-				var resources = site.$bundles.write.meta.resources;
-				if (dev && resources.develop) {
-					if (!data.meta) data.meta = {scripts: []};
-					if (site.$bundles.user) {
-						data.meta.scripts.unshift(site.$bundles.user.meta.bundle);
-					}
-					data.meta.scripts.unshift(resources.develop);
+				// client code relies on res.meta to be the page meta
+				data.meta = Object.assign({}, site.$bundles[data.item.type].meta);
+				if (write) {
+					var resources = site.$bundles.write.meta.resources;
 					data.meta.writes = {
 						scripts: [resources.editor, resources.readScript],
 						stylesheets: [resources.readStyle]
 					};
+
+					data.metas = [{
+						name: '-write-',
+						scripts: [
+							site.$bundles.user.meta.bundle,
+							resources.develop
+						]
+					}];
 				}
 				All.send(res, data);
 			}).catch(next);
@@ -144,7 +149,6 @@ exports.get = function(req, data) {
 		Object.assign(obj, {
 			item: page,
 			items: (page.children || []).concat(page.standalones || []),
-			meta: site.$bundles[page.type].meta,
 			links: links,
 			hrefs: page.hrefs
 		});
