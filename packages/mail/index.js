@@ -120,15 +120,23 @@ exports.to = function(data) {
 	delete data.purpose;
 	var mailer = Mailers[purpose];
 	if (!mailer) throw new Error("Unknown mailer purpose " + purpose);
-	if (purpose == "transactional" && data.to.length > 1) {
-		throw new Error("Transactional mail only accepts one recipient");
+	if (data.to.length > 1) {
+		if (purpose == "transactional") {
+			throw new Error("Transactional mail only accepts one recipient");
+		} else {
+			data.bcc = data.to;
+			data.to = data.replyTo || data.from || mailer.sender;
+		}
 	}
-	if (!data.from) data.from = mailer.sender;
-	else if (!data.from.address) data.from.address = mailer.sender.address;
+	var sender = Object.assign({}, data.from || mailer.sender);
+	if (!sender.address) {
+		sender.address = mailer.sender.address;
+	}
 	if (data.replyTo) {
-		data.from.name = data.replyTo.name || data.replyTo.address;
+		sender.name = data.replyTo.name || data.replyTo.address;
 		if (!data.replyTo.address) delete data.replyTo;
 	}
+	data.from = sender;
 	return mailer.transport.sendMail(data);
 };
 exports.to.schema = {
