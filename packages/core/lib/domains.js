@@ -72,7 +72,7 @@ Domains.prototype.mw = function(req, res, next) {
 		var path = req.path;
 		// FIXME do not redirect if host.domains[0] DNS has not been checked
 		if (req.hostname != host.domains[0] && (
-			!path.startsWith('/.well-known/') || /^.well-known\/\d{3}$/.test(path)
+			!path.startsWith('/.api/') || !path.startsWith('/.well-known/') || /^.well-known\/\d{3}$/.test(path)
 		)) {
 			var rhost = this.init(host.domains[0], path, req.headers);
 			rhost.waiting.then(function() {
