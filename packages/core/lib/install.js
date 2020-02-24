@@ -236,9 +236,10 @@ function doInstall(site, pkg, opt) {
 			if (!npkg.name) throw new Error("Installed module has no package name");
 			return npkg;
 		}).then(function(pkg) {
-			return runPostinstall(pkg.dir, pkg.name, opt).then(function(result) {
+			return runPostinstall(pkg, opt).then(function(result) {
 				if (result) Log.install(result);
-				return pkg;
+				if (pkg.server) return writePkg(pkg);
+				else return pkg;
 			});
 		});
 	}).catch(function(err) {
@@ -252,10 +253,19 @@ function prepareDir(pkg) {
 	return fs.mkdir(pkg.dir, {
 		recursive: true
 	}).then(function() {
-		return fs.writeFile(pkg.path, JSON.stringify({
-			"private": true,
-			"dependencies": {} // installation of main module populates it for us
-		}));
+		return writePkg(pkg);
+	});
+}
+
+function writePkg(pkg) {
+	return fs.writeFile(pkg.path, JSON.stringify({
+		"private": true,
+		dependencies: pkg.dependencies || {},
+		pageboard: {
+			server: pkg.server || null
+		}
+	})).then(function() {
+		return pkg;
 	});
 }
 
@@ -291,6 +301,7 @@ function getPkg(pkgDir) {
 	if (pkgDir == null) return Promise.resolve(pkg);
 	return fs.readFile(pkgPath).then(function(buf) {
 		var obj = JSON.parse(buf.toString());
+		pkg.server = obj.pageboard && obj.pageboard.server || null;
 		var deps = Object.keys(obj.dependencies);
 		if (!deps.length) return pkg;
 		// if siteModule is a github url, version will be <siteModule>#hash
@@ -301,6 +312,7 @@ function getPkg(pkgDir) {
 		// version is a string here so this boolean check is all right
 		if (!version || version.indexOf('/') >= 0) version = null;
 		pkg.name = name;
+		pkg.dependencies = obj.dependencies;
 		if (version != null) pkg.version = version;
 		return pkg;
 	}).catch(function(err) {
@@ -328,14 +340,17 @@ function getDependencies(root, name, list, deps) {
 	});
 }
 
-function runPostinstall(dir, name, opt) {
+function runPostinstall(pkg, opt) {
 	var list = [];
-	return getDependencies(dir, name, list).then(function() {
+	return getDependencies(pkg.dir, pkg.name, list).then(function() {
 		var firstError;
-		return Promise.all(list.reverse().map(function({pkg, dir}) {
-			if (!pkg.postinstall) return;
+		return Promise.all(list.reverse().map(function({pack, dir}) {
+			if (pack.name == "@pageboard/site") {
+				pkg.server = pack.version.split('.').slice(0, 2).join('.');
+			}
+			if (!pack.postinstall) return;
 			try {
-				return postinstall.process(pkg.postinstall, {
+				return postinstall.process(pack.postinstall, {
 					cwd: dir,
 					allow: opt.postinstall || [
 						'link',

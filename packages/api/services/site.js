@@ -211,9 +211,11 @@ exports.save = function(req, data) {
 		lodashMerge(site.data, data.data);
 		if (req.site && req.site.href) site.href = req.site.href;
 		return All.install(site).then(function(site) {
+			var copy = Object.assign({}, data.data);
+			if (site.server) copy.server = site.server;
 			return site.$query(req.trx).patchObject({
 				type: site.type,
-				data: data.data
+				data: copy
 			}).then(function() {
 				return site;
 			});

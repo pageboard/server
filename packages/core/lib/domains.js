@@ -32,7 +32,9 @@ Domains.prototype.mw = function(req, res, next) {
 	var path = req.path;
 	var host = this.init(req.hostname, path, req.headers);
 	var p;
+	var isUpcache = false;
 	if (path == "/.well-known/upcache") {
+		isUpcache = true;
 		if (host.finalize) {
 			host.finalize();
 		}
@@ -96,6 +98,10 @@ Domains.prototype.mw = function(req, res, next) {
 				errors: site.errors
 			});
 		} else {
+			if (isUpcache && site.server != All.opt.version) {
+				console.info("Setting Peer header", site.server);
+				res.set('X-Pageboard-Peer', All.opt.upstreams[site.server]);
+			}
 			next();
 		}
 	}).catch(next);
@@ -106,27 +112,33 @@ Domains.prototype.wkp = function(req, res, next) {
 	All.run('site.all', req).then(function(list) {
 		var map = {};
 		list.forEach(function(site) {
-			var upstream = All.opt.upstreams[site.data.server || All.opt.version];
-			var domains = site.data.domains;
-			if (!domains) domains = [];
-			else if (typeof domains == "string") domains = [domains];
-			var domain = domains.shift();
-			if (domain != null) {
-				domains = domains.slice();
-				domains.push(site.id);
-				domains.forEach(function(secondary) {
-					map[secondary] = '=' + domain;
-				});
-				map[domain] = upstream;
-			} else {
-				map[site.id] = upstream;
-			}
+			Object.assign(map, domainMapping(site));
 		});
 		res.type('json').end(JSON.stringify({
 			domains: map
 		}, null, ' '));
 	}).catch(next);
 };
+
+function domainMapping(site) {
+	var map = {};
+	var upstream = All.opt.upstreams[site.data.server || All.opt.version];
+	var domains = site.data.domains;
+	if (!domains) domains = [];
+	else if (typeof domains == "string") domains = [domains];
+	var domain = domains.shift();
+	if (domain != null) {
+		domains = domains.slice();
+		domains.push(site.id);
+		domains.forEach(function(secondary) {
+			map[secondary] = '=' + domain;
+		});
+		map[domain] = upstream;
+	} else {
+		map[site.id] = upstream;
+	}
+	return map;
+}
 
 Domains.prototype.init = function(hostname, path, headers) {
 	var sites = this.sites;
