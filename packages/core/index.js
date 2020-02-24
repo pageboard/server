@@ -178,6 +178,7 @@ function install(site) {
 			return Install.clean(site, pkg, All.opt);
 		});
 	}).then(function(pkg) {
+		site.server = pkg.server || site.data.server || All.opt.version;
 		if (site.href) {
 			All.domains.replace(site);
 			All.domains.release(site);
