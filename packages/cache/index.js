@@ -69,7 +69,7 @@ CacheState.prototype.open = function() {
 		if (!str) return;
 		return JSON.parse(str);
 	}).catch(function(err) {
-		console.info(`Unparsable ${me.path}, continuing anyway`);
+		console.info(`Unparsable ${me.path}, ignoring it`);
 	}).then(function(data) {
 		me.data = data || {};
 	});
