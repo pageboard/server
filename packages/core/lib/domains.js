@@ -110,10 +110,10 @@ Domains.prototype.mw = function(req, res, next) {
 
 Domains.prototype.wkp = function(req, res, next) {
 	if (req.hostname != localhost4) return next();
-	All.run('site.all', req).then(function(list) {
+	All.run('site.all', req).then((list) => {
 		var map = {};
-		list.forEach(function(site) {
-			Object.assign(map, domainMapping(site));
+		list.forEach((site) => {
+			Object.assign(map, this.domainMapping(site));
 		});
 		res.type('json').end(JSON.stringify({
 			domains: map
@@ -121,9 +121,11 @@ Domains.prototype.wkp = function(req, res, next) {
 	}).catch(next);
 };
 
-function domainMapping(site) {
+Domains.prototype.domainMapping = function(site) {
 	var map = {};
-	var upstream = All.opt.upstreams[site.data.server || All.opt.version];
+	var rsite = this.sites[site.id];
+	var version = rsite && rsite.server || site.data.server || All.opt.version;
+	var upstream = All.opt.upstreams[version];
 	var domains = site.data.domains;
 	if (!domains) domains = [];
 	else if (typeof domains == "string") domains = [domains];
@@ -139,7 +141,7 @@ function domainMapping(site) {
 		map[site.id] = upstream;
 	}
 	return map;
-}
+};
 
 Domains.prototype.init = function(hostname, path, headers) {
 	var sites = this.sites;
