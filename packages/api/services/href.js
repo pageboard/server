@@ -71,25 +71,26 @@ exports.search = function({site, trx}, data) {
 		if (url.startsWith('/') && hash != null) {
 			q = q.first().then(function(href) {
 				if (!href) return [];
-				return All.run('block.find', {site, trx}, {
-					type: 'page',
-					data: {
-						url: url
-					},
-					children: {
-						offset: data.offset,
-						limit: data.limit,
+				return All.run('block.search', {site, trx}, {
+					parent: {
+						type: 'page',
 						data: {
-							linkable: true
+							url: url
 						}
+					},
+					type: "heading",
+					offset: data.offset,
+					limit: data.limit,
+					data: {
+						'id:not': null
 					}
 				}).then(function(obj) {
 					var rows = [];
-					obj.item.items.forEach((child) => {
-						if (child.data.id && child.data.id.startsWith(hash)) {
+					obj.items.forEach((item) => {
+						if (item.data.id && item.data.id.startsWith(hash)) {
 							rows.push(Object.assign({}, href, {
-								title: href.title + ' #' + child.data.id,
-								url: href.url + '#' + child.data.id
+								title: href.title + ' #' + item.data.id,
+								url: href.url + '#' + item.data.id
 							}));
 						}
 					});
