@@ -264,7 +264,7 @@ function writePkg(pkg) {
 		pageboard: {
 			server: pkg.server || null
 		}
-	})).then(function() {
+	}, null, ' ')).then(function() {
 		return pkg;
 	});
 }
