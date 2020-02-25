@@ -32,9 +32,7 @@ Domains.prototype.mw = function(req, res, next) {
 	var path = req.path;
 	var host = this.init(req.hostname, path, req.headers);
 	var p;
-	var isUpcache = false;
 	if (path == "/.well-known/upcache") {
-		isUpcache = true;
 		if (host.finalize) {
 			host.finalize();
 		}
@@ -98,11 +96,14 @@ Domains.prototype.mw = function(req, res, next) {
 				errors: site.errors
 			});
 		} else {
-			if (isUpcache && site.server != All.opt.version) {
-				console.info("Setting Peer header", site.server);
-				res.set('X-Pageboard-Peer', All.opt.upstreams[site.server]);
+			var version = site.server || site.data.server || All.opt.version;
+			if (version != All.opt.version) {
+				res.set('X-Pageboard-Peer', All.opt.upstreams[version]);
+				if (req.method == "GET") res.redirect(307, req.url);
+				else next();
+			} else {
+				next();
 			}
-			next();
 		}
 	}).catch(next);
 };
@@ -169,10 +170,6 @@ Domains.prototype.init = function(hostname, path, headers) {
 			if (id) data.id = id; // search by domain and id
 			return All.site.get({}, data).select('_id');
 		}).then(function(site) {
-			var version = site.data && site.data.server || All.opt.version;
-			if (version != All.opt.version) {
-				throw new HttpError.ServiceUnavailable(`${host.name} must be served by ${version}`);
-			}
 			host.id = site.id;
 			sites[site.id] = site;
 			if (!site.data) site.data = {};
