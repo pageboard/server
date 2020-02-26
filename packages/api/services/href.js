@@ -82,17 +82,15 @@ exports.search = function({site, trx}, data) {
 					offset: data.offset,
 					limit: data.limit,
 					data: {
-						'id:not': null
+						'id:start': hash
 					}
 				}).then(function(obj) {
 					var rows = [];
 					obj.items.forEach((item) => {
-						if (item.data.id && item.data.id.startsWith(hash)) {
-							rows.push(Object.assign({}, href, {
-								title: href.title + ' #' + item.data.id,
-								url: href.url + '#' + item.data.id
-							}));
-						}
+						rows.push(Object.assign({}, href, {
+							title: href.title + ' #' + item.data.id,
+							url: href.url + '#' + item.data.id
+						}));
 					});
 					return rows;
 				});

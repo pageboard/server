@@ -147,6 +147,10 @@ exports.QueryBuilder = class CommonQueryBuilder extends QueryBuilder {
 				]);
 			} else if (typeof cond == "object" && cond.op == "not") {
 				this.whereNot(refk.castText(), cond.val);
+			} else if (typeof cond == "object" && cond.op == "end") {
+				this.where(refk.castText(), "like", '%' + cond.val);
+			} else if (typeof cond == "object" && cond.op == "start") {
+				this.where(refk.castText(), "like", cond.val + '%');
 			} else if (typeof cond =="object" && cond.range == "numeric") {
 				this.whereRaw('?? BETWEEN ? AND ?', [
 					refk, cond.start, cond.end
