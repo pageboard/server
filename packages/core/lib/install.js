@@ -340,17 +340,17 @@ function getDependencies(root, name, list, deps) {
 	});
 }
 
-function runPostinstall(pkg, opt) {
+function runPostinstall(rootPkg, opt) {
 	var list = [];
-	return getDependencies(pkg.dir, pkg.name, list).then(function() {
+	return getDependencies(rootPkg.dir, rootPkg.name, list).then(function() {
 		var firstError;
-		return Promise.all(list.reverse().map(function({pack, dir}) {
-			if (pack.name == "@pageboard/site") {
-				pkg.server = pack.version.split('.').slice(0, 2).join('.');
+		return Promise.all(list.reverse().map(function({pkg, dir}) {
+			if (pkg.name == "@pageboard/site") {
+				rootPkg.server = pkg.version.split('.').slice(0, 2).join('.');
 			}
-			if (!pack.postinstall) return;
+			if (!pkg.postinstall) return;
 			try {
-				return postinstall.process(pack.postinstall, {
+				return postinstall.process(pkg.postinstall, {
 					cwd: dir,
 					allow: opt.postinstall || [
 						'link',
