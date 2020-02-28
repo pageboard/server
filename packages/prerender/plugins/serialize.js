@@ -12,6 +12,7 @@ module.exports = function(page, settings, request, response) {
 				}).then(function(doc) {
 					done(null, doc);
 				}).catch(function(err) {
+					console.error(err); // FIXME else nobody can actually see the error
 					done(err);
 				});
 			});
