@@ -24,6 +24,10 @@ module.exports = function(page, settings, request, response) {
 				body: obj
 			};
 			settings.output = false;
+			if (obj.mime && obj.mime != "text/html") {
+				// browsers revalidate only html by default
+				response.set("Cache-Control", "must-revalidate");
+			}
 			if (obj.mime) response.type(obj.mime);
 			response.send(obj.body);
 		});
