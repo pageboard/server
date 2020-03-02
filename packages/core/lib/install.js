@@ -320,9 +320,9 @@ function getPkg(pkgDir) {
 	});
 }
 
-function getDependencies(root, name, list, deps) {
+function getDependencies(rootPkg, name, list, deps) {
 	if (!deps) deps = {};
-	var dir = Path.join(root, 'node_modules', name);
+	var dir = Path.join(rootPkg.dir, 'node_modules', name);
 	if (deps[dir]) return;
 	return fs.readFile(Path.join(dir, 'package.json')).catch(function(err) {
 		// nested dep
@@ -334,20 +334,21 @@ function getDependencies(root, name, list, deps) {
 		if (pst.includes("postinstall")) {
 			list.push({pkg, dir});
 		}
+		if (pkg.name == "@pageboard/site") {
+			rootPkg.server = pkg.version.split('.').slice(0, 2).join('.');
+		}
 		return Promise.all(Object.keys(pkg.dependencies || {}).map(function(name) {
-			return getDependencies(root, name, list, deps);
+			return getDependencies(rootPkg, name, list, deps);
 		}));
 	});
 }
 
 function runPostinstall(rootPkg, opt) {
 	var list = [];
-	return getDependencies(rootPkg.dir, rootPkg.name, list).then(function() {
+	return getDependencies(rootPkg, rootPkg.name, list).then(function() {
 		var firstError;
 		return Promise.all(list.reverse().map(function({pkg, dir}) {
-			if (pkg.name == "@pageboard/site") {
-				rootPkg.server = pkg.version.split('.').slice(0, 2).join('.');
-			}
+			Log.install("postinstall", pkg.name, pkg.version, dir);
 			if (!pkg.postinstall) return;
 			try {
 				return postinstall.process(pkg.postinstall, {
