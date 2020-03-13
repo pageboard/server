@@ -42,6 +42,9 @@ exports.migrate = function() {
 		});
 	}));
 };
+exports.migrate.schema = {
+	$action: 'write'
+};
 
 exports.seed = function() {
 	var opt = All.opt;
