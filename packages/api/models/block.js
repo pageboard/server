@@ -180,6 +180,7 @@ Block.extendSchema = function extendSchema(name, schemas) {
 			parents: element.parents,
 			upgrade: element.upgrade,
 			output: element.output,
+			standalone: element.standalone,
 			properties: Object.assign({}, blockProps, standProp, {
 				data: Object.assign({}, blockProps.data, {
 					properties: element.properties,
