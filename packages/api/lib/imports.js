@@ -30,10 +30,10 @@ exports.install = function(site, pkg, All) {
 
 		var eltsMap = {};
 		var groups = {};
-		var bundles = [];
+		var bundles = {};
 
 		names.forEach(function(name) {
-			var el = Object.assign({}, elts[name]); // drop proxy
+			var el = elts[name] = Object.assign({}, elts[name]); // drop proxy
 			el.name = name;
 			// backward compatibility with 0.7 extensions names, dropped in favor of output
 			if (updateExtension(el, eltsMap)) return;
@@ -46,9 +46,16 @@ exports.install = function(site, pkg, All) {
 				if (!group.includes(name)) group.push(name);
 			});
 			if (isPage) {
-				el.standalone = el.bundle = true;
+				if (!el.standalone) el.standalone = true;
+				if (!el.bundle) el.bundle = true;
 			}
-			if (el.bundle) bundles.push(el);
+			if (el.bundle === true) {
+				bundles[name] = {};
+			} else if (el.bundle) {
+				if (!bundles[el.bundle]) bundles[el.bundle] = {};
+				if (!bundles[el.bundle].list) bundles[el.bundle].list = [];
+				bundles[el.bundle].list.push(el);
+			}
 		});
 
 		var Block = All.api.Block.extendSchema(id, eltsMap);
@@ -83,9 +90,9 @@ function updateExtension(el, eltsMap) {
 
 exports.validate = function(site, pkg, bundles) {
 	var eltsMap = pkg.eltsMap;
-	return Promise.all(bundles.map(function(el) {
-		el = eltsMap[el.name] = Object.assign({}, el);
-		return bundle(site, pkg, el);
+	return Promise.all(Object.entries(bundles).map(function([name, {list}]) {
+		let el = eltsMap[name];
+		return bundle(site, pkg, el, list);
 	})).then(function() {
 		return bundleSource(site, pkg, null, 'services', All.services).then(function(path) {
 			site.$services = path;
@@ -101,8 +108,8 @@ exports.validate = function(site, pkg, bundles) {
 
 function sortPriority(list) {
 	list.sort(function(a, b) {
-		var pa = a.priority;
-		var pb = b.priority;
+		const pa = a.priority;
+		const pb = b.priority;
 		if (pa == pb) {
 			if (a.path && b.path) return Path.basename(a.path).localeCompare(Path.basename(b.path));
 			else return 0;
@@ -112,16 +119,16 @@ function sortPriority(list) {
 	});
 }
 
-function bundle(site, pkg, rootEl) {
-	var list = listDependencies(pkg, rootEl.group, rootEl);
+function bundle(site, pkg, rootEl, cobundles=[]) {
+	let list = listDependencies(pkg, rootEl.group, rootEl, cobundles.slice());
 	list.sort(function(a, b) {
 		return (a.priority || 0) - (b.priority || 0);
 	});
-	var scripts = sortElements(list, 'scripts');
-	var styles = sortElements(list, 'stylesheets');
-	var prefix = rootEl.name;
+	const scripts = sortElements(list, 'scripts');
+	const styles = sortElements(list, 'stylesheets');
+	const prefix = rootEl.name;
 
-	var eltsMap = {};
+	const eltsMap = {};
 	list.forEach(function(el) {
 		if (!el.standalone) {
 			el = Object.assign({}, el);
@@ -130,35 +137,56 @@ function bundle(site, pkg, rootEl) {
 		}
 		eltsMap[el.name] = el;
 	});
-	var metaEl = Object.assign({}, rootEl);
+	const metaEl = Object.assign({}, rootEl);
+	const metaKeys = Object.keys(eltsMap);
 	site.$bundles[rootEl.name] = {
 		meta: metaEl,
-		elements: Object.keys(eltsMap)
+		elements: metaKeys
 	};
+
 	return Promise.all([
 		All.statics.bundle(site, pkg, scripts, `${prefix}.js`),
 		All.statics.bundle(site, pkg, styles, `${prefix}.css`)
 	]).then(function([scripts, styles]) {
 		rootEl.scripts = scripts;
 		rootEl.stylesheets = styles;
+		cobundles.forEach((el) => {
+			if (el.group == "page") {
+				pkg.eltsMap[el.name].scripts = scripts;
+				pkg.eltsMap[el.name].stylesheets = styles;
+			}
+		});
 
 		return bundleSource(site, pkg, prefix, 'elements', eltsMap).then(function(path) {
 			if (path) metaEl.bundle = path;
 			metaEl.scripts = rootEl.group != "page" ? rootEl.scripts : [];
 			metaEl.stylesheets = rootEl.group != "page" ? rootEl.stylesheets : [];
 			metaEl.resources = rootEl.resources;
+			cobundles.forEach((el) => {
+				if (el.group == "page") {
+					site.$bundles[el.name] = {
+						meta: Object.assign({}, el, {
+							scripts: metaEl.scripts,
+							stylesheets: metaEl.stylesheets,
+							resources: metaEl.resources,
+							bundle: metaEl.bundle
+						}),
+						elements: metaKeys
+					};
+				}
+			});
 		});
 	});
 }
 
 function bundleSource(site, pkg, prefix, name, obj) {
 	if (prefix && prefix.startsWith('ext-')) return Promise.resolve();
-	var filename = [prefix, name].filter(Boolean).join('-') + '.js';
-	var version = site.data.version;
+	const filename = [prefix, name].filter(Boolean).join('-') + '.js';
+	let version = site.data.version;
 	if (version == null) version = site.branch;
-	var sourceUrl = `/.files/${version}/${filename}`;
-	var sourcePath = All.statics.resolve(site.id, sourceUrl);
-	var str = `Pageboard.${name} = Object.assign(Pageboard.${name} || {}, ${toSource(obj)});`;
+	const sourceUrl = `/.files/${version}/${filename}`;
+	const sourcePath = All.statics.resolve(site.id, sourceUrl);
+	const str = `Pageboard.${name} = Object.assign(Pageboard.${name} || {}, ${toSource(obj)});`;
 	return fs.writeFile(sourcePath, str).then(function() {
 		return All.statics.bundle(site, pkg, [sourceUrl], filename);
 	}).then(function(paths) {
