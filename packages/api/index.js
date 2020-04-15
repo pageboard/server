@@ -2,7 +2,6 @@ const objection = require('objection');
 
 const ajv = require('ajv');
 const AjvKeywords = require('ajv-keywords');
-const ajvMetaSchema = require('ajv/lib/refs/json-schema-draft-06.json');
 
 const bodyParser = require.lazy('body-parser');
 const jsonPath = require.lazy('@kapouer/path');
@@ -29,11 +28,11 @@ const ajvApiSettings = {
 };
 const ajvApiWithDefaults = AjvKeywords(ajv(Object.assign({}, ajvApiSettings, {
 	useDefaults: 'empty'
-})).addMetaSchema(ajvMetaSchema));
+})));
 
 const ajvApiWithNoDefaults = AjvKeywords(ajv(Object.assign({}, ajvApiSettings, {
 	useDefaults: false
-})).addMetaSchema(ajvMetaSchema));
+})));
 
 exports = module.exports = function(opt) {
 	opt.plugins.unshift(
@@ -67,7 +66,6 @@ function init(All) {
 	common.Model.createValidator = function() {
 		return new objection.AjvValidator({
 			onCreateAjv: function(ajv) {
-				ajv.addMetaSchema(ajvMetaSchema);
 				AjvKeywords(ajv);
 				ajv.addKeyword('coerce', {
 					modifying: true,
