@@ -1,5 +1,6 @@
 const common = require('./common');
 const Model = common.Model;
+const Traverse = require('json-schema-traverse');
 
 const crypto = require('crypto');
 
@@ -175,6 +176,11 @@ Block.extendSchema = function extendSchema(name, schemas) {
 				default: true
 			}
 		} : {};
+		Traverse(element, {
+			cb: (schema, pointer, root, parentPointer, keyword, parent, name) => {
+				if (schema.type == "string" && schema.format) schema.coerce = true;
+			}
+		});
 		schema.selectCases[type] = {
 			$lock: element.$lock,
 			parents: element.parents,
