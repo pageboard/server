@@ -75,6 +75,10 @@ function init(All) {
 					validate: function(schema, data, parentSchema, path, parent, name) {
 						if (data == null) return true;
 						var format = parentSchema.format;
+						if (parentSchema.type == "string" && parentSchema.nullable && data === "") {
+							parent[name] = null;
+							return true;
+						}
 						if (format != "date" && format != "time" && format != "date-time") return true;
 						var d = new Date(data);
 						if (isNaN(d.getTime())) {
