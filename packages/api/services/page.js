@@ -493,7 +493,7 @@ exports.save = function(req, changes) {
 		// FIXME use site.$model.hrefs to track the blocks with href when saving,
 		// and check all new/changed href have matching row in href table
 		return applyUnrelate(req, changes.unrelate).then(function() {
-			return applyRemove(req, changes.remove);
+			return applyRemove(req, changes.remove, changes.recursive);
 		}).then(function() {
 			return applyAdd(req, changes.add);
 		}).then(function(list) {
@@ -584,10 +584,15 @@ function applyUnrelate({site, trx}, obj) {
 	}));
 }
 
-function applyRemove({site, trx}, list) {
+function applyRemove({site, trx}, list, recursive) {
 	if (!list.length) return;
-	return site.$relatedQuery('children', trx).delete()
-	.whereIn('block.id', list).whereNot('standalone', true);
+	const q = site.$relatedQuery('children', trx).whereIn('block.id', list);
+	console.log("apply remove", recursive, list);
+	if (!recursive) {
+		return q.whereNot('standalone', true);
+	} else {
+		return q.select(raw('recursive_delete(block._id, FALSE) AS count'));
+	}
 }
 
 function applyAdd({site, trx}, list) {
