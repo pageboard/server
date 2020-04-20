@@ -636,23 +636,25 @@ function updatePage({site, trx}, page) {
 	.whereIn('block.type', page.type ? [page.type] : site.$pages)
 	.select(ref('block.data:url').as('url')).first().throwIfNotFound().then(function(dbPage) {
 		var oldUrl = dbPage.url;
+		var oldUrlStr = oldUrl == null ? '' : oldUrl;
 		var newUrl = page.data.url;
 		if (oldUrl == newUrl) return dbPage;
 		var hrefs = site.$model.hrefs;
 		// page.data.url is not a href input, see also page element.
 		return Promise.all(Object.keys(hrefs).map(function(type) {
 			return Promise.all(hrefs[type].map(function(desc) {
-				var key = 'block.data:' + desc.key;
+				var key = 'block.data:' + desc.path;
 				var field = ref(key).castText();
 				var args = field._createRawArgs(All.api.Block.query());
 				return site.$relatedQuery('children', trx).where('block.type', type)
 				.where(function() {
-					this.where(field, 'LIKE', `${oldUrl}/%`)
-					.orWhere(field, oldUrl);
+					this.where(field, 'LIKE', `${oldUrlStr}/%`);
+					if (oldUrl == null) this.orWhereNull(field);
+					else this.orWhere(field, oldUrl);
 				})
 				.patch({
 					[key]: raw(
-						`overlay(${args[0]} placing ? from 1 for ${oldUrl.length})`,
+						`overlay(${args[0]} placing ? from 1 for ${oldUrlStr.length})`,
 						args[1],
 						newUrl
 					)
@@ -663,8 +665,9 @@ function updatePage({site, trx}, page) {
 			return Href.query(trx).where('_parent_id', site._id)
 			.where('type', 'link')
 			.where(function() {
-				this.where('url', 'LIKE', `${oldUrl}/%`)
-				.orWhere('url', oldUrl);
+				this.where('url', 'LIKE', `${oldUrlStr}/%`);
+				if (oldUrl == null) this.orWhereNull('url');
+				else this.orWhere('url', oldUrl);
 			}).delete();
 		}).then(function() {
 			return dbPage;
