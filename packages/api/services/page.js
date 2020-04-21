@@ -587,7 +587,6 @@ function applyUnrelate({site, trx}, obj) {
 function applyRemove({site, trx}, list, recursive) {
 	if (!list.length) return;
 	const q = site.$relatedQuery('children', trx).whereIn('block.id', list);
-	console.log("apply remove", recursive, list);
 	if (!recursive) {
 		return q.whereNot('standalone', true);
 	} else {
