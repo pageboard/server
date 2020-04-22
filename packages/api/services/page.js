@@ -212,7 +212,7 @@ function getParents({site, trx}, url) {
 		ref('block.data:redirect').as('redirect'),
 		ref('block.data:title').as('title')
 	])
-	.where('block.type', 'page')
+	.whereIn('block.type', site.$pages)
 	.whereJsonText('block.data:url', 'IN', urlParents)
 	.orderByRaw("length(block.data->>'url') DESC");
 }
@@ -220,7 +220,7 @@ function getParents({site, trx}, url) {
 function listPages({site, trx}, data) {
 	var q = site.$relatedQuery('children', trx)
 	.selectWithout('content')
-	.whereIn('block.type', data.type || ['page'])
+	.whereIn('block.type', data.type || site.$pages)
 	.where('block.standalone', true);
 	if (!data.drafts) {
 		q.whereNotNull(ref('block.data:url'));
@@ -259,6 +259,7 @@ exports.search = function({site, trx}, data) {
 	if (!data.drafts) {
 		drafts = `AND (page.data->'nositemap' IS NULL OR (page.data->'nositemap')::BOOLEAN IS NOT TRUE)`;
 	}
+	const types = data.type || site.$pages;
 
 	var q = trx.raw(`SELECT json_build_object(
 		'count', count,
@@ -295,17 +296,18 @@ exports.search = function({site, trx}, data) {
 			WHERE
 				site.type = 'site' AND site.id = ?
 				AND rs.parent_id = site._id AND block._id = rs.child_id
-				AND block.type NOT IN ('site', 'user', 'page', 'fetch', 'template', 'api_form', 'query_form', 'priv', 'settings')
+				AND block.type NOT IN ('site', 'user', 'fetch', 'template', 'api_form', 'query_form', 'priv', 'settings', ${site.$pages.map(_ => '?').join(',')})
 				AND rp.child_id = block._id AND page._id = rp.parent_id
 				${drafts}
-				AND page.type IN (${data.type.map(_ => '?').join(',')})
+				AND page.type IN (${types.map(_ => '?').join(',')})
 				AND search.query @@ block.tsv
 		) AS results
 		GROUP BY id, title, url, updated_at ORDER BY rank DESC, updated_at DESC OFFSET ? LIMIT ?
 	) AS foo GROUP BY count`, [
 		data.text,
 		site.id,
-		...data.type,
+		...site.$pages,
+		...types,
 		data.offset,
 		data.limit
 	]);
@@ -360,7 +362,7 @@ exports.search.schema = {
 				type: 'string',
 				format: 'id'
 			},
-			default: ['page']
+			nullable: true
 		}
 	}
 };
@@ -433,7 +435,7 @@ exports.all.schema = {
 				type: 'string',
 				format: 'id'
 			},
-			default: ['page']
+			nullable: true
 		}
 	}
 };
