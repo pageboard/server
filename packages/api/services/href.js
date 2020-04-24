@@ -73,7 +73,7 @@ exports.search = function({site, trx}, data) {
 				if (!href) return [];
 				return All.run('block.search', {site, trx}, {
 					parent: {
-						type: 'page',
+						type: site.$pages,
 						data: {
 							url: url
 						}
