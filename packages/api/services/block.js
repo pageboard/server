@@ -100,8 +100,14 @@ exports.search = function({site, trx}, data) {
 			if (!data.parent.type) throw new HttpError.BadRequest("Missing parent.type");
 			valid = true;
 			q.joinRelated('parents', {alias: 'parent'});
-			schemas[data.parent.type] = site.$schema(data.parent.type);
-			q.whereObject(data.parent, schemas[data.parent.type], 'parent');
+			let pType = data.parent.type;
+			if (pType && typeof pType == "string") {
+				schemas[pType] = site.$schema(pType);
+				q.whereObject(data.parent, schemas[pType], 'parent');
+			} else {
+				q.whereObject(data.parent, {}, 'parent');
+			}
+
 		}
 	}
 	if (data.child && Object.keys(data.child).length) {
