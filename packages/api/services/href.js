@@ -191,7 +191,7 @@ function blindAdd(req, data) {
 	if (isLocal && !data.url.startsWith('/.')) {
 		// consider it's a page
 		p = All.block.find(req, {
-			type: 'page',
+			type: site.$pages,
 			data: {
 				url: objUrl.pathname
 			}
