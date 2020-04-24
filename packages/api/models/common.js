@@ -87,9 +87,9 @@ exports.QueryBuilder = class CommonQueryBuilder extends QueryBuilder {
 		};
 	}
 	selectWithout(...args) {
-		var model = this.modelClass();
-		var table = this.tableRefFor(model);
-		var list = [];
+		const model = this.modelClass();
+		const table = this.tableRefFor(model);
+		const list = [];
 		model.columns.forEach((col) => {
 			if (args.includes(col) == false) list.push(`${table}.${col}`);
 		});
@@ -97,8 +97,8 @@ exports.QueryBuilder = class CommonQueryBuilder extends QueryBuilder {
 	}
 	select(...args) {
 		if (args.length == 0) {
-			var model = this.modelClass();
-			var table = this.tableRefFor(model);
+			const model = this.modelClass();
+			const table = this.tableRefFor(model);
 			args = model.columns.map(col => `${table}.${col}`);
 		}
 		return super.select(...args);
@@ -112,11 +112,11 @@ exports.QueryBuilder = class CommonQueryBuilder extends QueryBuilder {
 		return this.where(...args);
 	}
 	patchObject(obj) {
-		var patchObjectOperation = this._patchObjectOperationFactory();
+		const patchObjectOperation = this._patchObjectOperationFactory();
 		obj = Object.assign({}, obj);
-		var table = this.tableRefFor(this.modelClass());
+		const table = this.tableRefFor(this.modelClass());
 		if (table == "block") {
-			var type = patchObjectOperation.instance && patchObjectOperation.instance.type;
+			const type = patchObjectOperation.instance && patchObjectOperation.instance.type;
 			if (type) {
 				if (obj.type) {
 					if (obj.type != type) throw new Error("Cannot patch object with different type");
@@ -132,11 +132,12 @@ exports.QueryBuilder = class CommonQueryBuilder extends QueryBuilder {
 		return this;
 	}
 	whereObject(obj, schema, alias) {
-		var table = alias || this.tableRefFor(this.modelClass());
-		var refs = asPaths(obj, {}, table, true, schema);
+		// TODO site.$relatedQuery means this._relatedQueryFor == site
+		const table = alias || this.tableRefFor(this.modelClass());
+		const refs = asPaths(obj, {}, table, true, schema);
 		Object.keys(refs).forEach(function(k) {
-			var cond = refs[k];
-			var refk = ref(k);
+			const cond = refs[k];
+			const refk = ref(k);
 			if (cond == null) {
 				this.whereNull(refk);
 			} else if (Array.isArray(cond)) {
@@ -164,7 +165,7 @@ exports.QueryBuilder = class CommonQueryBuilder extends QueryBuilder {
 		return this;
 	}
 	clone() {
-		var builder = super.clone();
+		const builder = super.clone();
 		builder._patchObjectOperationFactory = this._patchObjectOperationFactory;
 		return builder;
 	}
@@ -172,12 +173,12 @@ exports.QueryBuilder = class CommonQueryBuilder extends QueryBuilder {
 
 function asPaths(obj, ret, pre, first, schema) {
 	if (!schema) schema = {};
-	var props = schema.properties || {};
+	const props = schema.properties || {};
 	Object.keys(obj).forEach(function(str) {
-		var val = obj[str];
-		var [key, op] = str.split(':');
-		var schem = props[key] || {};
-		var cur;
+		let val = obj[str];
+		const [key, op] = str.split(':');
+		const schem = props[key] || {};
+		let cur;
 		if (pre) {
 			if (first) {
 				cur = `${pre}.${key}`;
@@ -211,9 +212,9 @@ function asPaths(obj, ret, pre, first, schema) {
 }
 
 function dateRange(val) {
-	var start = new Date(val);
-	var end = new Date(start);
-	var parts = val.split('-');
+	const start = new Date(val);
+	const end = new Date(start);
+	const parts = val.split('-');
 	if (parts.length == 1) {
 		end.setFullYear(end.getFullYear() + 1);
 	} else if (parts.length == 2) {
@@ -230,7 +231,7 @@ function dateRange(val) {
 }
 
 function numericRange(val, type) {
-	var [start, end] = val.split('~').map((n) => (type == "integer" ? parseInt : parseFloat)(n));
+	const [start, end] = val.split('~').map((n) => (type == "integer" ? parseInt : parseFloat)(n));
 	return {
 		range: "numeric",
 		start: start,
@@ -240,8 +241,8 @@ function numericRange(val, type) {
 
 function deepAssign(model, obj) {
 	Object.keys(obj).forEach(function(key) {
-		var val = obj[key];
-		var src = model[key];
+		const val = obj[key];
+		const src = model[key];
 		if (val == null || typeof val != "object" || src == null) {
 			model[key] = val;
 		} else {
