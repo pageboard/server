@@ -59,7 +59,7 @@ exports.get.schema = {
 
 exports.search = function({site, trx}, data) {
 	var schemas = {};
-	if (data.type) {
+	if (data.type && !Array.isArray(data.type)) {
 		schemas[data.type] = site.$schema(data.type);
 	}
 
@@ -415,7 +415,8 @@ function whereSub(q, data, schema, alias = 'block') {
 	var valid = false;
 	if (data.type) {
 		valid = true;
-		q.where(`${alias}.type`, data.type);
+		if (Array.isArray(data.type)) q.whereIn(`${alias}.type`, data.type);
+		else q.where(`${alias}.type`, data.type);
 	} else if (schema) {
 		if (!data.type) throw new HttpError.BadRequest("Missing type");
 	}
