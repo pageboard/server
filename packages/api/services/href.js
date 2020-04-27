@@ -48,8 +48,8 @@ exports.get.schema = {
 
 exports.search = function({site, trx}, data) {
 	// TODO use .page() and/or .resultSize() see objection doc
-	var Href = All.api.Href;
-	var q = Href.query(trx).select().whereSite(site.id);
+	const Href = All.api.Href;
+	let q = Href.query(trx).select().whereSite(site.id);
 
 	if (data.type) {
 		q.whereIn('href.type', data.type);
@@ -85,7 +85,7 @@ exports.search = function({site, trx}, data) {
 						'id:start': hash
 					}
 				}).then(function(obj) {
-					var rows = [];
+					const rows = [];
 					obj.items.forEach((item) => {
 						rows.push(Object.assign({}, href, {
 							title: href.title + ' #' + item.data.id,
@@ -175,18 +175,18 @@ exports.add = function(req, data) {
 };
 
 function blindAdd(req, data) {
-	var {site, trx} = req;
-	var Href = All.api.Href;
-	var url = data.url;
-	var objUrl = URL.parse(url);
-	var isLocal = false;
+	const {site, trx} = req;
+	const Href = All.api.Href;
+	const url = data.url;
+	const objUrl = URL.parse(url);
+	let isLocal = false;
 	if (!objUrl.hostname) objUrl.hostname = site.hostname;
 	if (site.hostname == objUrl.hostname) {
 		data.url = objUrl.path;
 		isLocal = true;
 	}
 
-	var p;
+	let p;
 
 	if (isLocal && !data.url.startsWith('/.')) {
 		// consider it's a page
@@ -195,8 +195,13 @@ function blindAdd(req, data) {
 			data: {
 				url: objUrl.pathname
 			}
+		}).catch(function(err) {
+			if (err.statusCode == 404) {
+				console.error("reinspect cannot find block", data);
+			}
+			throw err;
 		}).then(function(answer) {
-			var block = answer.item;
+			let block = answer.item;
 			return {
 				mime: 'text/html; charset=utf-8',
 				type: 'link',
@@ -238,7 +243,7 @@ exports.add.schema = {
 };
 
 exports.save = function(req, data) {
-	var Href = All.api.Href;
+	const Href = All.api.Href;
 	return exports.get(req, data)
 	.throwIfNotFound()
 	.forUpdate()
@@ -287,7 +292,7 @@ exports.del.schema = {
 };
 
 exports.collect = function({site, trx}, data={}) {
-	var q = All.api.Href.query(trx)
+	const q = All.api.Href.query(trx)
 	.select(
 		raw(`jsonb_object_agg(
 			href.url,
@@ -304,18 +309,18 @@ exports.collect = function({site, trx}, data={}) {
 };
 
 function collectHrefs({site, trx}, data, level) {
-	var q = All.api.Block.query(trx).where('block._id', site._id)
+	let q = All.api.Block.query(trx).where('block._id', site._id)
 	.select('href.url', 'href.meta', 'href.mime');
 	const hrefs = site.$model.hrefs;
 	const types = Object.keys(hrefs);
 
-	var blockRelation = {
+	const blockRelation = {
 		$relation: 'children',
 		$modify: [(q) => {
 			q.whereIn('type', types);
 		}]
 	};
-	var rel = {
+	const rel = {
 		href: {
 			$relation: 'hrefs'
 		},
@@ -344,12 +349,12 @@ function collectHrefs({site, trx}, data, level) {
 		q.whereIn('root.type', site.$pages)
 		.where(ref('root.data:url').castText(), data.url);
 	} else if (data.id != null) {
-		var list = data.id;
+		let list = data.id;
 		if (!Array.isArray(list)) list = [data.id];
 		q.whereIn('root.id', list);
 	}
 
-	var table = ['root', 'root:block', 'root:shared:block'][level];
+	const table = ['root', 'root:block', 'root:shared:block'][level];
 	q.where(function() {
 		Object.entries(hrefs).forEach(([type, list]) => {
 			if (!list.some((desc) => {
@@ -402,15 +407,24 @@ exports.gc = function({trx}, days) {
 
 exports.reinspect = function({site, trx}, data) {
 	const hrefs = site.$model.hrefs;
-	var fhrefs = {};
+	const fhrefs = {};
 	Object.entries(hrefs).forEach(([type, list]) => {
-		var flist = list.filter((desc) => {
+		if (data.type && type != data.type) return;
+		const flist = list.filter((desc) => {
 			return !data.types.length || desc.types.some((type) => {
 				return data.types.includes(type);
 			});
 		});
+		if (site.$pages.includes(type)) flist.push({
+			path: 'url',
+			types: ['link']
+		});
 		if (flist.length) fhrefs[type] = flist;
 	});
+	if (Object.keys(fhrefs).length === 0) {
+		throw new Error(`No types selected: ${data.types.join(',')}`);
+	}
+
 	return All.api.Block.query(trx).select().from(
 		site.$relatedQuery('children', trx).select('block._id')
 		.whereIn('block.type', Object.keys(fhrefs))
@@ -423,9 +437,9 @@ exports.reinspect = function({site, trx}, data) {
 						this.on(function() {
 							list.forEach((desc) => {
 								if (desc.array) {
-									this.orWhere(ref(`data:${desc.path}`).from('block'), '@>', ref('href.url').castJson());
+									this.orOn(ref(`data:${desc.path}`).from('block'), '@>', ref('href.url').castJson());
 								} else {
-									this.orWhere('href.url', ref(`data:${desc.path}`).from('block').castText());
+									this.orOn('href.url', ref(`data:${desc.path}`).from('block').castText());
 								}
 							});
 						});
@@ -439,18 +453,15 @@ exports.reinspect = function({site, trx}, data) {
 	).join('block', 'block._id', 'sub._id')
 	.where('sub.count', 0)
 	.then(function(rows) {
-		var urls = [];
+		const urls = [];
 		rows.forEach((row) => {
-			hrefs[row.type].forEach((desc) => {
-				var url = jsonPath.get(row.data, desc.path);
+			fhrefs[row.type].forEach((desc) => {
+				const url = jsonPath.get(row.data, desc.path);
 				if (url && !urls.includes(url)) urls.push(url);
 			});
 		});
 		return Promise.all(urls.map((url) => {
-			return All.run('href.add', {site, trx}, {url}).catch(function(err) {
-				console.error(err);
-				throw err;
-			});
+			return All.run('href.add', {site, trx}, {url});
 		})).then(function(list) {
 			return {missings: rows.length, added: list.length};
 		});
@@ -464,9 +475,14 @@ exports.reinspect.schema = {
 			type: 'boolean',
 			default: false
 		},
-		types: {
-			title: 'Types',
+		type: {
+			title: 'Type',
 			nullable: true,
+			type: 'string'
+		},
+		types: {
+			title: 'Href Types',
+			default: [],
 			type: 'array',
 			items: {
 				type: 'string'
@@ -476,7 +492,7 @@ exports.reinspect.schema = {
 };
 
 function callInspector(siteId, url, local) {
-	var fileUrl = url;
+	let fileUrl = url;
 	if (local === undefined) local = url.startsWith(`/.uploads/`);
 	if (local) {
 		fileUrl = url.replace(`/.uploads/`, `uploads/${siteId}/`);
