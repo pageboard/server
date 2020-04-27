@@ -457,7 +457,7 @@ exports.reinspect = function({site, trx}, data) {
 		rows.forEach((row) => {
 			fhrefs[row.type].forEach((desc) => {
 				const url = jsonPath.get(row.data, desc.path);
-				if (url && !urls.includes(url)) urls.push(url);
+				if (url && !urls.includes(url) && !url.startsWith('/.well-known/')) urls.push(url);
 			});
 		});
 		return Promise.all(urls.map((url) => {
