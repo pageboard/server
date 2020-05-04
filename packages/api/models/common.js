@@ -135,6 +135,12 @@ exports.QueryBuilder = class CommonQueryBuilder extends QueryBuilder {
 		// TODO site.$relatedQuery means this._relatedQueryFor == site
 		const table = alias || this.tableRefFor(this.modelClass());
 		const refs = asPaths(obj, {}, table, true, schema);
+		const comps = {
+			lt: '<',
+			lte: '<=',
+			gt: '>',
+			gte: '>='
+		};
 		Object.keys(refs).forEach(function(k) {
 			const cond = refs[k];
 			const refk = ref(k);
@@ -142,6 +148,14 @@ exports.QueryBuilder = class CommonQueryBuilder extends QueryBuilder {
 				this.whereNull(refk);
 			} else if (Array.isArray(cond)) {
 				this.where(refk.castText(), 'IN', cond);
+			} else if (typeof cond == "object" && cond.op in comps) {
+				if (cond.val instanceof Date) {
+					this.where(refk.castTo('date'), comps[cond.op], cond.val);
+				} else if (typeof cond.val == "number") {
+					this.where(refk.castFloat(), comps[cond.op], cond.val);
+				} else {
+					this.where(refk.castText(), comps[cond.op], cond.val);
+				}
 			} else if (typeof cond == "object" && cond.range == "date") {
 				this.whereRaw(`'[${cond.start}, ${cond.end})'::daterange @> ??`, [
 					refk.castTo('date')
