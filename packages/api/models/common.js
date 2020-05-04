@@ -192,7 +192,11 @@ function asPaths(obj, ret, pre, first, schema) {
 		}
 		if (Array.isArray(val) || val == null || typeof val != "object") {
 			if (val && typeof val == "string" && schem.type == "string" && (schem.format == "date-time" || schem.format == "date")) {
-				try { val = dateRange(val); } catch(err) { /**/ }
+				if (op) {
+					val = new Date(val);
+				} else {
+					val = dateRange(val);
+				}
 			} else if (schem.type == "boolean" && typeof val != "boolean") {
 				if (val == "false" || val == 0 || !val) val = false;
 				else val = true;
@@ -212,22 +216,26 @@ function asPaths(obj, ret, pre, first, schema) {
 }
 
 function dateRange(val) {
-	const start = new Date(val);
-	const end = new Date(start);
-	const parts = val.split('-');
-	if (parts.length == 1) {
-		end.setFullYear(end.getFullYear() + 1);
-	} else if (parts.length == 2) {
-		end.setMonth(end.getMonth() + 1);
-	} else if (parts.length == 3) {
-		end.setDate(end.getDate() + 1);
-	}
+	try {
+		const start = new Date(val);
+		const end = new Date(start);
+		const parts = val.split('-');
+		if (parts.length == 1) {
+			end.setFullYear(end.getFullYear() + 1);
+		} else if (parts.length == 2) {
+			end.setMonth(end.getMonth() + 1);
+		} else if (parts.length == 3) {
+			end.setDate(end.getDate() + 1);
+		}
 
-	return {
-		range: "date",
-		start: start.toISOString(),
-		end: end.toISOString()
-	};
+		return {
+			range: "date",
+			start: start.toISOString(),
+			end: end.toISOString()
+		};
+	} catch(err) {
+		return new Date(val);
+	}
 }
 
 function numericRange(val, type) {
