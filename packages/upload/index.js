@@ -11,7 +11,7 @@ exports = module.exports = function(opt) {
 	if (!opt.upload.files) opt.upload.files = 100;
 	if (!opt.upload.size) opt.upload.size = 50000000;
 
-	var dest = Path.resolve(opt.dirs.data, "uploads");
+	const dest = Path.resolve(opt.dirs.data, "uploads");
 	console.info(`upload:\t${dest}`);
 	opt.directories.push({
 		from: dest,
@@ -30,11 +30,11 @@ exports = module.exports = function(opt) {
 };
 
 function init(All) {
-	var upload = All.opt.upload;
-	var storage = multer.diskStorage({
+	const upload = All.opt.upload;
+	const storage = multer.diskStorage({
 		destination: function(req, file, cb) {
-			var date = (new Date()).toISOString().split('T').shift().substring(0, 7);
-			var curDest = Path.join(upload.path, req.site.id, date);
+			const date = (new Date()).toISOString().split('T').shift().substring(0, 7);
+			const curDest = Path.join(upload.path, req.site.id, date);
 
 			fs.mkdir(curDest, {recursive: true}).then(function() {
 				cb(null, curDest);
@@ -59,7 +59,7 @@ function init(All) {
 
 	All.app.post('/.api/upload/:id?', function(req, res, next) {
 		Promise.resolve().then(function() {
-			var limits = {
+			const limits = {
 				files: upload.files,
 				size: upload.size,
 				types: ['*/*']
@@ -75,7 +75,7 @@ function init(All) {
 			multer({
 				storage: storage,
 				fileFilter: function(req, file, cb) {
-					var types = limits.types.length ? limits.types : ['*/*'];
+					const types = limits.types.length ? limits.types : ['*/*'];
 					cb(null, !!typeis.is(file.mimetype, types));
 				},
 				limits: {
@@ -87,7 +87,7 @@ function init(All) {
 					return exports.file(req, file);
 				})).then(function(list) {
 					// backward compatibility with elements-write's input href
-					var obj = req.params.id ? {items: list} : list;
+					const obj = req.params.id ? {items: list} : list;
 					res.send(obj);
 				}).catch(next);
 			});
@@ -96,8 +96,8 @@ function init(All) {
 }
 
 exports.file = function({site}, data) {
-	var upload = All.opt.upload;
-	var dest = Path.join(upload.path, site.id);
+	const upload = All.opt.upload;
+	const dest = Path.join(upload.path, site.id);
 	if (!data.filename) data.filename = Path.basename(data.path);
 	if (!data.destination) data.destination = Path.dirname(data.path);
 	if (!data.mimetype) data.mimetype = mime.lookup(Path.extname(data.filename));
@@ -137,7 +137,7 @@ exports.gc = function(id, pathname) {
 	if (!id || !pathname.startsWith('/.uploads')) {
 		return Promise.resolve();
 	}
-	var file = Path.join("uploads", id, pathname);
+	const file = Path.join("uploads", id, pathname);
 	return fs.unlink(file).catch(function() {
 		// ignore error
 	}).then(function() {
