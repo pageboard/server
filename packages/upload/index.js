@@ -41,18 +41,18 @@ function init(All) {
 			}).catch(cb);
 		},
 		filename: function (req, file, cb) {
-			var parts = file.originalname.split('.');
-			var basename = speaking(parts.shift(), {truncate: 128});
-			var extensions = parts.map(function(str) {
-				return speaking(str, {
-					symbols: false,
-					truncate: 8
-				});
-			}).join('.').toLowerCase();
-
+			const parts = file.originalname.split('.');
+			const ext = speaking(parts.pop(), {
+				truncate: 8,
+				symbols: false
+			});
+			const basename = speaking(parts.join('-'), {
+				truncate: 128,
+				symbols: false
+			});
 			crypto.pseudoRandomBytes(4, function (err, raw) {
 				if (err) return cb(err);
-				cb(null, `${basename}-${raw.toString('hex')}.${extensions}`);
+				cb(null, `${basename}-${raw.toString('hex')}.${ext}`);
 			});
 		}
 	});
