@@ -446,8 +446,8 @@ function filterSub(q, data, schema, alias) {
 	var seen = {};
 	orders.forEach(function(order) {
 		var {col, dir} = parseOrder('block', order);
-		if (seen[col.column]) return;
-		seen[col.column] = true;
+		if (seen[col.expression]) return;
+		seen[col.expression] = true;
 		q.orderBy(col, dir);
 	});
 	q.offset(data.offset);
