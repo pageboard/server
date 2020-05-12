@@ -28,7 +28,7 @@ function init(All) {
 }
 
 exports.get = function(req, data) {
-	var q = req.site.$relatedQuery('children', req.trx).select()
+	const q = req.site.$relatedQuery('children', req.trx).select()
 	.where('block.id', data.id);
 	if (data.type) q.where('block.type', data.type);
 	if (data.standalone) q.withGraphFetched('[children(childrenFilter)]').modifiers({
@@ -58,12 +58,12 @@ exports.get.schema = {
 };
 
 exports.search = function({site, trx}, data) {
-	var schemas = {};
+	const schemas = {};
 	if (data.type && !Array.isArray(data.type)) {
 		schemas[data.type] = site.$schema(data.type);
 	}
 
-	var parents = data.parents;
+	let parents = data.parents;
 	if (parents) {
 		if (parents.type) {
 			schemas[parents.type] = site.$schema(parents.type);
@@ -73,21 +73,21 @@ exports.search = function({site, trx}, data) {
 			parents = null;
 		}
 	}
-	var children = data.children;
+	let children = data.children;
 	if (children) {
 		if (children.type) {
 			schemas[children.type] = site.$schema(children.type);
 		}
 	}
-	var valid = false;
-	var q = site.$relatedQuery('children', trx);
+	let valid = false;
+	const q = site.$relatedQuery('children', trx);
 	if (data.parent) {
-		var parentList = data.parent.parents;
+		const parentList = data.parent.parents;
 		if (parentList && Array.isArray(parentList)) {
 			if (parentList.length) {
 				valid = true;
 				parentList.forEach(function(item, i) {
-					var alias = 'parent_' + i;
+					const alias = 'parent_' + i;
 					q.joinRelated('parents', {alias: alias});
 					if (!item.type) throw new HttpError.BadRequest("Missing parents.item.type");
 					schemas[item.type] = site.$schema(item.type);
@@ -116,7 +116,7 @@ exports.search = function({site, trx}, data) {
 		schemas[data.child.type] = site.$schema(data.child.type);
 		q.whereObject(data.child, schemas[data.child.type], 'child');
 	}
-	var eagers = [];
+	const eagers = [];
 
 	valid = filterSub(q, data, schemas[data.type]) || valid;
 	if (!valid) throw new HttpError.BadRequest("Insufficient search parameters");
@@ -124,11 +124,11 @@ exports.search = function({site, trx}, data) {
 
 	if (children) {
 		if (children.count) {
-			var qchildren = Object.assign({}, children);
+			const qchildren = Object.assign({}, children);
 			delete qchildren.count;
 			delete qchildren.limit;
 			delete qchildren.offset;
-			var qc = site.$relatedQuery('children', trx).alias('children');
+			const qc = site.$relatedQuery('children', trx).alias('children');
 			whereSub(qc, qchildren, schemas[children.type], 'children');
 			qc.joinRelated('parents', {alias: 'parents'})
 			.where('parents._id', ref('block._id'));
@@ -154,22 +154,22 @@ exports.search = function({site, trx}, data) {
 	});
 
 	return q.then(function(rows) {
-		var metas = {};
+		const metas = {};
 		Object.keys(schemas).forEach(function(type) {
-			var bundleType = Object.keys(site.$bundles).find((key) => {
+			const bundleType = Object.keys(site.$bundles).find((key) => {
 				return site.$bundles[key].elements.includes(type);
 			});
 			if (bundleType && !metas[bundleType]) {
 				metas[bundleType] = site.$bundles[bundleType].meta;
 			}
 		});
-		var obj = {
+		const obj = {
 			items: rows,
 			offset: data.offset,
 			limit: data.limit,
 			metas: Object.values(metas)
 		};
-		var ids = [];
+		const ids = [];
 		rows.forEach(function(row) {
 			ids.push(row.id);
 			if (parents && parents.first) {
@@ -412,7 +412,7 @@ exports.search.schema = {
 exports.search.external = true;
 
 function whereSub(q, data, schema, alias = 'block') {
-	var valid = false;
+	let valid = false;
 	if (data.type) {
 		valid = true;
 		if (Array.isArray(data.type)) q.whereIn(`${alias}.type`, data.type);
@@ -439,13 +439,13 @@ function whereSub(q, data, schema, alias = 'block') {
 
 function filterSub(q, data, schema, alias) {
 	q.select();
-	var valid = whereSub(q, data, schema, alias);
+	const valid = whereSub(q, data, schema, alias);
 
-	var orders = data.order || [];
+	const orders = data.order || [];
 	orders.push("updated_at");
-	var seen = {};
+	const seen = {};
 	orders.forEach(function(order) {
-		var {col, dir} = parseOrder('block', order);
+		const {col, dir} = parseOrder('block', order);
 		if (seen[col.expression]) return;
 		seen[col.expression] = true;
 		q.orderBy(col, dir);
@@ -480,7 +480,7 @@ delete exports.find.schema.properties.offset;
 exports.find.external = true;
 
 exports.add = function({site, trx}, data) {
-	var parents = data.parents || [];
+	const parents = data.parents || [];
 	delete data.parents;
 
 	return site.$relatedQuery('children', trx).insert(data).then(function(child) {
@@ -543,7 +543,7 @@ exports.add.external = true;
 
 exports.save = function(req, data) {
 	return exports.get(req, data).forUpdate().then(function(block) {
-		var obj ={
+		const obj = {
 			type: block.type,
 			data: data.data
 		};
@@ -617,7 +617,7 @@ exports.del.schema = {
 exports.del.external = true;
 
 exports.write = function(req, data) {
-	var list = data.operations;
+	const list = data.operations;
 	return Promise.all(list.map(function(op) {
 		return All.run(`block.${op.method}`, req, op.item);
 	}));
@@ -678,14 +678,14 @@ exports.gc = function({trx}, days) {
 };
 
 function parseOrder(table, str) {
-	var col = str;
-	var dir = 'asc';
+	let col = str;
+	let dir = 'asc';
 	if (col.startsWith('-')) {
 		dir = 'desc';
 		col = col.substring(1);
 	}
-	var list = col.split('.');
-	var first = list.shift();
+	const list = col.split('.');
+	const first = list.shift();
 	col = `${table}.${first}`;
 	if (list.length > 0) col += `:${list.join('.')}`;
 	return {col: ref(col), dir};
