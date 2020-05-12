@@ -8,6 +8,8 @@
     }],
     "linebreak-style": [2, "unix"],
     "semi": [2, "always"],
+    "no-multi-spaces": ["warn"],
+    "space-infix-ops": ["warn"],
     "no-console": 0,
     "no-unused-vars": ["warn", { "args": "none" }]
   },
