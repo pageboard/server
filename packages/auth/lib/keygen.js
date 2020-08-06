@@ -18,7 +18,7 @@ module.exports = function(All) {
 				type: 'pkcs1',
 				format: 'pem'
 			}
-		}).then(function(keys)  {
+		}).then(function(keys) {
 			return fs.writeFile(keysPath, JSON.stringify(keys)).then(function() {
 				return fs.chmod(keysPath, 0o600);
 			}).then(function() {
