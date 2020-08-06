@@ -1,7 +1,7 @@
 const NodeMailer = require.lazy('nodemailer');
 const AddressParser = require.lazy('addressparser');
 const Transports = {
-	mailgun: require.lazy('nodemailer-mailgun-transport'),
+	mailgun: require.lazy('mailgun-nodemailer-transport'),
 	postmark: require.lazy('nodemailer-postmark-transport')
 };
 const Mailers = {};
@@ -41,8 +41,14 @@ exports = module.exports = function(opt) {
 function init(All) {
 	Object.entries(All.opt.mail).forEach(([purpose, conf]) => {
 		Log.mail(purpose, conf);
+		const transClass = conf.transport[0].toUpperCase() + conf.transport.slice(1) + 'Transport';
+		if (conf.auth && conf.auth.api_key) {
+			console.warn("DEPRECATED: mail.auth.apiKey, not api_key");
+			conf.auth.apiKey = conf.auth.api_key;
+			delete conf.auth.api_key;
+		}
 		Mailers[purpose] = {
-			transport: NodeMailer.createTransport(Transports[conf.transport]({auth: conf.auth})),
+			transport: NodeMailer.createTransport(new Transports[conf.transport][transClass]({auth: conf.auth})),
 			auth: conf.auth,
 			domain: conf.domain,
 			sender: AddressParser(conf.sender)[0]
