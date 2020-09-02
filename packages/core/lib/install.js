@@ -199,7 +199,7 @@ function doInstall(site, pkg, opt) {
 			baseEnv.SSH_AUTH_SOCK = process.env.SSH_AUTH_SOCK;
 		}
 		var args;
-		if (opt.installer.bin == "yarn") {
+		if (opt.installer.bin == "yarn" || opt.installer.bin == 'yarnpkg') {
 			args = [
 				'--ignore-scripts',
 				'--non-interactive',
@@ -208,7 +208,7 @@ function doInstall(site, pkg, opt) {
 				'add',
 				module
 			];
-		} else {
+		} else if (opt.install.bin == 'npm') {
 			args = [
 				'install',
 				'--ignore-scripts',
@@ -219,6 +219,8 @@ function doInstall(site, pkg, opt) {
 				'--save',
 				module
 			];
+		} else {
+			throw new Error("Unknown install.bin option, expected yarn or npm, got", opt.install.bin);
 		}
 		var command = `${opt.installer.path} ${args.join(' ')}`;
 		return exec(command, {
