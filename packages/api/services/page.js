@@ -48,6 +48,8 @@ function init(All) {
 			// this must not be confused with page.lock
 			req.query.drafts = true;
 			if (!req.query.type) req.query.type = req.site.$pages;
+		} else {
+			if (!req.query.type) req.query.type = ['page', 'blog'];
 		}
 
 		var action = req.query.text != null ? 'page.search' : 'page.all';
