@@ -81,7 +81,7 @@ function init(All) {
 	});
 
 	All.app.get('/.well-known/sitemap.txt', All.cache.tag('data-:site'), function(req, res, next) {
-		All.run('page.all', req, {robot:true}).then(function(obj) {
+		All.run('page.all', req, {robot:true, type:['page', 'blog']}).then(function(obj) {
 			res.type('text/plain');
 			All.auth.filter(req, obj);
 			res.send(obj.items.map(page => req.site.href + page.data.url).join('\n'));
@@ -782,7 +782,7 @@ exports.robots = function(req) {
 	if (req.site.data.env == "production") {
 		lines.push(`Sitemap: ${req.site.href}/.well-known/sitemap.txt`);
 		lines.push('User-agent: *');
-		p = listPages(req, {disallow: true}).then(function(pages) {
+		p = listPages(req, {disallow: true, type: ['page', 'blog']}).then(function(pages) {
 			pages.forEach(function(page) {
 				lines.push(`Disallow: ${page.data.url}`);
 			});
