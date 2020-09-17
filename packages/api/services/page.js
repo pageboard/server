@@ -206,7 +206,7 @@ function redUrl(obj) {
 function getParents({site, trx}, url) {
 	var urlParts = url.split('/');
 	var urlParents = ['/'];
-	for (var i=1; i < urlParts.length - 1; i++) {
+	for (var i = 1; i < urlParts.length - 1; i++) {
 		urlParents.push(urlParts.slice(0, i + 1).join('/'));
 	}
 	return site.$relatedQuery('children', trx).select([
