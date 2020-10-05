@@ -80,7 +80,7 @@ function init(All) {
 		}).catch(next);
 	});
 
-	All.app.get('/.well-known/sitemap.txt', All.cache.tag('data-:site'), function(req, res, next) {
+	All.app.get('/sitemap.txt', All.cache.tag('data-:site'), function(req, res, next) {
 		All.run('page.all', req, {robot:true, type:['page', 'blog']}).then(function(obj) {
 			res.type('text/plain');
 			All.auth.filter(req, obj);
@@ -780,7 +780,7 @@ exports.robots = function(req) {
 	var lines = [];
 	var p;
 	if (req.site.data.env == "production") {
-		lines.push(`Sitemap: ${req.site.href}/.well-known/sitemap.txt`);
+		lines.push(`Sitemap: ${req.site.href}/sitemap.txt`);
 		lines.push('User-agent: *');
 		p = listPages(req, {disallow: true, type: ['page', 'blog']}).then(function(pages) {
 			pages.forEach(function(page) {
