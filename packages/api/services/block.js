@@ -541,13 +541,13 @@ exports.add.schema = {
 };
 exports.add.external = true;
 
-exports.save = function(req, data) {
+exports.save = function (req, data) {
 	return exports.get(req, data).forUpdate().then(function(block) {
 		const obj = {
-			type: block.type,
-			data: data.data
+			type: block.type
 		};
-		if (data.lock) obj.lock = data.lock;
+		if (data.data && Object.keys(data.data).length) obj.data = data.data;
+		if (data.lock && Object.keys(data.lock).length) obj.lock = data.lock;
 		return block.$query(req.trx).patchObject(obj).then(function() {
 			if (!block) throw new Error(`Block not found for update ${data.id}`);
 			return block;
