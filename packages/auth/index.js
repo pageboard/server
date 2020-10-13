@@ -59,8 +59,10 @@ exports.filterResponse = function(req, obj, fn) {
 		obj.item = filter(req, item, fn);
 		if (!obj.item.type) delete obj.items;
 	}
-	if (obj.items) obj.items = obj.items.map(function(item) {
+	if (obj.items) obj.items = obj.items.map(function (item) {
 		return filter(req, item, fn);
+	}).filter((item) => {
+		return item && item.type;
 	});
 	return obj;
 };
