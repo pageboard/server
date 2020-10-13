@@ -55,9 +55,18 @@ exports.submit = function(req, data) {
 					delete body[key];
 				}
 			});
-			Object.keys(el.properties).forEach(function(key) {
-				var val = body[key];
-				if (val !== undefined) newBody[key] = val;
+			Object.keys(el.properties).forEach(function (key) {
+				var mkey = '$' + key;
+				var mval = body[mkey];
+				if (mval !== undefined) {
+					newBody[key] = mval;
+				} else {
+					var val = body[key];
+					if (val !== undefined) {
+						console.warn(`Use $${key} for setting el.properties[key]`);
+						newBody[key] = val;
+					}
+				}
 			});
 			body = newBody;
 		}
