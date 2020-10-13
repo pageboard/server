@@ -276,7 +276,7 @@ function deepAssign(model, obj) {
 
 class PatchObjectOperation extends UpdateOperation {
 	onBuildKnex(knexBuilder, builder) {
-		const json = this.model.$toDatabaseJson(builder.knex());
+		const json = this.model.$toDatabaseJson(builder);
 		const jsonPaths = asPaths(json, {}, "", true);
 		const convertedJson = this.convertFieldExpressionsToRaw(builder, jsonPaths);
 
@@ -285,10 +285,8 @@ class PatchObjectOperation extends UpdateOperation {
 	convertFieldExpressionsToRaw(builder, json) {
 		const knex = builder.knex();
 		const convertedJson = {};
-		const keys = Object.keys(json);
 
-		for (let i = 0, l = keys.length; i < l; ++i) {
-			let key = keys[i];
+		for (const key of Object.keys(json)) {
 			let val = json[key];
 
 			if (key.indexOf(':') > -1) {
@@ -296,7 +294,7 @@ class PatchObjectOperation extends UpdateOperation {
 				// "col" : raw(`jsonb_set("col", '{attr}', to_jsonb("other"#>'{lol}'), true)`)
 
 				let parsed = ref(key);
-				let jsonRefs = '{' + parsed._parsedExpr.access.map(it => it.ref).join(',') + '}';
+				let jsonRefs = '{' + parsed.parsedExpr.access.map(it => it.ref).join(',') + '}';
 				let valuePlaceholder = '?';
 
 				if (isKnexQueryBuilder(val) || isKnexRaw(val)) {
@@ -305,10 +303,13 @@ class PatchObjectOperation extends UpdateOperation {
 					val = JSON.stringify(val);
 				}
 
-				convertedJson[parsed.column] = knex.raw(
-					`jsonb_set_recursive(??, '${jsonRefs}', ${valuePlaceholder})`,
-					[convertedJson[parsed.column] || parsed.column, val]
-				);
+				convertedJson[
+				parsed.column
+				] = knex.raw(`jsonb_set_recursive(??, '${jsonRefs}', ${valuePlaceholder})`, [
+					convertedJson[parsed.column] || parsed.column,
+					val
+				]);
+
 				delete this.model[key];
 			} else {
 				convertedJson[key] = val;
