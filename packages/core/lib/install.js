@@ -208,7 +208,7 @@ function doInstall(site, pkg, opt) {
 				'add',
 				module
 			];
-		} else if (opt.install.bin == 'npm') {
+		} else if (opt.installer.bin == 'npm') {
 			args = [
 				'install',
 				'--ignore-scripts',
@@ -220,7 +220,7 @@ function doInstall(site, pkg, opt) {
 				module
 			];
 		} else {
-			throw new Error("Unknown install.bin option, expected yarn or npm, got", opt.install.bin);
+			throw new Error("Unknown install.bin option, expected yarn or npm, got", opt.installer.bin);
 		}
 		var command = `${opt.installer.path} ${args.join(' ')}`;
 		return exec(command, {
