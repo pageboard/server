@@ -17,9 +17,9 @@
   },
   "homepage": "https://github.com/pageboard/server#readme",
   "dependencies": {
-    "fast-json-stable-stringify": "^2.1.0",
+    "fast-json-stable-stringify": "^2.0.0",
     "glob": "^7.1.2",
-    "got": "^11.5.0",
+    "got": "^8.3.0",
     "upcache": "^2.1.0"
   },
   "pageboard": true
