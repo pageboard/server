@@ -268,6 +268,7 @@ exports.search = function({site, trx}, data) {
 		'rows', json_agg(
 			json_build_object(
 				'id', id,
+				'type', type,
 				'updated_at', updated_at,
 				'data', json_build_object(
 					'title', title,
@@ -278,11 +279,12 @@ exports.search = function({site, trx}, data) {
 			)
 		)) AS result FROM (
 		SELECT
-			id, title, url, updated_at, json_agg(DISTINCT headlines) AS headlines, sum(qrank) AS rank,
+			id, type, title, url, updated_at, json_agg(DISTINCT headlines) AS headlines, sum(qrank) AS rank,
 			count(*) OVER() AS count
 		FROM (
 			SELECT
 				page.id,
+				page.type,
 				page.data->>'title' AS title,
 				page.data->>'url' AS url,
 				page.updated_at,
