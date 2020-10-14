@@ -304,7 +304,7 @@ exports.search = function({site, trx}, data) {
 				AND page.type IN (${types.map(_ => '?').join(',')})
 				AND search.query @@ block.tsv
 		) AS results
-		GROUP BY id, title, url, updated_at ORDER BY rank DESC, updated_at DESC OFFSET ? LIMIT ?
+		GROUP BY id, type, title, url, updated_at ORDER BY rank DESC, updated_at DESC OFFSET ? LIMIT ?
 	) AS foo GROUP BY count`, [
 		data.text,
 		site.id,
