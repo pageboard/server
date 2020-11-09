@@ -84,7 +84,7 @@ function init(All) {
 						}
 						if (format != "date" && format != "time" && format != "date-time") return true;
 						var d = new Date(data);
-						if (isNaN(d.getTime())) {
+						if (Number.isNaN(d.getTime())) {
 							parent[name] = null;
 						} else {
 							data = d.toISOString();
