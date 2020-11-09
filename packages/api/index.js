@@ -70,13 +70,14 @@ function init(All) {
 				ajv.addKeyword('coerce', {
 					modifying: true,
 					type: 'string',
-					validate: function(schema, data, parentSchema, path, parent, name) {
+					errors: false,
+					validate: function (schema, data, parentSchema, path, parent, name) {
 						if (data == null) return true;
 						var format = parentSchema.format;
-						if (parentSchema.type == "string" && parentSchema.nullable && data === "") {
+						if (parentSchema.type == "string" && data === "") {
 							if (parentSchema.default !== undefined) {
 								parent[name] = parentSchema.default;
-							} else {
+							} else if (parentSchema.nullable) {
 								delete parent[name];
 							}
 							return true;
