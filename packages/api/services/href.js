@@ -337,7 +337,6 @@ exports.collect = function ({ site, trx }, data = {}) {
 			) AS hrefs`))
 		.where('href._parent_id', site._id)
 		.join('list', 'href.url', 'list.url');
-	console.log(q.toKnexQuery().toString());
 	return q;
 };
 
