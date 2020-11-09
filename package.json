@@ -32,5 +32,17 @@
     "@pageboard/prerender": "link:./packages/prerender",
     "@pageboard/statics": "link:./packages/statics",
     "@pageboard/upload": "link:./packages/upload"
+  },
+  "eslintConfig": {
+    "extends": "@kapouer/eslint-config",
+    "globals": {
+      "All": true,
+      "HttpError": true,
+      "Text": true,
+      "Log": true
+    }
+  },
+  "devDependencies": {
+    "@kapouer/eslint-config": "^1.1.1"
   }
 }
