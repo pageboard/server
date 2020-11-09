@@ -303,19 +303,19 @@ exports.collect = function ({ site, trx }, data = {}) {
 				});
 			})) return;
 			list.forEach(desc => {
-				urlQueries.push(
-					Block.query(trx)
-						.select(
-							desc.array
-								? raw("jsonb_array_elements_text(??) AS url", [
-									ref(`data:${desc.path}`)
-								])
-								: ref(`data:${desc.path}`).castText().as('url')
-						)
-						.from('blocks')
-						.where('type', type)
-						.whereNotNull(ref(`data:${desc.path}`))
-				);
+				const bq = Block.query(trx).from('blocks')
+					.where('type', type)
+					.whereNotNull(ref(`data:${desc.path}`));
+				if (desc.array) {
+					bq.select(raw("jsonb_array_elements_text(??) AS url", [
+						ref(`data:${desc.path}`)
+					]));
+					bq.where(raw("jsonb_typeof(??)", [ref(`data:${desc.path}`)]), 'array');
+				} else {
+					bq.select(ref(`data:${desc.path}`).castText().as('url'));
+				}
+
+				urlQueries.push(bq);
 			});
 		});
 		q.unionAll(urlQueries, true);
