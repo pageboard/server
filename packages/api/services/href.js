@@ -1,9 +1,9 @@
 const Path = require('path');
 const URL = require('url');
-const {ref, raw, val} = require('objection');
+const { ref, raw, val } = require('objection');
 const jsonPath = require.lazy('@kapouer/path');
 
-exports = module.exports = function(opt) {
+exports = module.exports = function (opt) {
 	this.opt = opt;
 	return {
 		name: 'href',
@@ -12,27 +12,27 @@ exports = module.exports = function(opt) {
 };
 
 function init(All) {
-	All.app.get("/.api/hrefs", All.auth.lock('webmaster'), function(req, res, next) {
-		All.run('href.search', req, req.query).then(function(href) {
+	All.app.get("/.api/hrefs", All.auth.lock('webmaster'), function (req, res, next) {
+		All.run('href.search', req, req.query).then(function (href) {
 			res.send(href);
 		}).catch(next);
 	});
-	All.app.post("/.api/href", All.auth.lock('webmaster'), function(req, res, next) {
-		All.run('href.add', req, req.body).then(function(href) {
+	All.app.post("/.api/href", All.auth.lock('webmaster'), function (req, res, next) {
+		All.run('href.add', req, req.body).then(function (href) {
 			res.send(href);
 		}).catch(next);
 	});
-	All.app.delete("/.api/href", All.auth.lock('webmaster'), function(req, res, next) {
-		All.run('href.del', req, req.query).then(function(href) {
+	All.app.delete("/.api/href", All.auth.lock('webmaster'), function (req, res, next) {
+		All.run('href.del', req, req.query).then(function (href) {
 			res.send(href);
 		}).catch(next);
 	});
 }
 
-exports.get = function({site, trx}, data) {
+exports.get = function ({ site, trx }, data) {
 	return All.api.Href.query(trx).select('href._id')
-	.whereSite(site.id)
-	.where('href.url', data.url).first();
+		.whereSite(site.id)
+		.where('href.url', data.url).first();
 };
 
 exports.get.schema = {
@@ -46,7 +46,7 @@ exports.get.schema = {
 	}
 };
 
-exports.search = function({site, trx}, data) {
+exports.search = function ({ site, trx }, data) {
 	// TODO use .page() and/or .resultSize() see objection doc
 	const Href = All.api.Href;
 	let q = Href.query(trx).select().whereSite(site.id);
@@ -69,9 +69,9 @@ exports.search = function({site, trx}, data) {
 		const [url, hash] = data.url.split('#');
 		q.where('url', url);
 		if (url.startsWith('/') && hash != null) {
-			q = q.first().then(function(href) {
+			q = q.first().then(function (href) {
 				if (!href) return [];
-				return All.run('block.search', {site, trx}, {
+				return All.run('block.search', { site, trx }, {
 					parent: {
 						type: site.$pages,
 						data: {
@@ -84,7 +84,7 @@ exports.search = function({site, trx}, data) {
 					data: {
 						'id:start': hash
 					}
-				}).then(function(obj) {
+				}).then(function (obj) {
 					const rows = [];
 					obj.items.forEach((item) => {
 						rows.push(Object.assign({}, href, {
@@ -111,7 +111,7 @@ exports.search = function({site, trx}, data) {
 		q.where('href.visible', true);
 		q.orderBy('updated_at', 'desc');
 	}
-	return q.then(function(rows) {
+	return q.then(function (rows) {
 		return {
 			data: rows,
 			offset: data.offset,
@@ -164,8 +164,8 @@ exports.search.schema = {
 	}
 };
 
-exports.add = function(req, data) {
-	return All.run('href.search', req, data).then(function(obj) {
+exports.add = function (req, data) {
+	return All.run('href.search', req, data).then(function (obj) {
 		if (obj.data.length > 0) {
 			return obj.data[0];
 		} else {
@@ -175,7 +175,7 @@ exports.add = function(req, data) {
 };
 
 function blindAdd(req, data) {
-	const {site, trx} = req;
+	const { site, trx } = req;
 	const Href = All.api.Href;
 	const url = data.url;
 	const objUrl = URL.parse(url);
@@ -195,12 +195,12 @@ function blindAdd(req, data) {
 			data: {
 				url: objUrl.pathname
 			}
-		}).catch(function(err) {
+		}).catch(function (err) {
 			if (err.statusCode == 404) {
 				console.error("reinspect cannot find block", data);
 			}
 			throw err;
-		}).then(function(answer) {
+		}).then(function (answer) {
 			let block = answer.item;
 			return {
 				mime: 'text/html; charset=utf-8',
@@ -214,18 +214,18 @@ function blindAdd(req, data) {
 	} else {
 		p = callInspector(site.id, data.url, isLocal);
 	}
-	return p.then(function(result) {
+	return p.then(function (result) {
 		if (!isLocal && result.url != data.url) {
 			result.canonical = result.url;
 			result.url = data.url;
 			result.pathname = objUrl.pathname;
 		}
-		return exports.get(req, data).forUpdate().then(function(href) {
+		return exports.get(req, data).forUpdate().then(function (href) {
 			if (!href) {
 				return site.$relatedQuery('hrefs', trx).insert(result).returning(Href.columns);
 			} else {
 				return site.$relatedQuery('hrefs', trx).patchObject(result).where('_id', href._id)
-				.first().returning(Href.columns);
+					.first().returning(Href.columns);
 			}
 		});
 	});
@@ -242,16 +242,16 @@ exports.add.schema = {
 	}
 };
 
-exports.save = function(req, data) {
+exports.save = function (req, data) {
 	const Href = All.api.Href;
 	return exports.get(req, data)
-	.throwIfNotFound()
-	.forUpdate()
-	.then(function(href) {
-		return req.site.$relatedQuery('hrefs', req.trx).patchObject({
-			title: data.title
-		}).where('_id', href._id).first().returning(Href.columns);
-	});
+		.throwIfNotFound()
+		.forUpdate()
+		.then(function (href) {
+			return req.site.$relatedQuery('hrefs', req.trx).patchObject({
+				title: data.title
+			}).where('_id', href._id).first().returning(Href.columns);
+		});
 };
 
 exports.save.schema = {
@@ -269,11 +269,11 @@ exports.save.schema = {
 	}
 };
 
-exports.del = function(req, data) {
-	return exports.get(req, data).throwIfNotFound().then(function(href) {
+exports.del = function (req, data) {
+	return exports.get(req, data).throwIfNotFound().then(function (href) {
 		return req.site.$relatedQuery('hrefs', req.trx).patchObject({
 			visible: false
-		}).where('_id', href._id).then(function() {
+		}).where('_id', href._id).then(function () {
 			href.visible = false;
 			return href;
 		});
@@ -380,7 +380,7 @@ function collectHrefs({site, trx}, data, level) {
 }
 
 
-exports.gc = function({trx}, days) {
+exports.gc = function ({ trx }, days) {
 	return Promise.resolve([]);
 	// TODO use sites schemas to known which paths to check:
 	// for example, data.url comes from elements.image.properties.url.input.name == "href"
@@ -405,7 +405,7 @@ exports.gc = function({trx}, days) {
 	*/
 };
 
-exports.reinspect = function({site, trx}, data) {
+exports.reinspect = function ({ site, trx }, data) {
 	const hrefs = site.$model.hrefs;
 	const fhrefs = {};
 	Object.entries(hrefs).forEach(([type, list]) => {
@@ -427,45 +427,45 @@ exports.reinspect = function({site, trx}, data) {
 
 	return All.api.Block.query(trx).select().from(
 		site.$relatedQuery('children', trx).select('block._id')
-		.whereIn('block.type', Object.keys(fhrefs))
-		.leftOuterJoin('href', function() {
-			this.on('href._parent_id', site._id);
-			this.on(function() {
-				Object.entries(fhrefs).forEach(([type, list]) => {
-					this.orOn(function() {
-						this.on('block.type', val(type));
-						this.on(function() {
-							list.forEach((desc) => {
-								if (desc.array) {
-									this.orOn(ref(`data:${desc.path}`).from('block'), '@>', ref('href.url').castJson());
-								} else {
-									this.orOn('href.url', ref(`data:${desc.path}`).from('block').castText());
-								}
+			.whereIn('block.type', Object.keys(fhrefs))
+			.leftOuterJoin('href', function () {
+				this.on('href._parent_id', site._id);
+				this.on(function () {
+					Object.entries(fhrefs).forEach(([type, list]) => {
+						this.orOn(function () {
+							this.on('block.type', val(type));
+							this.on(function () {
+								list.forEach((desc) => {
+									if (desc.array) {
+										this.orOn(ref(`data:${desc.path}`).from('block'), '@>', ref('href.url').castJson());
+									} else {
+										this.orOn('href.url', ref(`data:${desc.path}`).from('block').castText());
+									}
+								});
 							});
 						});
 					});
 				});
-			});
-		})
-		.groupBy('block._id')
-		.count({count: 'href.*'})
-		.as('sub')
+			})
+			.groupBy('block._id')
+			.count({ count: 'href.*' })
+			.as('sub')
 	).join('block', 'block._id', 'sub._id')
-	.where('sub.count', 0)
-	.then(function(rows) {
-		const urls = [];
-		rows.forEach((row) => {
-			fhrefs[row.type].forEach((desc) => {
-				const url = jsonPath.get(row.data, desc.path);
-				if (url && !urls.includes(url) && !url.startsWith('/.well-known/')) urls.push(url);
+		.where('sub.count', 0)
+		.then(function (rows) {
+			const urls = [];
+			rows.forEach((row) => {
+				fhrefs[row.type].forEach((desc) => {
+					const url = jsonPath.get(row.data, desc.path);
+					if (url && !urls.includes(url) && !url.startsWith('/.well-known/')) urls.push(url);
+				});
+			});
+			return Promise.all(urls.map((url) => {
+				return All.run('href.add', { site, trx }, { url });
+			})).then(function (list) {
+				return { missings: rows.length, added: list.length };
 			});
 		});
-		return Promise.all(urls.map((url) => {
-			return All.run('href.add', {site, trx}, {url});
-		})).then(function(list) {
-			return {missings: rows.length, added: list.length};
-		});
-	});
 };
 exports.reinspect.schema = {
 	$action: 'write',
@@ -501,7 +501,7 @@ function callInspector(siteId, url, local) {
 	return All.inspector.get({
 		url: fileUrl,
 		local: local
-	}).then(function(obj) {
+	}).then(function (obj) {
 		if (local) {
 			obj.site = null;
 			obj.url = url;
