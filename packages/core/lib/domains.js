@@ -315,7 +315,7 @@ Domains.prototype.error = function(site, err) {
 function hostUpdatePort(host, header) {
 	var parts = header.split(':');
 	var port = parts.length == 2 ? parseInt(parts[1]) : null;
-	if (!isNaN(port)) host.port = port;
+	if (!Number.isNaN(port)) host.port = port;
 	else delete host.port;
 }
 

@@ -317,7 +317,7 @@ function servicesError(err, req, res, next) {
 	var msg = err.message || err.toString();
 	var fullCode = err.statusCode || err.code;
 	var code = parseInt(fullCode);
-	if (isNaN(code) || code < 200 || code >= 600) {
+	if (Number.isNaN(code) || code < 200 || code >= 600) {
 		msg += "\nerror code: " + fullCode;
 		code = 500;
 	}
@@ -330,7 +330,7 @@ function servicesError(err, req, res, next) {
 
 function filesError(err, req, res, next) {
 	var code = parseInt(err.statusCode || err.code);
-	if (isNaN(code) || code < 200 || code >= 600) {
+	if (Number.isNaN(code) || code < 200 || code >= 600) {
 		code = 500;
 	}
 	if (code >= 500) console.error(err);
@@ -342,7 +342,7 @@ function filesError(err, req, res, next) {
 
 function viewsError(err, req, res, next) {
 	var code = parseInt(err.statusCode || err.code);
-	if (isNaN(code) || code < 200 || code >= 600) {
+	if (Number.isNaN(code) || code < 200 || code >= 600) {
 		code = 500;
 	}
 	if (res.headersSent) {
