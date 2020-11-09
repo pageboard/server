@@ -304,7 +304,7 @@ class PatchObjectOperation extends UpdateOperation {
 				}
 
 				convertedJson[
-				parsed.column
+					parsed.column
 				] = knex.raw(`jsonb_set_recursive(??, '${jsonRefs}', ${valuePlaceholder})`, [
 					convertedJson[parsed.column] || parsed.column,
 					val
