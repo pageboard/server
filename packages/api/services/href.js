@@ -291,29 +291,64 @@ exports.del.schema = {
 	}
 };
 
-exports.collect = function({site, trx}, data={}) {
+exports.collect = function ({ site, trx }, data = {}) {
+	const hrefs = site.$model.hrefs;
+	const Block = All.api.Block;
+	const qList = (q) => {
+		const urlQueries = [];
+		Object.entries(hrefs).forEach(([type, list]) => {
+			if (!list.some((desc) => {
+				return desc.types.some((type) => {
+					return ['image', 'video', 'audio', 'svg'].includes(type);
+				});
+			})) return;
+			list.forEach(desc => {
+				urlQueries.push(
+					Block.query(trx)
+						.select(
+							desc.array
+								? raw("jsonb_array_elements_text(??) AS url", [
+									ref(`data:${desc.path}`)
+								])
+								: ref(`data:${desc.path}`).castText().as('url')
+						)
+						.from('blocks')
+						.where('type', type)
+						.whereNotNull(ref(`data:${desc.path}`))
+				);
+			});
+		});
+		q.unionAll(urlQueries, true);
+	};
+
+	const qBlocks = (q) => {
+		q.unionAll([
+			collectBlockUrls({ site, trx }, data, 0),
+			collectBlockUrls({ site, trx }, data, 1),
+			collectBlockUrls({ site, trx }, data, 2)
+		], true);
+	};
 	const q = All.api.Href.query(trx)
-	.select(
-		raw(`jsonb_object_agg(
-			href.url,
-			jsonb_set(href.meta, '{mime}', to_jsonb(href.mime))
-		) AS hrefs`)
-	).from((builder) => {
-		builder.union([
-			collectHrefs({site, trx}, data, 0),
-			collectHrefs({site, trx}, data, 1),
-			collectHrefs({site, trx}, data, 2)
-		]).as('href');
-	});
+		.with('blocks', qBlocks)
+		.with('list', qList)
+		.select(raw(`jsonb_object_agg(
+				href.url,
+				jsonb_set(href.meta, '{mime}', to_jsonb(href.mime))
+			) AS hrefs`))
+		.where('href._parent_id', site._id)
+		.join('list', 'href.url', 'list.url');
+	console.log(q.toKnexQuery().toString());
 	return q;
 };
 
-function collectHrefs({site, trx}, data, level) {
-	let q = All.api.Block.query(trx).where('block._id', site._id)
-	.select('href.url', 'href.meta', 'href.mime');
+function collectBlockUrls({ site, trx }, data, level) {
 	const hrefs = site.$model.hrefs;
 	const types = Object.keys(hrefs);
+	const table = ['root', 'root:block', 'root:shared:block'][level];
 
+	const qRoot = All.api.Block.query(trx)
+		.select(table + '.*')
+		.where('block._id', site._id);
 	const blockRelation = {
 		$relation: 'children',
 		$modify: [(q) => {
@@ -321,9 +356,6 @@ function collectHrefs({site, trx}, data, level) {
 		}]
 	};
 	const rel = {
-		href: {
-			$relation: 'hrefs'
-		},
 		root: {
 			$relation: 'children',
 			$modify: [(q) => {
@@ -344,39 +376,16 @@ function collectHrefs({site, trx}, data, level) {
 		};
 		delete rel.root.block;
 	}
-	q.joinRelated(rel);
+	qRoot.joinRelated(rel);
 	if (data.url) {
-		q.whereIn('root.type', site.$pages)
-		.where(ref('root.data:url').castText(), data.url);
+		qRoot.whereIn('root.type', site.$pages)
+			.where(ref('root.data:url').castText(), data.url);
 	} else if (data.id != null) {
 		let list = data.id;
 		if (!Array.isArray(list)) list = [data.id];
-		q.whereIn('root.id', list);
+		qRoot.whereIn('root.id', list);
 	}
-
-	const table = ['root', 'root:block', 'root:shared:block'][level];
-	q.where(function() {
-		Object.entries(hrefs).forEach(([type, list]) => {
-			if (!list.some((desc) => {
-				return desc.types.some((type) => {
-					return ['image', 'video', 'audio', 'svg'].includes(type);
-				});
-			})) return;
-			this.orWhere(function() {
-				this.where(table + '.type', type);
-				this.where(function() {
-					list.forEach((desc) => {
-						if (desc.array) {
-							this.orWhere(ref(`data:${desc.path}`).from(table), '@>', ref('href.url').castJson());
-						} else {
-							this.orWhere('href.url', ref(`data:${desc.path}`).from(table).castText());
-						}
-					});
-				});
-			});
-		});
-	});
-	return q;
+	return qRoot;
 }
 
 
