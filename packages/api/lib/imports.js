@@ -240,7 +240,7 @@ function sortElements(elements, prop) {
 		if (!list) return;
 		if (typeof list == "string") list = [list];
 		var url, prev;
-		for (var i=0; i < list.length; i++) {
+		for (var i = 0; i < list.length; i++) {
 			url = list[i];
 			prev = map[url];
 			if (prev) {
