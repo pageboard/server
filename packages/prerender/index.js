@@ -185,15 +185,17 @@ function prerender(req, res, next) {
 	// backward compat
 	var ext = Path.extname(path);
 	if (ext) {
-		path = path.slice(0, -ext.length); // urlRegex does not allow extname
 		ext = ext.substring(1);
 		var extEl = req.site.$schema(ext);
-		if (extEl) el = extEl;
-		else ext = null;
+		if (extEl) {
+			el = extEl;
+			path = path.slice(0, -ext.length -1); // urlRegex does not allow extname
+		}
 	}
+	res.vary('Accept');
 
 	if (urlRegex.test(path) == false) {
-		if (req.xhr || !req.accepts('text/html')) {
+		if (req.accepts(['json', 'html']) == 'json') {
 			throw new HttpError.NotFound("Malformed path");
 		} else {
 			pipeline(got.stream(req.site.href + '/.well-known/404', {
