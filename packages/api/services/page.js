@@ -713,9 +713,9 @@ function applyRelate({site, trx}, obj) {
 						})) list.push(id);
 						return list;
 					}, []);
-					throw new HttpError.NotFound("Missing children: " + missing.join(', '));
 				}
 				return parent.$relatedQuery('children', trx).relate(unrelateds);
+							throw HttpError(404, "Unknown blocks", { blocks: missing });
 			});
 		});
 	}));
