@@ -314,18 +314,14 @@ function createApp(All) {
 }
 
 function servicesError(err, req, res, next) {
-	var msg = err.message || err.toString();
 	var fullCode = err.statusCode || err.code;
 	var code = parseInt(fullCode);
 	if (Number.isNaN(code) || code < 200 || code >= 600) {
-		msg += "\nerror code: " + fullCode;
+		err.code = fullCode;
 		code = 500;
 	}
 	if (All.opt.env == "development" || code >= 500) console.error(err);
-	if (msg) res.status(code).send({
-		message: msg
-	});
-	else res.sendStatus(code);
+	res.status(code).send(err);
 }
 
 function filesError(err, req, res, next) {
