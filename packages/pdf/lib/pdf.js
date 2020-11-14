@@ -6,13 +6,16 @@ exports.plugin = function(page, settings, req, res) {
 		unobserve() {}
 	};`);
 	if (!settings.pdf) settings.pdf = {};
-	settings.pdf.mappings = function(cb) {
-		Page.finish().then(function(state) {
-			return Page.serialize(state);
-		}).then(function(obj) {
+	settings.pdf.mappings = function (cb) {
+		Page.finish().then(function (state) {
+			if (Page.serialize) return Page.serialize(state);
+			else return {
+				mime: "text/html",
+				body: '<!DOCTYPE html>\n' + document.documentElement.outerHTML
+			};
+		}).then(function (obj) {
 			cb(null, obj);
 		}).catch(cb);
 	};
 	return require('express-dom-pdf').plugin(page, settings, req, res);
 };
-
