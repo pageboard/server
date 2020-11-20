@@ -214,7 +214,7 @@ function asPaths(obj, ret, pre, first, schema) {
 			} else if (schem.type == "boolean" && typeof val != "boolean") {
 				if (val == "false" || val == 0 || !val) val = false;
 				else val = true;
-			} else if (["integer", "number"].includes(schem.type) && typeof val == "string" && val.includes("~")) {
+			} else if (["integer", "number"].includes(schem.type) && typeof val == "string" && (val.includes("~") || val.includes("⩽"))) {
 				val = numericRange(val, schem.type);
 			}
 			if (op) ret[cur] = {
@@ -253,7 +253,9 @@ function dateRange(val) {
 }
 
 function numericRange(val, type) {
-	const [start, end] = val.split('~').map((n) => (type == "integer" ? parseInt : parseFloat)(n));
+	const [start, end] = val.split(/~|⩽/).map((n) => {
+		return (type == "integer" ? parseInt : parseFloat)(n);
+	});
 	return {
 		range: "numeric",
 		start: start,
