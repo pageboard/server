@@ -186,6 +186,7 @@ function prerender(req, res, next) {
 	var ext = Path.extname(path);
 	if (ext) {
 		ext = ext.substring(1);
+		if (ext == "rss") ext = "page"; // feed@0.8 kludge
 		var extEl = req.site.$schema(ext);
 		if (extEl) {
 			el = extEl;
