@@ -266,7 +266,7 @@ function prerender(req, res, next) {
 		var siteBundle = req.site.$bundles.site.meta;
 
 		var scripts = (siteBundle.scripts || []).map(function(src) {
-			return `<script src="${src}" defer></script>`;
+			return `<script defer src="${src}"></script>`;
 		});
 
 		var view = Text`
