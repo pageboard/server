@@ -190,7 +190,7 @@ function prerender(req, res, next) {
 		var extEl = req.site.$schema(ext);
 		if (extEl) {
 			el = extEl;
-			path = path.slice(0, -ext.length -1); // urlRegex does not allow extname
+			path = path.slice(0, -ext.length - 1); // urlRegex does not allow extname
 		}
 	}
 	res.vary('Accept');
