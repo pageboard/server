@@ -12,7 +12,7 @@ const allowedParameters = {
 	bg: true
 };
 
-exports = module.exports = function(opt) {
+exports = module.exports = function (opt) {
 	if (!opt.image) opt.image = {};
 	if (!opt.image.dir) opt.image.dir = ".image";
 
@@ -32,7 +32,7 @@ exports = module.exports = function(opt) {
 function initFile(All) {
 	sharpie.sharp.simd(true);
 	var opt = All.opt;
-	All.app.get(/^\/\.(uploads|files)\//, function(req, res, next) {
+	All.app.get(/^\/\.(uploads|files)\//, function (req, res, next) {
 		Log.image("processing", req.url);
 		var extname = Path.extname(req.path);
 		if (!extname || /png|jpe?g|gif|webp|tiff|svg/.test(extname.substring(1)) == false) {
@@ -46,7 +46,7 @@ function initFile(All) {
 			}
 		} else {
 			var wrongParams = [];
-			Object.keys(req.query).some(function(key) {
+			Object.keys(req.query).some(function (key) {
 				if (!allowedParameters[key]) wrongParams.push(key);
 			});
 			if (wrongParams.length) {
@@ -60,7 +60,7 @@ function initFile(All) {
 		}
 	}, sharpie(All.opt.image));
 
-	return All.utils.which(opt.image.im).catch(function() {}).then(function(path) {
+	return All.utils.which(opt.image.im).catch(function () { }).then(function (path) {
 		if (path) {
 			opt.image.im = path;
 			console.info("image:\tconverter", path);
@@ -73,7 +73,7 @@ function initFile(All) {
 
 function initService(All) {
 	console.info(`image:\tproxy at /.api/image`);
-	All.app.get('/.api/image', function(req, res, next) {
+	All.app.get('/.api/image', function (req, res, next) {
 		console.warn("/.api/image is used", req.url);
 		next();
 	}, sharpie(All.opt.image));
@@ -91,13 +91,13 @@ function request(url) {
 		"Accept-Encoding": "identity",
 		"Accept": "image/webp,*/*"
 	};
-	agent.get(obj).on('response', function(res) {
+	agent.get(obj).on('response', function (res) {
 		res.pipe(stream);
 	});
 	return stream;
 }
 
-exports.thumbnail = function(url) {
+exports.thumbnail = function (url) {
 	var pipeline;
 	if (url.startsWith('file://')) {
 		pipeline = sharpie.sharp(url.substring(7));
@@ -106,25 +106,25 @@ exports.thumbnail = function(url) {
 		request(url).pipe(pipeline);
 	}
 	return pipeline
-	.resize({
-		fit: "inside",
-		height: 64
-	})
-	.flatten({
-		background: 'white'
-	})
-	.toFormat('webp', {
-		quality: 50
-	})
-	.toBuffer().then(function(buf) {
-		var dtu = new DataUri();
-		dtu.format('.webp', buf);
-		return dtu.content;
-	});
+		.resize({
+			fit: "inside",
+			height: 64
+		})
+		.flatten({
+			background: 'white'
+		})
+		.toFormat('webp', {
+			quality: 50
+		})
+		.toBuffer().then(function (buf) {
+			var dtu = new DataUri();
+			dtu.format('.webp', buf);
+			return dtu.content;
+		});
 };
 
-exports.upload = function(file) {
-	return Promise.resolve().then(function() {
+exports.upload = function (file) {
+	return Promise.resolve().then(function () {
 		var mime = file.mimetype;
 		if (!mime) {
 			console.warn("image.upload cannot inspect file without mime type", file);
@@ -140,31 +140,31 @@ exports.upload = function(file) {
 
 		var dst = file.path + '.tmp';
 		return sharpie.sharp(file.path)
-		.withMetadata()
-		.resize({
-			fit: "inside",
-			withoutEnlargement: true,
-			fastShrinkOnLoad: false,
-			width: 2560,
-			height: 2560
-		})
-		.toFormat("webp", {
-			quality: 100,
-			lossless: true,
-			smartSubsample: true,
-			reductionEffort: 2
-		})
-		.toFile(dst).then(function() {
-			file.mimetype = "image/webp";
-			var pathObj = Path.parse(file.path);
-			file.filename = pathObj.name + '.webp';
-			file.path = Path.format({
-				dir: pathObj.dir,
-				base: file.filename
+			.withMetadata()
+			.resize({
+				fit: "inside",
+				withoutEnlargement: true,
+				fastShrinkOnLoad: false,
+				width: 2560,
+				height: 2560
+			})
+			.toFormat("webp", {
+				quality: 100,
+				lossless: true,
+				smartSubsample: true,
+				reductionEffort: 2
+			})
+			.toFile(dst).then(function () {
+				file.mimetype = "image/webp";
+				var pathObj = Path.parse(file.path);
+				file.filename = pathObj.name + '.webp';
+				file.path = Path.format({
+					dir: pathObj.dir,
+					base: file.filename
+				});
+				return fs.rename(dst, file.path).then(function () {
+					return file;
+				});
 			});
-			return fs.rename(dst, file.path).then(function() {
-				return file;
-			});
-		});
 	});
 };
