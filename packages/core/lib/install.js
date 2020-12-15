@@ -336,7 +336,7 @@ function getDependencies(rootPkg, name, list, deps) {
 		if (pst.includes("postinstall")) {
 			list.push({pkg, dir});
 		}
-		if (pkg.name == "@pageboard/site") {
+		if (pkg.name == "@pageboard/site" && !rootPkg.server) {
 			rootPkg.server = pkg.version.split('.').slice(0, 2).join('.');
 		}
 		return Promise.all(Object.keys(pkg.dependencies || {}).map(function(name) {
