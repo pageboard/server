@@ -22,7 +22,7 @@ maintain a cache (hosts) of requested hostnames
 so adding an IP to pageboard and pointing a host to that IP needs a restart)
 - then each hostname, if it is a subdomain of pageboard, gives a site.id, or if not, a site.domain
 - site instance is loaded and cached
-- /.well-known/pageboard returns here
+- /.well-known/status returns here
 - site is installed and init() is holded by a hanging promise
 - site installation calls upcache update url, which resolves the hanging promise
 - init returns for everyone
@@ -37,7 +37,7 @@ Domains.prototype.mw = function(req, res, next) {
 			host.finalize();
 		}
 		p = host.installing;
-	} else if (path == "/.well-known/pageboard") {
+	} else if (path == "/.well-known/status" || path == "/.well-known/pageboard") {
 		if (req.accepts('json')) p = host.waiting;
 		else p = host.searching;
 	} else if (req.path == "/favicon.ico" || req.path.startsWith('/.files/') || req.path.startsWith('/.api/')) {
@@ -92,7 +92,8 @@ Domains.prototype.mw = function(req, res, next) {
 		site.href = host.href;
 		site.hostname = host.name; // at this point it should be == host.domains[0]
 
-		if (path == "/.well-known/pageboard") {
+		if (path == "/.well-known/status" || path == "/.well-known/pageboard") {
+			// /.well-known/pageboard is kept during transition
 			// this is expected by proxy/statics/status.html
 			res.send({
 				errors: site.errors
