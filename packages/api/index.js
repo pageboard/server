@@ -147,7 +147,7 @@ function init(All) {
 		// invalid site by site
 		All.cache.tag('data-:site'),
 		// parse json bodies
-		bodyParser.json()
+		bodyParser.json({ limit: '1000kb' })
 	);
 }
 
