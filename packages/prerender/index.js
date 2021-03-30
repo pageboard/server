@@ -209,7 +209,7 @@ function prerender(req, res, next) {
 	} else {
 		var invalid = false;
 		Object.keys(req.query).forEach(function(key) {
-			if (/^[a-zA-Z][\w.]*$/.test(key) === false) {
+			if (/^[a-zA-Z][\w.-]*$/.test(key) === false) {
 				invalid = true;
 				delete req.query[key];
 			}
