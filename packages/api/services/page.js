@@ -161,6 +161,7 @@ exports.get = function (req, data) {
 			return Promise.all([
 				getParents(req, data.url),
 				listPages(req, {
+					drafts: true,
 					parent: data.url.split('/').slice(0, -1).join('/')
 				}).clearSelect().select([
 					ref('block.data:url').as('url'),
