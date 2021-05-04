@@ -174,8 +174,11 @@ exports.get = function (req, data) {
 				var found;
 				var position = siblings.findIndex(function (item) {
 					var same = item.url == data.url;
-					if (same) found = true;
-					else if (!found && data.url.length > 1 && item.url.startsWith(data.url)) found = item.url;
+					if (same) {
+						found = true;
+					} else if (!found && data.url.length > 1 && item.url.startsWith(data.url)) {
+						found = item.url;
+					}
 					return same;
 				});
 				if (found && found !== true) links.found = found;
@@ -229,6 +232,7 @@ function listPages({ site, trx }, data) {
 		.selectWithout('content')
 		.whereIn('block.type', data.type || site.$pages)
 		.where('block.standalone', true);
+
 	if (!data.drafts) {
 		q.whereNotNull(ref('block.data:url'));
 		q.where(function () {
