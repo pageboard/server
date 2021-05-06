@@ -1,21 +1,21 @@
 const ref = require('objection').ref;
 
-exports = module.exports = function(opt) {
+exports = module.exports = function (opt) {
 	return {
 		name: 'event',
-		service: function() {} // FIXME remove me ?
+		service: function () { } // FIXME remove me ?
 	};
 };
 
-exports.subscribe = function(req, data) {
+exports.subscribe = function (req, data) {
 	var [pSettings, pDate] = data.parents;
 	if (pSettings.type == "event_date" && pDate.type == "settings") {
 		[pDate, pSettings] = data.parents;
 	}
 	if (pSettings.type != "settings") throw new Error("Wrong parents, expected settings, event_date");
 	return All.run('block.find', req, Object.assign({}, pDate, {
-		parents: {type: 'event', first: true}
-	})).then(function(result) {
+		parents: { type: 'event', first: true }
+	})).then(function (result) {
 		var eventDate = result.item;
 		// add event_reservation block with two parents: settings and event_date
 		return All.run('block.search', req, {
@@ -23,7 +23,7 @@ exports.subscribe = function(req, data) {
 			parent: {
 				parents: data.parents // because search data.parents is for eager join, not relation
 			}
-		}).then(function(obj) {
+		}).then(function (obj) {
 			var maxSeats = eventDate.data.seats || eventDate.parent.data.seats || 0;
 			var total = eventDate.data.reservations || 0;
 			if (data.reservation.seats > eventDate.parent.data.maxSeatsReservations) {
@@ -45,21 +45,21 @@ exports.subscribe = function(req, data) {
 					type: 'event_reservation',
 					data: data.reservation,
 					parents: data.parents,
-					lock: {read: [`id-${req.user.id}`, 'scheduler']}
+					lock: { read: [`id-${req.user.id}`, 'scheduler'] }
 				};
 			} else {
 				throw new Error("Two reservations using the same login");
 			}
 			total += resa.data.seats;
-			if (isNaN(total)) throw new HttpError.BadRequest("Cannot reserve no seats");
+			if (Number.isNaN(total)) throw new HttpError.BadRequest("Cannot reserve no seats");
 			if (maxSeats > 0 && total > maxSeats) {
 				throw new HttpError.BadRequest("Cannot reserve that much seats");
 			}
 
-			return All.run(blockMeth, req, resa).then(function(resa) {
+			return All.run(blockMeth, req, resa).then(function (resa) {
 				return eventDate.$query(req.trx).patch({
 					'data:reservations': total
-				}).then(function() {
+				}).then(function () {
 					if (!data.url) throw new Error("Missing url");
 					var mail = {
 						url: data.url,
@@ -176,7 +176,7 @@ exports.subscribe.schema = {
 };
 exports.subscribe.external = true;
 
-exports.unsubscribe = function(req, data) {
+exports.unsubscribe = function (req, data) {
 	return All.block.get(req, {
 		type: 'event_reservation',
 		id: data.reservation
@@ -184,7 +184,7 @@ exports.unsubscribe = function(req, data) {
 		parentsFilter(q) {
 			q.whereIn('type', ['settings', 'event_date']).select('block.id', 'block.type');
 		}
-	}).then(function(reservation) {
+	}).then(function (reservation) {
 		if (reservation.data.seats !== 0) return All.run('event.subscribe', req, {
 			parents: reservation.parents,
 			reservation: {
@@ -208,42 +208,42 @@ exports.unsubscribe.schema = {
 };
 exports.unsubscribe.external = true;
 
-exports.reservations = function({site, trx}, data) {
+exports.reservations = function ({ site, trx }, data) {
 	// given an event_date, retrieve reservations, user settings and email
 	return site.$relatedQuery('children', trx)
-	.where('block.type', 'event_date')
-	.where('block.id', data.id)
-	.select().first().throwIfNotFound()
-	.withGraphFetched(`[
+		.where('block.type', 'event_date')
+		.where('block.id', data.id)
+		.select().first().throwIfNotFound()
+		.withGraphFetched(`[
 		parents(event) as parent,
 		children(reservations) as children
 		.parents(settings) as settings
 		.parents(user) as user
 	]`).modifiers({
-		event(q) {
-			q.where('type', 'event').select();
-		},
-		reservations(q) {
-			q.where('type', 'event_reservation').select();
-		},
-		settings(q) {
-			q.where('type', 'settings').select();
-		},
-		user(q) {
-			q.where('type', 'user').select(ref('data:email').as('email'));
-		}
-	}).then(function(eventDate) {
-		eventDate.parent = eventDate.parent[0];
-		eventDate.children.forEach(function(item) {
-			// bad test data could ruin everything
-			if (item.settings.length) item.settings = item.settings[0];
-			else console.warn("no settings event date item", data.id, item.id);
-			if (item.settings.user.length) item.settings.data.email = item.settings.user[0].email;
-			else console.warn("no settings user for event date item", data.id, item.id);
-			delete item.settings.user;
+			event(q) {
+				q.where('type', 'event').select();
+			},
+			reservations(q) {
+				q.where('type', 'event_reservation').select();
+			},
+			settings(q) {
+				q.where('type', 'settings').select();
+			},
+			user(q) {
+				q.where('type', 'user').select(ref('data:email').as('email'));
+			}
+		}).then(function (eventDate) {
+			eventDate.parent = eventDate.parent[0];
+			eventDate.children.forEach(function (item) {
+				// bad test data could ruin everything
+				if (item.settings.length) item.settings = item.settings[0];
+				else console.warn("no settings event date item", data.id, item.id);
+				if (item.settings.user.length) item.settings.data.email = item.settings.user[0].email;
+				else console.warn("no settings user for event date item", data.id, item.id);
+				delete item.settings.user;
+			});
+			return { item: eventDate };
 		});
-		return {item: eventDate};
-	});
 };
 exports.reservations.schema = {
 	title: 'List reservations',
