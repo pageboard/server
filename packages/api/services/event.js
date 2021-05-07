@@ -83,12 +83,16 @@ exports.subscribe.schema = {
 			type: 'string',
 			format: 'id'
 		},
+		email: {
+			title: 'User Email',
+			type: 'string',
+			format: 'email'
+		},
 		reservation: {
 			title: 'Reservation',
 			type: 'object',
 			required: ['seats'],
-			// FIXME use event_reservation schema for this site here ?
-			// is it even possible ?
+			additionalProperties: true,
 			properties: {
 				seats: {
 					title: 'Number of reserved seats',
@@ -110,11 +114,6 @@ exports.subscribe.schema = {
 					pattern: '^\\d+(\\s*\\.*-*\\d+)*$'
 				}
 			}
-		},
-		email: {
-			title: 'Email',
-			type: 'string',
-			format: 'email'
 		}
 	}
 };
