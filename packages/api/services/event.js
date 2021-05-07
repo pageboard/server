@@ -8,21 +8,25 @@ exports = module.exports = function (opt) {
 };
 
 exports.subscribe = function (req, data) {
-	var [pSettings, pDate] = data.parents;
-	if (pSettings.type == "event_date" && pDate.type == "settings") {
-		[pDate, pSettings] = data.parents;
-	}
-	if (pSettings.type != "settings") throw new Error("Wrong parents, expected settings, event_date");
-	return All.run('block.find', req, Object.assign({}, pDate, {
-		parents: { type: 'event', first: true }
-	})).then(function (result) {
-		var eventDate = result.item;
-		// add event_reservation block with two parents: settings and event_date
+	return Promise.all([
+		All.run('settings.find', req, { email: data.email }),
+		All.run('block.find', req, {
+			type: 'event_date',
+			id: data.event_date,
+			parents: {
+				type: 'event',
+				first: true
+			}
+		})
+	]).then(function ([settings, { item: eventDate }]) {
+		const parents = [
+			{ type: 'settings', id: settings.id },
+			{ type: 'event_date', id: eventDate.id }
+		];
+		// because search data.parents is for eager join, not relation
 		return All.run('block.search', req, {
 			type: 'event_reservation',
-			parent: {
-				parents: data.parents // because search data.parents is for eager join, not relation
-			}
+			parent: { parents }
 		}).then(function (obj) {
 			var maxSeats = eventDate.data.seats || eventDate.parent.data.seats || 0;
 			var total = eventDate.data.reservations || 0;
@@ -44,34 +48,25 @@ exports.subscribe = function (req, data) {
 				resa = {
 					type: 'event_reservation',
 					data: data.reservation,
-					parents: data.parents,
+					parents: parents,
 					lock: { read: [`id-${req.user.id}`, 'scheduler'] }
 				};
 			} else {
-				throw new Error("Two reservations using the same login");
+				console.error("event.subscribe found out multiple subscriptions", data);
+				throw new Error("Multiple subscriptions already exists");
 			}
 			total += resa.data.seats;
-			if (Number.isNaN(total)) throw new HttpError.BadRequest("Cannot reserve no seats");
+			if (Number.isNaN(total)) throw new HttpError.BadRequest("At least one seat must be reserved");
 			if (maxSeats > 0 && total > maxSeats) {
-				throw new HttpError.BadRequest("Cannot reserve that much seats");
+				throw new HttpError.BadRequest("Cannot reserve this number of seats");
 			}
 
 			return All.run(blockMeth, req, resa).then(function (resa) {
 				return eventDate.$query(req.trx).patch({
 					'data:reservations': total
 				}).then(function () {
-					if (!data.url) throw new Error("Missing url");
-					var mail = {
-						url: data.url,
-						purpose: 'transactional',
-						body: {
-							date: eventDate.id,
-							reservation: resa.id
-						},
-						to: [pSettings.id]
-					};
-					if (data.from) mail.from = data.from;
-					return All.run('mail.send', req, mail);
+					resa.parent = eventDate;
+					return resa;
 				});
 			});
 		});
@@ -81,23 +76,19 @@ exports.subscribe = function (req, data) {
 exports.subscribe.schema = {
 	title: 'Subscribe',
 	$action: 'write',
-	required: ['parents', 'reservation'],
+	required: ['event_date', 'reservation', 'email'],
 	properties: {
-		parents: {
-			title: 'parents',
-			type: 'array',
-			items: {
-				type: 'object'
-			},
-			$filter: {
-				name: 'relation',
-				from: 'service'
-			}
+		event_date: {
+			title: 'Event Date',
+			type: 'string',
+			format: 'id'
 		},
 		reservation: {
 			title: 'Reservation',
 			type: 'object',
-			required: ['seats', 'name'],
+			required: ['seats'],
+			// FIXME use event_reservation schema for this site here ?
+			// is it even possible ?
 			properties: {
 				seats: {
 					title: 'Number of reserved seats',
@@ -120,58 +111,11 @@ exports.subscribe.schema = {
 				}
 			}
 		},
-		from: {
-			title: 'From',
-			description: 'User settings.id or email',
-			anyOf: [{
-				type: 'string',
-				format: 'id'
-			}, {
-				type: 'string',
-				format: 'email'
-			}]
-		},
-		url: { // TODO remove this - mails should be send by form "arrays of methods"
-			title: 'Mail page',
-			type: "string",
-			format: "pathname",
-			$helper: {
-				name: 'page',
-				type: 'mail'
-			}
-		},
-		body: {
-			title: 'Mail body',
-			type: "object"
+		email: {
+			title: 'Email',
+			type: 'string',
+			format: 'email'
 		}
-	},
-	parents: {
-		type: 'array',
-		items: [{
-			type: 'object',
-			properties: {
-				type: {
-					const: 'settings'
-				},
-				id: {
-					title: 'user settings id',
-					type: 'string',
-					format: 'id'
-				}
-			}
-		}, {
-			type: 'object',
-			properties: {
-				type: {
-					const: 'event_date'
-				},
-				id: {
-					title: 'event date id',
-					type: 'string',
-					format: 'id'
-				}
-			}
-		}]
 	}
 };
 exports.subscribe.external = true;
