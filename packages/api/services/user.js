@@ -1,4 +1,4 @@
-exports = module.exports = function(opt) {
+exports = module.exports = function (opt) {
 	return {
 		name: 'user',
 		service: init
@@ -9,10 +9,10 @@ function init() {
 
 }
 
-function QueryUser({trx}, data) {
+function QueryUser({ trx }, data) {
 	var Block = All.api.Block;
 	var q = Block.query(trx).alias('user').select()
-	.first().throwIfNotFound().where('user.type', 'user');
+		.first().throwIfNotFound().where('user.type', 'user');
 	if (!data.id && !data.email) throw new HttpError.BadRequest("Missing id or email");
 	if (data.id) {
 		q.where('user.id', data.id);
@@ -22,7 +22,7 @@ function QueryUser({trx}, data) {
 	return q;
 }
 
-exports.get = function(req, data) {
+exports.get = function (req, data) {
 	return QueryUser(req, data);
 };
 exports.get.schema = {
@@ -47,10 +47,10 @@ exports.get.schema = {
 	}
 };
 
-exports.add = function(req, data) {
+exports.add = function (req, data) {
 	return QueryUser(req, {
 		email: data.email
-	}).catch(function(err) {
+	}).catch(function (err) {
 		if (err.status != 404) throw err;
 		return All.api.Block.query(req.trx).insert({
 			data: { email: data.email },
@@ -71,7 +71,7 @@ exports.add.schema = {
 	}
 };
 
-exports.del = function(req, data) {
+exports.del = function (req, data) {
 	return QueryUser(req, data).del();
 };
 exports.del.schema = Object.assign({}, exports.get.schema, {
