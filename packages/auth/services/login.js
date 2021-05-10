@@ -62,14 +62,12 @@ exports.send = function (req, data) {
 	}
 	return generate(req, data).then(function (token) {
 		var p = Promise.resolve();
-		var settings = data.settings;
-		if (settings) {
-			delete settings.grants;
-			p = All.settings.save(req, {
-				email: data.email,
-				data: settings
-			});
-		}
+		var settings = data.settings || {};
+		delete settings.grants;
+		p = All.settings.save(req, {
+			email: data.email,
+			data: settings
+		});
 		return p.then(function () {
 			return token;
 		});
