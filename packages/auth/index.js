@@ -72,7 +72,8 @@ function grantsLevels(DomainBlock) {
 	var list = DomainBlock.schema('settings.data.grants').items.anyOf || [];
 	list.forEach(function(grant, i) {
 		var n = grant.$level;
-		if (typeof n != 'number' || isNaN(n)) {
+		if (typeof n != 'number' || Number.isNaN(n)) {
+			// eslint-disable-next-line no-console
 			console.warn("grant without $level, ignoring", grant);
 			return;
 		}
