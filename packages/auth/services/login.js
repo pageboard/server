@@ -2,7 +2,7 @@ const otp = require.lazy('otplib');
 const qrcode = require.lazy('qrcode');
 const URL = require('url');
 
-exports = module.exports = function(opt) {
+exports = module.exports = function (opt) {
 	return {
 		name: 'login',
 		service: init
@@ -14,53 +14,53 @@ function init(All) {
 		step: 30, // do not change this value, we want third-party otp apps to work with us
 		window: [40, 1] // ten minutes-old tokens are still valid
 	};
-	All.app.get("/.api/login", function(req, res, next) {
-		All.run('login.grant', req, req.query).then(function(data) {
+	All.app.get("/.api/login", function (req, res, next) {
+		All.run('login.grant', req, req.query).then(function (data) {
 			All.send(res, data);
 		}).catch(next);
 	});
 
-	All.app.get("/.api/logout", function(req, res, next) {
-		All.run('login.clear', req, req.query).then(function(data) {
+	All.app.get("/.api/logout", function (req, res, next) {
+		All.run('login.clear', req, req.query).then(function (data) {
 			All.send(res, data);
 		}).catch(next);
 	});
 }
 
-function userPriv({trx}, user) {
+function userPriv({ trx }, user) {
 	return user.$relatedQuery('children', trx).alias('privs')
-	.where('privs.type', 'priv')
-	.first().throwIfNotFound().select().catch(function(err) {
-		if (err.statusCode != 404) throw err;
-		return user.$relatedQuery('children', trx).insert({
-			type: 'priv',
-			data: {
-				otp: {
-					secret: otp.authenticator.generateSecret()
+		.where('privs.type', 'priv')
+		.first().throwIfNotFound().select().catch(function (err) {
+			if (err.statusCode != 404) throw err;
+			return user.$relatedQuery('children', trx).insert({
+				type: 'priv',
+				data: {
+					otp: {
+						secret: otp.authenticator.generateSecret()
+					}
 				}
-			}
-		}).returning('*');
-	});
+			}).returning('*');
+		});
 }
 
 function generate(req, data) {
-	return Promise.resolve().then(function() {
-		if (data.register) return All.user.add(req, {email: data.email});
-	}).then(function() {
-		return All.user.get(req, {email: data.email}).select('_id');
-	}).then(function(user) {
+	return Promise.resolve().then(function () {
+		if (data.register) return All.user.add(req, { email: data.email });
+	}).then(function () {
+		return All.user.get(req, { email: data.email }).select('_id');
+	}).then(function (user) {
 		return userPriv(req, user);
-	}).then(function(priv) {
+	}).then(function (priv) {
 		return otp.authenticator.generate(priv.data.otp.secret);
 	});
 }
 
-exports.send = function(req, data) {
+exports.send = function (req, data) {
 	var site = req.site;
 	if (!site.href) {
 		return "login.send requires a hostname. Use login.link";
 	}
-	return generate(req, data).then(function(token) {
+	return generate(req, data).then(function (token) {
 		var p = Promise.resolve();
 		var settings = data.settings;
 		if (settings) {
@@ -70,10 +70,10 @@ exports.send = function(req, data) {
 				data: settings
 			});
 		}
-		return p.then(function() {
+		return p.then(function () {
 			return token;
 		});
-	}).then(function(token) {
+	}).then(function (token) {
 		var mail = {
 			purpose: 'transactional',
 			from: {
@@ -87,18 +87,20 @@ exports.send = function(req, data) {
 		var prefix = site.data.title ? site.data.title + ' - ' : '';
 		if (site.data.lang == "fr") {
 			mail.subject = `${prefix}code de vérification: ${tokenStr}`;
-			mail.text = Text`${tokenStr}
+			mail.text = Text`
+				${tokenStr}
 				Ce message est envoyé depuis
 				${site.href}
 				et peut être ignoré.`;
 		} else {
-			mail.subject = `${prefix}Verification token: ${tokenStr}`;
-			mail.text = Text`${tokenStr}
+			mail.subject = `${prefix}verification token: ${tokenStr}`;
+			mail.text = Text`
+				${tokenStr}
 				This message is sent from
 				${site.href}
 				and can be ignored.`;
 		}
-		return All.run('mail.to', req, mail).then(function() {
+		return All.run('mail.to', req, mail).then(function () {
 			// do not return information about that
 			return {};
 		});
@@ -130,13 +132,13 @@ exports.send.schema = {
 exports.send.external = true;
 
 
-function verifyToken(req, {email, token}) {
-	return All.user.get(req, {email}).then(function(user) {
-		return userPriv({req}, user).then(function(priv) {
+function verifyToken(req, { email, token }) {
+	return All.user.get(req, { email }).then(function (user) {
+		return userPriv({ req }, user).then(function (priv) {
 			var tries = (priv.data.otp.tries || 0) + 1;
 			if (tries >= 5) {
 				var at = Date.parse(priv.data.otp.checked_at);
-				if (!isNaN(at) && Date.now() - at < 1000 * otp.authenticator.options.step / 2) {
+				if (!Number.isNaN(at) && Date.now() - at < 1000 * otp.authenticator.options.step / 2) {
 					throw new HttpError.TooManyRequests();
 				}
 			}
@@ -145,19 +147,19 @@ function verifyToken(req, {email, token}) {
 			return priv.$query(req.trx).patch({
 				'data:otp.checked_at': new Date().toISOString(),
 				'data:otp.tries': verified ? 0 : tries
-			}).then(function() {
+			}).then(function () {
 				return verified;
 			});
 		});
 	});
 }
 
-exports.grant = function(req, data) {
-	return verifyToken(req, data).then(function(verified) {
+exports.grant = function (req, data) {
+	return verifyToken(req, data).then(function (verified) {
 		if (!verified) throw new HttpError.BadRequest("Bad token");
 		return All.run('settings.find', req, {
 			email: data.email
-		}).then(function(settings) {
+		}).then(function (settings) {
 			var grants = req.user && req.user.grants || [];
 			var user = req.user = {
 				id: settings.id,
@@ -211,8 +213,8 @@ exports.grant.schema = {
 
 exports.grant.external = true;
 
-exports.link = function(req, data) {
-	return generate(req, data).then(function(token) {
+exports.link = function (req, data) {
+	return generate(req, data).then(function (token) {
 		return URL.format({
 			pathname: "/.api/login",
 			query: {
@@ -248,7 +250,7 @@ exports.link.schema = {
 };
 
 
-exports.clear = function(req, data) {
+exports.clear = function (req, data) {
 	req.granted = true;
 	return {
 		cookies: {
@@ -265,9 +267,9 @@ exports.clear.schema = {
 
 exports.clear.external = true;
 
-exports.key = function(req, data) {
-	return All.user.get(req, {email: data.email}).then(function(user) {
-		return userPriv(req, user).then(function(priv) {
+exports.key = function (req, data) {
+	return All.user.get(req, { email: data.email }).then(function (user) {
+		return userPriv(req, user).then(function (priv) {
 			var uri = otp.authenticator.keyuri(user.data.email, All.opt.name, priv.data.otp.secret);
 			if (data.qr) {
 				return qrcode.toString(uri, {
