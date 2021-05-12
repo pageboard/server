@@ -1,12 +1,12 @@
 module.exports = class Upgrader {
-	constructor(Block, opts={}) {
+	constructor(Block, opts = {}) {
 		this.copy = !!opts.copy;
 		this.Block = Block;
 		this.idMap = {};
 		if (opts.from != opts.to && opts.from && opts.to) {
 			try {
 				this.module = require(`./from-${opts.from}-to-${opts.to}`);
-			} catch(ex) {
+			} catch (ex) {
 				if (ex.code != "MODULE_NOT_FOUND") {
 					throw ex;
 				}
@@ -39,7 +39,7 @@ module.exports = class Upgrader {
 		try {
 			if (mod.any) mod.any.call(this, block);
 			if (mod[block.type]) block = mod[block.type].call(this, block, parent) || block;
-		} catch(ex) {
+		} catch (ex) {
 			console.error(ex.message);
 			console.error(block);
 			throw new Error("Upgrader error");
@@ -61,7 +61,7 @@ module.exports = class Upgrader {
 			console.error(block);
 			throw new Error("content not object");
 		}
-		Object.entries(block.content).forEach(([key,str]) => {
+		Object.entries(block.content).forEach(([key, str]) => {
 			if (!str) return;
 			var bad = false;
 			block.content[key] = str.replaceAll(/block-id="(\w+)"/g, (match, id, pos, str) => {
