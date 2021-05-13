@@ -332,9 +332,10 @@ exports.export = function ({ trx }, data) {
 			}).then(function () {
 				out.write(',\n"standalones": [');
 				var last = children.length - 1;
-				var prom = Promise.resolve();
-				return children.reduce(function (p, child, i) {
-					return p.then(function () {
+				var p = Promise.resolve();
+				var list = [];
+				children.forEach(function (child) {
+					p = p.then(function () {
 						return All.api.Block.query(trx)
 							.selectWithout('tsv', '_id')
 							.first().where('_id', child._id)
@@ -351,13 +352,20 @@ exports.export = function ({ trx }, data) {
 							}).then(function (lone) {
 								if (lone.standalones.length == 0) {
 									delete lone.standalones;
+									list.unshift(lone);
+								} else {
+									list.push(lone);
 								}
 								counts.blocks += lone.children.length;
-								out.write(toJSON(lone));
-								if (i != last) out.write('\n,');
 							});
 					});
-				}, prom);
+				});
+				return p.then(function () {
+					list.forEach(function (lone, i) {
+						out.write(toJSON(lone));
+						if (i != last) out.write('\n,');
+					});
+				});
 			}).then(function () {
 				out.write('],\n"reservations": [');
 			}).then(function () {
