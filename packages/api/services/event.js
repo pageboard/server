@@ -30,6 +30,11 @@ exports.subscribe = function (req, data) {
 		}).then(function (obj) {
 			var maxSeats = eventDate.data.seats || eventDate.parent.data.seats || 0;
 			var total = eventDate.data.reservations || 0;
+			if (data.reservation.attendees) {
+				data.reservation.seats = data.reservation.attendees.length;
+			} else if (data.reservation.seats == null) {
+				data.reservation.seats = 1;
+			}
 			if (data.reservation.seats > eventDate.parent.data.maxSeatsReservations) {
 				throw new HttpError.BadRequest("Cannot reserve that much seats at once");
 			}
@@ -91,14 +96,27 @@ exports.subscribe.schema = {
 		reservation: {
 			title: 'Reservation',
 			type: 'object',
-			required: ['seats'],
-			additionalProperties: true,
 			properties: {
 				seats: {
 					title: 'Number of reserved seats',
 					type: 'integer',
 					default: 1,
 					minimum: 0
+				},
+				attendees: {
+					title: 'Attendees',
+					type: 'array',
+					items: {
+						type: 'object',
+						additionalProperties: true,
+						properties: {
+							name: {
+								title: 'Name',
+								type: 'string'
+							}
+						}
+					},
+					nullable: true
 				},
 				comment: {
 					title: 'Comment',
