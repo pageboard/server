@@ -180,9 +180,13 @@ exports.search = function ({ site, trx }, data) {
 				if (row.items && row.items.length) row.item = row.items[0];
 				delete row.items;
 			}
+			if (!data.content) delete row.content;
 		});
 		if (!ids.length) return obj;
-		return All.href.collect({ site, trx }, { id: ids }).first().then(function (hrow) {
+		return All.href.collect({ site, trx }, {
+			id: ids,
+			content: data.content
+		}).first().then(function (hrow) {
 			obj.hrefs = hrow.hrefs;
 			return obj;
 		});
