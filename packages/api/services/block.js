@@ -180,7 +180,7 @@ exports.search = function ({ site, trx }, data) {
 				delete row.parents;
 			}
 			if (children && children.first) {
-				if (row.items && row.items.length) row.item = row.items[0];
+				if (row.items && row.items.length) row.child = row.items[0];
 				delete row.items;
 			}
 			if (!data.content) delete row.content;
