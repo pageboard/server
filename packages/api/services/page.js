@@ -124,7 +124,7 @@ exports.get = function (req, data) {
 	return QueryPage(req).whereIn('page.type', site.$pages)
 		.whereJsonText("page.data:url", data.url)
 		.select(
-			All.href.collect(req, { url: data.url }).as('hrefs')
+			All.href.collect(req, { url: data.url, content: true }).as('hrefs')
 		).then(function (page) {
 			if (!page) {
 				obj.status = 404;
@@ -137,7 +137,7 @@ exports.get = function (req, data) {
 					.where('page.type', 'page')
 					.whereJsonText("page.data:url", statusUrl)
 					.select(
-						All.href.collect(req, { url: statusUrl }).as('hrefs')
+						All.href.collect(req, { url: statusUrl, content: true }).as('hrefs')
 					).then(function (page) {
 						if (!page) throw new HttpError[obj.status]();
 						return page;

@@ -322,11 +322,14 @@ exports.collect = function ({ site, trx }, data = {}) {
 	};
 
 	const qBlocks = (q) => {
-		q.unionAll([
-			collectBlockUrls({ site, trx }, data, 0),
-			collectBlockUrls({ site, trx }, data, 1),
-			collectBlockUrls({ site, trx }, data, 2)
-		], true);
+		const qList = [
+			collectBlockUrls({ site, trx }, data, 0)
+		];
+		if (data.content) {
+			qList.push(collectBlockUrls({ site, trx }, data, 1));
+			qList.push(collectBlockUrls({ site, trx }, data, 2));
+		}
+		q.unionAll(qList, true);
 	};
 	const q = All.api.Href.query(trx)
 		.with('blocks', qBlocks)
