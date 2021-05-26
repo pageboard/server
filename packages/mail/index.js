@@ -254,7 +254,10 @@ exports.to.schema = {
 	}
 };
 
-exports.send = function(req, data) {
+exports.send = function (req, data) {
+	if (!data.from && !data.replyTo) {
+		throw new HttpError.NotFound("Missing parameters");
+	}
 	var purpose = data.purpose;
 	data = Object.assign({}, data);
 	delete data.purpose;
