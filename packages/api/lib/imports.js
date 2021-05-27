@@ -3,6 +3,7 @@ const toSource = require('tosource');
 
 const fs = require('fs').promises;
 const vm = require('vm');
+const translateJSON = require('./translate');
 
 exports.install = function(site, pkg, All) {
 	var elements = pkg.elements;
@@ -55,6 +56,22 @@ exports.install = function(site, pkg, All) {
 				if (!bundles[el.bundle]) bundles[el.bundle] = {};
 				if (!bundles[el.bundle].list) bundles[el.bundle].list = [];
 				bundles[el.bundle].list.push(el);
+			}
+			if (el.intl) {
+				const { lang } = site.data;
+				if (lang) {
+					const dict = el.intl[lang];
+					if (dict) {
+						delete el.intl[lang];
+						if (el.intl.keys) {
+							translateJSON(el.intl.keys, el, dict);
+						} else {
+							console.warn(
+								`${el.name}.intl.${lang} is set but the list intl.keys is missing`
+							);
+						}
+					}
+				}
 			}
 		});
 
@@ -382,7 +399,7 @@ class EltProxy {
 				val = [];
 				Reflect.set(elt, key, val);
 			}
-		} else if (["resources", "properties", "csp", "filters"].includes(key)) {
+		} else if (["resources", "properties", "csp", "filters", "intl"].includes(key)) {
 			if (val == null) {
 				val = {};
 				Reflect.set(elt, key, val);
