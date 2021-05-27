@@ -60,11 +60,11 @@ exports.install = function(site, pkg, All) {
 			if (el.intl) {
 				const { lang } = site.data;
 				if (lang) {
-					const dict = el.intl[lang];
-					if (dict) {
-						delete el.intl[lang];
-						if (el.intl.keys) {
-							translateJSON(el.intl.keys, el, dict);
+					const i8dict = el.intl[lang];
+					const i8keys = el.intl.keys;
+					if (i8dict) {
+						if (i8keys) {
+							translateJSON(i8keys, el, i8dict);
 						} else {
 							console.warn(
 								`${el.name}.intl.${lang} is set but the list intl.keys is missing`
@@ -72,6 +72,7 @@ exports.install = function(site, pkg, All) {
 						}
 					}
 				}
+				delete el.intl;
 			}
 		});
 
