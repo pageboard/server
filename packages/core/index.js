@@ -314,7 +314,7 @@ function createApp(All) {
 }
 
 function servicesError(err, req, res, next) {
-	var fullCode = err.statusCode || err.code;
+	var fullCode = err.statusCode || err.status || err.code;
 	var code = parseInt(fullCode);
 	if (Number.isNaN(code) || code < 200 || code >= 600) {
 		err.code = fullCode;
@@ -325,7 +325,7 @@ function servicesError(err, req, res, next) {
 }
 
 function filesError(err, req, res, next) {
-	var code = parseInt(err.statusCode || err.code);
+	var code = parseInt(err.statusCode || err.status || err.code);
 	if (Number.isNaN(code) || code < 200 || code >= 600) {
 		code = 500;
 	}
@@ -337,7 +337,7 @@ function filesError(err, req, res, next) {
 }
 
 function viewsError(err, req, res, next) {
-	var code = parseInt(err.statusCode || err.code);
+	var code = parseInt(err.statusCode || err.status || err.code);
 	if (Number.isNaN(code) || code < 200 || code >= 600) {
 		code = 500;
 	}
