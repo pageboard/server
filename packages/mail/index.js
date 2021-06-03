@@ -46,7 +46,8 @@ function init(All) {
 				transport: NodeMailer.createTransport(Transports[conf.transport]({ auth: conf.auth })),
 				auth: conf.auth,
 				domain: conf.domain,
-				sender: AddressParser(conf.sender)[0]
+				sender: AddressParser(conf.sender)[0],
+				headers: conf.headers
 			};
 		} catch (ex) {
 			console.error(ex);
@@ -163,6 +164,7 @@ exports.to = function(req, data) {
 		if (!data.replyTo.address) delete data.replyTo;
 	}
 	data.from = sender;
+	if (mailer.headers) data.headers = mailer.headers;
 	Log.mail("mail.to", data);
 	return mailer.transport.sendMail(data);
 };
