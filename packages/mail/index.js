@@ -341,17 +341,7 @@ exports.send.schema = {
 	$action: 'write',
 	required: ['url', 'to'],
 	properties: {
-		purpose: {
-			title: 'Purpose',
-			anyOf: [{
-				title: "Transactional",
-				const: "transactional"
-			}, {
-				title: "Bulk",
-				const: "bulk"
-			}],
-			default: 'transactional'
-		},
+		purpose: exports.to.schema.properties.purpose,
 		from: {
 			title: 'From',
 			description: 'User settings.id or email',
