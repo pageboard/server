@@ -1,7 +1,6 @@
 const NodeMailer = require.lazy('nodemailer');
 const AddressParser = require.lazy('addressparser');
 const Transports = {
-	mailgun: require.lazy('nodemailer-mailgun-transport'),
 	postmark: require.lazy('nodemailer-postmark-transport')
 };
 const Mailers = {};
@@ -181,8 +180,11 @@ exports.to.schema = {
 				title: "Transactional",
 				const: "transactional"
 			}, {
-				title: "Bulk",
-				const: "bulk"
+				title: "Conversations",
+				const: "conversations"
+			}, {
+				title: "Subscriptions",
+				const: "subscriptions"
 			}],
 			default: 'transactional'
 		},
