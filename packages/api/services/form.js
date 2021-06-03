@@ -74,7 +74,7 @@ exports.submit = function(req, data) {
 
 		return All.run(method, req, body).catch(function(err) {
 			return {
-				status: err.status || 400,
+				status: err.statusCode || err.status || err.code || 400,
 				item: {
 					type: 'error',
 					data: {
