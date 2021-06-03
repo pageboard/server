@@ -166,7 +166,10 @@ exports.to = function(req, data) {
 	data.from = sender;
 	if (mailer.headers) data.headers = mailer.headers;
 	Log.mail("mail.to", data);
-	return mailer.transport.sendMail(data);
+	return mailer.transport.sendMail(data).catch(err => {
+		err.statusCode = 400;
+		throw err;
+	});
 };
 exports.to.schema = {
 	$action: 'write',
