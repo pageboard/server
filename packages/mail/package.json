@@ -21,7 +21,7 @@
     "busboy": "^0.3.1",
     "got": "^9.6.0",
     "nodemailer": "^6.6.1",
-    "nodemailer-postmark-transport": "^5.0.0"
+    "nodemailer-postmark-transport": "^5.1.0"
   },
   "pageboard": true
 }

@@ -158,7 +158,13 @@ exports.to = function(req, data) {
 		if (!data.replyTo.address) delete data.replyTo;
 	}
 	data.from = sender;
-	if (mailer.headers) data.headers = mailer.headers;
+	if (mailer.headers) {
+		data.headers = mailer.headers;
+	}
+	if (mailer.messageStream) {
+		// specific to postmark
+		data.messageStream = mailer.messageStream;
+	}
 	Log.mail("mail.to", data);
 	return mailer.transport.sendMail(data).catch(err => {
 		err.statusCode = 400;
