@@ -147,12 +147,8 @@ exports.to = function(req, data) {
 	var mailer = Mailers[purpose];
 	if (!mailer) throw new Error("Unknown mailer purpose " + purpose);
 	if (data.to.length > 1) {
-		if (purpose == "transactional" && data.to.length > 2) {
-			throw new Error("Transactional mail accepts at most two recipients");
-		} else {
-			data.bcc = data.to;
-			data.to = data.replyTo || data.from || mailer.sender;
-		}
+		data.bcc = data.to;
+		data.to = data.replyTo || data.from || mailer.sender;
 	}
 	var sender = Object.assign({}, data.from || mailer.sender);
 	if (!sender.address) {
@@ -312,11 +308,17 @@ exports.send = function (req, data) {
 			name: site.data.title,
 			address: `${site.id}.${rows[1].id}@${mailer.domain}`
 		};
+		const domains = {};
 		mailOpts.to = rows.slice(-1).pop().map((settings) => {
+			const email = settings.parent.data.email;
+			domains[AddressParser(email).address.split('@').pop()] = true;
 			return {
-				address: settings.parent.data.email
+				address: email
 			};
 		});
+		if (purpose == "transactional" && (Object.keys(domains).length > 2 || mailOpts.to.length > 10)) {
+			throw new Error("Transactional mail allowed for at most two different recipients domains and ten recipients");
+		}
 		var emailUrl = site.href + emailPage.data.url;
 
 		return got(emailUrl + ".mail", { // TODO when all 0.7 are migrated, drop .mail
