@@ -41,13 +41,12 @@ function init(All) {
 	Object.entries(All.opt.mail).forEach(([purpose, conf]) => {
 		Log.mail(purpose, conf);
 		try {
-			Mailers[purpose] = {
-				transport: NodeMailer.createTransport(Transports[conf.transport]({ auth: conf.auth })),
-				auth: conf.auth,
-				domain: conf.domain,
-				sender: AddressParser(conf.sender)[0],
-				headers: conf.headers
-			};
+			Mailers[purpose] = Object.assign({}, conf, {
+				transport: NodeMailer.createTransport(Transports[conf.transport]({
+					auth: conf.auth
+				})),
+				sender: AddressParser(conf.sender)[0]
+			});
 		} catch (ex) {
 			console.error(ex);
 		}
