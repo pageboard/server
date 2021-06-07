@@ -34,7 +34,7 @@ const ajvApiWithNoDefaults = AjvKeywords(ajv(Object.assign({}, ajvApiSettings, {
 	useDefaults: false
 })));
 
-exports = module.exports = function(opt) {
+exports = module.exports = function (opt) {
 	opt.plugins.unshift(
 		__dirname + '/services/user',
 		__dirname + '/services/site',
@@ -63,9 +63,9 @@ function init(All) {
 	var opt = All.opt;
 	var knexInst = All.db.knex;
 
-	common.Model.createValidator = function() {
+	common.Model.createValidator = function () {
 		return new objection.AjvValidator({
-			onCreateAjv: function(ajv) {
+			onCreateAjv: function (ajv) {
 				AjvKeywords(ajv);
 				ajv.addKeyword('coerce', {
 					modifying: true,
@@ -115,19 +115,19 @@ function init(All) {
 	common.Model.knex(knexInst);
 
 	var models = {};
-	opt.models.forEach(function(path) {
+	opt.models.forEach(function (path) {
 		var model = require(path);
 		models[model.name] = model;
 	});
 
 	exports.Href = models.Href;
 	exports.Block = models.Block;
-	exports.transaction = function(fn) {
+	exports.transaction = function (fn) {
 		if (fn) return knexInst.transaction(fn);
 		else return objection.transaction.start(knexInst);
 	};
 
-	Object.keys(utils).forEach(function(key) {
+	Object.keys(utils).forEach(function (key) {
 		if (All.utils[key]) throw new Error(`Cannot reassign All.utils.${key}`);
 		All.utils[key] = utils[key];
 	});
@@ -137,7 +137,7 @@ function init(All) {
 	// api depends on site files, that tag is invalidated in cache install
 	All.app.get('/.api/*', All.cache.tag('app-:site'));
 	All.app.use('/.api/*',
-		function(req, res, next) {
+		function (req, res, next) {
 			if (req.site.data.maintenance === true && req.method != "GET") {
 				throw new HttpError.ServiceUnavailable("Site is in maintenance mode");
 			} else {
@@ -165,7 +165,7 @@ function check(fun, schema, data) {
 	if (fun.validate(data)) {
 		return data;
 	} else {
-		var messages = fun.validate.errors.map(function(err) {
+		var messages = fun.validate.errors.map(function (err) {
 			if (err.dataPath) return `${err.dataPath} ${err.message}`;
 			else return err.message;
 		}).join(',\n');
@@ -190,35 +190,35 @@ function getApiMethodSchema(apiStr) {
 	return [schema, mod, fun];
 }
 
-All.help = function(apiStr) {
+All.help = function (apiStr) {
 	const [schema] = getApiMethodSchema(apiStr);
 	return require('./lib/json-doc')(schema);
 };
 
-All.run = function(apiStr, req, data) {
-	return Promise.resolve().then(function() {
+All.run = function (apiStr, req, data) {
+	return Promise.resolve().then(function () {
 		const [schema, mod, fun] = getApiMethodSchema(apiStr);
 		Log.api("run %s:\n%O", apiStr, data);
 		try {
 			data = check(fun, schema, data);
-		} catch(err) {
+		} catch (err) {
 			err.message += '\n ' + apiStr + '\n' + jsonDoc(All.opt, schema);
 			throw err;
 		}
 		// start a transaction on set trx object on site
 		var hadTrx = false;
-		return Promise.resolve().then(function() {
+		return Promise.resolve().then(function () {
 			if (!req) {
 				return;
 			} else if (req.trx) {
 				hadTrx = true;
 				return;
 			}
-			return exports.transaction().then(function(trx) {
+			return exports.transaction().then(function (trx) {
 				req.trx = trx;
 				if (req.site) req.site = req.site.$clone();
 			});
-		}).then(function() {
+		}).then(function () {
 			var args = [data];
 			if (req) args.unshift(req);
 			return fun.apply(mod, args);
@@ -241,7 +241,7 @@ All.run = function(apiStr, req, data) {
 	});
 };
 
-All.send = function(res, obj) {
+All.send = function (res, obj) {
 	var req = res.req;
 	if (obj == null || typeof obj != "object") {
 		console.trace("All.send expects an object, got", obj);
@@ -255,7 +255,7 @@ All.send = function(res, obj) {
 			secure: host && host.protocol == "https" || false,
 			path: '/'
 		};
-		Object.keys(obj.cookies).forEach(function(key) {
+		Object.keys(obj.cookies).forEach(function (key) {
 			var cookie = obj.cookies[key];
 			var val = cookie.value;
 			var maxAge = cookie.maxAge;
@@ -269,7 +269,7 @@ All.send = function(res, obj) {
 	}
 	// client needs to know what keys are supposed to be available
 	obj.grants = {};
-	(req.user.grants || []).forEach(function(grant) {
+	(req.user.grants || []).forEach(function (grant) {
 		obj.grants[grant] = true;
 	});
 	if (obj.status) {
@@ -290,7 +290,7 @@ All.send = function(res, obj) {
 
 function itemFn(schema, block) {
 	if (schema.upgrade) {
-		Object.entries(schema.upgrade).forEach(function([src, dst]) {
+		Object.entries(schema.upgrade).forEach(function ([src, dst]) {
 			var val = jsonPath.get(block, src);
 			if (val !== undefined) {
 				jsonPath.set(block, dst, val);
