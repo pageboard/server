@@ -231,7 +231,7 @@ All.run = function (apiStr, req, data) {
 				return obj;
 			}
 		}).catch(function (err) {
-			console.error(apiStr, data, err);
+			Log.api("error %s:\n%O", apiStr, err);
 			throw err;
 		}).finally(function () {
 			if (!req || !req.trx) return;
