@@ -110,7 +110,7 @@ exports.search.schema = {
 
 exports.save = function (req, data) {
 	var site = req.site;
-	return All.run('settings.find', req, data).then(function (settings) {
+	return All.settings.find(req, data).then(function (settings) {
 		if (!data.data) return settings;
 		if (data.data.grants) {
 			// delete data.data.grants;
