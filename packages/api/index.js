@@ -234,7 +234,12 @@ All.run = function (apiStr, req, data) {
 			console.error(apiStr, data, err);
 			throw err;
 		}).finally(function () {
-			if (!hadTrx && req && req.trx && !req.trx.isCompleted()) {
+			if (!req || !req.trx) return;
+			if (req.trx.isCompleted()) {
+				if (hadTrx) return exports.transaction().then(function (trx) {
+					req.trx = trx;
+				});
+			} else if (!hadTrx) {
 				return req.trx.rollback();
 			}
 		});
