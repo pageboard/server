@@ -316,7 +316,8 @@ exports.send = function (req, data) {
 		const domains = {};
 		mailOpts.to = rows.slice(-1).pop().map((settings) => {
 			const email = settings.parent.data.email;
-			domains[AddressParser(email).address.split('@').pop()] = true;
+			const parsedAddress = AddressParser(email)[0];
+			domains[parsedAddress.address.split('@').pop()] = true;
 			return {
 				address: email
 			};
