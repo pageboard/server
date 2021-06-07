@@ -222,30 +222,20 @@ All.run = function(apiStr, req, data) {
 			var args = [data];
 			if (req) args.unshift(req);
 			return fun.apply(mod, args);
-		}).then(function(obj) {
-			if (!hadTrx && req && req.trx) {
-				try {
-					return req.trx.commit().then(function() {
-						return obj;
-					});
-				} catch(ex) {
-					console.trace("bad trx.commit at", apiStr, ex);
-				}
-			}
-			return obj;
-		}).catch(function(err) {
-			console.error("Error from api:", apiStr, err.message);
-			if (req && req.user && req.user.id) console.error("by user", req.user.id, req.user.grants);
-			if (!hadTrx && req && req.trx) {
-				try {
-					return req.trx.rollback().then(function() {
-						throw err;
-					});
-				} catch(ex) {
-					console.trace("bad trx.rollback at", apiStr, ex);
-				}
+		}).then(function (obj) {
+			if (!hadTrx && req && req.trx && !req.trx.isCompleted()) {
+				return req.trx.commit().then(function () {
+					return obj;
+				});
 			} else {
-				throw err;
+				return obj;
+			}
+		}).catch(function (err) {
+			console.error(apiStr, data, err);
+			throw err;
+		}).finally(function () {
+			if (!hadTrx && req && req.trx && !req.trx.isCompleted()) {
+				return req.trx.rollback();
 			}
 		});
 	});
