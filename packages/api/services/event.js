@@ -19,6 +19,9 @@ exports.subscribe = function (req, data) {
 			}
 		})
 	]).then(function ([settings, { item: eventDate }]) {
+		if (req.user.id !== settings.id) {
+			throw new HttpError.Unauthorized("Wrong user");
+		}
 		const parents = [
 			{ type: 'settings', id: settings.id },
 			{ type: 'event_date', id: eventDate.id }
