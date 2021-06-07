@@ -307,7 +307,10 @@ exports.send = function (req, data) {
 
 	var site = req.site;
 
-	return Promise.all(list).then(function(rows) {
+	return Promise.allSettled(list).then(results => results.map(item => {
+		if (item.status == "rejected") throw item.reason;
+		return item.value;
+	})).then(function(rows) {
 		var emailPage = rows[0].item;
 		if (data.from) mailOpts.from = {
 			name: site.data.title,
