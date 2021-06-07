@@ -1,4 +1,5 @@
 require('promise.prototype.finally').shim();
+require('promise.allsettled').shim();
 require('string.prototype.replaceall').shim();
 
 const importLazy = require('import-lazy');
