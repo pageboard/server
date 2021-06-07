@@ -30,7 +30,7 @@ exports.submit = function(req, data) {
 			throw new HttpError.BadRequest("Missing method");
 		}
 		if (All.auth.locked(req, (form.lock || {}).write)) {
-			throw HttpError.Unauthorized("Check user permissions");
+			throw new HttpError.Unauthorized("Check user permissions");
 		}
 		// build parameters
 		var expr = ((form.expr || {}).action || {}).parameters || {};
