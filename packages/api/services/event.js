@@ -118,11 +118,15 @@ exports.subscribe.schema = {
 			title: 'Reservation',
 			type: 'object',
 			properties: {
-				seats: {
-					title: 'Number of reserved seats',
-					type: 'integer',
-					default: 1,
-					minimum: 0
+				payment: {
+					title: 'Payment',
+					type: 'object',
+					properties: {
+						method: {
+							title: 'Payment method',
+							type: 'string'
+						}
+					}
 				},
 				attendees: {
 					title: 'Attendees',
