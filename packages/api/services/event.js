@@ -161,8 +161,7 @@ exports.unsubscribe = function (req, data) {
 		if (reservation.data.seats !== 0) return All.run('event.subscribe', req, {
 			parents: reservation.parents,
 			reservation: {
-				name: `(${reservation.data.name})`,
-				seats: 0
+				attendees: []
 			}
 		});
 	});
