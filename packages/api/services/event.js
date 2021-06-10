@@ -42,22 +42,38 @@ exports.subscribe = function (req, data) {
 				throw new HttpError.BadRequest("Cannot reserve that much seats at once");
 			}
 			const price = eventDate.data.price || eventDate.parent.data.price || 0;
-			data.reservation.price = data.reservation.seats * price;
+			const payment = {
+				price: data.reservation.seats * price,
+				method: data.reservation.payment.method,
+				paid: 0
+			};
+			data.reservation.payment.due = data.reservation.seats * price;
 			let blockMeth, resa;
 			if (obj.items.length == 1) {
 				resa = obj.items[0];
 				total += -resa.data.seats;
+				if (resa.data.payment) {
+					payment.paid = resa.data.payment.paid;
+				}
 				blockMeth = 'block.save';
 				resa = {
 					id: resa.id,
 					type: 'event_reservation',
-					data: data.reservation
+					data: {
+						contact: data.reservation.contact,
+						attendees: data.reservation.attendees,
+						payment: payment
+					}
 				};
 			} else if (obj.items.length == 0) {
 				blockMeth = 'block.add';
 				resa = {
 					type: 'event_reservation',
-					data: data.reservation,
+					data: {
+						contact: data.reservation.contact,
+						attendees: data.reservation.attendees,
+						payment: payment
+					},
 					parents: parents,
 					lock: { read: [`id-${req.user.id}`, 'scheduler'] }
 				};
