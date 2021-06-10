@@ -31,8 +31,8 @@ exports.subscribe = function (req, data) {
 			type: 'event_reservation',
 			parent: { parents }
 		}).then(function (obj) {
-			var maxSeats = eventDate.data.seats || eventDate.parent.data.seats || 0;
-			var total = eventDate.data.reservations || 0;
+			const maxSeats = eventDate.data.seats || eventDate.parent.data.seats || 0;
+			let total = eventDate.data.reservations || 0;
 			if (data.reservation.attendees) {
 				data.reservation.seats = data.reservation.attendees.length;
 			} else if (data.reservation.seats == null) {
@@ -41,7 +41,9 @@ exports.subscribe = function (req, data) {
 			if (data.reservation.seats > eventDate.parent.data.maxSeatsReservations) {
 				throw new HttpError.BadRequest("Cannot reserve that much seats at once");
 			}
-			var blockMeth, resa;
+			const price = eventDate.data.price || eventDate.parent.data.price || 0;
+			data.reservation.price = data.reservation.seats * price;
+			let blockMeth, resa;
 			if (obj.items.length == 1) {
 				resa = obj.items[0];
 				total += -resa.data.seats;
@@ -121,18 +123,25 @@ exports.subscribe.schema = {
 					},
 					nullable: true
 				},
+				contact: {
+					title: 'Contact',
+					type: 'object',
+					additionalProperties: true,
+					properties: {
+						name: {
+							title: 'Name',
+							type: 'string'
+						},
+						phone: {
+							title: 'Phone',
+							type: 'string',
+							pattern: '^(\\(\\d+\\))? *\\d+([ .\\-]?\\d+)*$'
+						}
+					}
+				},
 				comment: {
 					title: 'Comment',
 					type: 'string'
-				},
-				name: {
-					title: 'Name',
-					type: 'string'
-				},
-				phone: {
-					title: 'Phone',
-					type: 'string',
-					pattern: '^\\d+(\\s*\\.*-*\\d+)*$'
 				}
 			}
 		}
