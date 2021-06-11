@@ -43,11 +43,11 @@ exports.subscribe = function (req, data) {
 			}
 			const price = eventDate.data.price || eventDate.parent.data.price || 0;
 			const payment = {
-				price: data.reservation.seats * price,
+				due: data.reservation.seats * price,
 				method: data.reservation.payment.method,
 				paid: 0
 			};
-			data.reservation.payment.due = data.reservation.seats * price;
+
 			let blockMeth, resa;
 			if (obj.items.length == 1) {
 				resa = obj.items[0];
