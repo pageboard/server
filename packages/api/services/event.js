@@ -177,9 +177,11 @@ exports.unsubscribe = function (req, data) {
 		parentsFilter(q) {
 			q.whereIn('type', ['settings', 'event_date']).select('block.id', 'block.type');
 		}
-	}).then(function (reservation) {
-		if (reservation.data.seats !== 0) return All.run('event.subscribe', req, {
-			parents: reservation.parents,
+	}).then(function (resa) {
+		const paid = (resa.data.payment || {}).paid || 0;
+		if (paid !== 0) throw new HttpError.BadRequest("Reservation has received payments");
+		if (resa.data.seats !== 0) return All.run('event.subscribe', req, {
+			parents: resa.parents,
 			reservation: {
 				attendees: []
 			}
