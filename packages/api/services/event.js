@@ -1,4 +1,4 @@
-const ref = require('objection').ref;
+const { raw, ref } = require('objection');
 
 exports = module.exports = function (opt) {
 	return {
@@ -252,6 +252,9 @@ exports.reservations = function ({ site, trx }, data) {
 				} else if (data.paid === false) {
 					q.whereNot(ref('data:payment.due'), ref('data:payment.paid'));
 				}
+				q.where(raw('jsonb_array_length(:attendees:) > 0', {
+					attendees: ref('data:attendees')
+				}));
 				q.where('type', 'event_reservation').select();
 			},
 			settings(q) {
