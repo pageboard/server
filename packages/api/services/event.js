@@ -230,6 +230,7 @@ exports.pay.schema = {
 		}
 	}
 };
+exports.pay.external = true;
 
 exports.reservations = function ({ site, trx }, data) {
 	// given an event_date, retrieve reservations, user settings and email
