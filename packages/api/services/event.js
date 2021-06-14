@@ -200,6 +200,37 @@ exports.unsubscribe.schema = {
 };
 exports.unsubscribe.external = true;
 
+
+exports.pay = function (req, data) {
+	return All.block.get(req, {
+		type: 'event_reservation',
+		id: data.reservation
+	}).then(function (resa) {
+		if (!resa.data.payment) {
+			resa.data.payment = {};
+		}
+		resa.data.payment.paid = data.amount;
+		return All.run('block.save', req, resa);
+	});
+};
+exports.pay.schema = {
+	title: 'Pay',
+	$action: 'write',
+	required: ['reservation'],
+	properties: {
+		reservation: {
+			title: 'Reservation',
+			type: 'string',
+			format: 'id'
+		},
+		amount: {
+			title: 'Amount',
+			type: 'number',
+			default: 0
+		}
+	}
+};
+
 exports.reservations = function ({ site, trx }, data) {
 	// given an event_date, retrieve reservations, user settings and email
 	return site.$relatedQuery('children', trx)
@@ -216,6 +247,11 @@ exports.reservations = function ({ site, trx }, data) {
 				q.where('type', 'event').select();
 			},
 			reservations(q) {
+				if (data.paid === true) {
+					q.where(ref('data:payment.due'), ref('data:payment.paid'));
+				} else if (data.paid === false) {
+					q.whereNot(ref('data:payment.due'), ref('data:payment.paid'));
+				}
 				q.where('type', 'event_reservation').select();
 			},
 			settings(q) {
@@ -246,6 +282,11 @@ exports.reservations.schema = {
 			title: 'Event date',
 			type: "string",
 			format: 'id'
+		},
+		paid: {
+			title: 'Only paid or unpaid',
+			type: 'boolean',
+			nullable: true
 		}
 	}
 };
