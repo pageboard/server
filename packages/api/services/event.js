@@ -290,9 +290,18 @@ exports.reservations.schema = {
 			format: 'id'
 		},
 		paid: {
-			title: 'Only paid or unpaid',
-			type: 'boolean',
-			nullable: true
+			title: 'Payment',
+			anyOf: [{
+				const: false,
+				title: 'Unpaid'
+			}, {
+				const: true,
+				title: 'Paid'
+			}, {
+				const: null,
+				title: 'All'
+			}],
+			default: null
 		}
 	}
 };
