@@ -8,6 +8,9 @@ exports = module.exports = function (opt) {
 };
 
 exports.subscribe = function (req, data) {
+	if (!data.reservation.attendees || data.reservation.attendees.length == 0) {
+		throw new HttpError.BadRequest("reservation.attendees must not be empty");
+	}
 	return Promise.all([
 		All.run('settings.find', req, { email: data.email }),
 		All.run('block.find', req, {
@@ -19,7 +22,7 @@ exports.subscribe = function (req, data) {
 			}
 		})
 	]).then(function ([settings, { item: eventDate }]) {
-		if (req.user.id !== settings.id) {
+		if (req.user.id !== settings.id && !req.user.grants.includes('scheduler')) {
 			throw new HttpError.Unauthorized("Wrong user");
 		}
 		const parents = [
@@ -31,22 +34,26 @@ exports.subscribe = function (req, data) {
 			type: 'event_reservation',
 			parent: { parents }
 		}).then(function (obj) {
-			const maxSeats = eventDate.data.seats || eventDate.parent.data.seats || 0;
-			let total = eventDate.data.reservations || 0;
-			if (data.reservation.attendees) {
-				data.reservation.seats = data.reservation.attendees.length;
-			} else if (data.reservation.seats == null) {
-				data.reservation.seats = 1;
+			const reservation = data.reservation;
+			if (reservation.attendees) {
+				reservation.seats = reservation.attendees.length;
+			} else if (reservation.seats == null) {
+				reservation.seats = 1;
 			}
-			if (data.reservation.seats > eventDate.parent.data.maxSeatsReservations) {
-				throw new HttpError.BadRequest("Cannot reserve that much seats at once");
-			}
-			const price = eventDate.data.price || eventDate.parent.data.price || 0;
 			const payment = {
-				due: data.reservation.seats * price,
-				method: data.reservation.payment.method,
+				method: (reservation.payment || {}).method,
+				due: 0,
 				paid: 0
 			};
+			let total = eventDate.data.reservations || 0;
+			if (reservation.seats > 0) {
+				const maxSeatsRes = eventDate.parent.data.maxSeatsReservations;
+				if (maxSeatsRes && reservation.seats > maxSeatsRes) {
+					throw new HttpError.BadRequest("Cannot reserve that much seats at once");
+				}
+				payment.due = (eventDate.data.price || eventDate.parent.data.price || 0) * reservation.seats;
+			}
+
 
 			let blockMeth, resa;
 			if (obj.items.length == 1) {
@@ -60,8 +67,9 @@ exports.subscribe = function (req, data) {
 					id: resa.id,
 					type: 'event_reservation',
 					data: {
-						contact: data.reservation.contact,
-						attendees: data.reservation.attendees,
+						seats: reservation.seats,
+						contact: reservation.contact,
+						attendees: reservation.attendees,
 						payment: payment
 					}
 				};
@@ -70,21 +78,25 @@ exports.subscribe = function (req, data) {
 				resa = {
 					type: 'event_reservation',
 					data: {
-						contact: data.reservation.contact,
-						attendees: data.reservation.attendees,
+						seats: reservation.seats,
+						contact: reservation.contact,
+						attendees: reservation.attendees,
 						payment: payment
 					},
 					parents: parents,
 					lock: { read: [`id-${req.user.id}`, 'scheduler'] }
 				};
 			} else {
-				console.error("event.subscribe found out multiple subscriptions", data);
+				console.error("event.subscribe found out multiple subscriptions", reservation);
 				throw new Error("Multiple subscriptions already exists");
 			}
 			total += resa.data.seats;
 			if (Number.isNaN(total)) throw new HttpError.BadRequest("At least one seat must be reserved");
-			if (maxSeats > 0 && total > maxSeats) {
-				throw new HttpError.BadRequest("Cannot reserve this number of seats");
+			if (resa.data.seats > 0) {
+				const maxSeats = eventDate.data.seats || eventDate.parent.data.seats || 0;
+				if (maxSeats > 0 && total > maxSeats) {
+					throw new HttpError.BadRequest("Cannot reserve this number of seats");
+				}
 			}
 
 			return All.run(blockMeth, req, resa).then(function (resa) {
@@ -175,16 +187,26 @@ exports.unsubscribe = function (req, data) {
 		id: data.reservation
 	}).withGraphFetched('[parents(parentsFilter)]').modifiers({
 		parentsFilter(q) {
-			q.whereIn('type', ['settings', 'event_date']).select('block.id', 'block.type');
+			q.whereIn('block.type', ['event_date', 'settings'])
+				.select()
+				.orderBy('block.type');
 		}
 	}).then(function (resa) {
 		const paid = (resa.data.payment || {}).paid || 0;
 		if (paid !== 0) throw new HttpError.BadRequest("Reservation has received payments");
-		if (resa.data.seats !== 0) return All.run('event.subscribe', req, {
-			parents: resa.parents,
-			reservation: {
-				attendees: []
-			}
+		const [eventDate, settings] = resa.parents;
+		delete resa.parents;
+		if (req.user.id !== settings.id && !req.user.grants.includes('scheduler')) {
+			throw new HttpError.Unauthorized("Wrong user");
+		}
+		if (resa.data.seats == 0) return resa;
+
+		const total = (eventDate.data.reservations || 0) - resa.data.seats;
+		return Promise.allSettled([
+			eventDate.$query(req.trx).patch({ 'data:reservations': total }),
+			resa.$query(req.trx).delete()
+		]).then(() => {
+			return {};
 		});
 	});
 };
