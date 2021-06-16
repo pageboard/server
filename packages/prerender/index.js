@@ -232,12 +232,10 @@ function prerender(req, res, next) {
 
 		var outputOpts = el.output || {};
 
-		if (req.query.develop !== undefined) {
+		if (req.query.develop !== undefined) { // TODO also when site.data.env == development
 			All.cache.map(res, '/.well-known/200');
 			// FIXME
-			// when editor will be loaded alongside the page (and not in an iframe with ?develop)
-			// it will make more sense to consolidate write element with page element's csp
-			// a very open CSP here
+			// build csp out of site elements right now
 			res.set('Content-Security-Policy', "");
 		} else {
 			if (outputOpts.pdf) {
