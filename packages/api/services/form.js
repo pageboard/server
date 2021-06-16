@@ -32,9 +32,11 @@ exports.submit = function(req, data) {
 		if (All.auth.locked(req, (form.lock || {}).write)) {
 			throw new HttpError.Unauthorized("Check user permissions");
 		}
+		let body = data.body;
 		// build parameters
 		var expr = ((form.expr || {}).action || {}).parameters || {};
 		var params = All.utils.mergeParameters(expr, {
+			$request: body,
 			$query: data.query || {},
 			$user: req.user
 		});
@@ -43,7 +45,6 @@ exports.submit = function(req, data) {
 		Log.api("form params", params, req.user, data.query);
 
 		// build body
-		var body = data.body;
 		if (params.type && Object.keys(body).length > 0) {
 			var el = req.site.$schema(params.type);
 			if (!el) throw new HttpError.BadRequest("Unknown element type " + params.type);
