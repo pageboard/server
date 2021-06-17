@@ -250,6 +250,7 @@ exports.pay.schema = {
 		},
 		amount: {
 			title: 'Amount',
+			description: 'Positive or negative',
 			type: 'number',
 			default: 0
 		}
