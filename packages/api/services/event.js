@@ -233,7 +233,8 @@ exports.pay = function (req, data) {
 		if (!resa.data.payment) {
 			resa.data.payment = {};
 		}
-		resa.data.payment.paid = data.amount;
+		if (!resa.data.payment.paid) resa.data.payment.paid = 0;
+		resa.data.payment.paid += data.amount;
 		return All.run('block.save', req, resa);
 	});
 };
