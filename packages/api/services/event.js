@@ -233,6 +233,7 @@ exports.pay = function (req, data) {
 		if (!resa.data.payment) {
 			resa.data.payment = {};
 		}
+		if (!resa.data.payment.due) resa.data.payment.due = 0;
 		if (!resa.data.payment.paid) resa.data.payment.paid = 0;
 		resa.data.payment.paid += data.amount;
 		return All.run('block.save', req, resa);
