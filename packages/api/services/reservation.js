@@ -36,9 +36,7 @@ exports.add = function (req, data) {
 			parent: { parents }
 		}).then(function (obj) {
 			if (obj.items.length == 1) {
-				throw HttpError('Conflict', "User already has a reservation for this date", {
-					reservation: obj.items[0].id
-				});
+				throw new HttpError.Conflict("User already has a reservation for this date");
 			}
 			if (reservation.attendees) {
 				reservation.seats = reservation.attendees.length;
