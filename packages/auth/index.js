@@ -157,6 +157,7 @@ function filter(req, item, fn) {
 	}
 	if (parent) {
 		item.parent = filter(req, parent, fn);
+		if (item.parent && !item.parent.type) delete item.type;
 	}
 	// old types might not have schema
 	var schema = req.site.$schema(item.type) || {};
