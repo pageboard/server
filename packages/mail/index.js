@@ -166,10 +166,10 @@ exports.to = function(req, data) {
 		data.messageStream = mailer.messageStream;
 	}
 	Log.mail("mail.to", data);
-	return mailer.transport.sendMail(data).then(result => {
+	return mailer.transport.sendMail(data).then(sentStatus => {
 		return {
-			accepted: results.accepted.length > 0,
-			rejected: results.rejected.length > 0
+			accepted: sentStatus.accepted.length > 0,
+			rejected: sentStatus.rejected.length > 0
 		};
 	}).catch(err => {
 		err.statusCode = 400;
