@@ -23,7 +23,7 @@ exports.add = function (req, data) {
 			}
 		})
 	]).then(function ([settings, { item: eventDate }]) {
-		if (req.user.id !== settings.id && !req.user.grants.includes('scheduler')) {
+		if (req.user.id !== settings.id) {
 			throw new HttpError.Unauthorized("Wrong user");
 		}
 		const parents = [
