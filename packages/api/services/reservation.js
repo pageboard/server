@@ -13,7 +13,7 @@ exports.add = function (req, data) {
 		throw new HttpError.BadRequest("reservation.attendees must not be empty");
 	}
 	return Promise.all([
-		All.run('settings.find', req, { email: data.email }),
+		All.run('settings.save', req, { email: data.email }),
 		All.run('block.find', req, {
 			type: 'event_date',
 			id: data.event_date,
