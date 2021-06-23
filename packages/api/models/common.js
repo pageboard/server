@@ -1,4 +1,5 @@
-const {ref, val, raw, Model, QueryBuilder} = require('objection');
+const { ref, val, raw, Model, QueryBuilder } = require('objection');
+const Duration = require('iso8601-duration');
 
 const { isKnexRaw, isKnexQueryBuilder } = require(
 	require('path').join(
@@ -230,9 +231,11 @@ function asPaths(obj, ret, pre, first, schema) {
 }
 
 function dateRange(val) {
-	try {
-		const start = new Date(val);
-		const end = new Date(start);
+	const parts = val.split('P');
+	const start = new Date(parts[0]);
+	let end;
+	if (parts.length == 1) {
+		end = new Date(start);
 		const parts = val.split('-');
 		if (parts.length == 1) {
 			end.setFullYear(end.getFullYear() + 1);
@@ -241,15 +244,16 @@ function dateRange(val) {
 		} else if (parts.length == 3) {
 			end.setDate(end.getDate() + 1);
 		}
-
-		return {
-			range: "date",
-			start: start.toISOString(),
-			end: end.toISOString()
-		};
-	} catch(err) {
-		return new Date(val);
+	} else if (parts.length == 2) {
+		end = Duration.end(Duration.parse(parts[1]), start);
 	}
+	if (Number.isNaN(start.getTime()) || Number.isNaN(end.getTime())) {
+		return new Date(val);
+	} else return {
+		range: "date",
+		start: start.toISOString(),
+		end: end.toISOString()
+	};
 }
 
 function numericRange(val, type) {
