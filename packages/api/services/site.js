@@ -280,7 +280,7 @@ exports.del.schema = {
 
 // export all data but files
 exports.export = function (req, data) {
-	const id = data.id || req.site.id;
+	const id = req.site ? req.site.id : data.id;
 	const filepath = data.file || (id + '-' + (new Date()).toISOString().split('.')[0].replace(/[-:]/g, '').replace('T', '-').slice(0, -2) + '.json');
 	const counts = {
 		site: 0,
