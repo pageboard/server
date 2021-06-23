@@ -245,7 +245,7 @@ function dateRange(val) {
 			end.setDate(end.getDate() + 1);
 		}
 	} else if (parts.length == 2) {
-		end = Duration.end(Duration.parse(parts[1]), start);
+		end = Duration.end(Duration.parse('P' + parts[1]), start);
 	}
 	if (Number.isNaN(start.getTime()) || Number.isNaN(end.getTime())) {
 		return new Date(val);
