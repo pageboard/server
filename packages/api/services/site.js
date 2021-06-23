@@ -14,6 +14,9 @@ exports = module.exports = function (opt) {
 };
 
 function init(All) {
+	All.app.get('/.api/site/export', All.auth.lock('webmaster'), function (req, res, next) {
+		return All.run('site.export', req, req.query);
+	});
 	All.app.put('/.api/site', All.auth.lock('webmaster'), function (req, res, next) {
 		const data = Object.assign(req.body, { id: req.site.id });
 		All.run('site.save', req, data).then(function (site) {
@@ -276,7 +279,9 @@ exports.del.schema = {
 };
 
 // export all data but files
-exports.export = function ({ trx }, data) {
+exports.export = function (req, data) {
+	const id = data.id || req.site.id;
+	const filepath = data.file || (id + '-' + (new Date()).toISOString().split('.')[0].replace(/[-:]/g, '').replace('T', '-').slice(0, -2) + '.json');
 	const counts = {
 		site: 0,
 		blocks: 0,
@@ -285,14 +290,16 @@ exports.export = function ({ trx }, data) {
 		settings: 0,
 		reservations: 0
 	};
-	return exports.get({ trx }, data).withGraphFetched(`[children(lones)]`).modifiers({
+	const trx = req.trx;
+	return exports.get(req, { id }).withGraphFetched(`[children(lones)]`).modifiers({
 		lones(builder) {
 			return builder.select('_id').where('standalone', true).orderByRaw("data->>'url' IS NOT NULL");
 		}
 	}).then(function (site) {
 		const children = site.children;
 		delete site.children;
-		const out = createWriteStream(Path.resolve(All.opt.cwd, data.file));
+		const out = req.res || createWriteStream(Path.resolve(All.opt.cwd, filepath));
+		if (req.res) req.res.attachment(Path.basename(filepath));
 		const finished = new Promise(function (resolve, reject) {
 			out.resolve = resolve;
 			out.reject = reject;
@@ -407,16 +414,18 @@ exports.export = function ({ trx }, data) {
 exports.export.schema = {
 	title: 'Export site',
 	$action: 'read',
-	required: ['id', 'file'],
 	properties: {
 		id: {
-			title: 'ID',
+			title: 'Site id',
 			type: 'string',
-			format: 'id'
+			format: 'id',
+			nullable: true
 		},
 		file: {
-			title: 'File path',
-			type: 'string'
+			title: 'File name',
+			type: 'string',
+			pattern: '^[\\w-]+\\.json$',
+			nullable: true
 		}
 	}
 };
