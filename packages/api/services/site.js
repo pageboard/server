@@ -15,7 +15,7 @@ exports = module.exports = function (opt) {
 
 function init(All) {
 	All.app.put('/.api/site', All.auth.lock('webmaster'), function (req, res, next) {
-		var data = Object.assign(req.body, { id: req.site.id });
+		const data = Object.assign(req.body, { id: req.site.id });
 		All.run('site.save', req, data).then(function (site) {
 			res.send(site);
 		}).catch(next);
@@ -32,8 +32,8 @@ function QuerySite({ trx }, data) {
 			.as('types')
 	)
 	*/
-	var Block = All.api.Block;
-	var q = Block.query(trx).alias('site')
+	const Block = All.api.Block;
+	const q = Block.query(trx).alias('site')
 		.first().throwIfNotFound()
 		.where('site.type', 'site').where(function (q) {
 			if (data.id) q.orWhere('site.id', data.id);
@@ -69,8 +69,8 @@ exports.get.schema = {
 };
 
 exports.search = function ({ trx }, data) {
-	var Block = All.api.Block;
-	var q = Block.query(trx).alias('site').select().where('site.type', 'site')
+	const Block = All.api.Block;
+	const q = Block.query(trx).alias('site').select().where('site.type', 'site')
 		.joinRelated('children', { alias: 'settings' })
 		.where('settings.type', 'settings');
 	if (data.grants) q.where(function (builder) {
@@ -84,7 +84,7 @@ exports.search = function ({ trx }, data) {
 		.orderBy('site.updated_at', 'site.desc')
 		.offset(data.offset)
 		.limit(data.limit).then(function (rows) {
-			var obj = {
+			const obj = {
 				data: rows,
 				offset: data.offset,
 				limit: data.limit
@@ -212,7 +212,7 @@ exports.save = function (req, data) {
 		lodashMerge(site.data, data.data);
 		if (req.site && req.site.href) site.href = req.site.href;
 		return All.install(site).then(function (site) {
-			var copy = Object.assign({}, data.data);
+			const copy = Object.assign({}, data.data);
 			if (site.server) copy.server = site.server;
 			return site.$query(req.trx).patchObject({
 				type: site.type,
@@ -250,8 +250,8 @@ exports.all.schema = {
 };
 
 exports.del = function ({ trx }, data) {
-	var Block = All.api.Block;
-	var counts = {};
+	const Block = All.api.Block;
+	const counts = {};
 	return Block.query(trx).where('type', 'site')
 		.select('_id', raw('recursive_delete(_id, TRUE) AS blocks'))
 		.where('id', data.id)
@@ -277,7 +277,7 @@ exports.del.schema = {
 
 // export all data but files
 exports.export = function ({ trx }, data) {
-	var counts = {
+	const counts = {
 		site: 0,
 		blocks: 0,
 		standalones: 0,
@@ -290,10 +290,10 @@ exports.export = function ({ trx }, data) {
 			return builder.select('_id').where('standalone', true).orderByRaw("data->>'url' IS NOT NULL");
 		}
 	}).then(function (site) {
-		var children = site.children;
+		const children = site.children;
 		delete site.children;
-		var out = createWriteStream(Path.resolve(All.opt.cwd, data.file));
-		var finished = new Promise(function (resolve, reject) {
+		const out = createWriteStream(Path.resolve(All.opt.cwd, data.file));
+		const finished = new Promise(function (resolve, reject) {
 			out.resolve = resolve;
 			out.reject = reject;
 		});
@@ -315,9 +315,9 @@ exports.export = function ({ trx }, data) {
 				}
 			}).joinRelated('parents', { alias: 'site' })
 			.where('site.type', 'site').then(function (settings) {
-				var last = settings.length - 1;
+				const last = settings.length - 1;
 				settings.forEach(function (setting, i) {
-					var user = setting.user;
+					let user = setting.user;
 					delete setting.user;
 					if (user.length == 0) return;
 					user = user[0];
@@ -331,9 +331,9 @@ exports.export = function ({ trx }, data) {
 				out.write(']');
 			}).then(function () {
 				out.write(',\n"standalones": [');
-				var last = children.length - 1;
-				var p = Promise.resolve();
-				var list = [];
+				const last = children.length - 1;
+				let p = Promise.resolve();
+				const list = [];
 				children.forEach(function (child) {
 					p = p.then(function () {
 						return All.api.Block.query(trx)
@@ -376,7 +376,7 @@ exports.export = function ({ trx }, data) {
 								.whereIn('block.type', ['settings', 'event_date']);
 						}
 					}).then(function (reservations) {
-						var last = reservations.length - 1;
+						const last = reservations.length - 1;
 						reservations.forEach(function (resa, i) {
 							counts.reservations++;
 							out.write(toJSON(resa));
@@ -388,7 +388,7 @@ exports.export = function ({ trx }, data) {
 				return All.api.Href.query(trx).selectWithout('tsv', '_id', '_parent_id')
 					.whereSite(site.id).then(function (hrefs) {
 						counts.hrefs = hrefs.length;
-						var last = hrefs.length - 1;
+						const last = hrefs.length - 1;
 						hrefs.forEach(function (href, i) {
 							out.write(JSON.stringify(href));
 							if (i != last) out.write('\n,');
@@ -423,8 +423,8 @@ exports.export.schema = {
 
 // import all data but files
 exports.import = function ({ trx }, data) {
-	var Block = All.api.Block;
-	var counts = {
+	const Block = All.api.Block;
+	const counts = {
 		site: 0,
 		blocks: 0,
 		standalones: 0,
@@ -433,20 +433,20 @@ exports.import = function ({ trx }, data) {
 		hrefs: 0,
 		reservations: 0
 	};
-	var p = Promise.resolve();
+	let p = Promise.resolve();
 	const fstream = createReadStream(Path.resolve(All.opt.cwd, data.file));
 	const pstream = new PassThrough({
 		objectMode: true,
 		highWaterMark: 1
 	});
-	var site;
-	var queues = {};
-	var mp = [];
-	var upgrader;
+	let site;
+	const queues = {};
+	const mp = [];
+	let upgrader;
 	pstream.on('data', function (obj) {
 		if (obj.site) {
 			if (!obj.site.data) obj.site.data = {};
-			var fromVersion = obj.site.data.server;
+			const fromVersion = obj.site.data.server;
 			Object.assign(obj.site.data, data.data || {});
 			upgrader = new Upgrader(Block, {
 				copy: data.copy,
@@ -463,19 +463,19 @@ exports.import = function ({ trx }, data) {
 				});
 			});
 		} else if (obj.lone) {
-			var lone = upgrader.process(obj.lone, site);
-			var doneLone;
+			const lone = upgrader.process(obj.lone, site);
+			let doneLone;
 			queues[lone.id] = new Promise(function (resolve) {
 				doneLone = resolve;
 			});
-			var lonesRefs = [];
+			const lonesRefs = [];
 			mp.push(p.then(function () {
-				var lones = lone.standalones;
+				const lones = lone.standalones;
 				if (!lones) return;
 				delete lone.standalones;
 				return Promise.all(lones.map(function (rlone) {
 					// relate lone to rlone
-					var id = upgrader.get(rlone.id);
+					const id = upgrader.get(rlone.id);
 					if (!id) throw new Error("unknown standalone " + rlone.id);
 					return queues[id].then(function (_id) {
 						lonesRefs.push({
@@ -501,7 +501,7 @@ exports.import = function ({ trx }, data) {
 			}));
 		} else if (obj.href) {
 			p = p.then(function () {
-				var href = obj.href;
+				const href = obj.href;
 				if (href.pathname) {
 					href.pathname = href.pathname.replace(/\/uploads\/[^/]+\//, `/uploads/${site.id}/`);
 				}
@@ -512,7 +512,7 @@ exports.import = function ({ trx }, data) {
 				});
 			});
 		} else if (obj.setting) {
-			var setting = upgrader.process(obj.setting, obj.site);
+			const setting = upgrader.process(obj.setting, obj.site);
 			p = p.then(function () {
 				upgrader.finish(setting);
 				return Block.query(trx).where('type', 'user')
@@ -533,10 +533,10 @@ exports.import = function ({ trx }, data) {
 					});
 			});
 		} else if (obj.reservation) {
-			var resa = upgrader.process(obj.reservation, obj.site);
+			const resa = upgrader.process(obj.reservation, obj.site);
 			p = p.then(function () {
 				upgrader.finish(resa);
-				var parents = resa.parents || [];
+				const parents = resa.parents || [];
 				if (parents.length != 2) {
 					console.warn("Ignoring reservation", resa);
 					return;
@@ -586,7 +586,7 @@ exports.import = function ({ trx }, data) {
 		pstream.emit('error', failObj);
 	});
 
-	var q = new Promise(function (resolve, reject) {
+	const q = new Promise(function (resolve, reject) {
 		pstream.on('error', function (err) {
 			reject(err);
 		});
