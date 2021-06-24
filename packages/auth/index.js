@@ -154,6 +154,7 @@ function filter(req, item, fn) {
 	}
 	if (child) {
 		item.child = filter(req, child, fn);
+		if (item.child && !item.child.type) delete item.type;
 	}
 	if (parent) {
 		item.parent = filter(req, parent, fn);
