@@ -380,7 +380,8 @@ exports.export = function (req, data) {
 					.select().withGraphFetched('parents(notsite) as parents').modifiers({
 						notsite(builder) {
 							return builder.select('block.id', 'block.type')
-								.whereIn('block.type', ['settings', 'event_date']);
+								.whereIn('block.type', ['settings', 'event_date'])
+								.orderBy('block.type');
 						}
 					}).then(function (reservations) {
 						const last = reservations.length - 1;
