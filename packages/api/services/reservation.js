@@ -157,29 +157,25 @@ exports.save = function (req, data) {
 	if (!reservation.attendees || reservation.attendees.length == 0) {
 		throw new HttpError.BadRequest("reservation.attendees must not be empty");
 	}
-	return Promise.all([
-		All.run('settings.find', req, { email: data.email }),
-		All.run('block.find', req, {
-			child: {
-				type: 'event_reservation',
-				id: data.id
-			},
-			children: {
-				type: 'event_reservation',
-				first: true
-			},
-			type: 'event_date',
-			parents: {
-				type: 'event',
-				first: true
-			}
-		})
-	]).then(function ([settings, { item: eventDate }]) {
-		if (req.user.id !== settings.id && !req.user.grants.includes('scheduler')) {
+	return All.run('block.find', req, {
+		child: {
+			type: 'event_reservation',
+			id: data.id
+		},
+		children: {
+			type: 'event_reservation',
+			first: true
+		},
+		type: 'event_date',
+		parents: {
+			type: 'event',
+			first: true
+		}
+	}).then(function ({item: eventDate}) {
+		const resa = eventDate.child;
+		if (!resa.type) {
 			throw new HttpError.Unauthorized("Wrong user");
 		}
-		const resa = eventDate.child;
-
 		if (reservation.attendees) {
 			reservation.seats = reservation.attendees.length;
 		} else if (reservation.seats == null) {
@@ -218,16 +214,16 @@ exports.save = function (req, data) {
 };
 exports.save.schema = Object.assign({}, exports.add.schema, {
 	title: 'Save reservation',
-	required: ['id', 'reservation', 'email']
+	required: ['id', 'reservation']
 });
-Object.assign({}, exports.save.schema.properties, {
-	event_date: undefined,
-	id: {
-		title: 'Reservation id',
-		type: 'string',
-		format: 'id'
-	}
-});
+exports.save.schema.properties = Object.assign({}, exports.add.schema.properties);
+exports.save.schema.properties.id = {
+	title: 'Reservation id',
+	type: 'string',
+	format: 'id'
+};
+delete exports.save.schema.properties.event_date;
+delete exports.save.schema.properties.email;
 
 exports.save.external = true;
 
