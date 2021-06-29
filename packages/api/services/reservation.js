@@ -164,6 +164,7 @@ exports.save = function (req, data) {
 		},
 		children: {
 			type: 'event_reservation',
+			id: data.id,
 			first: true
 		},
 		type: 'event_date',
