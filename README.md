@@ -7,6 +7,7 @@ install
 -------
 
 Besides `npm install pageboard`:
+
 - a postgresql 10 database
 - exiftool (for inspector)
 - webkitgtk 2.20 (for prerender)
@@ -28,62 +29,64 @@ then install them and link them in node_modules using `make`.
 modules
 -------
 
-* core  
+Modules define API that are callable through query(get)/form(post),
+or directly from the command-line.
+
+- core
   - provides `pageboard` client and application launcher
   - loads pageboard modules that define further cli api and http routes.
 
-* api  
+- api
   Manages domain schemas and their npm module deployment.
   Manipulate blocks:
   - block.get/search/save/add/del
   - site.get/add/save/del
   - page.get/search/add/save/del
   - user.get/add/save/del
-  
+
   Manipulate hrefs:
   - href.get/search/save/add/del
   and the matching HTTP REST api
   Each href stores metadata about it (using inspector or direct data about pages).
-  
+
   Userland api for query/form elements, allows calling internal api (granted
   permissions).
   - search.query (GET)
   - form.query (GET)
   - form.submit (POST)
 
-* auth  
+- auth
   Authentication
   - auth.login: gets a validation url
   - auth.validate: validates that url and sets a jsonwebtoken in cookie
 
-* cache  
+- cache
   Tag and scope-based directives for the proxy. Also sets peremption headers.
 
-* statics  
+- statics
   Mounts and symlinks static files directories declared by pageboard modules.
 
-* image  
+- image
   Image thumbnailer and resizer/converter using sharpie -> sharp -> vips.
 
-* github-webhook  
+- github-webhook
   Listens to github json payloads /.api/github and deploy accordingly.
 
-* upload  
+- upload
   deals with files uploads
   /.api/upload (POST, no internal api)
 
-* inspector  
+- inspector
   Inspects any URL to get metadata about it.
   - inspector.get (internal api)
 
-* mail  
+- mail
   renders a url to mail it to given recipient(s):
   - mail.send (internal api)
 
-* read  
+- read
   bootstraps a page that uses @pageboard/client elements modules.
 
-* prerender  
+- prerender
   serves prerendered web pages, also used by mail and pdf modules.
   Uses `express-dom`.
-
