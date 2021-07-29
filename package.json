@@ -39,9 +39,14 @@
       "HttpError": true,
       "Text": true,
       "Log": true
-    }
+    },
+    "ignorePatterns": [
+      "/*",
+      "!/packages",
+      "node_modules/"
+    ]
   },
   "devDependencies": {
-    "@kapouer/eslint-config": "^1.1.1"
+    "@kapouer/eslint-config": "^1.4.1"
   }
 }
