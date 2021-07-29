@@ -432,7 +432,8 @@ exports.export.schema = {
 };
 
 // import all data but files
-exports.import = function ({ trx }, data) {
+exports.import = function (req, data) {
+	const trx = req.trx;
 	const Block = All.api.Block;
 	const counts = {
 		site: 0,
