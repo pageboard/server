@@ -12,7 +12,7 @@ exports.unflatten = function(query) {
 exports.mergeParameters = mergeParameters;
 
 function mergeParameters(params, obj) {
-	var ret = Array.isArray(params) ? [] : {};
+	const ret = Array.isArray(params) ? [] : {};
 	Object.entries(params).forEach(function([key, val]) {
 		if (val == null) return;
 		if (typeof val == "string") {
@@ -31,9 +31,9 @@ exports.mergeObjects = mergeObjects;
 
 function mergeObjects(data, expr) {
 	if (data == null) return expr;
-	var copy = Array.isArray(data) ? data.slice() : Object.assign({}, data);
+	const copy = Array.isArray(data) ? data.slice() : Object.assign({}, data);
 	if (expr != null) Object.entries(expr).forEach(function([key, val]) {
-		var sval = copy[key];
+		let sval = copy[key];
 		if (val == null) return;
 		else if (typeof val == "object") {
 			if (Array.isArray(val)) {

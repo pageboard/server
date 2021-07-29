@@ -30,7 +30,7 @@ function init(All) {
 
 function paramSiteWrap(fn) {
 	return function() {
-		var mw = fn.apply(null, Array.from(arguments));
+		const mw = fn.apply(null, Array.from(arguments));
 		function omw(req, res, next) {
 			req.params.site = req.site.id;
 			mw(req, res, next);
@@ -51,7 +51,7 @@ CacheState.prototype.init = function(All) {
 
 CacheState.prototype.saveNow = function() {
 	delete this.toSave;
-	var me = this;
+	const me = this;
 	return fs.writeFile(this.path, JSON.stringify(this.data)).catch(function(err) {
 		console.error("Error writing", me.path);
 	});
@@ -63,12 +63,13 @@ CacheState.prototype.save = function() {
 };
 
 CacheState.prototype.open = function() {
-	var me = this;
+	const me = this;
 	return fs.readFile(this.path, {flag: 'a+'}).then(function(buf) {
-		var str = buf.toString();
+		const str = buf.toString();
 		if (!str) return;
 		return JSON.parse(str);
 	}).catch(function(err) {
+		// eslint-disable-next-line no-console
 		console.info(`Unparsable ${me.path}, continuing anyway`);
 	}).then(function(data) {
 		me.data = data || {};
@@ -91,15 +92,16 @@ CacheState.prototype.install = function(site) {
 };
 
 CacheState.prototype.mw = function(req, res, next) {
-	var me = this;
-	var tags = [];
-	var doSave = false;
-	var dobj = this.data;
+	const me = this;
+	const tags = [];
+	let doSave = false;
+	let dobj = this.data;
 	if (!dobj) dobj = this.data = {};
+	// eslint-disable-next-line no-console
 	console.info("Check app configuration changes");
 
 	if (!this.hash) {
-		var hash = crypto.createHash('sha256');
+		const hash = crypto.createHash('sha256');
 		hash.update(Stringify(this.opt));
 		this.hash = hash.digest('hex');
 	}
@@ -110,6 +112,7 @@ CacheState.prototype.mw = function(req, res, next) {
 		doSave = true;
 		dobj.hash = this.hash;
 		tags.push('app');
+		// eslint-disable-next-line no-console
 		console.info("detected application change");
 	}
 	tags.push('app-:site');

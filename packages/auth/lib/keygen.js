@@ -4,7 +4,7 @@ const pify = require('util').promisify;
 const generateKeyPair = pify(require('crypto').generateKeyPair);
 
 module.exports = function(All) {
-	var keysPath = Path.join(All.opt.dirs.data, 'keys.json');
+	const keysPath = Path.join(All.opt.dirs.data, 'keys.json');
 	return fs.readFile(keysPath).then(function(buf) {
 		return JSON.parse(buf.toString());
 	}).catch(function() {

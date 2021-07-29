@@ -1,12 +1,12 @@
 exports.helper = function(mw, settings) {
-	var opts = settings.extensions || {};
-	var list = opts.list || [];
+	const opts = settings.extensions || {};
+	const list = opts.list || [];
 	if (!settings.filters) settings.filters = [];
 	settings.filters.push([function(list, allow) {
 		if (this.uri.startsWith("data:")) return;
-		var path = (new URL(this.uri, document.location)).pathname;
+		const path = (new URL(this.uri, document.location)).pathname;
 		if (!path) return;
-		var ext = path.substring(path.lastIndexOf('.') + 1).toLowerCase();
+		const ext = path.substring(path.lastIndexOf('.') + 1).toLowerCase();
 		if (list.includes(ext)) {
 			if (!allow) this.cancel = true;
 		} else {

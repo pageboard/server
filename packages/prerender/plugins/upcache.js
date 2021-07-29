@@ -1,8 +1,8 @@
 module.exports = function upcachePlugin(page, settings, request, response) {
-	var locksMap = {};
-	var tagsMap = {};
+	const locksMap = {};
+	const tagsMap = {};
 	page.on('response', function(res) {
-		var list = res.headers['X-Upcache-Lock'];
+		let list = res.headers['X-Upcache-Lock'];
 		if (list) list.split(',').forEach(function(str) {
 			locksMap[str.trim()] = true;
 		});
@@ -12,9 +12,9 @@ module.exports = function upcachePlugin(page, settings, request, response) {
 		});
 	});
 	page.when('idle', function() {
-		var locks = Object.keys(locksMap);
+		const locks = Object.keys(locksMap);
 		if (locks.length) response.priv.locks = locks;
-		var tags = Object.keys(tagsMap);
+		const tags = Object.keys(tagsMap);
 		if (tags.length) response.priv.tags = tags;
 	});
 };

@@ -69,12 +69,12 @@ function init(All) {
 }
 
 exports.report = function(req, data) {
-	var mailer = Mailers.bulk;
-	var sign = data.signature;
+	const mailer = Mailers.bulk;
+	const sign = data.signature;
 	if (!validateMailgun(mailer.auth, sign.timestamp, sign.token, sign.signature)) {
 		return false;
 	}
-	var event = data['event-data'];
+	const event = data['event-data'];
 	return All.run('mail.to', req, {
 		to: [mailer.sender],
 		subject: 'Pageboard mail delivery failure to ' + event.message.headers.to,
@@ -87,11 +87,11 @@ exports.report.schema = {
 };
 
 exports.receive = function(req, data) {
-	var mailer = Mailers.bulk;
+	const mailer = Mailers.bulk;
 	if (!validateMailgun(mailer.auth, data.timestamp, data.token, data.signature)) {
 		return false;
 	}
-	var senders = data.sender || '';
+	let senders = data.sender || '';
 	if (data.from) senders += ', ' + data.from;
 	senders = AddressParser(senders).map(function(item) { return item.address; });
 	if (senders.length == 0) {
@@ -99,7 +99,7 @@ exports.receive = function(req, data) {
 		return false;
 	}
 	return Promise.all(AddressParser(data.recipient).map(function(item) {
-		var parts = item.address.split('@');
+		let parts = item.address.split('@');
 		if (parts.pop() != mailer.domain) return false;
 		parts = parts[0].split('.');
 		if (parts.length != 2) return false;
@@ -128,7 +128,7 @@ exports.receive = function(req, data) {
 			});
 		});
 	})).then(function(arr) {
-		return arr.some(ok => !!ok);
+		return arr.some(ok => Boolean(ok));
 	}).catch(function(err) {
 		if (err.status == 404) return false;
 		else throw err;
@@ -140,16 +140,16 @@ exports.receive.schema = {
 };
 
 exports.to = function(req, data) {
-	var purpose = data.purpose;
+	const purpose = data.purpose;
 	data = Object.assign({}, data);
 	delete data.purpose;
-	var mailer = Mailers[purpose];
+	const mailer = Mailers[purpose];
 	if (!mailer) throw new Error("Unknown mailer purpose " + purpose);
 	if (data.to.length > 1) {
 		data.bcc = data.to;
 		data.to = data.replyTo || data.from || mailer.sender;
 	}
-	var sender = Object.assign({}, data.from || mailer.sender);
+	const sender = Object.assign({}, data.from || mailer.sender);
 	if (!sender.address) {
 		sender.address = mailer.sender.address;
 	}
@@ -271,17 +271,17 @@ exports.send = function (req, data) {
 	if (!data.from && !data.replyTo) {
 		throw new HttpError.NotFound("Missing parameters");
 	}
-	var purpose = data.purpose;
+	const purpose = data.purpose;
 	data = Object.assign({}, data);
 	delete data.purpose;
 	const mailer = Mailers[purpose];
 	if (!mailer) throw new Error("Unknown mailer purpose " + purpose);
 
-	var list = [All.run('block.find', req, {
+	const list = [All.run('block.find', req, {
 		type: 'mail',
 		data: {url: data.url}
 	})];
-	var mailOpts = {
+	const mailOpts = {
 		purpose: purpose
 	};
 	if (data.from) {
@@ -310,13 +310,13 @@ exports.send = function (req, data) {
 		else return All.run('settings.get', req, {id:to});
 	})));
 
-	var site = req.site;
+	const site = req.site;
 
 	return Promise.allSettled(list).then(results => results.map(item => {
 		if (item.status == "rejected") throw item.reason;
 		return item.value;
 	})).then(function(rows) {
-		var emailPage = rows[0].item;
+		const emailPage = rows[0].item;
 		if (data.from) mailOpts.from = {
 			name: site.data.title,
 			address: `${site.id}.${rows[1].id}@${mailer.domain}`
@@ -333,7 +333,7 @@ exports.send = function (req, data) {
 		if (purpose == "transactional" && (Object.keys(domains).length > 2 || mailOpts.to.length > 10)) {
 			throw new Error("Transactional mail allowed for at most two different recipients domains and ten recipients");
 		}
-		var emailUrl = site.href + emailPage.data.url;
+		const emailUrl = site.href + emailPage.data.url;
 
 		return got(emailUrl + ".mail", { // TODO when all 0.7 are migrated, drop .mail
 			headers: {

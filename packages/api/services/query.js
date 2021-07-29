@@ -23,8 +23,8 @@ exports.query = function(req, data) {
 	return All.run('block.get', req, {
 		id: data.id
 	}).then(function(form) {
-		var fd = form.data || {};
-		var method = (fd.action || {}).method;
+		const fd = form.data || {};
+		const method = (fd.action || {}).method;
 		if (!method) {
 			throw new HttpError.BadRequest("Missing method");
 		}
@@ -32,8 +32,8 @@ exports.query = function(req, data) {
 			throw new HttpError.Unauthorized("Check user permissions");
 		}
 		// build parameters
-		var expr = ((form.expr || {}).action || {}).parameters || {};
-		var params = All.utils.mergeParameters(expr, {
+		const expr = ((form.expr || {}).action || {}).parameters || {};
+		let params = All.utils.mergeParameters(expr, {
 			$query: data.query || {},
 			$user: req.user
 		});

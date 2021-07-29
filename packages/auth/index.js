@@ -15,7 +15,7 @@ exports = module.exports = function(opt) {
 // validate: process activation link and return bearer in cookie
 
 function init(All) {
-	var opt = All.opt;
+	const opt = All.opt;
 	opt.lock = Object.assign({
 		maxAge: 60 * 60 * 24 * 31,
 		userProperty: 'user',
@@ -24,7 +24,7 @@ function init(All) {
 
 	return require('./lib/keygen')(All).then(function(keys) {
 		Object.assign(opt.lock, keys);
-		var lock = Upcache.lock(opt.lock);
+		const lock = Upcache.lock(opt.lock);
 
 		All.auth.restrict = lock.restrict.bind(lock);
 		All.auth.vary = lock.vary;
@@ -51,7 +51,7 @@ exports.locked = locked;
 exports.filter = filter;
 
 exports.filterResponse = function(req, obj, fn) {
-	var {item, items} = obj;
+	const {item, items} = obj;
 	if (!item && !items) {
 		return filter(req, obj, fn);
 	}
@@ -68,10 +68,10 @@ exports.filterResponse = function(req, obj, fn) {
 };
 
 function grantsLevels(DomainBlock) {
-	var grants = {};
-	var list = DomainBlock.schema('settings.data.grants').items.anyOf || [];
+	const grants = {};
+	const list = DomainBlock.schema('settings.data.grants').items.anyOf || [];
 	list.forEach(function(grant, i) {
-		var n = grant.$level;
+		const n = grant.$level;
 		if (typeof n != 'number' || Number.isNaN(n)) {
 			// eslint-disable-next-line no-console
 			console.warn("grant without $level, ignoring", grant);
@@ -87,7 +87,7 @@ function lockMw(list) {
 		if (typeof list == "string") list = [list];
 		if (locked(req, list)) {
 			All.auth.headers(res, list);
-			var status = (req.user.grants || []).length == 0 ? 401 : 403;
+			const status = (req.user.grants || []).length == 0 ? 401 : 403;
 			res.status(status);
 			res.send({locks: req.locks});
 		} else {
@@ -97,7 +97,8 @@ function lockMw(list) {
 }
 
 function locked(req, list) {
-	var {site, user, locks} = req;
+	const { site, user } = req;
+	let { locks } = req;
 	if (!locks) locks = req.locks = [];
 	if (list != null && !Array.isArray(list) && typeof list == "object" && list.read !== undefined) {
 		// backward compat, block.lock only cares about read access
@@ -107,15 +108,15 @@ function locked(req, list) {
 	else if (typeof list == "string") list = [list];
 	else if (list === true) return true;
 	else if (list.length == 0) return false;
-	var minLevel = Infinity;
-	var grants = user.grants || [];
+	let minLevel = Infinity;
+	const grants = user.grants || [];
 	grants.forEach(function(grant) {
 		minLevel = Math.min(site.$grants[grant] || Infinity, minLevel);
 	});
 
-	var granted = false;
+	let granted = false;
 	list.forEach(function(lock) {
-		var lockIndex = site.$grants[lock] || -1;
+		const lockIndex = site.$grants[lock] || -1;
 		if (lock.startsWith('id-')) {
 			if (`id-${user.id}` == lock) granted = true;
 			lock = 'id-:id';
@@ -125,8 +126,8 @@ function locked(req, list) {
 		if (!locks.includes(lock)) locks.push(lock);
 	});
 	locks.sort(function(a, b) {
-		var al = site.$grants[a] || -1;
-		var bl = site.$grants[b] || -1;
+		const al = site.$grants[a] || -1;
+		const bl = site.$grants[b] || -1;
 		if (al == bl) return 0;
 		else if (al < bl) return 1;
 		else if (al > bl) return -1;
@@ -136,7 +137,7 @@ function locked(req, list) {
 
 function filter(req, item, fn) {
 	if (!item.type) return item;
-	var {children, child, parents, parent, items} = item;
+	const {children, child, parents, parent, items} = item;
 	if (children) {
 		item.children = children.filter(function(item) {
 			return filter(req, item, fn);
@@ -161,16 +162,16 @@ function filter(req, item, fn) {
 		if (item.parent && !item.parent.type) delete item.type;
 	}
 	// old types might not have schema
-	var schema = req.site.$schema(item.type) || {};
+	const schema = req.site.$schema(item.type) || {};
 	if (fn && schema) fn(schema, item);
 
-	var $lock = schema.$lock || {};
+	let $lock = schema.$lock || {};
 	if (typeof $lock == "boolean" || typeof $lock == "string" || Array.isArray($lock)) $lock = {'*': $lock};
-	var lock = (item.lock || {}).read || [];
+	const lock = (item.lock || {}).read || [];
 
 	if (Object.keys($lock).length == 0 && lock.length == 0) return item;
 
-	var locks = {
+	let locks = {
 		'*': lock
 	};
 	locks = Object.assign({}, $lock, locks);
@@ -184,7 +185,7 @@ function filter(req, item, fn) {
 	delete locks['*'];
 
 	Object.keys(locks).forEach(function(path) {
-		var list = locks[path];
+		const list = locks[path];
 		path = path.split('.');
 		path.reduce(function(obj, val, index) {
 			if (obj == null) return;

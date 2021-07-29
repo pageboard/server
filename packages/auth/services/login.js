@@ -56,13 +56,13 @@ function generate(req, data) {
 }
 
 exports.send = function (req, data) {
-	var site = req.site;
+	const site = req.site;
 	if (!site.href) {
 		return "login.send requires a hostname. Use login.link";
 	}
 	return generate(req, data).then(function (token) {
-		var p = Promise.resolve();
-		var settings = data.settings || {};
+		let p = Promise.resolve();
+		const settings = data.settings || {};
 		delete settings.grants;
 		p = All.settings.save(req, {
 			email: data.email,
@@ -72,7 +72,7 @@ exports.send = function (req, data) {
 			return token;
 		});
 	}).then(function (token) {
-		var mail = {
+		const mail = {
 			purpose: 'transactional',
 			from: {
 				name: site.data.title
@@ -81,8 +81,8 @@ exports.send = function (req, data) {
 				address: data.email
 			}]
 		};
-		var tokenStr = token.toString();
-		var prefix = site.data.title ? site.data.title + ' - ' : '';
+		const tokenStr = token.toString();
+		const prefix = site.data.title ? site.data.title + ' - ' : '';
 		if (site.data.lang == "fr") {
 			mail.subject = `${prefix}code de vérification: ${tokenStr}`;
 			mail.text = Text`
@@ -133,15 +133,15 @@ exports.send.external = true;
 function verifyToken(req, { email, token }) {
 	return All.user.get(req, { email }).then(function (user) {
 		return userPriv({ req }, user).then(function (priv) {
-			var tries = (priv.data.otp.tries || 0) + 1;
+			const tries = (priv.data.otp.tries || 0) + 1;
 			if (tries >= 5) {
-				var at = Date.parse(priv.data.otp.checked_at);
+				const at = Date.parse(priv.data.otp.checked_at);
 				if (!Number.isNaN(at) && Date.now() - at < 1000 * otp.authenticator.options.step / 2) {
 					throw new HttpError.TooManyRequests();
 				}
 			}
 			token = token.replaceAll(/\s/g, '');
-			var verified = otp.authenticator.check(token, priv.data.otp.secret);
+			const verified = otp.authenticator.check(token, priv.data.otp.secret);
 			return priv.$query(req.trx).patch({
 				'data:otp.checked_at': new Date().toISOString(),
 				'data:otp.tries': verified ? 0 : tries
@@ -158,13 +158,13 @@ exports.grant = function (req, data) {
 		return All.run('settings.find', req, {
 			email: data.email
 		}).then(function (settings) {
-			var grants = req.user && req.user.grants || [];
-			var user = req.user = {
+			const grants = req.user && req.user.grants || [];
+			const user = req.user = {
 				id: settings.id,
 				grants: settings.data && settings.data.grants || []
 			};
 			if (user.grants.length == 0) user.grants.push('user');
-			var locks = data.grant ? [data.grant] : [];
+			const locks = data.grant ? [data.grant] : [];
 			if (All.auth.locked(req, locks)) {
 				throw new HttpError.Forbidden("User has insufficient grants");
 			}
@@ -268,7 +268,7 @@ exports.clear.external = true;
 exports.key = function (req, data) {
 	return All.user.get(req, { email: data.email }).then(function (user) {
 		return userPriv(req, user).then(function (priv) {
-			var uri = otp.authenticator.keyuri(user.data.email, All.opt.name, priv.data.otp.secret);
+			const uri = otp.authenticator.keyuri(user.data.email, All.opt.name, priv.data.otp.secret);
 			if (data.qr) {
 				return qrcode.toString(uri, {
 					type: 'terminal',

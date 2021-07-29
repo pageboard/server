@@ -5,10 +5,10 @@ class DebugProxy {
 		this.root = root;
 	}
 	get(obj, key) {
-		var logger = Reflect.get(obj, key);
+		let logger = Reflect.get(obj, key);
 
 		if (!logger) {
-			let flag = `${this.root}:${key}`;
+			const flag = `${this.root}:${key}`;
 			logger = debug(flag);
 			Reflect.set(obj, key, logger);
 		}

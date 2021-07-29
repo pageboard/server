@@ -1,10 +1,10 @@
-var Busboy = require('busboy');
+const Busboy = require('busboy');
 
 module.exports = function(req, res, next) {
-	var busboy = new Busboy({
+	const busboy = new Busboy({
 		headers: req.headers
 	});
-	var body = {};
+	const body = {};
 	busboy.on("field", function(fieldname, value) {
 		body[fieldname] = value;
 	});

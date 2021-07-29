@@ -76,7 +76,7 @@ function init(All) {
 				storage: storage,
 				fileFilter: function(req, file, cb) {
 					const types = limits.types.length ? limits.types : ['*/*'];
-					cb(null, !!typeis.is(file.mimetype, types));
+					cb(null, Boolean(typeis.is(file.mimetype, types)));
 				},
 				limits: {
 					files: limits.files,

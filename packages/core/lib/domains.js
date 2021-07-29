@@ -28,10 +28,10 @@ so adding an IP to pageboard and pointing a host to that IP needs a restart)
 - init returns for everyone
 */
 Domains.prototype.mw = function(req, res, next) {
-	var All = this.All;
-	var path = req.path;
-	var host = this.init(req.hostname, path, req.headers);
-	var p;
+	const All = this.All;
+	const path = req.path;
+	const host = this.init(req.hostname, path, req.headers);
+	let p;
 	if (path == "/.well-known/upcache") {
 		if (host.finalize) {
 			host.finalize();
@@ -59,7 +59,7 @@ Domains.prototype.mw = function(req, res, next) {
 	return p.then(() => {
 		if (!next) return;
 		if (host._error) throw host._error;
-		var site = this.sites[host.id];
+		const site = this.sites[host.id];
 		if (!host.id || !site) {
 			// this should never actually happen !
 			throw new HttpError.ServiceUnavailable(`Missing host.id or site for ${host.name}`);
@@ -69,14 +69,14 @@ Domains.prototype.mw = function(req, res, next) {
 		return site;
 	}).then((site) => {
 		if (!next) return;
-		var path = req.path;
+		const path = req.path;
 		// FIXME do not redirect if host.domains[0] DNS has not been checked
 		if (req.hostname != host.domains[0]
 			&& !path.startsWith('/.api/')
 			&& !path.startsWith('/.well-known/')
 			&& /^.well-known\/\d{3}$/.test(path)
 		) {
-			var rhost = this.init(host.domains[0], path, req.headers);
+			const rhost = this.init(host.domains[0], path, req.headers);
 			rhost.waiting.then(function () {
 				All.cache.tag('data-:site')(req, res, function () {
 					res.redirect(308, rhost.href + req.url);
@@ -99,7 +99,7 @@ Domains.prototype.mw = function(req, res, next) {
 				errors: site.errors
 			});
 		} else {
-			var version = site.server || site.data.server || All.opt.version;
+			const version = site.server || site.data.server || All.opt.version;
 			if (version != All.opt.version) {
 				res.set('X-Pageboard-Peer', All.opt.upstreams[version]);
 				if (req.method == "GET") res.redirect(307, req.url);
@@ -114,7 +114,7 @@ Domains.prototype.mw = function(req, res, next) {
 Domains.prototype.wkp = function(req, res, next) {
 	if (req.hostname != localhost4) return next();
 	All.run('site.all', req).then((list) => {
-		var map = {};
+		const map = {};
 		list.forEach((site) => {
 			Object.assign(map, this.domainMapping(site));
 		});
@@ -125,14 +125,14 @@ Domains.prototype.wkp = function(req, res, next) {
 };
 
 Domains.prototype.domainMapping = function(site) {
-	var map = {};
-	var rsite = this.sites[site.id];
-	var version = rsite && rsite.server || site.data.server || All.opt.version;
-	var upstream = All.opt.upstreams[version];
-	var domains = site.data.domains;
+	const map = {};
+	const rsite = this.sites[site.id];
+	const version = rsite && rsite.server || site.data.server || All.opt.version;
+	const upstream = All.opt.upstreams[version];
+	let domains = site.data.domains;
 	if (!domains) domains = [];
 	else if (typeof domains == "string") domains = [domains];
-	var domain = domains.shift();
+	const domain = domains.shift();
 	if (domain != null) {
 		domains = domains.slice();
 		domains.push(site.id);
@@ -147,9 +147,9 @@ Domains.prototype.domainMapping = function(site) {
 };
 
 Domains.prototype.init = function(hostname, path, headers) {
-	var sites = this.sites;
-	var hosts = this.hosts;
-	var host = hosts[hostname];
+	const sites = this.sites;
+	const hosts = this.hosts;
+	let host = hosts[hostname];
 	if (!host) {
 		hosts[hostname] = host = {name: hostname};
 		hostUpdatePort(host, headers.host);
@@ -160,16 +160,16 @@ Domains.prototype.init = function(hostname, path, headers) {
 		host.searching = Promise.resolve().then(function() {
 			return this.check(host, headers['x-forwarded-by']);
 		}.bind(this)).then(function(hostname) {
-			var site = host.id && sites[host.id];
+			const site = host.id && sites[host.id];
 			if (site) return site;
-			var id;
+			let id;
 			pageboardNames.some(function(hn) {
 				if (hostname.endsWith(hn)) {
 					id = hostname.substring(0, hostname.length - hn.length);
 					return true;
 				}
 			});
-			var data = {
+			const data = {
 				domain: host.name
 			};
 			if (id) data.id = id; // search by domain and id
@@ -180,7 +180,7 @@ Domains.prototype.init = function(hostname, path, headers) {
 			if (!site.data) site.data = {};
 
 			// there was a miss, so update domains list
-			var domains = (site.data.domains || []).concat(pageboardNames.map(function(hn) {
+			const domains = (site.data.domains || []).concat(pageboardNames.map(function(hn) {
 				return host.id + hn;
 			}));
 			domains.forEach(function(domain) {
@@ -212,17 +212,17 @@ Domains.prototype.init = function(hostname, path, headers) {
 };
 
 Domains.prototype.check = function(host, forwardedBy) {
-	var fam = 4;
-	var ip = forwardedBy;
+	let fam = 4;
+	let ip = forwardedBy;
 	if (!ip) return Promise.reject(new Error("Missing X-Forwarded-By header"));
 	if (isIPv6(ip)) fam = 6;
 
-	var ips = {};
+	const ips = {};
 	ips['ip' + fam] = ip;
-	var prefix = '::ffff:';
+	const prefix = '::ffff:';
 	if (fam == 6) {
 		if (ip.startsWith(prefix)) {
-			var tryFour = ip.substring(prefix.length);
+			const tryFour = ip.substring(prefix.length);
 			if (!isIPv6(tryFour)) {
 				ips.ip4 = tryFour;
 				ip = tryFour;
@@ -230,7 +230,7 @@ Domains.prototype.check = function(host, forwardedBy) {
 		}
 	}
 
-	var hostname = host.name;
+	const hostname = host.name;
 
 	return Promise.resolve().then(function() {
 		if (!pageboardIps[ip]) return DNS.reverse(ip).then(function(hostnames) {
@@ -246,7 +246,7 @@ Domains.prototype.check = function(host, forwardedBy) {
 			all: false
 		}).then(function(lookup) {
 			if (lookup.address == hostname) throw new Error("hostname is an ip " + hostname);
-			var expected = ips['ip' + lookup.family];
+			const expected = ips['ip' + lookup.family];
 			if (lookup.address != expected) {
 				setTimeout(function() {
 					// allow checking again in a minute
@@ -260,7 +260,7 @@ Domains.prototype.check = function(host, forwardedBy) {
 };
 
 Domains.prototype.promote = function(site) {
-	var cur = this.sites[site.id] || {};
+	const cur = this.sites[site.id] || {};
 	cur.errors = [];
 	site.href = site.href || cur.href;
 	site.hostname = site.hostname || cur.hostname || site.data.domain;
@@ -268,9 +268,9 @@ Domains.prototype.promote = function(site) {
 };
 
 Domains.prototype.replace = function(site) {
-	var cur = this.sites[site.id];
-	var oldDomain = cur && cur.data && cur.data.domain;
-	var newDomain = site.data && site.data.domain;
+	const cur = this.sites[site.id];
+	const oldDomain = cur && cur.data && cur.data.domain;
+	const newDomain = site.data && site.data.domain;
 	if (oldDomain != newDomain) {
 		this.hosts[newDomain] = this.hosts[oldDomain] || this.hosts[site.hostname];
 		if (oldDomain) delete this.hosts[oldDomain];
@@ -280,13 +280,13 @@ Domains.prototype.replace = function(site) {
 
 Domains.prototype.hold = function(site) {
 	if (site.data.env == "production" && site.$model) return; // do not hold
-	var host = this.hosts[site.hostname];
+	const host = this.hosts[site.hostname];
 	if (!host) return;
 	doWait(host);
 };
 
 Domains.prototype.release = function(site) {
-	var host = this.hosts[site.hostname];
+	const host = this.hosts[site.hostname];
 	if (!host) return;
 	host.isWaiting = false;
 	delete host.parked;
@@ -295,7 +295,7 @@ Domains.prototype.release = function(site) {
 Domains.prototype.error = function(site, err) {
 	try {
 		if (!site.hostname) console.warn("All.domains.error(site) missing site.hostname");
-		var host = this.hosts[site.hostname];
+		const host = this.hosts[site.hostname];
 		if (!host) {
 			console.error("Error", site.id, err);
 			return;
@@ -314,8 +314,8 @@ Domains.prototype.error = function(site, err) {
 };
 
 function hostUpdatePort(host, header) {
-	var parts = header.split(':');
-	var port = parts.length == 2 ? parseInt(parts[1]) : null;
+	const parts = header.split(':');
+	const port = parts.length == 2 ? parseInt(parts[1]) : null;
 	if (!Number.isNaN(port)) host.port = port;
 	else delete host.port;
 }
@@ -326,18 +326,18 @@ function hostUpdateDomain(host, name) {
 }
 
 function errorObject(site, err) {
-	var std = err.toString();
-	var errObj = {
+	const std = err.toString();
+	const errObj = {
 		name: err.name,
 		message: err.message
 	};
 	if (err.stack) errObj.stack = err.stack.split('\n').map(function(line) {
 		if (line == std) return;
-		var index = line.indexOf("/pageboard/");
+		const index = line.indexOf("/pageboard/");
 		if (index >= 0) return line.substring(index);
 		if (/^\s*at\s/.test(line)) return;
 		return line;
-	}).filter(x => !!x).join('\n');
+	}).filter(x => Boolean(x)).join('\n');
 
 	return errObj;
 }
@@ -349,7 +349,7 @@ function isIPv6(ip) {
 function doWait(host) {
 	if (host.finalize) return;
 	host.isWaiting = true;
-	var subpending = new Promise(function(resolve) {
+	const subpending = new Promise(function(resolve) {
 		host.finalize = function() {
 			delete host.finalize;
 			resolve();

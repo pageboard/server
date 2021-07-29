@@ -10,8 +10,8 @@ function init() {
 }
 
 function QueryUser({ trx }, data) {
-	var Block = All.api.Block;
-	var q = Block.query(trx).alias('user').select()
+	const Block = All.api.Block;
+	const q = Block.query(trx).alias('user').select()
 		.first().throwIfNotFound().where('user.type', 'user');
 	if (!data.id && !data.email) throw new HttpError.BadRequest("Missing id or email");
 	if (data.id) {

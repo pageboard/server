@@ -1,12 +1,12 @@
 exports.any = function(block) {
-	var locks = block.lock && block.lock.read;
+	const locks = block.lock && block.lock.read;
 	if (locks) locks.forEach(function(lock, i) {
 		locks[i] = lock.replace(/^user-/, "id-");
 	});
 	if (block.content) Object.entries(block.content).forEach(function([key, str]) {
 		block.content[key] = str
-		.replaceAll('<element-query', '<element-template')
-		.replaceAll('</element-query>', '</element-template>');
+			.replaceAll('<element-query', '<element-template')
+			.replaceAll('</element-query>', '</element-template>');
 	});
 };
 
@@ -27,7 +27,7 @@ exports.notfound = function(block) {
 };
 
 exports.page = function(block) {
-	var tr = block.data.transition;
+	const tr = block.data.transition;
 	if (tr && (tr.from || tr.to)) {
 		block.data.transition = {
 			close: tr.from ? (tr.from == "fade-from" ? "fade" : tr.from.replace(/^(\w+)-from$/, 'tr-$1')) : null,
@@ -37,10 +37,10 @@ exports.page = function(block) {
 };
 
 exports.form = function(block, parent) {
-	var data = {};
-	var old = block.data;
-	var method = old.action && old.action.method || 'get';
-	var expr = {};
+	const data = {};
+	const old = block.data;
+	const method = old.action && old.action.method || 'get';
+	const expr = {};
 	if (method == "get") {
 		block.type = "query_form";
 		if (old.action) {
@@ -51,7 +51,7 @@ exports.form = function(block, parent) {
 				throw new Error("Cannot convert action.consts for query_form");
 			}
 			if (old.action.vars) {
-				var keys = Object.keys(old.action.vars);
+				const keys = Object.keys(old.action.vars);
 				if (keys.length) console.warn("ignoring form.action.vars ", old);
 			}
 		}
@@ -64,7 +64,7 @@ exports.form = function(block, parent) {
 			};
 			if (data.action.method == "mail.send") {
 				Object.entries(data.action.parameters).forEach(([key, val]) => {
-					var nkey = key.replace(/^query\./, 'body.');
+					const nkey = key.replace(/^query\./, 'body.');
 					if (nkey != key) {
 						data.action.parameters[nkey] = val;
 						delete data.action.parameters[key];
@@ -121,8 +121,8 @@ exports.input_file = function(block) {
 
 exports.query = function(block) {
 	block.type = 'fetch';
-	var data = {};
-	var old = block.data;
+	const data = {};
+	const old = block.data;
 	if (old.query) {
 		data.action = {
 			method: old.query.call,
@@ -175,11 +175,11 @@ exports.grid = function(block) {
 };
 
 exports.piercan_produit = function(block) {
-	var content = block.content || {};
+	const content = block.content || {};
 	block.content = {};
 	if (content.content) block.content.extra = content.content;
 	if (block.data.image) {
-		var imgBlock = {
+		const imgBlock = {
 			id: this.Block.genIdSync(),
 			type: 'image',
 			data: {

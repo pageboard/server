@@ -10,9 +10,9 @@ exports = module.exports = function (opt) {
 
 function init(All) {
 	All.app.get('/.api/page', function (req, res, next) {
-		var site = req.site;
-		var isWebmaster = !All.auth.locked(req, ['webmaster']);
-		var dev = req.query.develop == "write";
+		const site = req.site;
+		const isWebmaster = !All.auth.locked(req, ['webmaster']);
+		const dev = req.query.develop == "write";
 		delete req.query.develop;
 		if (isWebmaster && !dev) {
 			All.send(res, {
@@ -25,7 +25,7 @@ function init(All) {
 			});
 		} else {
 			All.run('page.get', req, req.query).then(function (data) {
-				var resources = site.$bundles.write.meta.resources;
+				const resources = site.$bundles.write.meta.resources;
 				if (dev && resources.develop) {
 					if (!data.meta) data.meta = { scripts: [] };
 					if (site.$bundles.user) {
@@ -42,7 +42,7 @@ function init(All) {
 		}
 	});
 	All.app.get('/.api/pages', function (req, res, next) {
-		var isWebmaster = !All.auth.locked(req, ['webmaster']);
+		const isWebmaster = !All.auth.locked(req, ['webmaster']);
 		if (isWebmaster) {
 			// webmaster want to see those anyway
 			// this must not be confused with page.lock
@@ -52,7 +52,7 @@ function init(All) {
 			if (!req.query.type) req.query.type = ['page', 'blog'];
 		}
 
-		var action = req.query.text != null ? 'page.search' : 'page.all';
+		const action = req.query.text != null ? 'page.search' : 'page.all';
 		All.run(action, req, req.query).then(function (obj) {
 			All.send(res, obj);
 		}).catch(next);
@@ -113,13 +113,13 @@ function QueryPage({ site, trx }) {
 }
 
 exports.get = function (req, data) {
-	var { site } = req;
-	var obj = {
+	const { site } = req;
+	const obj = {
 		status: 200,
 		site: site.data
 	};
 
-	var wkp = /^\/\.well-known\/(\d{3})$/.exec(data.url);
+	const wkp = /^\/\.well-known\/(\d{3})$/.exec(data.url);
 	if (wkp) obj.status = parseInt(wkp[1]);
 	return QueryPage(req).whereIn('page.type', site.$pages)
 		.whereJsonText("page.data:url", data.url)
@@ -132,7 +132,7 @@ exports.get = function (req, data) {
 				obj.status = 401;
 			}
 			if (obj.status != 200) {
-				var statusUrl = `/.well-known/${obj.status}`;
+				const statusUrl = `/.well-known/${obj.status}`;
 				return QueryPage(req)
 					.where('page.type', 'page')
 					.whereJsonText("page.data:url", statusUrl)
@@ -146,7 +146,7 @@ exports.get = function (req, data) {
 				return page;
 			}
 		}).then(function (page) {
-			var links = {};
+			const links = {};
 			Object.assign(obj, {
 				item: page,
 				items: (page.children || []).concat(page.standalones || []),
@@ -170,10 +170,10 @@ exports.get = function (req, data) {
 				])
 			]).then(function (list) {
 				links.up = list[0].map(redUrl);
-				var siblings = list[1];
-				var found;
-				var position = siblings.findIndex(function (item) {
-					var same = item.url == data.url;
+				const siblings = list[1];
+				let found;
+				const position = siblings.findIndex(function (item) {
+					const same = item.url == data.url;
 					if (same) {
 						found = true;
 					} else if (!found && data.url.length > 1 && item.url.startsWith(data.url)) {
@@ -212,9 +212,9 @@ function redUrl(obj) {
 }
 
 function getParents({ site, trx }, url) {
-	var urlParts = url.split('/');
-	var urlParents = ['/'];
-	for (var i = 1; i < urlParts.length - 1; i++) {
+	const urlParts = url.split('/');
+	const urlParents = ['/'];
+	for (let i = 1; i < urlParts.length - 1; i++) {
 		urlParents.push(urlParts.slice(0, i + 1).join('/'));
 	}
 	return site.$relatedQuery('children', trx).select([
@@ -228,7 +228,7 @@ function getParents({ site, trx }, url) {
 }
 
 function listPages({ site, trx }, data) {
-	var q = site.$relatedQuery('children', trx)
+	const q = site.$relatedQuery('children', trx)
 		.selectWithout('content')
 		.whereIn('block.type', data.type || site.$pages)
 		.where('block.standalone', true);
@@ -251,7 +251,7 @@ function listPages({ site, trx }, data) {
 	}
 
 	if (data.parent != null) {
-		var regexp = data.home ? `^${data.parent}(/[^/]+)?$` : `^${data.parent}/[^/]+$`;
+		const regexp = data.home ? `^${data.parent}(/[^/]+)?$` : `^${data.parent}/[^/]+$`;
 		if (data.home) q.orderByRaw("block.data->>'url' = ? DESC", data.parent);
 		q.whereJsonText('block.data:url', '~', regexp)
 			.orderBy(ref('block.data:index'));
@@ -266,13 +266,13 @@ function listPages({ site, trx }, data) {
 }
 
 exports.search = function ({ site, trx }, data) {
-	var drafts = '';
+	let drafts = '';
 	if (!data.drafts) {
 		drafts = `AND (page.data->'nositemap' IS NULL OR (page.data->'nositemap')::BOOLEAN IS NOT TRUE)`;
 	}
 	const types = data.type || site.$pages;
 
-	var q = trx.raw(`SELECT json_build_object(
+	const q = trx.raw(`SELECT json_build_object(
 		'count', count,
 		'rows', json_agg(
 			json_build_object(
@@ -325,7 +325,7 @@ exports.search = function ({ site, trx }, data) {
 		data.limit
 	]);
 	return q.then(function (results) {
-		var obj = {
+		const obj = {
 			offset: data.offset,
 			limit: data.limit,
 			total: 0
@@ -333,7 +333,7 @@ exports.search = function ({ site, trx }, data) {
 		if (results.rowCount == 0) {
 			obj.items = [];
 		} else {
-			var result = results.rows[0].result;
+			const result = results.rows[0].result;
 			obj.items = result.rows;
 			obj.total = result.count;
 		}
@@ -383,8 +383,8 @@ exports.search.external = true;
 
 exports.all = function (req, data) {
 	return listPages(req, data).then(function (pages) {
-		var els = {};
-		var obj = {
+		const els = {};
+		const obj = {
 			items: pages
 		};
 		if (data.home) {
@@ -392,7 +392,7 @@ exports.all = function (req, data) {
 			if (obj.item && obj.item.data.url != data.parent) delete obj.item;
 		} else {
 			req.site.$pages.forEach(function (type) {
-				var schema = req.site.$schema(type);
+				const schema = req.site.$schema(type);
 				els[type] = schema;
 			});
 			obj.item = {
@@ -468,7 +468,7 @@ exports.save = function (req, changes) {
 		relate: {}
 	}, changes);
 
-	var pages = {
+	const pages = {
 		add: changes.add.filter(b => b.type == "page"),
 		update: changes.update.filter(b => b.type == "page")
 	};
@@ -482,8 +482,8 @@ exports.save = function (req, changes) {
 	});
 	// this also effectively prevents removing a page and adding a new page
 	// with the same url as the one removed
-	var allUrl = {};
-	var returning = {};
+	const allUrl = {};
+	const returning = {};
 	return req.site.$relatedQuery('children', req.trx)
 		.select('block.id', ref('block.data:url').as('url'))
 		.whereIn('block.type', req.site.$pages)
@@ -499,7 +499,7 @@ exports.save = function (req, changes) {
 				}
 			});
 			dbPages.forEach(function (dbPage) {
-				var id = allUrl[dbPage.url];
+				const id = allUrl[dbPage.url];
 				if (id != null && dbPage.id != id) {
 					throw new HttpError.BadRequest("Page url already exists");
 				}
@@ -579,9 +579,9 @@ exports.save.schema = {
 };
 
 function stripHostname(site, block) {
-	var url = block.data && block.data.url; // FIXME use site.$model.hrefs
+	const url = block.data && block.data.url; // FIXME use site.$model.hrefs
 	if (url) {
-		var objUrl = URL.parse(url);
+		const objUrl = URL.parse(url);
 		if (objUrl.hostname == site.hostname) {
 			block.data.url = objUrl.path;
 		}
@@ -649,17 +649,17 @@ function updatePage({ site, trx }, page) {
 	return site.$relatedQuery('children', trx).where('block.id', page.id)
 		.whereIn('block.type', page.type ? [page.type] : site.$pages)
 		.select(ref('block.data:url').as('url')).first().throwIfNotFound().then(function (dbPage) {
-			var oldUrl = dbPage.url;
-			var oldUrlStr = oldUrl == null ? '' : oldUrl;
-			var newUrl = page.data.url;
+			const oldUrl = dbPage.url;
+			const oldUrlStr = oldUrl == null ? '' : oldUrl;
+			const newUrl = page.data.url;
 			if (oldUrl == newUrl) return dbPage;
-			var hrefs = site.$model.hrefs;
+			const hrefs = site.$model.hrefs;
 			// page.data.url is not a href input, see also page element.
 			return Promise.all(Object.keys(hrefs).map(function (type) {
 				return Promise.all(hrefs[type].map(function (desc) {
-					var key = 'block.data:' + desc.path;
-					var field = ref(key).castText();
-					var args = field._createRawArgs(All.api.Block.query());
+					const key = 'block.data:' + desc.path;
+					const field = ref(key).castText();
+					const args = field._createRawArgs(All.api.Block.query());
 					return site.$relatedQuery('children', trx).where('block.type', type)
 						.where(function () {
 							this.where(field, 'LIKE', `${oldUrlStr}/%`);
@@ -675,7 +675,7 @@ function updatePage({ site, trx }, page) {
 						}).skipUndefined();
 				}));
 			})).then(function () {
-				var Href = All.api.Href;
+				const Href = All.api.Href;
 				return Href.query(trx).where('_parent_id', site._id)
 					.where('type', 'link')
 					.where(function () {
@@ -714,9 +714,9 @@ function applyRelate({ site, trx }, obj) {
 							.andOn('rel.child_id', '=', 'block._id');
 					}).then(function (ids) {
 						// do not relate again
-						var unrelateds = ids.filter(item => !item.child_id);
+						const unrelateds = ids.filter(item => !item.child_id);
 						if (ids.length != obj[parentId].length) {
-							var missing = obj[parentId].reduce(function (list, id) {
+							const missing = obj[parentId].reduce(function (list, id) {
 								if (!ids.some(function (item) {
 									return item.id === id;
 								})) list.push(id);
@@ -788,8 +788,8 @@ exports.del.schema = {
 };
 
 exports.robots = function (req) {
-	var lines = [];
-	var p;
+	const lines = [];
+	let p;
 	if (req.site.data.env == "production") {
 		lines.push(`Sitemap: ${req.site.href}/sitemap.txt`);
 		lines.push('User-agent: *');

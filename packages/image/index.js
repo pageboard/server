@@ -31,10 +31,10 @@ exports = module.exports = function (opt) {
 
 function initFile(All) {
 	sharpie.sharp.simd(true);
-	var opt = All.opt;
+	const opt = All.opt;
 	All.app.get(/^\/\.(uploads|files)\//, function (req, res, next) {
 		Log.image("processing", req.url);
-		var extname = Path.extname(req.path);
+		const extname = Path.extname(req.path);
 		if (!extname || /png|jpe?g|gif|webp|tiff|svg/.test(extname.substring(1)) == false) {
 			return next('route');
 		}
@@ -45,7 +45,7 @@ function initFile(All) {
 				next('route');
 			}
 		} else {
-			var wrongParams = [];
+			const wrongParams = [];
 			Object.keys(req.query).some(function (key) {
 				if (!allowedParameters[key]) wrongParams.push(key);
 			});
@@ -80,11 +80,11 @@ function initService(All) {
 }
 
 function request(url) {
-	var obj = require('url').parse(url);
-	var agent;
+	const obj = require('url').parse(url);
+	let agent;
 	if (obj.protocol == "http:") agent = require('http');
 	else if (obj.protocol == "https:") agent = require('https');
-	var stream = new require('stream').PassThrough();
+	const stream = new require('stream').PassThrough();
 	// high profile web sites sniff ua/accept fields (facebook, linkedin, gmaps...)
 	obj.headers = {
 		"User-Agent": "Mozilla/5.0 (compatible; Googlebot/2.1; +http://www.google.com/bot.html)",
@@ -98,7 +98,7 @@ function request(url) {
 }
 
 exports.thumbnail = function (url) {
-	var pipeline;
+	let pipeline;
 	if (url.startsWith('file://')) {
 		pipeline = sharpie.sharp(url.substring(7));
 	} else {
@@ -117,7 +117,7 @@ exports.thumbnail = function (url) {
 			quality: 50
 		})
 		.toBuffer().then(function (buf) {
-			var dtu = new DataUri();
+			const dtu = new DataUri();
 			dtu.format('.webp', buf);
 			return dtu.content;
 		});
@@ -125,20 +125,20 @@ exports.thumbnail = function (url) {
 
 exports.upload = function (file) {
 	return Promise.resolve().then(function () {
-		var mime = file.mimetype;
+		const mime = file.mimetype;
 		if (!mime) {
 			console.warn("image.upload cannot inspect file without mime type", file);
 			return;
 		}
 		if (!mime.startsWith('image/')) return;
 		if (mime.startsWith('image/svg')) return;
-		var format = mime.split('/').pop();
+		const format = mime.split('/').pop();
 		if (!sharpie.sharp.format[format]) {
 			console.warn("image.upload cannot process", mime);
 			return;
 		}
 
-		var dst = file.path + '.tmp';
+		const dst = file.path + '.tmp';
 		return sharpie.sharp(file.path)
 			.withMetadata()
 			.resize({
@@ -156,7 +156,7 @@ exports.upload = function (file) {
 			})
 			.toFile(dst).then(function () {
 				file.mimetype = "image/webp";
-				var pathObj = Path.parse(file.path);
+				const pathObj = Path.parse(file.path);
 				file.filename = pathObj.name + '.webp';
 				file.path = Path.format({
 					dir: pathObj.dir,

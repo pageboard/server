@@ -1,6 +1,6 @@
 exports.up = function(knex) {
 	return knex.schema
-	.raw(`CREATE OR REPLACE FUNCTION recursive_delete(root_id INTEGER, standalones BOOLEAN)
+		.raw(`CREATE OR REPLACE FUNCTION recursive_delete(root_id INTEGER, standalones BOOLEAN)
 RETURNS INTEGER
 LANGUAGE plpgsql AS
 $$
@@ -26,6 +26,6 @@ VOLATILE;`);
 
 exports.down = function(knex) {
 	return knex.schema
-	.raw("DROP FUNCTION IF EXISTS recursive_delete(INTEGER, BOOLEAN)");
+		.raw("DROP FUNCTION IF EXISTS recursive_delete(INTEGER, BOOLEAN)");
 };
 

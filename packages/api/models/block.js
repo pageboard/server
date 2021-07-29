@@ -16,10 +16,10 @@ class Block extends Model {
 	}
 
 	static schema(path) {
-		var list = path.split('.');
-		var type = list.shift();
-		var sch = this.jsonSchema.selectCases[type];
-		for (var i = 0; i < list.length; i++) {
+		const list = path.split('.');
+		const type = list.shift();
+		let sch = this.jsonSchema.selectCases[type];
+		for (let i = 0; i < list.length; i++) {
 			sch = sch.properties && sch.properties[list[i]];
 			if (!sch) throw new Error("Schema not found: " + path);
 		}
@@ -148,11 +148,11 @@ Block.relationMappings = {
 };
 
 Block.extendSchema = function extendSchema(name, schemas) {
-	var types = Object.keys(schemas);
+	const types = Object.keys(schemas);
 	if (types.length === 0) return Block;
-	var schema = Object.assign({}, Block.jsonSchema);
+	const schema = Object.assign({}, Block.jsonSchema);
 	if (name != null) schema.$id += `/${name}`;
-	var blockProps = schema.properties;
+	const blockProps = schema.properties;
 	delete schema.properties;
 
 	schema.select = {
@@ -160,17 +160,17 @@ Block.extendSchema = function extendSchema(name, schemas) {
 	};
 	schema.selectCases = {};
 
-	var hrefs = {};
+	const hrefs = {};
 
 	types.forEach(function(type) {
-		var element = Object.assign({
+		const element = Object.assign({
 			properties: {},
 			contents: {}
 		}, schemas[type]);
-		var hrefsList = [];
+		const hrefsList = [];
 		findHrefs(element, hrefsList);
 		if (hrefsList.length) hrefs[type] = hrefsList;
-		var standProp = element.standalone ? {
+		const standProp = element.standalone ? {
 			standalone: {
 				const: true,
 				default: true
@@ -198,7 +198,7 @@ Block.extendSchema = function extendSchema(name, schemas) {
 			})
 		};
 	});
-	var DomainBlock = class extends Block {};
+	const DomainBlock = class extends Block {};
 	Object.assign(DomainBlock, Block);
 	DomainBlock.relationMappings.children.modelClass = DomainBlock;
 	DomainBlock.relationMappings.parents.modelClass = DomainBlock;
@@ -226,7 +226,7 @@ Block.normalizeContents = function(contents) {
 		if (!contents.nodes) {
 			// support old version
 			contents = Object.keys(contents).map(function(key) {
-				var val = contents[key];
+				let val = contents[key];
 				if (typeof val == "string") {
 					val = {nodes: val};
 				} else {
@@ -246,7 +246,7 @@ Block.normalizeContents = function(contents) {
 	return contents;
 };
 function contentsNames(list) {
-	var props = {};
+	const props = {};
 	if (!list) return props;
 	list.forEach(function(def) {
 		props[def.id || ""] = {
@@ -259,12 +259,12 @@ function contentsNames(list) {
 function findHrefs(schema, list, root, isArray) {
 	if (!schema.properties) return;
 	Object.keys(schema.properties).forEach(function(key) {
-		var prop = schema.properties[key];
+		const prop = schema.properties[key];
 		if (isArray) key = root;
 		else if (root) key = `${root}.${key}`;
-		var helper = prop.$helper;
+		const helper = prop.$helper;
 		if (helper && helper.name == "href") {
-			var ftype = helper.filter && helper.filter.type || [];
+			let ftype = helper.filter && helper.filter.type || [];
 			if (!Array.isArray(ftype)) ftype = [ftype];
 			list.push({
 				path: key,

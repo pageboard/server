@@ -1,6 +1,6 @@
 module.exports = class Upgrader {
 	constructor(Block, opts = {}) {
-		this.copy = !!opts.copy;
+		this.copy = Boolean(opts.copy);
 		this.Block = Block;
 		this.idMap = {};
 		if (opts.from != opts.to && opts.from && opts.to) {
@@ -22,10 +22,10 @@ module.exports = class Upgrader {
 	}
 	process(block, parent) {
 		if (this.copy) {
-			var old = block.id;
+			const old = block.id;
 			block.id = this.idMap[old] = this.Block.genIdSync();
 			if (block.parents) block.parents.forEach((parent) => {
-				var id = parent.id;
+				const id = parent.id;
 				parent.id = this.idMap[id];
 				console.warn("remap parent", id, "to", parent.id);
 			});
@@ -34,7 +34,7 @@ module.exports = class Upgrader {
 		if (block.children) block.children = block.children.map((child) => {
 			return this.process(child, block);
 		});
-		var mod = this.module;
+		const mod = this.module;
 		if (!mod) return block;
 		try {
 			if (mod.any) mod.any.call(this, block);
@@ -63,9 +63,9 @@ module.exports = class Upgrader {
 		}
 		Object.entries(block.content).forEach(([key, str]) => {
 			if (!str) return;
-			var bad = false;
+			let bad = false;
 			block.content[key] = str.replaceAll(/block-id="(\w+)"/g, (match, id, pos, str) => {
-				var cid = this.idMap[id];
+				const cid = this.idMap[id];
 				if (cid) return `block-id="${cid}"`;
 				console.warn(`Cannot replace id: '${id}' in content
 					${str.substring(pos - 5, pos + 35)}`);
@@ -78,12 +78,12 @@ module.exports = class Upgrader {
 		});
 	}
 	copyLock(block) {
-		var locks = block.lock && block.lock.read;
+		const locks = block.lock && block.lock.read;
 		if (!locks) return;
 		locks.forEach((item, i) => {
 			item = item.split('-');
 			if (item.length != 2) return;
-			var id = this.idMap[item[1]];
+			const id = this.idMap[item[1]];
 			if (id) item[1] = id;
 			locks[i] = item.join('-');
 		});

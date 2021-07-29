@@ -32,10 +32,10 @@ global.Text = require('outdent');
 global.Log = require('./lib/log')('pageboard');
 
 exports.config = function(pkgOpt) {
-	var dir = Path.resolve(__dirname, '..', '..');
+	const dir = Path.resolve(__dirname, '..', '..');
 	pkgOpt = Object.assign({}, require(Path.join(dir, 'package.json')), pkgOpt);
-	var name = pkgOpt.name;
-	var opt = rc(name, {
+	const name = pkgOpt.name;
+	const opt = rc(name, {
 		cwd: process.cwd(),
 		dir: dir,
 		env: pkgOpt.env || process.env.NODE_ENV || 'development',
@@ -82,7 +82,7 @@ function symlinkDir(opt, name) {
 }
 
 exports.init = function(opt) {
-	var All = {
+	const All = {
 		opt: opt,
 		utils: {}
 	};
@@ -95,17 +95,17 @@ exports.init = function(opt) {
 
 	All.log = initLog(opt);
 
-	var plugins = [];
+	const plugins = [];
 	return (opt.installer.path ? Promise.resolve(opt.installer.path) : All.utils.which(opt.installer.bin)).then(function(path) {
 		console.info("core:\tinstaller.path", path);
 		opt.installer.path = path;
 	}).then(function() {
 		return Promise.all(Object.keys(opt.dependencies).map(function(module) {
-			var pkgPath = resolvePkg(module, {cwd: opt.dir});
+			const pkgPath = resolvePkg(module, {cwd: opt.dir});
 			return Install.config(pkgPath, "pageboard", module, All.opt);
 		})).then(function(modules) {
-			opt.plugins = modules.filter(x => !!x);
-			var plugin, module;
+			opt.plugins = modules.filter(x => Boolean(x));
+			let plugin, module;
 			while (opt.plugins.length) {
 				module = opt.plugins.shift();
 				try {
@@ -118,7 +118,7 @@ exports.init = function(opt) {
 				if (typeof plugin != "function") {
 					continue;
 				}
-				var obj = plugin(opt);
+				const obj = plugin(opt);
 				if (!obj) {
 					console.warn("plugin not configured", module);
 					continue;
@@ -160,7 +160,7 @@ exports.init = function(opt) {
 };
 
 function install(site) {
-	var All = this;
+	const All = this;
 	if (site.href) {
 		All.domains.promote(site);
 		All.domains.hold(site);
@@ -193,7 +193,7 @@ function install(site) {
 }
 
 exports.start = function(All) {
-	var server = http.createServer(All.app);
+	const server = http.createServer(All.app);
 	server.listen(All.opt.port);
 	console.info(`port:\t${All.opt.port}`);
 };
@@ -208,7 +208,7 @@ function initDirs(dirs) {
 }
 
 function initPlugins(plugins, type) {
-	var All = this;
+	const All = this;
 	if (type == "service") {
 		All.services = {};
 	}
@@ -223,9 +223,9 @@ function initPlugins(plugins, type) {
 		else if (a > b) return 1;
 		else if (a < b) return -1;
 	});
-	var p = Promise.resolve();
+	let p = Promise.resolve();
 	plugins.forEach(function(obj) {
-		var to;
+		let to;
 		if (obj.name) {
 			to = All[obj.name] = All[obj.name] || {};
 		} else {
@@ -237,7 +237,7 @@ function initPlugins(plugins, type) {
 			p = p.then(() => obj.init.call(obj, All));
 		}
 		p = p.then(function() {
-			var plugin = obj.plugin = Object.assign({}, obj.plugin); // make a copy
+			const plugin = obj.plugin = Object.assign({}, obj.plugin); // make a copy
 			Object.keys(plugin).forEach(function(key) {
 				if (to[key] !== undefined) throw new Error(`module conflict ${obj.name || 'All'}.${key}`);
 				to[key] = plugin[key];
@@ -267,7 +267,7 @@ function initLog(opt) {
 		return pad(3, res.statusCode);
 	});
 	morgan.token('time', function(req, res) {
-		var ms = morgan['response-time'](req, res, 0);
+		const ms = morgan['response-time'](req, res, 0);
 		if (ms) return pad(4, ms) + 'ms';
 		else return pad(6, '');
 	});
@@ -275,7 +275,7 @@ function initLog(opt) {
 		return pad(4, (res.get('Content-Type') || '-').split(';').shift().split('/').pop());
 	});
 	morgan.token('size', function(req, res) {
-		var len = parseInt(res.get('Content-Length'));
+		const len = parseInt(res.get('Content-Length'));
 		return pad(6, (len && prettyBytes(len) || '0 B').replaceAll(' ', ''));
 	});
 	morgan.token('site', function(req, res) {
@@ -290,8 +290,8 @@ function initLog(opt) {
 }
 
 function createApp(All) {
-	var app = express();
-	var opt = All.opt;
+	const app = express();
+	const opt = All.opt;
 	// for csp headers, see prerender and write
 	app.set("env", opt.env);
 	app.disable('x-powered-by');
@@ -315,8 +315,8 @@ function createApp(All) {
 }
 
 function servicesError(err, req, res, next) {
-	var fullCode = err.statusCode || err.status || err.code;
-	var code = parseInt(fullCode);
+	const fullCode = err.statusCode || err.status || err.code;
+	let code = parseInt(fullCode);
 	if (Number.isNaN(code) || code < 200 || code >= 600) {
 		err.code = fullCode;
 		code = 500;
@@ -326,7 +326,7 @@ function servicesError(err, req, res, next) {
 }
 
 function filesError(err, req, res, next) {
-	var code = parseInt(err.statusCode || err.status || err.code);
+	let code = parseInt(err.statusCode || err.status || err.code);
 	if (Number.isNaN(code) || code < 200 || code >= 600) {
 		code = 500;
 	}
@@ -338,7 +338,7 @@ function filesError(err, req, res, next) {
 }
 
 function viewsError(err, req, res, next) {
-	var code = parseInt(err.statusCode || err.status || err.code);
+	let code = parseInt(err.statusCode || err.status || err.code);
 	if (Number.isNaN(code) || code < 200 || code >= 600) {
 		code = 500;
 	}

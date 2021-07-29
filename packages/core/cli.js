@@ -1,12 +1,12 @@
 #!/usr/bin/env node
 
-var pkgOpt = {};
+const pkgOpt = {};
 if (process.env.APPNAME) pkgOpt.name = process.env.APPNAME;
 if (!process.env.HOME) throw new Error("Missing HOME environment variable");
 
 if (process.argv.length > 2) {
-	var thenData = false;
-	for (var i=2; i < process.argv.length; i++) {
+	let thenData = false;
+	for (let i = 2; i < process.argv.length; i++) {
 		if (process.argv[i].startsWith('--') == false) {
 			// skip the first one, which is supposed to be the api command
 			if (thenData) process.argv[i] = '--data.' + process.argv[i];
@@ -15,10 +15,10 @@ if (process.argv.length > 2) {
 	}
 }
 
-var pageboard = require(__dirname);
+const pageboard = require(__dirname);
 
-var config = pageboard.config(pkgOpt);
-var title = `${config.name}@${config.version}`;
+const config = pageboard.config(pkgOpt);
+const title = `${config.name}@${config.version}`;
 process.title = title;
 
 if (config._.length == 1) {
@@ -39,14 +39,14 @@ pageboard.init(config).catch(function(err) {
 		return pageboard.start(All);
 	}
 
-	var command = All.opt._[0];
+	const command = All.opt._[0];
 	if (All.opt.help) {
 		console.log("\n", command);
 		console.log(All.help(command));
 		process.exit(0);
 	}
 
-	var args = [command];
+	const args = [command];
 	if (config.data != null) config.data = coercions(config.data);
 	return Promise.resolve().then(function() {
 		if (config.data !== undefined && typeof config.data.data == "string") {
@@ -80,8 +80,8 @@ pageboard.init(config).catch(function(err) {
 });
 
 function coercions(data) {
-	var obj = {};
-	var keyString;
+	let obj = {};
+	let keyString;
 	Object.entries(data).forEach(function([key, val]) {
 		if (parseInt(key) != key) keyString = true;
 		else if (!keyString) keyString = false;

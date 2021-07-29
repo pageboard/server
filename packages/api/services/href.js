@@ -201,7 +201,7 @@ function blindAdd(req, data) {
 			}
 			throw err;
 		}).then(function (answer) {
-			let block = answer.item;
+			const block = answer.item;
 			return {
 				mime: 'text/html; charset=utf-8',
 				type: 'link',

@@ -60,8 +60,8 @@ exports = module.exports = function (opt) {
 };
 
 function init(All) {
-	var opt = All.opt;
-	var knexInst = All.db.knex;
+	const opt = All.opt;
+	const knexInst = All.db.knex;
 
 	common.Model.createValidator = function () {
 		return new objection.AjvValidator({
@@ -73,7 +73,7 @@ function init(All) {
 					errors: false,
 					validate: function (schema, data, parentSchema, path, parent, name) {
 						if (data == null) return true;
-						var format = parentSchema.format;
+						const format = parentSchema.format;
 						if (parentSchema.type == "string" && data === "") {
 							if (parentSchema.default !== undefined) {
 								parent[name] = parentSchema.default;
@@ -83,7 +83,7 @@ function init(All) {
 							return true;
 						}
 						if (format != "date" && format != "time" && format != "date-time") return true;
-						var d = new Date(data);
+						const d = new Date(data);
 						if (Number.isNaN(d.getTime())) {
 							parent[name] = null;
 						} else {
@@ -97,7 +97,7 @@ function init(All) {
 				});
 				// otherwise the `format` keyword would validate before `coerce`
 				// https://github.com/epoberezkin/ajv/issues/986
-				var rules = ajv.RULES.types.string.rules;
+				const rules = ajv.RULES.types.string.rules;
 				rules.unshift(rules.pop());
 			},
 			options: {
@@ -114,9 +114,9 @@ function init(All) {
 	};
 	common.Model.knex(knexInst);
 
-	var models = {};
+	const models = {};
 	opt.models.forEach(function (path) {
-		var model = require(path);
+		const model = require(path);
 		models[model.name] = model;
 	});
 
@@ -165,7 +165,7 @@ function check(fun, schema, data) {
 	if (fun.validate(data)) {
 		return data;
 	} else {
-		var messages = fun.validate.errors.map(function (err) {
+		const messages = fun.validate.errors.map(function (err) {
 			if (err.dataPath) return `${err.dataPath} ${err.message}`;
 			else return err.message;
 		}).join(',\n');
@@ -175,13 +175,13 @@ function check(fun, schema, data) {
 
 function getApiMethodSchema(apiStr) {
 	const [modName, funName] = apiStr.split('.');
-	var mod = All.services[modName];
+	const mod = All.services[modName];
 	if (!mod) throw new HttpError.BadRequest(Text`
 		Unknown api module ${modName}
 			${Object.getOwnPropertyNames(All.services).sort().join(', ')}
 	`);
-	var schema = mod[funName];
-	var fun = All[modName][funName];
+	const schema = mod[funName];
+	const fun = All[modName][funName];
 	if (!fun) throw new HttpError.BadRequest(Text`
 		Unknown api method ${apiStr}
 			${Object.getOwnPropertyNames(mod).sort().join(', ')}
@@ -206,7 +206,7 @@ All.run = function (apiStr, req, data) {
 			throw err;
 		}
 		// start a transaction on set trx object on site
-		var hadTrx = false;
+		let hadTrx = false;
 		return Promise.resolve().then(function () {
 			if (!req) {
 				return;
@@ -219,7 +219,7 @@ All.run = function (apiStr, req, data) {
 				if (req.site) req.site = req.site.$clone();
 			});
 		}).then(function () {
-			var args = [data];
+			const args = [data];
 			if (req) args.unshift(req);
 			return fun.apply(mod, args);
 		}).then(function (obj) {
@@ -247,23 +247,24 @@ All.run = function (apiStr, req, data) {
 };
 
 All.send = function (res, obj) {
-	var req = res.req;
+	const req = res.req;
 	if (obj == null || typeof obj != "object") {
+		// eslint-disable-next-line no-console
 		console.trace("All.send expects an object, got", obj);
 		obj = {};
 	}
 	if (obj.cookies) {
-		var host = All.domains.hosts[req.hostname];
-		var cookieParams = {
+		const host = All.domains.hosts[req.hostname];
+		const cookieParams = {
 			httpOnly: true,
 			sameSite: true,
 			secure: host && host.protocol == "https" || false,
 			path: '/'
 		};
 		Object.keys(obj.cookies).forEach(function (key) {
-			var cookie = obj.cookies[key];
-			var val = cookie.value;
-			var maxAge = cookie.maxAge;
+			const cookie = obj.cookies[key];
+			const val = cookie.value;
+			const maxAge = cookie.maxAge;
 
 			if (val == null || maxAge == 0) res.clearCookie(key, cookieParams);
 			else res.cookie(key, val, Object.assign({}, cookieParams, {
@@ -296,7 +297,7 @@ All.send = function (res, obj) {
 function itemFn(schema, block) {
 	if (schema.upgrade) {
 		Object.entries(schema.upgrade).forEach(function ([src, dst]) {
-			var val = jsonPath.get(block, src);
+			const val = jsonPath.get(block, src);
 			if (val !== undefined) {
 				jsonPath.set(block, dst, val);
 				jsonPath.unSet(block, src);

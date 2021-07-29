@@ -1,6 +1,6 @@
 exports.up = function(knex) {
 	return knex.schema
-	.raw(`CREATE OR REPLACE FUNCTION jsonb_set_recursive(data jsonb, path text[], new_value jsonb)
+		.raw(`CREATE OR REPLACE FUNCTION jsonb_set_recursive(data jsonb, path text[], new_value jsonb)
 RETURNS jsonb
 LANGUAGE plpgsql AS
 $$
@@ -41,6 +41,6 @@ STABLE;`);
 
 exports.down = function(knex) {
 	return knex.schema
-	.raw("DROP FUNCTION IF EXISTS jsonb_set_recursive(jsonb, text[], jsonb)");
+		.raw("DROP FUNCTION IF EXISTS jsonb_set_recursive(jsonb, text[], jsonb)");
 };
 

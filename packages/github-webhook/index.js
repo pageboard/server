@@ -10,11 +10,11 @@ exports = module.exports = function(opt) {
 
 function init(All) {
 	All.app.post('/.api/github', function(req, res, next) {
-		var site = req.site;
-		var pusher;
-		var version;
+		const site = req.site;
+		let pusher;
+		let version;
 		Promise.resolve().then(function() {
-			var event = req.get('X-Github-Event');
+			const event = req.get('X-Github-Event');
 			if (event == "ping") {
 				return res.sendStatus(200);
 			}
@@ -22,30 +22,30 @@ function init(All) {
 				return next(new HttpError.BadRequest("Unsupported event"));
 			}
 
-			var secret = site.data['github-webhook-secret'];
+			const secret = site.data['github-webhook-secret'];
 			if (secret) {
-				var sign = req.get('X-Github-Signature');
+				const sign = req.get('X-Github-Signature');
 				if (sign && sign != signBlob(secret, req._body)) {
 					return next(new HttpError.Forbidden("Invalid Signature"));
 				}
 			}
 
-			var payload = req.body;
+			const payload = req.body;
 			pusher = payload.pusher;
 			const mod = parseRefs(site.data.module);
 
 			if (!mod.repo || mod.repo != payload.repository.full_name) {
 				return next(new HttpError.BadRequest(`Unknown repository "${payload.repository.full_name}"`));
 			}
-			var refs = getRefs(payload);
+			const refs = getRefs(payload);
 			if (!refs) {
 				return next(new HttpError.BadRequest('Ignoring payload without ref'));
 			}
 
 			// site.data.module keeps the repository, branch|commit|tag|semver:range that should be installed
 			// site.data.version tracks the *actual* successfully installed commit|tag|version
-			var msg = 'Nothing to do';
-			var stop = false;
+			let msg = 'Nothing to do';
+			let stop = false;
 			if (mod.branch && refs.branch) {
 				if (refs.branch != mod.branch) {
 					msg = `Site module restricted to branch "${mod.branch}"`;

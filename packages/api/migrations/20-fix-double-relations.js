@@ -4,12 +4,14 @@ exports.up = function(knex) {
 		WHERE r.parent_id = doubles.parent_id AND r.child_id = doubles.child_id
 		ORDER BY r.child_id, r.parent_id
 	`).then(function(list) {
-		var ids = [];
-		var couples = {};
+		const ids = [];
+		const couples = {};
+		// eslint-disable-next-line no-console
 		console.info("Deleting these relations");
 		list.rows.forEach(function(row) {
-			var pair = `${row.parent_id}-${row.child_id}`;
+			const pair = `${row.parent_id}-${row.child_id}`;
 			if (couples[pair]) {
+				// eslint-disable-next-line no-console
 				console.info(row);
 				ids.push(row.id);
 			}	else {

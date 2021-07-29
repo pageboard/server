@@ -7,6 +7,7 @@ exports.plugin = function(page, settings, req, res) {
 	};`);
 	if (!settings.pdf) settings.pdf = {};
 	settings.pdf.mappings = function (cb) {
+		/* global Page */
 		Page.finish().then(function (state) {
 			if (Page.serialize) return Page.serialize(state);
 			else return {

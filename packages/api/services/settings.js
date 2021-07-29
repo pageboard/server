@@ -56,7 +56,7 @@ exports.get.schema = {
 exports.get.external = true;
 
 exports.find = function ({ site, trx }, data) {
-	var q = site.$relatedQuery('children', trx).alias('settings')
+	const q = site.$relatedQuery('children', trx).alias('settings')
 		.where('settings.type', 'settings')
 		.first().throwIfNotFound()
 		.joinRelated('parents', { alias: 'parent' }).where('parent.type', 'user')
@@ -84,7 +84,7 @@ Object.defineProperty(exports.find, 'schema', {
 });
 
 exports.search = function ({ site, trx }, data) {
-	var q = site.$relatedQuery('children', trx).alias('settings')
+	const q = site.$relatedQuery('children', trx).alias('settings')
 		.where('settings.type', 'settings')
 		.first().throwIfNotFound()
 		.select().select(ref('parent.data:email').as('email'))
@@ -109,7 +109,7 @@ exports.search.schema = {
 };
 
 exports.save = function (req, data) {
-	var site = req.site;
+	const site = req.site;
 	return All.settings.find(req, data).then(function (settings) {
 		if (!data.data) return settings;
 		if (data.data.grants) {
@@ -127,7 +127,7 @@ exports.save = function (req, data) {
 				return All.user.get(req, { email: data.email }).select('_id');
 			});
 		}).then(function (user) {
-			var block = {
+			const block = {
 				type: 'settings',
 				data: data.data,
 				parents: [user]
@@ -148,7 +148,7 @@ exports.save = function (req, data) {
 };
 Object.defineProperty(exports.save, 'schema', {
 	get: function () {
-		var schema = Object.assign({}, All.user.get.schema);
+		const schema = Object.assign({}, All.user.get.schema);
 		schema.$action = 'save';
 		schema.properties = Object.assign({
 			data: {

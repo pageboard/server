@@ -3,7 +3,7 @@ const {table, getBorderCharacters} = require('table');
 
 module.exports = function(opt, schema) {
 	if (!schema) return;
-	var lines = [];
+	const lines = [];
 
 	traverse(schema, {
 		cb: cb
@@ -11,11 +11,11 @@ module.exports = function(opt, schema) {
 
 	function cb(schema, pointer, root, parentPointer, keyword, parent, name) {
 		if (keyword == "properties") {
-			var required = (parent && parent.required || []).includes(name);
-			var type = schema.type;
+			const required = (parent && parent.required || []).includes(name);
+			let type = schema.type;
 			if (typeof type != "string") type = 'object';
 			else if (type == "object" && schema.properties) type = "";
-			var path = pointer.split('/').slice(1).filter((x) => x != 'properties').join('.');
+			const path = pointer.split('/').slice(1).filter((x) => x != 'properties').join('.');
 			lines.push([path + (required ? ' *' : ''), type, schema.title || '-']);
 		}
 	}

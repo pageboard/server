@@ -2,6 +2,7 @@ module.exports = function(page, settings, request, response) {
 	page.when('idle', function() {
 		if (settings.output == null) return page.run(function(done) {
 			// could use Page.finish().then() the day all clients use window-page@9.2.0
+			/* global Page */
 			Page.init(function(state) {
 				state.queue.then(function(state) {
 					if (Page.serialize) return Page.serialize(state);

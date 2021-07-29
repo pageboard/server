@@ -11,8 +11,8 @@ module.exports = function validateMailgun(auth, timestamp, token, signature) {
 		console.warn("Cannot do validation without api_key");
 		return false;
 	}
-	var adjustedTimestamp = parseInt(timestamp, 10) * 1000;
-	var fresh = (Math.abs(Date.now() - adjustedTimestamp) < mailgunExpirey);
+	const adjustedTimestamp = parseInt(timestamp, 10) * 1000;
+	const fresh = (Math.abs(Date.now() - adjustedTimestamp) < mailgunExpirey);
 
 	if (!fresh) {
 		console.error('[mailgun] Stale Timestamp: this may be an attack');
@@ -34,9 +34,9 @@ module.exports = function validateMailgun(auth, timestamp, token, signature) {
 		delete mailgunTokens[token];
 	}, mailgunExpirey + (5 * 1000));
 
-	var computed = crypto.createHmac(mailgunHashType, auth.api_key)
-	.update(new Buffer(timestamp + token, 'utf-8'))
-	.digest(mailgunSignatureEncoding);
+	const computed = crypto.createHmac(mailgunHashType, auth.api_key)
+		.update(new Buffer(timestamp + token, 'utf-8'))
+		.digest(mailgunSignatureEncoding);
 
 	return crypto.timingSafeEqual(Buffer.from(signature), Buffer.from(computed));
 };

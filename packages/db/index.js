@@ -15,10 +15,10 @@ exports = module.exports = function() {
 };
 
 function init(All) {
-	var opt = All.opt;
+	const opt = All.opt;
 	exports.knex = knex(knexConfig(opt));
 	// normalize options
-	var dbOpts = exports.knex.client.config.connection;
+	const dbOpts = exports.knex.client.config.connection;
 	Object.assign(opt.database, {
 		user: dbOpts.user,
 		name: dbOpts.database,
@@ -29,8 +29,8 @@ function init(All) {
 }
 
 exports.migrate = function() {
-	var opt = All.opt;
-	var dirs = opt && opt.migrations || null;
+	const opt = All.opt;
+	const dirs = opt && opt.migrations || null;
 	if (!dirs) throw new Error("Missing `migrations` directory option");
 	return Promise.all(dirs.map(function(dir) {
 		console.info(` ${dir}`);
@@ -47,8 +47,8 @@ exports.migrate.schema = {
 };
 
 exports.seed = function() {
-	var opt = All.opt;
-	var dirs = opt && opt.seeds || null;
+	const opt = All.opt;
+	const dirs = opt && opt.seeds || null;
 	if (!dirs) throw new Error("Missing `seeds` directory option");
 	return Promise.all(dirs.map(function(dir) {
 		console.info(` ${dir}`);
@@ -62,10 +62,10 @@ exports.seed = function() {
 };
 
 exports.dump = function({trx}, {name}) {
-	var opt = All.opt.database;
-	var dumpDir = opt.dump && opt.dump.dir;
+	const opt = All.opt.database;
+	const dumpDir = opt.dump && opt.dump.dir;
 	if (!dumpDir) throw new HttpError.BadRequest("Missing database.dump.dir config");
-	var file = Path.join(Path.resolve(All.opt.dir, dumpDir), `${opt.name}-${name}.dump`);
+	const file = Path.join(Path.resolve(All.opt.dir, dumpDir), `${opt.name}-${name}.dump`);
 	return exec(`pg_dump --format=custom --file=${file} --username=${opt.user} ${opt.name}`, {}).then(function() {
 		return file;
 	});
@@ -83,11 +83,11 @@ exports.dump.schema = {
 };
 
 exports.restore = function({trx}, {name}) {
-	var opt = All.opt.database;
-	var dumpDir = opt.dump && opt.dump.dir;
+	const opt = All.opt.database;
+	const dumpDir = opt.dump && opt.dump.dir;
 	if (!dumpDir) throw new HttpError.BadRequest("Missing database.dump.dir config");
-	var db = `${opt.name}-${name}`;
-	var file = Path.join(Path.resolve(All.opt.dir, dumpDir), `${db}.dump`);
+	const db = `${opt.name}-${name}`;
+	const file = Path.join(Path.resolve(All.opt.dir, dumpDir), `${db}.dump`);
 	return exec(`createdb -U ${opt.user} -T template1 ${db}`, {}).then(function() {
 		return exec(`pg_restore -d ${db} -U ${opt.user} ${file}`, {}).then(function() {
 			return file;
@@ -109,20 +109,20 @@ exports.restore.schema = {
 };
 
 function knexConfig(opt) {
-	var dbName = opt.database.name;
+	let dbName = opt.database.name;
 	if (!dbName) dbName = opt.database.name = opt.name;
-	var dbOpts = Object.assign({}, {
+	const dbOpts = Object.assign({}, {
 		url: `postgres://localhost/${dbName}`
 	}, opt.database);
 	delete dbOpts.dump;
-	var parsed = require('url').parse(dbOpts.url, true);
+	const parsed = require('url').parse(dbOpts.url, true);
 	delete dbOpts.url;
-	var conn = {};
-	var obj = { connection: conn };
+	const conn = {};
+	const obj = { connection: conn };
 	if (parsed.host) conn.host = parsed.host;
 	if (parsed.pathname) conn.database = parsed.pathname.substring(1);
 	if (parsed.auth) {
-		var auth = parsed.auth.split(':');
+		const auth = parsed.auth.split(':');
 		conn.user = auth[0];
 		if (auth.length > 1) conn.password = auth[1];
 	}
@@ -182,18 +182,18 @@ exports.gc = function(All) {
 */
 
 function initDumps(All) {
-	var opt = All.opt.database.dump;
+	let opt = All.opt.database.dump;
 	if (!opt) return;
-	var day = 1000 * 60 * 60 * 24;
+	const day = 1000 * 60 * 60 * 24;
 	opt = All.opt.database.dump = Object.assign({
 		interval: 1,
 		dir: Path.join(All.opt.dirs.data, 'dumps'),
 		keep: 15
 	}, opt);
-	var job = new Cron.CronJob({
+	const job = new Cron.CronJob({
 		cronTime: `0 3 */${opt.interval} * *`,
 		onTick: function() {
-			var dir = Path.resolve(All.opt.dir, opt.dir);
+			const dir = Path.resolve(All.opt.dir, opt.dir);
 			doDump(dir, opt.interval * opt.keep * day).then(() => {
 				console.info("cron: db.dump to", dir);
 			}).catch((err) => {
@@ -211,7 +211,7 @@ function doDump(dir, keep) {
 		return All.run('db.dump', {trx: false}, {
 			name: (new Date()).toISOString().split('.')[0].replaceAll(/[-:]/g, '')
 		}).then(function() {
-			var now = Date.now();
+			const now = Date.now();
 			fs.readdir(dir).then(function(files) {
 				return Promise.all(files.map(function(file) {
 					file = Path.join(dir, file);

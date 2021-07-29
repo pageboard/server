@@ -33,9 +33,76 @@ const InstanceUpdateOperation = require(
 	)
 ).InstanceUpdateOperation;
 
+class InstancePatchObjectOperation extends InstanceUpdateOperation {
+	async onAfter2(builder, result) {
+		const clone = this.instance.$clone();
+		result = await super.onAfter2(builder, result);
+
+		if (!isObject(result)) {
+			deepAssign(clone, this.model);
+			this.instance.$set(clone);
+		}
+		return result;
+	}
+}
+
+class PatchObjectOperation extends UpdateOperation {
+	onBuildKnex(knexBuilder, builder) {
+		const json = this.model.$toDatabaseJson(builder);
+		const jsonPaths = asPaths(json, {}, "", true);
+		const convertedJson = this.convertFieldExpressionsToRaw(builder, jsonPaths);
+
+		knexBuilder.update(convertedJson);
+	}
+	convertFieldExpressionsToRaw(builder, json) {
+		const knex = builder.knex();
+		const convertedJson = {};
+
+		for (const key of Object.keys(json)) {
+			let val = json[key];
+
+			if (key.indexOf(':') > -1) {
+				// 'col:attr' : ref('other:lol') is transformed to
+				// "col" : raw(`jsonb_set("col", '{attr}', to_jsonb("other"#>'{lol}'), true)`)
+
+				const parsed = ref(key);
+				const jsonRefs = '{'
+					+ parsed.parsedExpr.access.map(it => it.ref).join(',')
+					+ '}';
+				let valuePlaceholder = '?';
+
+				if (isKnexQueryBuilder(val) || isKnexRaw(val)) {
+					valuePlaceholder = 'to_jsonb(?)';
+				} else {
+					val = JSON.stringify(val);
+				}
+
+				convertedJson[
+					parsed.column
+				] = knex.raw(`jsonb_set_recursive(??, '${jsonRefs}', ${valuePlaceholder})`, [
+					convertedJson[parsed.column] || parsed.column,
+					val
+				]);
+
+				delete this.model[key];
+			} else {
+				convertedJson[key] = val;
+			}
+		}
+
+		return convertedJson;
+	}
+}
+
+InstancePatchObjectOperation.prototype.onBuildKnex = PatchObjectOperation.prototype.onBuildKnex;
+InstancePatchObjectOperation.prototype.convertFieldExpressionsToRaw = PatchObjectOperation.prototype.convertFieldExpressionsToRaw;
+
+
+
 exports.Model = class CommonModel extends Model {
 	$query(trx) {
 		if (this.trx && !trx) {
+			// eslint-disable-next-line no-console
 			console.trace("transactions should be passed explicitely");
 			trx = this.trx;
 		}
@@ -49,6 +116,7 @@ exports.Model = class CommonModel extends Model {
 
 	$relatedQuery(what, trx) {
 		if (this.trx && !trx) {
+			// eslint-disable-next-line no-console
 			console.trace("transactions should be passed explicitely");
 			trx = this.trx;
 		}
@@ -72,7 +140,7 @@ exports.Model = class CommonModel extends Model {
 	}
 
 	$formatJson(json) {
-		let superJson = super.$formatJson(json);
+		const superJson = super.$formatJson(json);
 		delete superJson._id;
 		return superJson;
 	}
@@ -279,66 +347,4 @@ function deepAssign(model, obj) {
 	});
 }
 
-
-class PatchObjectOperation extends UpdateOperation {
-	onBuildKnex(knexBuilder, builder) {
-		const json = this.model.$toDatabaseJson(builder);
-		const jsonPaths = asPaths(json, {}, "", true);
-		const convertedJson = this.convertFieldExpressionsToRaw(builder, jsonPaths);
-
-		knexBuilder.update(convertedJson);
-	}
-	convertFieldExpressionsToRaw(builder, json) {
-		const knex = builder.knex();
-		const convertedJson = {};
-
-		for (const key of Object.keys(json)) {
-			let val = json[key];
-
-			if (key.indexOf(':') > -1) {
-				// 'col:attr' : ref('other:lol') is transformed to
-				// "col" : raw(`jsonb_set("col", '{attr}', to_jsonb("other"#>'{lol}'), true)`)
-
-				let parsed = ref(key);
-				let jsonRefs = '{' + parsed.parsedExpr.access.map(it => it.ref).join(',') + '}';
-				let valuePlaceholder = '?';
-
-				if (isKnexQueryBuilder(val) || isKnexRaw(val)) {
-					valuePlaceholder = 'to_jsonb(?)';
-				} else {
-					val = JSON.stringify(val);
-				}
-
-				convertedJson[
-					parsed.column
-				] = knex.raw(`jsonb_set_recursive(??, '${jsonRefs}', ${valuePlaceholder})`, [
-					convertedJson[parsed.column] || parsed.column,
-					val
-				]);
-
-				delete this.model[key];
-			} else {
-				convertedJson[key] = val;
-			}
-		}
-
-		return convertedJson;
-	}
-}
-
-class InstancePatchObjectOperation extends InstanceUpdateOperation {
-	async onAfter2(builder, result) {
-		const clone = this.instance.$clone();
-		result = await super.onAfter2(builder, result);
-
-		if (!isObject(result)) {
-			deepAssign(clone, this.model);
-			this.instance.$set(clone);
-		}
-		return result;
-	}
-}
-
-InstancePatchObjectOperation.prototype.onBuildKnex = PatchObjectOperation.prototype.onBuildKnex;
-InstancePatchObjectOperation.prototype.convertFieldExpressionsToRaw = PatchObjectOperation.prototype.convertFieldExpressionsToRaw;
 

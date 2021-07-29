@@ -25,22 +25,22 @@ exports.get = function({url, local}) {
 		if (typeof err == 'number') err = new HttpError[err]("Inspector failure");
 		throw err;
 	})
-	.then(filterResult)
-	.then(preview);
+		.then(filterResult)
+		.then(preview);
 };
 
 function filterResult(result) {
-	var obj = {meta:{}};
+	const obj = {meta:{}};
 	['mime', 'url', 'type', 'title', 'icon', 'site']
-	.forEach(function(key) {
-		if (result[key] !== undefined) obj[key] = result[key];
-	});
+		.forEach(function(key) {
+			if (result[key] !== undefined) obj[key] = result[key];
+		});
 	if (obj.icon == "data:/,") delete obj.icon;
 	if (result.url) obj.pathname = URL.parse(result.url).pathname;
 	['width', 'height', 'duration', 'size', 'thumbnail', 'description']
-	.forEach(function(key) {
-		if (result[key] !== undefined) obj.meta[key] = result[key];
-	});
+		.forEach(function(key) {
+			if (result[key] !== undefined) obj.meta[key] = result[key];
+		});
 	if (obj.type == "image" && obj.mime != "text/html") {
 		if (!obj.meta.thumbnail) obj.meta.thumbnail = obj.url;
 		if (!obj.meta.width || !obj.meta.height) throw new HttpError.BadRequest("Bad image.\nCheck it does not embed huge metadata (thumbnail, icc profile, ...).");
@@ -51,9 +51,9 @@ function filterResult(result) {
 }
 
 function preview(obj) {
-	var desc = obj.meta.description || '';
+	const desc = obj.meta.description || '';
 	delete obj.meta.description;
-	var thumb = obj.meta.thumbnail;
+	const thumb = obj.meta.thumbnail;
 	delete obj.meta.thumbnail;
 	if (thumb != null) {
 		return All.image.thumbnail(thumb).then(function(datauri) {

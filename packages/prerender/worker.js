@@ -17,7 +17,7 @@ class FakeResponse extends PassThrough {
 		this.headers = {};
 		this.priv = {};
 		this.on('pipe', () => {
-			var done = false;
+			let done = false;
 			this.on('error', (err) => {
 				if (done) return;
 				done = true;
@@ -82,7 +82,7 @@ class FakeResponse extends PassThrough {
 		this.priv.file = path;
 	}
 	append(name, val) {
-		var list = this.headers[name];
+		let list = this.headers[name];
 		if (!list) list = val;
 		else list += "," + val;
 		this.headers[name] = list;
@@ -92,7 +92,7 @@ class FakeResponse extends PassThrough {
 	}
 }
 
-var initialized = false;
+let initialized = false;
 
 function init(opt) {
 	initialized = true;
@@ -101,18 +101,18 @@ function init(opt) {
 		dom.clear();
 	}
 	global.All = {opt: opt};
-	var conf = opt.prerender;
+	const conf = opt.prerender;
 
 	conf.helpers.forEach(function(path) {
-		var mod = require(path);
-		var name = Path.basename(path, Path.extname(path));
+		const mod = require(path);
+		const name = Path.basename(path, Path.extname(path));
 		dom.helpers[name] = mod.helper || mod;
 	});
 	delete conf.helpers;
 
 	conf.plugins.forEach(function(path) {
-		var mod = require(path);
-		var name = Path.basename(path, Path.extname(path));
+		const mod = require(path);
+		const name = Path.basename(path, Path.extname(path));
 		dom.plugins[name] = mod.plugin || mod;
 	});
 	delete conf.plugins;
@@ -124,18 +124,18 @@ function init(opt) {
 }
 
 function run(params) {
-	var req = new FakeRequest(params);
-	var res = new FakeResponse();
+	const req = new FakeRequest(params);
+	const res = new FakeResponse();
 
 	params.helpers.forEach(function(name) {
-		var fn = dom.helpers[name];
+		const fn = dom.helpers[name];
 		if (fn) dom.settings.helpers.push(fn);
 		else console.error("Prerender missing helper", name);
 	});
 	dom(function(mw, settings, request, response) {
 		settings.view = params.view;
 		settings.load.plugins = params.plugins.map(function(name) {
-			var fn = dom.plugins[name];
+			const fn = dom.plugins[name];
 			if (fn) return fn;
 			else console.error("Prerender missing plugin", name);
 		});

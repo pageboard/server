@@ -5,7 +5,7 @@ module.exports = function formPlugin(page) {
 				if (val === undefined) {
 					el.removeAttribute(name);
 				} else {
-					var attr = document.createAttribute(name);
+					const attr = document.createAttribute(name);
 					if (val !== null) attr.value = val;
 					el.attributes.setNamedItem(attr);
 				}

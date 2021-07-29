@@ -1,17 +1,18 @@
 const Path = require('path');
 const toSource = require('tosource');
+const { AbsoluteProxy, EltProxy, MapProxy } = require('./proxies');
 
 const fs = require('fs').promises;
 const vm = require('vm');
 const translateJSON = require('./translate');
 
 exports.install = function(site, pkg, All) {
-	var elements = pkg.elements;
-	var directories = pkg.directories;
+	const elements = pkg.elements;
+	const directories = pkg.directories;
+	const id = site ? site.id : null;
 	Log.imports("installing", id, elements, directories);
-	var id = site ? site.id : null;
-	var allDirs = id ? All.opt.directories.concat(directories) : directories;
-	var allElts = id ? All.opt.elements.concat(elements) : elements;
+	const allDirs = id ? All.opt.directories.concat(directories) : directories;
+	const allElts = id ? All.opt.elements.concat(elements) : elements;
 
 	sortPriority(allDirs);
 	sortPriority(allElts);
@@ -19,30 +20,30 @@ exports.install = function(site, pkg, All) {
 	return Promise.all(allElts.map(function(eltObj) {
 		return fs.readFile(eltObj.path);
 	})).then(function(bufs) {
-		var elts = {};
-		var names = [];
-		var context = {};
+		const elts = {};
+		const names = [];
+		const context = {};
 		bufs.forEach(function(buf, i) {
-			var path = allElts[i].path;
+			const path = allElts[i].path;
 			context.mount = getMountPath(path, id, allDirs);
 			context.path = path;
 			loadFromFile(buf, elts, names, context);
 		});
 
-		var eltsMap = {};
-		var groups = {};
-		var bundles = {};
+		const eltsMap = {};
+		const groups = {};
+		const bundles = {};
 
 		names.forEach(function(name) {
-			var el = elts[name] = Object.assign({}, elts[name]); // drop proxy
+			const el = elts[name] = Object.assign({}, elts[name]); // drop proxy
 			el.name = name;
 			// backward compatibility with 0.7 extensions names, dropped in favor of output
 			if (updateExtension(el, eltsMap)) return;
 			eltsMap[name] = el;
-			var isPage = false; // backward compatibility with < client@0.7
+			let isPage = false; // backward compatibility with < client@0.7
 			if (el.group) el.group.split(/\s+/).forEach(function(gn) {
 				if (gn == "page") isPage = true;
-				var group = groups[gn];
+				let group = groups[gn];
 				if (!group) group = groups[gn] = [];
 				if (!group.includes(name)) group.push(name);
 			});
@@ -76,7 +77,7 @@ exports.install = function(site, pkg, All) {
 			}
 		});
 
-		var Block = All.api.Block.extendSchema(id, eltsMap);
+		const Block = All.api.Block.extendSchema(id, eltsMap);
 		if (id) {
 			pkg.Block = Block;
 			pkg.eltsMap = eltsMap;
@@ -95,11 +96,11 @@ exports.install = function(site, pkg, All) {
 };
 
 function updateExtension(el, eltsMap) {
-	var extPage = {
+	const extPage = {
 		'.mail': 'mail'
 	}[el.name];
 	if (!extPage) return;
-	var page = eltsMap[extPage];
+	const page = eltsMap[extPage];
 	page.scripts = (page.scripts || []).concat(el.scripts);
 	if (el.prerender) page.output = el.prerender;
 	if (el.print) page.output = Object.assign({}, page.output, {pdf: true});
@@ -107,9 +108,9 @@ function updateExtension(el, eltsMap) {
 }
 
 exports.validate = function(site, pkg, bundles) {
-	var eltsMap = pkg.eltsMap;
+	const eltsMap = pkg.eltsMap;
 	return Promise.all(Object.entries(bundles).map(function([name, {list}]) {
-		let el = eltsMap[name];
+		const el = eltsMap[name];
 		return bundle(site, pkg, el, list);
 	})).then(function() {
 		return bundleSource(site, pkg, null, 'services', All.services).then(function(path) {
@@ -137,8 +138,8 @@ function sortPriority(list) {
 	});
 }
 
-function bundle(site, pkg, rootEl, cobundles=[]) {
-	let list = listDependencies(pkg, rootEl.group, rootEl, cobundles.slice());
+function bundle(site, pkg, rootEl, cobundles = []) {
+	const list = listDependencies(pkg, rootEl.group, rootEl, cobundles.slice());
 	list.sort(function(a, b) {
 		return (a.priority || 0) - (b.priority || 0);
 	});
@@ -212,12 +213,12 @@ function bundleSource(site, pkg, prefix, name, obj) {
 	});
 }
 
-function listDependencies(pkg, rootGroup, el, list=[], gDone={}, eDone={}) {
+function listDependencies(pkg, rootGroup, el, list = [], gDone = {}, eDone = {}) {
 	if (!el || eDone[el.name]) return list;
-	var elts = pkg.eltsMap;
+	const elts = pkg.eltsMap;
 	list.push(el);
 	eDone[el.name] = true;
-	var contents = All.api.Block.normalizeContents(el.contents);
+	const contents = All.api.Block.normalizeContents(el.contents);
 	if (contents) contents.forEach(function(content) {
 		if (!content.nodes) return;
 		content.nodes.split(/\W+/).filter(Boolean).forEach(function(word) {
@@ -226,7 +227,7 @@ function listDependencies(pkg, rootGroup, el, list=[], gDone={}, eDone={}) {
 				return;
 			}
 			if (word == "text") return;
-			var group = pkg.groups[word];
+			let group = pkg.groups[word];
 			if (group) {
 				if (gDone[word]) return;
 				gDone[word] = true;
@@ -239,7 +240,7 @@ function listDependencies(pkg, rootGroup, el, list=[], gDone={}, eDone={}) {
 		});
 	});
 	else if (el.name == rootGroup) {
-		var group = pkg.groups[el.name];
+		const group = pkg.groups[el.name];
 		if (group) {
 			gDone[el.name] = true;
 			group.forEach((sub) => {
@@ -251,16 +252,15 @@ function listDependencies(pkg, rootGroup, el, list=[], gDone={}, eDone={}) {
 }
 
 function sortElements(elements, prop) {
-	var map = {};
-	var res = [];
+	const map = {};
+	let res = [];
 	elements.forEach(function(el) {
-		var list = el[prop];
+		let list = el[prop];
 		if (!list) return;
 		if (typeof list == "string") list = [list];
-		var url, prev;
-		for (var i = 0; i < list.length; i++) {
-			url = list[i];
-			prev = map[url];
+		for (let i = 0; i < list.length; i++) {
+			const url = list[i];
+			const prev = map[url];
 			if (prev) {
 				if (el.priority != null) {
 					if (prev.priority == null) {
@@ -286,44 +286,20 @@ function sortElements(elements, prop) {
 }
 
 function getMountPath(eltPath, id, directories) {
-	var mount = directories.find(function(mount) {
+	const mount = directories.find(function(mount) {
 		return eltPath.startsWith(mount.from);
 	});
 	if (!mount) return;
-	var basePath = id ? mount.to.replace(id + "/", "") : mount.to;
-	var eltPathname = Path.join(basePath, eltPath.substring(mount.from.length));
+	const basePath = id ? mount.to.replace(id + "/", "") : mount.to;
+	const eltPathname = Path.join(basePath, eltPath.substring(mount.from.length));
 	return Path.dirname(eltPathname);
 }
 
-function absolutePaths(list, file) {
-	if (!list) return;
-	if (typeof list == "string") list = [list];
-	var obj = Array.isArray(list) ? null : {};
-	var arr = Object.entries(list).map(function([key, path]) {
-		if (path == null) {
-			console.warn("null path in", file);
-			return;
-		}
-		if (path.startsWith('/') || /^(http|https|data):/.test(path)) {
-			// do nothing
-		} else if (!file.mount) {
-			console.error("Cannot mount", path, "from element defined in", file.path);
-			return;
-		} else {
-			path = Path.join(file.mount, path);
-		}
-		if (obj) obj[key] = path;
-		else return path;
-	});
-	if (obj) return obj;
-	else return arr.filter(x => !!x);
-}
-
 function loadFromFile(buf, elts, names, context) {
-	var script = new vm.Script(buf, {
+	const script = new vm.Script(buf, {
 		filename: context.path
 	});
-	var sandbox = {
+	const sandbox = {
 		exports: new Proxy(elts, new MapProxy(context))
 	};
 	// let's keep compatibility for now
@@ -336,9 +312,8 @@ function loadFromFile(buf, elts, names, context) {
 	});
 
 	AbsoluteProxy.create(context);
-	var elt;
-	for (var name in elts) {
-		elt = elts[name];
+	for (const name in elts) {
+		let elt = elts[name];
 		if (!elt) {
 			console.warn("element", name, "is not defined at", context.path);
 			continue;
@@ -359,81 +334,3 @@ function loadFromFile(buf, elts, names, context) {
 		}
 	}
 }
-
-class MapProxy {
-	constructor(context) {
-		this.context = context;
-	}
-	set(obj, key, val) {
-		if (Object.prototype.hasOwnProperty.call(obj, key)) {
-			if (key == "user" || key == "priv") {
-				console.error(`Modifying ${key} element is not allowed`);
-				return false;
-			}
-			console.error("Please avoid setting", key, "in", this.context.path, " - using Object.assign instead");
-			Object.assign(obj[key], val);
-			return false;
-		}
-		return Reflect.set(obj, key, val);
-	}
-}
-
-class EltProxy {
-	constructor(name, context) {
-		this.name = name;
-		this.context = context;
-	}
-	set(elt, key, val) {
-		if (this.name == "user" || this.name == "priv") {
-			console.error(`Modifying ${this.name} element properties is not allowed`);
-			return false;
-		}
-		if (key == "scripts" || key == "stylesheets" || key == "resources") {
-			val = new Proxy(absolutePaths(val, this.context), new AbsoluteProxy(this.context));
-		}
-		return Reflect.set(elt, key, val);
-	}
-	get(elt, key) {
-		var val = Reflect.get(elt, key);
-		if (["scripts", "stylesheets", "polyfills", "fragments"].includes(key)) {
-			if (val == null) {
-				val = [];
-				Reflect.set(elt, key, val);
-			}
-		} else if (["resources", "properties", "csp", "filters", "intl"].includes(key)) {
-			if (val == null) {
-				val = {};
-				Reflect.set(elt, key, val);
-			}
-		}
-		return val;
-	}
-}
-
-class AbsoluteProxy {
-	static create(context) {
-		return new this(context);
-	}
-	constructor(context) {
-		this.context = context;
-	}
-	set(arr, key, val) {
-		if (typeof key == "number" && val != null) {
-			val = absolutePaths(val, this.context);
-			if (val.length == 1) val = val[0];
-			else throw new Error(`Cannot set ${this.context}.${key} with ${val}`);
-		}
-		return Reflect.set(arr, key, val);
-	}
-	get(arr, key) {
-		if (['push', 'unshift'].includes(key)) {
-			var context = this.context;
-			return function() {
-				var args = absolutePaths(Array.from(arguments), context);
-				return Array.prototype[key].apply(arr, args);
-			};
-		}
-		return Reflect.get(arr, key);
-	}
-}
-

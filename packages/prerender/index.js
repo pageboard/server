@@ -5,7 +5,7 @@ const { Pool } = require('tarn');
 const fork = require('child_process').fork;
 const URL = require('url');
 
-var pool;
+let pool;
 
 exports = module.exports = function(opt) {
 	if (opt.prerender.workers) opt.prerender.workers = parseInt(opt.prerender.workers);
@@ -41,7 +41,7 @@ exports = module.exports = function(opt) {
 };
 
 function init(All) {
-	var opt = All.opt;
+	const opt = All.opt;
 	opt.read = {};
 	opt.read.helpers = [
 		'develop',
@@ -77,7 +77,7 @@ function init(All) {
 			return !child.killed;
 		},
 		create: function(cb) {
-			var child;
+			let child;
 			try {
 				child = fork(workerPath, {
 					detached: true,
@@ -116,7 +116,7 @@ function run(config, req, res, next) {
 			if (msg.locks) All.auth.headers(res, msg.locks);
 			if (msg.tags) All.cache.tag.apply(null, msg.tags)(req, res);
 			if (msg.headers != null) {
-				for (var k in msg.headers) res.set(k, msg.headers[k]);
+				for (const k in msg.headers) res.set(k, msg.headers[k]);
 			}
 			if (msg.attachment != null) {
 				res.attachment(msg.attachment);
@@ -167,7 +167,7 @@ function run(config, req, res, next) {
 }
 
 function objToError(obj) {
-	var err = new Error(obj.message);
+	const err = new Error(obj.message);
 	err.name = obj.name;
 	err.stack = obj.stack;
 	err.statusCode = obj.statusCode || 500;
@@ -175,19 +175,19 @@ function objToError(obj) {
 }
 
 function prerender(req, res, next) {
-	var opt = All.opt;
-	var el = req.site.$schema('page');
+	const opt = All.opt;
+	let el = req.site.$schema('page');
 
-	var pattern = el && el.properties.data && el.properties.data.properties.url.pattern;
+	const pattern = el && el.properties.data && el.properties.data.properties.url.pattern;
 	if (!pattern) throw new Error("Missing page element missing schema for data.url.pattern");
-	var urlRegex = new RegExp(pattern);
-	var path = req.path;
+	const urlRegex = new RegExp(pattern);
+	let path = req.path;
 	// backward compat
-	var ext = Path.extname(path);
+	let ext = Path.extname(path);
 	if (ext) {
 		ext = ext.substring(1);
 		if (ext == "rss") ext = "page"; // feed@0.8 kludge
-		var extEl = req.site.$schema(ext);
+		const extEl = req.site.$schema(ext);
 		if (extEl) {
 			el = extEl;
 			path = path.slice(0, -ext.length - 1); // urlRegex does not allow extname
@@ -207,7 +207,7 @@ function prerender(req, res, next) {
 			});
 		}
 	} else {
-		var invalid = false;
+		let invalid = false;
 		Object.keys(req.query).forEach(function(key) {
 			if (/^[a-zA-Z][\w.-]*$/.test(key) === false) {
 				invalid = true;
@@ -219,8 +219,8 @@ function prerender(req, res, next) {
 			query: req.query
 		}));
 
-		var plugins = opt.read.plugins.slice();
-		var settings = {
+		const plugins = opt.read.plugins.slice();
+		const settings = {
 			extensions: {
 				allow: false,
 				list: []
@@ -230,7 +230,7 @@ function prerender(req, res, next) {
 		if (ext == "mail") settings.mime = "application/json";
 		else if (ext == "rss") settings.mime = "application/xml";
 
-		var outputOpts = el.output || {};
+		const outputOpts = el.output || {};
 
 		if (req.query.develop !== undefined) { // TODO also when site.data.env == development
 			All.cache.map(res, '/.well-known/200');
@@ -262,13 +262,13 @@ function prerender(req, res, next) {
 		}
 		plugins.push('serialize');
 
-		var siteBundle = req.site.$bundles.site.meta;
+		const siteBundle = req.site.$bundles.site.meta;
 
-		var scripts = (siteBundle.scripts || []).map(function(src) {
+		const scripts = (siteBundle.scripts || []).map(function(src) {
 			return `<script defer src="${src}"></script>`;
 		});
 
-		var view = Text`
+		const view = Text`
 			<!DOCTYPE html>
 			<html>
 				<head>

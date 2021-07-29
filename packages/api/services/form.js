@@ -24,8 +24,8 @@ exports.submit = function(req, data) {
 	return All.run('block.get', req, {
 		id: data.id
 	}).then(function(form) {
-		var fd = form.data || {};
-		var method = (fd.action || {}).method;
+		const fd = form.data || {};
+		const method = (fd.action || {}).method;
 		if (!method) {
 			throw new HttpError.BadRequest("Missing method");
 		}
@@ -34,8 +34,8 @@ exports.submit = function(req, data) {
 		}
 		let body = data.body;
 		// build parameters
-		var expr = ((form.expr || {}).action || {}).parameters || {};
-		var params = All.utils.mergeParameters(expr, {
+		const expr = ((form.expr || {}).action || {}).parameters || {};
+		let params = All.utils.mergeParameters(expr, {
 			$request: body,
 			$query: data.query || {},
 			$user: req.user
@@ -46,23 +46,23 @@ exports.submit = function(req, data) {
 
 		// build body
 		if (params.type && Object.keys(body).length > 0) {
-			var el = req.site.$schema(params.type);
+			const el = req.site.$schema(params.type);
 			if (!el) throw new HttpError.BadRequest("Unknown element type " + params.type);
-			var newBody = {data: {}};
+			const newBody = {data: {}};
 			Object.keys((el.properties.data || {}).properties || {}).forEach(function(key) {
-				var val = body[key];
+				const val = body[key];
 				if (val !== undefined) {
 					newBody.data[key] = val;
 					delete body[key];
 				}
 			});
 			Object.keys(el.properties).forEach(function (key) {
-				var mkey = '$' + key;
-				var mval = body[mkey];
+				const mkey = '$' + key;
+				const mval = body[mkey];
 				if (mval !== undefined) {
 					newBody[key] = mval;
 				} else {
-					var val = body[key];
+					const val = body[key];
 					if (val !== undefined) {
 						console.warn(`Use $${key} for setting el.properties[key]`);
 						newBody[key] = val;
@@ -73,7 +73,7 @@ exports.submit = function(req, data) {
 		}
 		body = All.utils.mergeObjects(body, params);
 
-		return All.run(method, req, body).catch(function(err) {
+		return All.run(method, req, body).catch(function (err) {
 			return {
 				status: err.statusCode || err.status || err.code || 400,
 				item: {
