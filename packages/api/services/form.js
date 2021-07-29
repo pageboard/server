@@ -12,7 +12,7 @@ function init(All) {
 	All.app.post("/.api/form/:id", function(req, res, next) {
 		All.run('form.submit', req, {
 			id: req.params.id,
-			query: All.utils.unflatten(req.query),
+			query: req.query,
 			body: All.utils.unflatten(req.body)
 		}).then(function(data) {
 			All.send(res, data);

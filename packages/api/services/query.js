@@ -9,7 +9,7 @@ function init(All) {
 	All.app.get("/.api/query/:id", function(req, res, next) {
 		All.run('search.query', req, {
 			id: req.params.id,
-			query: All.utils.unflatten(req.query)
+			query: req.query
 		}).then(function(data) {
 			All.send(res, data);
 		}).catch(next);
