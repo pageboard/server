@@ -58,27 +58,18 @@ exports.get.schema = {
 };
 
 exports.search = function ({ site, trx }, data) {
-	const schemas = {};
-	if (data.type && !Array.isArray(data.type)) {
-		schemas[data.type] = site.$schema(data.type);
-	}
+	// TODO data.id or data.parent.id or data.child.id must be set
+	// currently the check filterSub -> boolean is only partially applied
 
 	let parents = data.parents;
 	if (parents) {
-		if (parents.type) {
-			schemas[parents.type] = site.$schema(parents.type);
-		} else if (parents.id) {
+		if (parents.type || parents.id) {
 			// ok
 		} else {
 			parents = null;
 		}
 	}
-	let children = data.children;
-	if (children) {
-		if (children.type) {
-			schemas[children.type] = site.$schema(children.type);
-		}
-	}
+	const children = data.children;
 	let valid = false;
 	const q = site.$relatedQuery('children', trx);
 	if (data.parent) {
@@ -90,8 +81,7 @@ exports.search = function ({ site, trx }, data) {
 					const alias = 'parent_' + i;
 					q.joinRelated('parents', { alias: alias });
 					if (!item.type) throw new HttpError.BadRequest("Missing parents.item.type");
-					schemas[item.type] = site.$schema(item.type);
-					q.whereObject(item, schemas[item.type], alias);
+					q.whereObject(item, item.type, alias);
 				});
 			}
 			delete data.parent.parents;
@@ -100,25 +90,17 @@ exports.search = function ({ site, trx }, data) {
 			if (!data.parent.type) throw new HttpError.BadRequest("Missing parent.type");
 			valid = true;
 			q.joinRelated('parents', { alias: 'parent' });
-			let pType = data.parent.type;
-			if (pType && typeof pType == "string") {
-				schemas[pType] = site.$schema(pType);
-				q.whereObject(data.parent, schemas[pType], 'parent');
-			} else {
-				q.whereObject(data.parent, {}, 'parent');
-			}
-
+			q.whereObject(data.parent, data.parent.type, 'parent');
 		}
 	}
 	if (data.child && Object.keys(data.child).length) {
 		if (!data.child.type) throw new HttpError.BadRequest("Missing child.type");
 		q.joinRelated('children', { alias: 'child' });
-		schemas[data.child.type] = site.$schema(data.child.type);
-		q.whereObject(data.child, schemas[data.child.type], 'child');
+		q.whereObject(data.child, data.child.type, 'child');
 	}
 	const eagers = [];
 
-	valid = filterSub(q, data, schemas[data.type]) || valid;
+	valid = filterSub(q, data) || valid;
 	if (!valid) throw new HttpError.BadRequest("Insufficient search parameters");
 	if (parents) eagers.push('parents(parentsFilter) as parents');
 
@@ -129,7 +111,7 @@ exports.search = function ({ site, trx }, data) {
 			delete qchildren.limit;
 			delete qchildren.offset;
 			const qc = site.$relatedQuery('children', trx).alias('children');
-			whereSub(qc, qchildren, schemas[children.type], 'children');
+			whereSub(qc, qchildren, 'children');
 			qc.joinRelated('parents', { alias: 'parents' })
 				.where('parents._id', ref('block._id'));
 			q.select(All.api.Block.query(trx).count().from(qc.as('sub')).as('itemsCount'));
@@ -137,15 +119,18 @@ exports.search = function ({ site, trx }, data) {
 			eagers.push('children(itemsFilter) as items');
 		}
 	}
+	if (data.count) {
+		// TODO
+	}
 	if (data.content) {
 		eagers.push('children(childrenFilter) as children');
 	}
 	if (eagers.length) q.withGraphFetched(`[${eagers.join(',')}]`).modifiers({
 		parentsFilter(query) {
-			filterSub(query, parents, schemas[parents.type]);
+			filterSub(query, parents);
 		},
 		itemsFilter(query) {
-			filterSub(query, children, children.type ? schemas[children.type] : null);
+			filterSub(query, children);
 			if (!children.type) {
 				// FIXME this is for backward compatibility
 				query.where('standalone', true);
@@ -157,21 +142,12 @@ exports.search = function ({ site, trx }, data) {
 	});
 
 	return q.then(function (rows) {
-		const metas = {};
-		Object.keys(schemas).forEach(function (type) {
-			const bundleType = Object.keys(site.$bundles).find((key) => {
-				return site.$bundles[key].elements.includes(type);
-			});
-			if (bundleType && !metas[bundleType]) {
-				metas[bundleType] = site.$bundles[bundleType].meta;
-			}
-		});
 		const obj = {
 			items: rows,
 			offset: data.offset,
-			limit: data.limit,
-			metas: Object.values(metas)
+			limit: data.limit
 		};
+
 		const ids = [];
 		rows.forEach(function (row) {
 			ids.push(row.id);
@@ -221,12 +197,16 @@ exports.search.schema = {
 		},
 		type: {
 			title: 'Select by type',
-			type: 'string',
-			format: 'id',
+			type: 'array',
+			items: {
+				type: 'string',
+				format: 'id'
+			},
 			$filter: {
 				name: 'element',
 				standalone: true,
-				contentless: true
+				contentless: true,
+				multiple: true
 			}
 		},
 		text: {
@@ -292,13 +272,17 @@ exports.search.schema = {
 				},
 				type: {
 					title: 'Select by type',
-					type: 'string',
-					format: 'id',
 					nullable: true,
+					type: 'array',
+					items: {
+						type: 'string',
+						format: 'id'
+					},
 					$filter: {
 						name: 'element',
 						standalone: true,
-						contentless: true
+						contentless: true,
+						multiple: true
 					}
 				},
 				text: {
@@ -361,13 +345,17 @@ exports.search.schema = {
 				},
 				type: {
 					title: 'Select by type',
-					type: 'string',
-					format: 'id',
 					nullable: true,
+					type: 'array',
+					items: {
+						type: 'string',
+						format: 'id'
+					},
 					$filter: {
 						name: 'element',
 						standalone: true,
-						contentless: true
+						contentless: true,
+						multiple: true
 					}
 				},
 				text: {
@@ -418,14 +406,12 @@ exports.search.schema = {
 };
 exports.search.external = true;
 
-function whereSub(q, data, schema, alias = 'block') {
+function whereSub(q, data, alias = 'block') {
 	let valid = false;
 	if (data.type) {
 		valid = true;
 		if (Array.isArray(data.type)) q.whereIn(`${alias}.type`, data.type);
 		else q.where(`${alias}.type`, data.type);
-	} else if (schema) {
-		if (!data.type) throw new HttpError.BadRequest("Missing type");
 	}
 	if (data.id) {
 		valid = true;
@@ -433,7 +419,7 @@ function whereSub(q, data, schema, alias = 'block') {
 	}
 	if (data.data && Object.keys(data.data).length > 0) {
 		valid = true;
-		q.whereObject({ data: data.data }, schema, alias);
+		q.whereObject({ data: data.data }, data.type, alias);
 	}
 	if (data.text) {
 		valid = true;
@@ -444,9 +430,9 @@ function whereSub(q, data, schema, alias = 'block') {
 	return valid;
 }
 
-function filterSub(q, data, schema, alias) {
+function filterSub(q, data, alias) {
 	q.select();
-	const valid = whereSub(q, data, schema, alias);
+	const valid = whereSub(q, data, alias);
 
 	const orders = data.order || [];
 	orders.push("updated_at");
@@ -471,7 +457,6 @@ exports.find = function (req, data) {
 		}
 		return {
 			item: obj.items[0],
-			metas: obj.metas,
 			hrefs: obj.hrefs
 		};
 	});

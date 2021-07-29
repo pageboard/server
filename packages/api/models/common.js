@@ -200,9 +200,19 @@ exports.QueryBuilder = class CommonQueryBuilder extends QueryBuilder {
 		this.addOperation(patchObjectOperation, [obj]);
 		return this;
 	}
-	whereObject(obj, schema, alias) {
+	whereObject(obj, types = [], alias) {
 		// TODO site.$relatedQuery means this._relatedQueryFor == site
-		const table = alias || this.tableRefFor(this.modelClass());
+		const schema = {};
+		const mClass = this.modelClass();
+		if (types == null) types = [];
+		else if (!Array.isArray(types)) {
+			types = [types];
+		}
+		types.forEach(type => {
+			schema[type] = mClass.prototype.$schema(type);
+		});
+
+		const table = alias || this.tableRefFor(mClass);
 		const refs = asPaths(obj, {}, table, true, schema);
 		const comps = {
 			lt: '<',

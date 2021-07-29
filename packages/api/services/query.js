@@ -20,9 +20,15 @@ function init(All) {
 }
 
 exports.query = function(req, data) {
-	return All.run('block.get', req, {
-		id: data.id
-	}).then(function(form) {
+	return All.run('block.find', req, {
+		id: data.id,
+		type: 'fetch',
+		parents: {
+			type: req.site.$pages,
+			first: true
+		}
+	}).then(function (obj) {
+		const form = obj.item;
 		const fd = form.data || {};
 		const method = (fd.action || {}).method;
 		if (!method) {
@@ -38,7 +44,27 @@ exports.query = function(req, data) {
 			$user: req.user
 		});
 		params = All.utils.mergeObjects(params, fd.action.parameters);
-		return All.run(method, req, params).catch(function(err) {
+		return All.run(method, req, params).then(obj => {
+			const parentType = form.parent.type;
+			const bundles = req.site.$bundles;
+			const bundle = bundles[parentType];
+			const metas = {};
+			Object.keys(fillTypes(obj.item || obj.items, {})).forEach((type) => {
+				if (bundle.elements.includes(type)) return;
+				const bundleType = Object.keys(bundles).find((key) => {
+					return key != parentType && bundles[key].elements.includes(type);
+				});
+				if (bundleType) {
+					if (metas[bundleType]) {
+						console.warn("Element is bundled in several types", type);
+					} else {
+						metas[bundleType] = bundles[bundleType].meta;
+					}
+				}
+			});
+			obj.metas = Object.values(metas);
+			return obj;
+		}).catch(function (err) {
 			return {
 				status: err.statusCode || err.status || err.code || 400,
 				item: {
@@ -68,3 +94,15 @@ exports.query.schema = {
 	additionalProperties: false
 };
 
+function fillTypes(list, obj) {
+	if (!list) return obj;
+	if (!Array.isArray(list)) list = [list];
+	for (const row of list) {
+		if (row.type) obj[row.type] = true;
+		if (row.parent) fillTypes(row.parent, obj);
+		if (row.child) fillTypes(row.child, obj);
+		if (row.parents) fillTypes(row.parents, obj);
+		if (row.children) fillTypes(row.children, obj);
+	}
+	return obj;
+}
