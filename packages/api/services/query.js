@@ -50,16 +50,13 @@ exports.query = function(req, data) {
 			const bundle = bundles[parentType];
 			const metas = {};
 			Object.keys(fillTypes(obj.item || obj.items, {})).forEach((type) => {
-				if (bundle.elements.includes(type)) return;
-				const bundleType = Object.keys(bundles).find((key) => {
-					return key != parentType && bundles[key].elements.includes(type);
-				});
+				const bundleType = bundle.elements.includes(type)
+					? parentType
+					: Object.keys(bundles).find((key) => {
+						return key != parentType && bundles[key].elements.includes(type);
+					});
 				if (bundleType) {
-					if (metas[bundleType]) {
-						console.warn("Element is bundled in several types", type);
-					} else {
-						metas[bundleType] = bundles[bundleType].meta;
-					}
+					metas[bundleType] = bundles[bundleType].meta;
 				}
 			});
 			obj.metas = Object.values(metas);
