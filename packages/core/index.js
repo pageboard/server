@@ -102,9 +102,8 @@ exports.init = function(opt) {
 		opt.installer.path = path;
 	}).then(function() {
 		return Promise.all(Object.keys(opt.dependencies).map(function(module) {
-			return pkgup(resolvePkg(module)).then(function(pkgPath) {
-				return Install.config(Path.dirname(pkgPath), "pageboard", module, All.opt);
-			});
+			var pkgPath = resolvePkg(module, {cwd: opt.dir});
+			return Install.config(pkgPath, "pageboard", module, All.opt);
 		})).then(function(modules) {
 			opt.plugins = modules.filter(x => !!x);
 			var plugin, module;
