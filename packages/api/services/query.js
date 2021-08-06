@@ -19,16 +19,10 @@ function init(All) {
 	});
 }
 
-exports.query = function(req, data) {
-	return All.run('block.find', req, {
-		id: data.id,
-		type: 'fetch',
-		parents: {
-			type: req.site.$pages,
-			first: true
-		}
-	}).then(function (obj) {
-		const form = obj.item;
+exports.query = function (req, data) {
+	return All.run('block.get', req, {
+		id: data.id
+	}).then(function (form) {
 		const fd = form.data || {};
 		const method = (fd.action || {}).method;
 		if (!method) {
@@ -45,16 +39,17 @@ exports.query = function(req, data) {
 		});
 		params = All.utils.mergeObjects(params, fd.action.parameters);
 		return All.run(method, req, params).then(obj => {
-			const parentType = form.parent.type;
-			const bundles = req.site.$bundles;
-			const bundle = bundles[parentType];
+			// check if a non-page bundle is needed
+			const bundles = {};
+			Object.keys(req.site.$bundles).forEach(key => {
+				const bundle = req.site.$bundles[key];
+				if (bundle.meta.group != "page") bundles[key] = bundle;
+			});
 			const metas = {};
 			Object.keys(fillTypes(obj.item || obj.items, {})).forEach((type) => {
-				const bundleType = bundle.elements.includes(type)
-					? parentType
-					: Object.keys(bundles).find((key) => {
-						return key != parentType && bundles[key].elements.includes(type);
-					});
+				const bundleType = Object.keys(bundles).find((key) => {
+					return bundles[key].elements.includes(type);
+				});
 				if (bundleType) {
 					metas[bundleType] = bundles[bundleType].meta;
 				}
