@@ -413,6 +413,8 @@ function whereSub(q, data, alias = 'block') {
 		valid = true;
 		q.whereIn(`${alias}.type`, types);
 	}
+	if (data.standalone != null) {
+		q.where(`${alias}.standalone`, data.standalone);
 	}
 	if (data.id) {
 		valid = true;
