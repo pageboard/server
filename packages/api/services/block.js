@@ -408,10 +408,11 @@ exports.search.external = true;
 
 function whereSub(q, data, alias = 'block') {
 	let valid = false;
-	if (data.type) {
+	const types = (data.type || []).filter(t => t != 'site');
+	if (types.length) {
 		valid = true;
-		if (Array.isArray(data.type)) q.whereIn(`${alias}.type`, data.type);
-		else q.where(`${alias}.type`, data.type);
+		q.whereIn(`${alias}.type`, types);
+	}
 	}
 	if (data.id) {
 		valid = true;
