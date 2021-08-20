@@ -26,6 +26,10 @@ util.inspect.defaultOptions.depth = 10;
 const Domains = require.lazy('./lib/domains');
 const Install = require('./lib/install');
 
+const matchdom = require('matchdom');
+String.prototype.fuse = function (obj) {
+	return matchdom(this, obj);
+};
 // exceptional but so natural
 global.HttpError = require('http-errors');
 global.Text = require('outdent');

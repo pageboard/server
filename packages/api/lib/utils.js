@@ -1,4 +1,3 @@
-const matchdom = require('matchdom');
 const flat = require('flat');
 
 
@@ -16,7 +15,7 @@ function mergeParameters(params, obj) {
 	Object.entries(params).forEach(function([key, val]) {
 		if (val == null) return;
 		if (typeof val == "string") {
-			val = matchdom(val, obj);
+			val = val.fuse(obj);
 			if (val != null) ret[key] = val;
 		} else if (typeof val == "object") {
 			ret[key] = mergeParameters(val, obj);
@@ -49,8 +48,3 @@ function mergeObjects(data, expr) {
 	});
 	return copy;
 }
-
-
-exports.merge = function(str, obj) {
-	return matchdom(str, obj);
-};
