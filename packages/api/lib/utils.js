@@ -15,7 +15,7 @@ function mergeParameters(params, obj) {
 	Object.entries(params).forEach(function([key, val]) {
 		if (val == null) return;
 		if (typeof val == "string") {
-			val = val.fuse(obj);
+			val = All.utils.fuse(val, obj);
 			if (val != null) ret[key] = val;
 		} else if (typeof val == "object") {
 			ret[key] = mergeParameters(val, obj);

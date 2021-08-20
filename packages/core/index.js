@@ -20,16 +20,13 @@ const xdg = require('xdg-basedir');
 const resolvePkg = require('resolve-pkg');
 const http = require.lazy('http');
 const fs = require('fs').promises;
+const matchdom = require('matchdom');
 
 util.inspect.defaultOptions.depth = 10;
 
 const Domains = require.lazy('./lib/domains');
 const Install = require('./lib/install');
 
-const matchdom = require('matchdom');
-String.prototype.fuse = function (obj) {
-	return matchdom(this, obj);
-};
 // exceptional but so natural
 global.HttpError = require('http-errors');
 global.Text = require('outdent');
@@ -91,6 +88,14 @@ exports.init = function(opt) {
 		utils: {}
 	};
 	All.utils.which = pify(require('which'));
+	All.utils.fuse = function (str, obj) {
+		return matchdom(str, obj, {
+			'||'(val) {
+				if (val == null) return '';
+				else return val;
+			}
+		});
+	};
 	All.install = install.bind(All);
 	All.domains = new Domains(All);
 	All.app = createApp(All);
