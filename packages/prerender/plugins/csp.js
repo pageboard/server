@@ -10,6 +10,11 @@ exports.plugin = function(page, settings, request, response) {
 				response.set(cspHeader, csp);
 			}
 		}
+
+		const csp = response.get(cspHeader);
+		if (csp && All.opt.csp) {
+			response.set(cspHeader, csp.fuse({ csp: All.opt.csp }));
+		}
 	});
 };
 

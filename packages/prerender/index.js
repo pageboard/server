@@ -24,13 +24,13 @@ exports = module.exports = function(opt) {
 
 	opt.prerender.helpers = [
 		'./plugins/extensions',
-		'./plugins/report'
+		'./plugins/csp'
 	];
 	opt.prerender.plugins = [
 		'./plugins/form',
 		'./plugins/upcache',
 		'./plugins/bearer',
-		'./plugins/report',
+		'./plugins/csp',
 		'./plugins/serialize'
 	];
 
@@ -55,7 +55,7 @@ function init(All) {
 		'bearer'
 	];
 	if (opt.env != "development") {
-		opt.read.helpers.push('report');
+		opt.read.helpers.push('csp');
 	}
 
 	All.app.get(
@@ -68,7 +68,7 @@ function init(All) {
 
 	const childOpts = {
 		prerender: opt.prerender,
-		report: opt.report,
+		csp: opt.csp,
 		clear: true
 	};
 
@@ -254,7 +254,7 @@ function prerender(req, res, next) {
 		if (!outputOpts.mime || outputOpts.mime == "text/html") {
 			plugins.push('redirect');
 			if (opt.env != "development") {
-				plugins.unshift('httplinkpreload', 'report');
+				plugins.unshift('httplinkpreload', 'csp');
 			}
 		}
 		if (!outputOpts.display) {
