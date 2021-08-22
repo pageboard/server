@@ -37,8 +37,7 @@ module.exports = function(opt) {
 					stdio: ['ignore', 'pipe', 'inherit', 'ipc']
 				});
 				child.send({
-					prerender: opt.prerender,
-					report: opt.report
+					prerender: opt.prerender
 				});
 			} catch(ex) {
 				cb(ex);
@@ -68,6 +67,7 @@ module.exports = function(opt) {
 				if (msg.tags) All.cache.tag.apply(null, msg.tags)(req, res);
 				if (msg.headers != null) {
 					for (var k in msg.headers) res.set(k, msg.headers[k]);
+					csp(res);
 				}
 				if (msg.attachment != null) {
 					res.attachment(msg.attachment);
@@ -116,6 +116,39 @@ module.exports = function(opt) {
 	};
 };
 
+function csp(res) {
+	const cspHeader = 'Content-Security-Policy';
+	let str = res.get(cspHeader);
+	const { csp, report } = All.opt;
+	if (report && report.uri && !str.contains(' report-uri ')) {
+		str += `; report-uri ${report.uri}`;
+	}
+	if (csp) {
+		str = All.utils.fuse(str, { csp });
+	}
+	res.set(cspHeader, str);
+
+	if (report.to) {
+		res.set('Report-To', JSON.stringify({
+			group: "default",
+			max_age: 31536000,
+			endpoints: [{
+				url: report.to
+			}],
+			include_subdomains: true
+		}));
+		res.set('NEL', JSON.stringify({
+			report_to: "default",
+			max_age: 31536000,
+			include_subdomains: true
+		}));
+	}
+	let xss = '1; mode=block';
+	if (report.xpp) {
+		xss += `; report=${report.xpp}`;
+	}
+	res.set('X-Xss-Protection', xss);
+}
 
 function objToError(obj) {
 	var err = new Error(obj.message);

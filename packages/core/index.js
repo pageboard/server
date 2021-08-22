@@ -15,6 +15,7 @@ var pkgup = require('pkg-up');
 var debug = require('debug')('pageboard:core');
 var csp = require('content-security-policy-builder');
 var http = require('http');
+var matchdom = require('matchdom');
 
 var Domains = require('./lib/domains');
 var Install = require('./lib/install');
@@ -59,6 +60,7 @@ exports.config = function(pkgOpt) {
 		core: {
 			log: ':method :status :time :size :site:url'
 		},
+		csp: {},
 		extnames: [],
 		upstreams: {}
 	}, null, (str) => toml.parse(str));
@@ -87,6 +89,14 @@ exports.init = function(opt) {
 		utils: {}
 	};
 	All.utils.which = pify(require('which'));
+	All.utils.fuse = function (str, obj) {
+		return matchdom(str, obj, {
+			'||'(val) {
+				if (val == null) return '';
+				else return val;
+			}
+		});
+	};
 	All.run = run.bind(All);
 	All.install = install.bind(All);
 	All.domains = new Domains(All);
