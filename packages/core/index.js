@@ -14,6 +14,7 @@ var xdg = require('xdg-basedir');
 var resolvePkg = require('resolve-pkg');
 var debug = require('debug')('pageboard:core');
 var http = require('http');
+var matchdom = require('matchdom');
 
 util.inspect.defaultOptions.depth = 10;
 
@@ -89,6 +90,14 @@ exports.init = function(opt) {
 		utils: {}
 	};
 	All.utils.which = pify(require('which'));
+	All.utils.fuse = function (str, obj) {
+		return matchdom(str, obj, {
+			'||'(val) {
+				if (val == null) return '';
+				else return val;
+			}
+		});
+	};
 	All.install = install.bind(All);
 	All.domains = new Domains(All);
 	All.app = createApp(All);

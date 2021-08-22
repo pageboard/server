@@ -1,4 +1,3 @@
-var matchdom = require('matchdom');
 var flat = require('flat');
 
 
@@ -12,24 +11,11 @@ exports.unflatten = function(query) {
 exports.mergeParameters = mergeParameters;
 
 function mergeParameters(params, obj) {
-	// consumed obj parameters are removed from obj
-	// this is useful for populating a block with matchdom expressions
-	// that merge variables but remove them as they are merged.
-	// it is avoidable, especially with the new template variables,
-	// the block data could be properly scoped and not mixed with request parameters.
-	var ret = Array.isArray(params) ? [] : {};
+	const ret = Array.isArray(params) ? [] : {};
 	Object.entries(params).forEach(function([key, val]) {
+		if (val == null) return;
 		if (typeof val == "string") {
-			val = matchdom(val, obj, {'||': function(val, what) {
-				var path = what.scope.path.slice();
-				if (path[0] == "$query" || path[0] == "$body" || path[0] == "$response") {
-					var last = path.pop();
-					var parent = what.expr.get(what.data, path);
-					if (parent == null) return;
-					delete parent[last];
-				}
-				return val;
-			}});
+			val = All.utils.fuse(val, obj);
 			if (val != null) ret[key] = val;
 		} else if (typeof val == "object") {
 			ret[key] = mergeParameters(val, obj);
@@ -55,8 +41,3 @@ function mergeObjects(data, expr) {
 	});
 	return copy;
 }
-
-
-exports.merge = function(str, obj) {
-	return matchdom(str, obj);
-};
