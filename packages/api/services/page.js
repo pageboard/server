@@ -623,29 +623,41 @@ function applyAdd({ site, trx }, list) {
 }
 
 function applyUpdate(req, list) {
-	return Promise.all(list.map(function (block) {
-		if (req.site.$pages.includes(block.type)) {
-			return updatePage(req, block);
-		} else if (!block.updated_at) {
-			throw new HttpError.BadRequest(`Block is missing 'updated_at' ${block.id}`);
-		} else {
-			// simpler path
-			return req.site.$relatedQuery('children', req.trx)
-				.where('block.id', block.id)
-				.where('block.type', block.type)
-				.where(raw("date_trunc('milliseconds', block.updated_at)"), block.updated_at)
-				.patch(block)
-				.returning('id', 'updated_at')
-				.first()
-				.then(function (part) {
-					if (!part) throw new HttpError.Conflict(`Please refresh page before saving`);
-					return part;
-				});
-		}
-	}));
+	const blocksMap = {};
+	const updates = [];
+	return list.reduce(function (p, block) {
+		return p.then(function () {
+			if (block.id in blocksMap) block.updated_at = blocksMap[block.id];
+			if (req.site.$pages.includes(block.type)) {
+				return updatePage(req, block, blocksMap);
+			} else if (!block.updated_at) {
+				throw new HttpError.BadRequest(`Block is missing 'updated_at' ${block.id}`);
+			} else {
+				// simpler path
+				return req.site.$relatedQuery('children', req.trx)
+					.where('block.id', block.id)
+					.where('block.type', block.type)
+					.where(raw("date_trunc('milliseconds', block.updated_at)"), block.updated_at)
+					.patch(block)
+					.returning('id', 'updated_at')
+					.first()
+					.then(function (part) {
+						if (!part) {
+							throw new HttpError.Conflict(`${block.type}:${block.id} last update mismatch ${block.updated_at}`);
+						}
+						return part;
+					});
+			}
+		}).then(function (update) {
+			updates.push(update);
+		});
+	}, Promise.resolve()).then(function () {
+		return updates;
+	});
 }
 
-function updatePage({ site, trx }, page) {
+function updatePage({ site, trx }, page, sideEffects) {
+	if (!sideEffects) sideEffects = {};
 	return site.$relatedQuery('children', trx).where('block.id', page.id)
 		.whereIn('block.type', page.type ? [page.type] : site.$pages)
 		.select(ref('block.data:url').as('url')).first().throwIfNotFound().then(function (dbPage) {
@@ -654,7 +666,6 @@ function updatePage({ site, trx }, page) {
 			const newUrl = page.data.url;
 			if (oldUrl == newUrl) return dbPage;
 			const hrefs = site.$model.hrefs;
-			// page.data.url is not a href input, see also page element.
 			return Promise.all(Object.keys(hrefs).map(function (type) {
 				return Promise.all(hrefs[type].map(function (desc) {
 					const key = 'block.data:' + desc.path;
@@ -672,7 +683,16 @@ function updatePage({ site, trx }, page) {
 								args[1],
 								newUrl
 							)
-						}).skipUndefined();
+						})
+						.skipUndefined()
+						.returning('block.id', 'block.updated_at')
+						.then(function (rows) {
+							rows.forEach(function (row) {
+								const date = row.updated_at.toISOString();
+								sideEffects[row.id] = date;
+								if (page.id == row.id) page.updated_at = date;
+							});
+						});
 				}));
 			})).then(function () {
 				const Href = All.api.Href;
@@ -690,10 +710,12 @@ function updatePage({ site, trx }, page) {
 			return site.$relatedQuery('children', trx).where('block.id', page.id)
 				.where(raw("date_trunc('milliseconds', block.updated_at)"), page.updated_at)
 				.patch(page)
-				.returning('id', 'updated_at')
+				.returning('block.id', 'block.updated_at')
 				.first()
 				.then(function (part) {
-					if (!part) throw new HttpError.Conflict(`Please refresh page before saving`);
+					if (!part) {
+						throw new HttpError.Conflict(`${page.type}:${page.id} last update mismatch ${page.updated_at}`);
+					}
 					return part;
 				});
 		}).catch(function (err) {
