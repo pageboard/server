@@ -99,6 +99,7 @@ exports.init = function(opt) {
 
 	const plugins = [];
 	return (opt.installer.path ? Promise.resolve(opt.installer.path) : All.utils.which(opt.installer.bin)).then(function(path) {
+		// eslint-disable-next-line no-console
 		console.info("core:\tinstaller.path", path);
 		opt.installer.path = path;
 	}).then(function() {
@@ -197,6 +198,7 @@ function install(site) {
 exports.start = function(All) {
 	const server = http.createServer(All.app);
 	server.listen(All.opt.port);
+	// eslint-disable-next-line no-console
 	console.info(`port:\t${All.opt.port}`);
 };
 
@@ -294,7 +296,7 @@ function initLog(opt) {
 function createApp(All) {
 	const app = express();
 	const opt = All.opt;
-	// for csp headers, see prerender and write
+	// site-specific headers are built by page element and csp filter + prerender
 	app.set("env", opt.env);
 	app.disable('x-powered-by');
 	app.enable('trust proxy');
