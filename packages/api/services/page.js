@@ -21,7 +21,8 @@ function init(All) {
 					data: {}
 				},
 				meta: Object.assign({ services: site.$services }, site.$bundles.write.meta),
-				site: site.data
+				site: site.data,
+				commons: All.opt.commons
 			});
 		} else {
 			All.run('page.get', req, req.query).then(function (data) {
@@ -37,6 +38,7 @@ function init(All) {
 						stylesheets: [resources.readStyle]
 					};
 				}
+				data.commons = All.opt.commons;
 				All.send(res, data);
 			}).catch(next);
 		}

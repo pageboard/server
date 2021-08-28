@@ -59,7 +59,7 @@ exports.config = function(pkgOpt) {
 		core: {
 			log: ':method :status :time :size :site :url'
 		},
-		csp: {},
+		commons: {},
 		upstreams: {}
 	}, null, (str) => toml.parse(str));
 	opt.upstream = opt.upstreams[opt.version];
