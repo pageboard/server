@@ -12,9 +12,10 @@ exports = module.exports = function(opt) {
 function init(All) {
 	All.app.get('/.api/page', function(req, res, next) {
 		if ((req.user.grants || []).includes('webmaster') && req.query.develop === undefined) {
-			res.send({type: 'write', site: req.site.data});
+			res.send({type: 'write', site: req.site.data, commons: All.opt.commons});
 		} else {
 			All.run('page.get', req.site, req.query).then(function(page) {
+				page.commons = All.opt.commons;
 				res.send(page);
 			}).catch(next);
 		}

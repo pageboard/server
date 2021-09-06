@@ -60,7 +60,7 @@ exports.config = function(pkgOpt) {
 		core: {
 			log: ':method :status :time :size :site:url'
 		},
-		csp: {},
+		commons: {},
 		extnames: [],
 		upstreams: {}
 	}, null, (str) => toml.parse(str));
