@@ -22,7 +22,8 @@ function init(All) {
 					data: {}
 				},
 				meta: Object.assign({services: req.site.$services}, $write),
-				site: req.site.data
+				site: req.site.data,
+				commons: All.opt.commons
 			});
 		} else {
 			All.run('page.get', req, req.query).then(function(data) {
@@ -33,6 +34,7 @@ function init(All) {
 						stylesheets: $write.resources.slice(5)
 					};
 				}
+				data.commons = All.opt.commons;
 				All.send(res, data);
 			}).catch(next);
 		}
