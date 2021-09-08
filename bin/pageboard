@@ -1,4 +1,4 @@
-#!/usr/bin/node
+#!/usr/bin/node --experimental-worker
 var Path = require('path');
 process.env.JSC_SIGNAL_FOR_GC = 30;
 require(
