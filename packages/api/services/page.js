@@ -494,9 +494,9 @@ exports.save = function (req, changes) {
 				if (!page.data.url) {
 					delete page.data.url;
 				} else if (allUrl[page.data.url]) {
-					throw new HttpError.BadRequest("Two pages with same url");
+					throw new HttpError.BadRequest(`${page.id} and ${allUrl[page.data.url]} have the same url: ${page.data.url}`);
 				} else {
-					if (!page.id) throw new HttpError.BadRequest("Page without id");
+					if (!page.id) throw new HttpError.BadRequest(`Page without id: ${page.data.url}`);
 					allUrl[page.data.url] = page.id;
 				}
 			});
