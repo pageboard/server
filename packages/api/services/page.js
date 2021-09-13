@@ -503,7 +503,7 @@ exports.save = function (req, changes) {
 			dbPages.forEach(function (dbPage) {
 				const id = allUrl[dbPage.url];
 				if (id != null && dbPage.id != id) {
-					throw new HttpError.BadRequest("Page url already exists");
+					throw new HttpError.BadRequest(`${id} wants to take ${dbPage.id} url: ${dbPage.url}`);
 				}
 			});
 		}).then(function () {
