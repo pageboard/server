@@ -1,6 +1,6 @@
 {
   "name": "@pageboard/prerender",
-  "version": "0.7.0",
+  "version": "0.8.0",
   "description": "setup prerendering of views in pageboard",
   "main": "index.js",
   "scripts": {
@@ -22,10 +22,10 @@
   },
   "homepage": "https://github.com/pageboard/server#readme",
   "dependencies": {
-    "express-dom": "^5.13.3",
-    "got": "^9.6.0",
-    "tarn": "^2.0.0",
-    "webkitgtk": "^4.11.0"
+    "express-dom": "^5.14.3",
+    "got": "^11.8.2",
+    "tarn": "^3.0.1",
+    "webkitgtk": "^4.13.2"
   },
   "pageboard": true
 }

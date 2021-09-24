@@ -19,8 +19,8 @@
   "dependencies": {
     "addressparser": "^1.0.1",
     "busboy": "^0.3.1",
-    "got": "^9.6.0",
-    "nodemailer": "^6.6.1",
+    "got": "^11.8.2",
+    "nodemailer": "^6.6.5",
     "nodemailer-postmark-transport": "^5.1.0"
   },
   "pageboard": true
