@@ -5,10 +5,10 @@ module.exports = function(req, res, next) {
 		headers: req.headers
 	});
 	const body = {};
-	busboy.on("field", function(fieldname, value) {
+	busboy.on("field", (fieldname, value) => {
 		body[fieldname] = value;
 	});
-	busboy.on("finish", function() {
+	busboy.on("finish", () => {
 		req.body = body;
 		next();
 	});

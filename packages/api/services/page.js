@@ -9,7 +9,7 @@ exports = module.exports = function (opt) {
 };
 
 function init(All) {
-	All.app.get('/.api/page', function (req, res, next) {
+	All.app.get('/.api/page', (req, res, next) => {
 		const site = req.site;
 		const isWebmaster = !All.auth.locked(req, ['webmaster']);
 		const dev = req.query.develop == "write";
@@ -25,7 +25,7 @@ function init(All) {
 				commons: All.opt.commons
 			});
 		} else {
-			All.run('page.get', req, req.query).then(function (data) {
+			All.run('page.get', req, req.query).then((data) => {
 				const resources = site.$bundles.write.meta.resources;
 				if (dev && resources.develop) {
 					if (!data.meta) data.meta = { scripts: [] };
@@ -43,51 +43,49 @@ function init(All) {
 			}).catch(next);
 		}
 	});
-	All.app.get('/.api/pages', function (req, res, next) {
+	All.app.get('/.api/pages', (req, res, next) => {
 		const isWebmaster = !All.auth.locked(req, ['webmaster']);
 		if (isWebmaster) {
 			// webmaster want to see those anyway
 			// this must not be confused with page.lock
 			req.query.drafts = true;
 			if (!req.query.type) req.query.type = req.site.$pages;
-		} else {
-			if (!req.query.type) req.query.type = ['page', 'blog'];
-		}
+		} else if (!req.query.type) req.query.type = ['page', 'blog'];
 
 		const action = req.query.text != null ? 'page.search' : 'page.all';
-		All.run(action, req, req.query).then(function (obj) {
+		All.run(action, req, req.query).then((obj) => {
 			All.send(res, obj);
 		}).catch(next);
 	});
-	All.app.post('/.api/page', All.auth.lock('webmaster'), function (req, res, next) {
-		All.run('page.add', req, req.body).then(function (page) {
+	All.app.post('/.api/page', All.auth.lock('webmaster'), (req, res, next) => {
+		All.run('page.add', req, req.body).then((page) => {
 			res.send(page);
 		}).catch(next);
 	});
-	All.app.put('/.api/page', All.auth.lock('webmaster'), function (req, res, next) {
-		All.run('page.save', req, req.body).then(function (page) {
+	All.app.put('/.api/page', All.auth.lock('webmaster'), (req, res, next) => {
+		All.run('page.save', req, req.body).then((page) => {
 			res.send(page);
 		}).catch(next);
 	});
-	All.app.delete('/.api/page', All.auth.lock('webmaster'), function (req, res, next) {
-		All.run('page.del', req, req.query).then(function (page) {
+	All.app.delete('/.api/page', All.auth.lock('webmaster'), (req, res, next) => {
+		All.run('page.del', req, req.query).then((page) => {
 			res.send(page);
 		}).catch(next);
 	});
 
-	All.app.get('/robots.txt', All.cache.tag('data-:site'), function (req, res, next) {
-		All.run('page.robots', req).then(function (txt) {
+	All.app.get('/robots.txt', All.cache.tag('data-:site'), (req, res, next) => {
+		All.run('page.robots', req).then((txt) => {
 			res.type('text/plain');
 			res.send(txt);
 		}).catch(next);
 	});
 
-	All.app.get('/sitemap.txt', All.cache.tag('data-:site'), function (req, res, next) {
+	All.app.get('/sitemap.txt', All.cache.tag('data-:site'), (req, res, next) => {
 		All.run('page.all', req, {
 			robot: true,
 			type: ['page', 'blog'] // TODO do not return pages that require a query
 			// TODO do not return pages that do not have a properties.nositemap (nor sitemap)
-		}).then(function (obj) {
+		}).then((obj) => {
 			res.type('text/plain');
 			All.auth.filter(req, obj);
 			res.send(obj.items.map(page => req.site.href + page.data.url).join('\n'));
@@ -127,7 +125,7 @@ exports.get = function (req, data) {
 		.whereJsonText("page.data:url", data.url)
 		.select(
 			All.href.collect(req, { url: data.url, content: true }).as('hrefs')
-		).then(function (page) {
+		).then((page) => {
 			if (!page) {
 				obj.status = 404;
 			} else if (All.auth.locked(req, (page.lock || {}).read)) {
@@ -140,14 +138,14 @@ exports.get = function (req, data) {
 					.whereJsonText("page.data:url", statusUrl)
 					.select(
 						All.href.collect(req, { url: statusUrl, content: true }).as('hrefs')
-					).then(function (page) {
+					).then((page) => {
 						if (!page) throw new HttpError[obj.status]();
 						return page;
 					});
 			} else {
 				return page;
 			}
-		}).then(function (page) {
+		}).then((page) => {
 			const links = {};
 			Object.assign(obj, {
 				item: page,
@@ -170,11 +168,11 @@ exports.get = function (req, data) {
 					ref('block.data:redirect').as('redirect'),
 					ref('block.data:title').as('title')
 				])
-			]).then(function (list) {
+			]).then((list) => {
 				links.up = list[0].map(redUrl);
 				const siblings = list[1];
 				let found;
-				const position = siblings.findIndex(function (item) {
+				const position = siblings.findIndex((item) => {
 					const same = item.url == data.url;
 					if (same) {
 						found = true;
@@ -326,7 +324,7 @@ exports.search = function ({ site, trx }, data) {
 		data.offset,
 		data.limit
 	]);
-	return q.then(function (results) {
+	return q.then((results) => {
 		const obj = {
 			offset: data.offset,
 			limit: data.limit,
@@ -384,7 +382,7 @@ exports.search.schema = {
 exports.search.external = true;
 
 exports.all = function (req, data) {
-	return listPages(req, data).then(function (pages) {
+	return listPages(req, data).then((pages) => {
 		const els = {};
 		const obj = {
 			items: pages
@@ -393,7 +391,7 @@ exports.all = function (req, data) {
 			obj.item = pages.shift();
 			if (obj.item && obj.item.data.url != data.parent) delete obj.item;
 		} else {
-			req.site.$pages.forEach(function (type) {
+			req.site.$pages.forEach((type) => {
 				const schema = req.site.$schema(type);
 				els[type] = schema;
 			});
@@ -476,10 +474,10 @@ exports.save = function (req, changes) {
 	};
 	pages.all = pages.add.concat(pages.update);
 
-	changes.add.forEach(function (b) {
+	changes.add.forEach((b) => {
 		stripHostname(req.site, b);
 	});
-	changes.update.forEach(function (b) {
+	changes.update.forEach((b) => {
 		stripHostname(req.site, b);
 	});
 	// this also effectively prevents removing a page and adding a new page
@@ -489,8 +487,8 @@ exports.save = function (req, changes) {
 	return req.site.$relatedQuery('children', req.trx)
 		.select('block.id', ref('block.data:url').as('url'))
 		.whereIn('block.type', req.site.$pages)
-		.whereNotNull(ref('block.data:url')).then(function (dbPages) {
-			pages.all.forEach(function (page) {
+		.whereNotNull(ref('block.data:url')).then((dbPages) => {
+			pages.all.forEach((page) => {
 				if (!page.data.url) {
 					delete page.data.url;
 				} else if (allUrl[page.data.url]) {
@@ -500,52 +498,52 @@ exports.save = function (req, changes) {
 					allUrl[page.data.url] = page.id;
 				}
 			});
-			dbPages.forEach(function (dbPage) {
+			dbPages.forEach((dbPage) => {
 				const id = allUrl[dbPage.url];
 				if (id != null && dbPage.id != id) {
 					throw new HttpError.BadRequest(`${id} wants to take ${dbPage.id} url: ${dbPage.url}`);
 				}
 			});
-		}).then(function () {
+		}).then(() => {
 			// FIXME use site.$model.hrefs to track the blocks with href when saving,
 			// and check all new/changed href have matching row in href table
-			return applyUnrelate(req, changes.unrelate).then(function () {
+			return applyUnrelate(req, changes.unrelate).then(() => {
 				return applyRemove(req, changes.remove, changes.recursive);
-			}).then(function () {
+			}).then(() => {
 				return applyAdd(req, changes.add);
-			}).then(function (list) {
+			}).then((list) => {
 				returning.update = list || [];
 				return applyUpdate(req, changes.update);
-			}).then(function (list) {
+			}).then((list) => {
 				returning.update = returning.update.concat(list);
 				return applyRelate(req, changes.relate);
 			});
-		}).then(function (parts) {
-			return Promise.all(pages.update.map(function (child) {
+		}).then((parts) => {
+			return Promise.all(pages.update.map((child) => {
 				if (!child.data.url || child.data.url.startsWith('/.')) return;
 				return All.href.save(req, {
 					url: child.data.url,
 					title: child.data.title
-				}).catch(function (err) {
+				}).catch((err) => {
 					if (err.statusCode == 404) return All.href.add(req, {
 						url: child.data.url
-					}).catch(function (err) {
+					}).catch((err) => {
 						console.error(err);
 					});
 					else console.error(err);
 				});
 			}));
-		}).then(function () {
-			return Promise.all(pages.add.map(function (child) {
+		}).then(() => {
+			return Promise.all(pages.add.map((child) => {
 				if (!child.data.url || child.data.url.startsWith('/.')) return;
 				// problem: added pages are not saved here
 				return All.href.add(req, {
 					url: child.data.url
-				}).catch(function (err) {
+				}).catch((err) => {
 					console.error(err);
 				});
 			}));
-		}).then(function () {
+		}).then(() => {
 			return returning;
 		});
 };
@@ -591,9 +589,9 @@ function stripHostname(site, block) {
 }
 
 function applyUnrelate({ site, trx }, obj) {
-	return Promise.all(Object.keys(obj).map(function (parentId) {
+	return Promise.all(Object.keys(obj).map((parentId) => {
 		return site.$relatedQuery('children', trx).where('block.id', parentId)
-			.first().throwIfNotFound().then(function (parent) {
+			.first().throwIfNotFound().then((parent) => {
 				return parent.$relatedQuery('children', trx)
 					.unrelate()
 					.whereIn('block.id', obj[parentId]);
@@ -614,8 +612,8 @@ function applyRemove({ site, trx }, list, recursive) {
 function applyAdd({ site, trx }, list) {
 	if (!list.length) return;
 	// this relates site to inserted children
-	return site.$relatedQuery('children', trx).insert(list).returning('*').then(function (rows) {
-		return rows.map(function (row) {
+	return site.$relatedQuery('children', trx).insert(list).returning('*').then((rows) => {
+		return rows.map((row) => {
 			return {
 				id: row.id,
 				updated_at: row.updated_at
@@ -627,8 +625,8 @@ function applyAdd({ site, trx }, list) {
 function applyUpdate(req, list) {
 	const blocksMap = {};
 	const updates = [];
-	return list.reduce(function (p, block) {
-		return p.then(function () {
+	return list.reduce((p, block) => {
+		return p.then(() => {
 			if (block.id in blocksMap) block.updated_at = blocksMap[block.id];
 			if (req.site.$pages.includes(block.type)) {
 				return updatePage(req, block, blocksMap);
@@ -643,17 +641,17 @@ function applyUpdate(req, list) {
 					.patch(block)
 					.returning('id', 'updated_at')
 					.first()
-					.then(function (part) {
+					.then((part) => {
 						if (!part) {
 							throw new HttpError.Conflict(`${block.type}:${block.id} last update mismatch ${block.updated_at}`);
 						}
 						return part;
 					});
 			}
-		}).then(function (update) {
+		}).then((update) => {
 			updates.push(update);
 		});
-	}, Promise.resolve()).then(function () {
+	}, Promise.resolve()).then(() => {
 		return updates;
 	});
 }
@@ -662,14 +660,14 @@ function updatePage({ site, trx }, page, sideEffects) {
 	if (!sideEffects) sideEffects = {};
 	return site.$relatedQuery('children', trx).where('block.id', page.id)
 		.whereIn('block.type', page.type ? [page.type] : site.$pages)
-		.select(ref('block.data:url').as('url')).first().throwIfNotFound().then(function (dbPage) {
+		.select(ref('block.data:url').as('url')).first().throwIfNotFound().then((dbPage) => {
 			const oldUrl = dbPage.url;
 			const oldUrlStr = oldUrl == null ? '' : oldUrl;
 			const newUrl = page.data.url;
 			if (oldUrl == newUrl) return dbPage;
 			const hrefs = site.$model.hrefs;
-			return Promise.all(Object.keys(hrefs).map(function (type) {
-				return Promise.all(hrefs[type].map(function (desc) {
+			return Promise.all(Object.keys(hrefs).map((type) => {
+				return Promise.all(hrefs[type].map((desc) => {
 					const key = 'block.data:' + desc.path;
 					const field = ref(key).castText();
 					const args = field._createRawArgs(All.api.Block.query());
@@ -688,15 +686,15 @@ function updatePage({ site, trx }, page, sideEffects) {
 						})
 						.skipUndefined()
 						.returning('block.id', 'block.updated_at')
-						.then(function (rows) {
-							rows.forEach(function (row) {
+						.then((rows) => {
+							rows.forEach((row) => {
 								const date = row.updated_at.toISOString();
 								sideEffects[row.id] = date;
 								if (page.id == row.id) page.updated_at = date;
 							});
 						});
 				}));
-			})).then(function () {
+			})).then(() => {
 				const Href = All.api.Href;
 				return Href.query(trx).where('_parent_id', site._id)
 					.where('type', 'link')
@@ -705,43 +703,43 @@ function updatePage({ site, trx }, page, sideEffects) {
 						if (oldUrl == null) this.orWhereNull('url');
 						else this.orWhere('url', oldUrl);
 					}).delete();
-			}).then(function () {
+			}).then(() => {
 				return dbPage;
 			});
-		}).then(function (dbPage) {
+		}).then((dbPage) => {
 			return site.$relatedQuery('children', trx).where('block.id', page.id)
 				.where(raw("date_trunc('milliseconds', block.updated_at)"), page.updated_at)
 				.patch(page)
 				.returning('block.id', 'block.updated_at')
 				.first()
-				.then(function (part) {
+				.then((part) => {
 					if (!part) {
 						throw new HttpError.Conflict(`${page.type}:${page.id} last update mismatch ${page.updated_at}`);
 					}
 					return part;
 				});
-		}).catch(function (err) {
+		}).catch((err) => {
 			console.error("cannot updatePage", err);
 			throw err;
 		});
 }
 
 function applyRelate({ site, trx }, obj) {
-	return Promise.all(Object.keys(obj).map(function (parentId) {
+	return Promise.all(Object.keys(obj).map((parentId) => {
 		return site.$relatedQuery('children', trx).where('block.id', parentId)
-			.first().throwIfNotFound().then(function (parent) {
+			.first().throwIfNotFound().then((parent) => {
 				return site.$relatedQuery('children', trx)
 					.whereIn('block.id', obj[parentId])
 					.select('block.id', 'block._id', 'block.standalone', 'rel.child_id')
 					.leftOuterJoin('relation as rel', function () {
 						this.on('rel.parent_id', '=', parent._id)
 							.andOn('rel.child_id', '=', 'block._id');
-					}).then(function (ids) {
+					}).then((ids) => {
 						// do not relate again
 						const unrelateds = ids.filter(item => !item.child_id);
 						if (ids.length != obj[parentId].length) {
-							const missing = obj[parentId].reduce(function (list, id) {
-								if (!ids.some(function (item) {
+							const missing = obj[parentId].reduce((list, id) => {
+								if (!ids.some((item) => {
 									return item.id === id;
 								})) list.push(id);
 								return list;
@@ -755,7 +753,7 @@ function applyRelate({ site, trx }, obj) {
 }
 
 exports.add = function (req, data) {
-	return req.site.$beforeInsert.call(data).then(function () {
+	return req.site.$beforeInsert.call(data).then(() => {
 		return exports.save(req, {
 			add: [data]
 		});
@@ -775,14 +773,14 @@ exports.add.schema = {
 };
 
 exports.del = function ({ site, trx }, data) {
-	return All.run('block.get', { site, trx }, data).then(function (page) {
+	return All.run('block.get', { site, trx }, data).then((page) => {
 		return site.$relatedQuery('children', trx)
 			.select('block.id', 'block.type', 'block.content', ref('parents.id').as('parentId'), ref('parents.data:url').as('parentUrl'))
 			.where(ref('block.data:url').castText(), page.data.url)
 			.joinRelated('parents')
 			.whereNot('parents.type', 'site')
 			.whereNot('parents.id', page.id)
-			.then(function (links) {
+			.then((links) => {
 				if (links.length > 0) {
 					throw new HttpError.Conflict(Text`
 					There are ${links.length} referrers to this page:
@@ -791,7 +789,7 @@ exports.del = function ({ site, trx }, data) {
 				}
 				return All.api.Href.query(trx).where('url', page.data.url).del();
 			})
-			.then(function () {
+			.then(() => {
 				return All.run('block.del', { site, trx }, {
 					id: page.id,
 					type: page.type
@@ -817,8 +815,8 @@ exports.robots = function (req) {
 	if (req.site.data.env == "production") {
 		lines.push(`Sitemap: ${req.site.href}/sitemap.txt`);
 		lines.push('User-agent: *');
-		p = listPages(req, { disallow: true, type: ['page', 'blog'] }).then(function (pages) {
-			pages.forEach(function (page) {
+		p = listPages(req, { disallow: true, type: ['page', 'blog'] }).then((pages) => {
+			pages.forEach((page) => {
 				lines.push(`Disallow: ${page.data.url}`);
 			});
 		});
@@ -827,7 +825,7 @@ exports.robots = function (req) {
 		lines.push('User-agent: *');
 		lines.push("Disallow: /");
 	}
-	return p.then(function () {
+	return p.then(() => {
 		return lines.join('\n');
 	});
 };

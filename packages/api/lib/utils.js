@@ -12,7 +12,7 @@ exports.mergeParameters = mergeParameters;
 
 function mergeParameters(params, obj) {
 	const ret = Array.isArray(params) ? [] : {};
-	Object.entries(params).forEach(function([key, val]) {
+	Object.entries(params).forEach(([key, val]) => {
 		if (val == null) return;
 		if (typeof val == "string") {
 			val = All.utils.fuse(val, obj);
@@ -31,7 +31,7 @@ exports.mergeObjects = mergeObjects;
 function mergeObjects(data, expr) {
 	if (data == null) return expr;
 	const copy = Array.isArray(data) ? data.slice() : Object.assign({}, data);
-	if (expr != null) Object.entries(expr).forEach(function([key, val]) {
+	if (expr != null) Object.entries(expr).forEach(([key, val]) => {
 		let sval = copy[key];
 		if (val == null) return;
 		else if (typeof val == "object") {

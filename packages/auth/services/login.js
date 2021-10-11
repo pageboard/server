@@ -14,14 +14,14 @@ function init(All) {
 		step: 30, // do not change this value, we want third-party otp apps to work with us
 		window: [40, 1] // ten minutes-old tokens are still valid
 	};
-	All.app.get("/.api/login", function (req, res, next) {
-		All.run('login.grant', req, req.query).then(function (data) {
+	All.app.get("/.api/login", (req, res, next) => {
+		All.run('login.grant', req, req.query).then((data) => {
 			All.send(res, data);
 		}).catch(next);
 	});
 
-	All.app.get("/.api/logout", function (req, res, next) {
-		All.run('login.clear', req, req.query).then(function (data) {
+	All.app.get("/.api/logout", (req, res, next) => {
+		All.run('login.clear', req, req.query).then((data) => {
 			All.send(res, data);
 		}).catch(next);
 	});
@@ -30,7 +30,7 @@ function init(All) {
 function userPriv({ trx }, user) {
 	return user.$relatedQuery('children', trx).alias('privs')
 		.where('privs.type', 'priv')
-		.first().throwIfNotFound().select().catch(function (err) {
+		.first().throwIfNotFound().select().catch((err) => {
 			if (err.statusCode != 404) throw err;
 			return user.$relatedQuery('children', trx).insert({
 				type: 'priv',
@@ -44,13 +44,13 @@ function userPriv({ trx }, user) {
 }
 
 function generate(req, data) {
-	return Promise.resolve().then(function () {
+	return Promise.resolve().then(() => {
 		if (data.register) return All.user.add(req, { email: data.email });
-	}).then(function () {
+	}).then(() => {
 		return All.user.get(req, { email: data.email }).select('_id');
-	}).then(function (user) {
+	}).then((user) => {
 		return userPriv(req, user);
-	}).then(function (priv) {
+	}).then((priv) => {
 		return otp.authenticator.generate(priv.data.otp.secret);
 	});
 }
@@ -60,7 +60,7 @@ exports.send = function (req, data) {
 	if (!site.href) {
 		return "login.send requires a hostname. Use login.link";
 	}
-	return generate(req, data).then(function (token) {
+	return generate(req, data).then((token) => {
 		let p = Promise.resolve();
 		const settings = data.settings || {};
 		delete settings.grants;
@@ -68,10 +68,10 @@ exports.send = function (req, data) {
 			email: data.email,
 			data: settings
 		});
-		return p.then(function () {
+		return p.then(() => {
 			return token;
 		});
-	}).then(function (token) {
+	}).then((token) => {
 		const mail = {
 			purpose: 'transactional',
 			from: {
@@ -98,7 +98,7 @@ exports.send = function (req, data) {
 				${site.href}
 				and can be ignored.`;
 		}
-		return All.run('mail.to', req, mail).then(function () {
+		return All.run('mail.to', req, mail).then(() => {
 			// do not return information about that
 			return {};
 		});
@@ -131,8 +131,8 @@ exports.send.external = true;
 
 
 function verifyToken(req, { email, token }) {
-	return All.user.get(req, { email }).then(function (user) {
-		return userPriv({ req }, user).then(function (priv) {
+	return All.user.get(req, { email }).then((user) => {
+		return userPriv({ req }, user).then((priv) => {
 			const tries = (priv.data.otp.tries || 0) + 1;
 			if (tries >= 5) {
 				const at = Date.parse(priv.data.otp.checked_at);
@@ -145,7 +145,7 @@ function verifyToken(req, { email, token }) {
 			return priv.$query(req.trx).patch({
 				'data:otp.checked_at': new Date().toISOString(),
 				'data:otp.tries': verified ? 0 : tries
-			}).then(function () {
+			}).then(() => {
 				return verified;
 			});
 		});
@@ -153,11 +153,11 @@ function verifyToken(req, { email, token }) {
 }
 
 exports.grant = function (req, data) {
-	return verifyToken(req, data).then(function (verified) {
+	return verifyToken(req, data).then((verified) => {
 		if (!verified) throw new HttpError.BadRequest("Bad token");
 		return All.run('settings.find', req, {
 			email: data.email
-		}).then(function (settings) {
+		}).then((settings) => {
 			const grants = req.user && req.user.grants || [];
 			const user = req.user = {
 				id: settings.id,
@@ -212,7 +212,7 @@ exports.grant.schema = {
 exports.grant.external = true;
 
 exports.link = function (req, data) {
-	return generate(req, data).then(function (token) {
+	return generate(req, data).then((token) => {
 		return URL.format({
 			pathname: "/.api/login",
 			query: {
@@ -266,8 +266,8 @@ exports.clear.schema = {
 exports.clear.external = true;
 
 exports.key = function (req, data) {
-	return All.user.get(req, { email: data.email }).then(function (user) {
-		return userPriv(req, user).then(function (priv) {
+	return All.user.get(req, { email: data.email }).then((user) => {
+		return userPriv(req, user).then((priv) => {
 			const uri = otp.authenticator.keyuri(user.data.email, All.opt.name, priv.data.otp.secret);
 			if (data.qr) {
 				return qrcode.toString(uri, {

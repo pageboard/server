@@ -20,9 +20,9 @@ function init(All) {
 	All.cache.tag = paramSiteWrap(Upcache.tag);
 	All.cache.for = paramSiteWrap(Upcache.tag.for);
 	All.cache.disable = Upcache.tag.disable;
-	return state.init(All).then(function() {
+	return state.init(All).then(() => {
 		All.app.get('*', Upcache.tag('app'));
-		All.app.post('/.well-known/upcache', state.mw.bind(state), function(req, res) {
+		All.app.post('/.well-known/upcache', state.mw.bind(state), (req, res) => {
 			res.sendStatus(204);
 		});
 	});
@@ -52,7 +52,7 @@ CacheState.prototype.init = function(All) {
 CacheState.prototype.saveNow = function() {
 	delete this.toSave;
 	const me = this;
-	return fs.writeFile(this.path, JSON.stringify(this.data)).catch(function(err) {
+	return fs.writeFile(this.path, JSON.stringify(this.data)).catch((err) => {
 		console.error("Error writing", me.path);
 	});
 };
@@ -64,14 +64,14 @@ CacheState.prototype.save = function() {
 
 CacheState.prototype.open = function() {
 	const me = this;
-	return fs.readFile(this.path, {flag: 'a+'}).then(function(buf) {
+	return fs.readFile(this.path, {flag: 'a+'}).then((buf) => {
 		const str = buf.toString();
 		if (!str) return;
 		return JSON.parse(str);
-	}).catch(function(err) {
+	}).catch((err) => {
 		// eslint-disable-next-line no-console
 		console.info(`Unparsable ${me.path}, continuing anyway`);
-	}).then(function(data) {
+	}).then((data) => {
 		me.data = data || {};
 	});
 };
@@ -82,10 +82,10 @@ CacheState.prototype.install = function(site) {
 		// app tag invalidation is postponed until an actual site is installed
 		return;
 	}
-	setTimeout(function() {
+	setTimeout(() => {
 		if (site.href) got.post(`${site.href}/.well-known/upcache`, {
 			timeout: 5000
-		}).catch(function(err) {
+		}).catch((err) => {
 			console.error(err);
 		});
 	});

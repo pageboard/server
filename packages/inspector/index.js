@@ -9,19 +9,19 @@ exports = module.exports = function(opt) {
 };
 
 exports.get = function({url, local}) {
-	return new Promise(function(resolve, reject) {
+	return new Promise((resolve, reject) => {
 		try {
 			inspector(url, Object.assign({}, All.opt.inspector, {
 				nofavicon: local,
 				file: local
-			}), function(err, result) {
+			}), (err, result) => {
 				if (err) reject(err);
 				else resolve(result);
 			});
 		} catch(err) {
 			reject(err);
 		}
-	}).catch(function(err) {
+	}).catch((err) => {
 		if (typeof err == 'number') err = new HttpError[err]("Inspector failure");
 		throw err;
 	})
@@ -32,13 +32,13 @@ exports.get = function({url, local}) {
 function filterResult(result) {
 	const obj = {meta:{}};
 	['mime', 'url', 'type', 'title', 'icon', 'site']
-		.forEach(function(key) {
+		.forEach((key) => {
 			if (result[key] !== undefined) obj[key] = result[key];
 		});
 	if (obj.icon == "data:/,") delete obj.icon;
 	if (result.url) obj.pathname = URL.parse(result.url).pathname;
 	['width', 'height', 'duration', 'size', 'thumbnail', 'description']
-		.forEach(function(key) {
+		.forEach((key) => {
 			if (result[key] !== undefined) obj.meta[key] = result[key];
 		});
 	if (obj.type == "image" && obj.mime != "text/html") {
@@ -56,11 +56,11 @@ function preview(obj) {
 	const thumb = obj.meta.thumbnail;
 	delete obj.meta.thumbnail;
 	if (thumb != null) {
-		return All.image.thumbnail(thumb).then(function(datauri) {
+		return All.image.thumbnail(thumb).then((datauri) => {
 			obj.preview = `<img src="${datauri}" alt="${desc}" />`;
-		}).catch(function(err) {
+		}).catch((err) => {
 			console.error("Error embedding thumbnail", thumb, err);
-		}).then(function() {
+		}).then(() => {
 			return obj;
 		});
 	}

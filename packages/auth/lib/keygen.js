@@ -5,9 +5,9 @@ const generateKeyPair = pify(require('crypto').generateKeyPair);
 
 module.exports = function(All) {
 	const keysPath = Path.join(All.opt.dirs.data, 'keys.json');
-	return fs.readFile(keysPath).then(function(buf) {
+	return fs.readFile(keysPath).then((buf) => {
 		return JSON.parse(buf.toString());
-	}).catch(function() {
+	}).catch(() => {
 		return generateKeyPair('rsa', {
 			modulusLength: 4096,
 			publicKeyEncoding: {
@@ -18,14 +18,14 @@ module.exports = function(All) {
 				type: 'pkcs1',
 				format: 'pem'
 			}
-		}).then(function(keys) {
-			return fs.writeFile(keysPath, JSON.stringify(keys)).then(function() {
+		}).then((keys) => {
+			return fs.writeFile(keysPath, JSON.stringify(keys)).then(() => {
 				return fs.chmod(keysPath, 0o600);
-			}).then(function() {
+			}).then(() => {
 				return keys;
 			});
 		});
-	}).then(function(keys) {
+	}).then((keys) => {
 		// deal with old format
 		if (keys.public) {
 			keys.publicKey = keys.public;

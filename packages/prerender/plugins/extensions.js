@@ -9,8 +9,8 @@ exports.helper = function(mw, settings) {
 		const ext = path.substring(path.lastIndexOf('.') + 1).toLowerCase();
 		if (list.includes(ext)) {
 			if (!allow) this.cancel = true;
-		} else {
-			if (allow) this.cancel = true;
+		} else if (allow) {
+			this.cancel = true;
 		}
 	}, list, opts.allow]);
 };

@@ -1,6 +1,6 @@
 exports.up = function(knex) {
 	return knex.schema
-		.createTable('block', function (table) {
+		.createTable('block', (table) => {
 			table.increments('_id').primary();
 			table.string('id', 16).notNullable().unique();
 			table.string('type').notNullable().index();
@@ -11,7 +11,7 @@ exports.up = function(knex) {
 			table.boolean('standalone').notNullable().defaultTo(false);
 			table.timestamps(true, true); // created_at, updated_at, useTimestamps, defaultToNow
 		})
-		.createTable('relation', function (table) {
+		.createTable('relation', (table) => {
 			table.primary('parent_id', 'child_id');
 			table.integer('parent_id').notNullable().index()
 				.unsigned().references('_id').inTable('block').onDelete('CASCADE');
@@ -30,7 +30,7 @@ exports.up = function(knex) {
 		.raw(
 			"CREATE INDEX ON block (updated_at DESC)"
 		)
-		.createTable('href', function(table) {
+		.createTable('href', (table) => {
 			table.increments('_id').primary();
 			table.integer('_parent_id').notNullable().unsigned()
 				.references('_id').inTable('block').onDelete('CASCADE');

@@ -43,9 +43,9 @@ Domains.prototype.mw = function(req, res, next) {
 	} else if (req.path == "/favicon.ico" || req.path.startsWith('/.files/') || req.path.startsWith('/.api/')) {
 		p = host.waiting;
 	} else if (host.isWaiting) {
-		p = new Promise(function(resolve) {
+		p = new Promise((resolve) => {
 			setTimeout(resolve, host.parked ? 0 : 2000);
-		}).then(function() {
+		}).then(() => {
 			if (host.isWaiting && !req.path.startsWith('/.') && All.opt.env != "development") {
 				next = null;
 				res.type('html').sendStatus(503);
@@ -77,8 +77,8 @@ Domains.prototype.mw = function(req, res, next) {
 			&& /^.well-known\/\d{3}$/.test(path)
 		) {
 			const rhost = this.init(host.domains[0], path, req.headers);
-			rhost.waiting.then(function () {
-				All.cache.tag('data-:site')(req, res, function () {
+			rhost.waiting.then(() => {
+				All.cache.tag('data-:site')(req, res, () => {
 					res.redirect(308, rhost.href + req.url);
 				});
 			});
@@ -136,7 +136,7 @@ Domains.prototype.domainMapping = function(site) {
 	if (domain != null) {
 		domains = domains.slice();
 		domains.push(site.id);
-		domains.forEach(function(secondary) {
+		domains.forEach((secondary) => {
 			map[secondary] = '=' + domain;
 		});
 		map[domain] = upstream;
@@ -157,13 +157,13 @@ Domains.prototype.init = function(hostname, path, headers) {
 	}
 	if (!host.searching && !host._error) {
 		delete host._error;
-		host.searching = Promise.resolve().then(function() {
+		host.searching = Promise.resolve().then(() => {
 			return this.check(host, headers['x-forwarded-by']);
-		}.bind(this)).then(function(hostname) {
+		}).then((hostname) => {
 			const site = host.id && sites[host.id];
 			if (site) return site;
 			let id;
-			pageboardNames.some(function(hn) {
+			pageboardNames.some((hn) => {
 				if (hostname.endsWith(hn)) {
 					id = hostname.substring(0, hostname.length - hn.length);
 					return true;
@@ -174,33 +174,33 @@ Domains.prototype.init = function(hostname, path, headers) {
 			};
 			if (id) data.id = id; // search by domain and id
 			return All.site.get({}, data).select('_id');
-		}).then(function(site) {
+		}).then((site) => {
 			host.id = site.id;
 			sites[site.id] = site;
 			if (!site.data) site.data = {};
 
 			// there was a miss, so update domains list
-			const domains = (site.data.domains || []).concat(pageboardNames.map(function(hn) {
+			const domains = (site.data.domains || []).concat(pageboardNames.map((hn) => {
 				return host.id + hn;
 			}));
-			domains.forEach(function(domain) {
+			domains.forEach((domain) => {
 				hosts[domain] = host;
 			});
 			hostUpdateDomain(host, domains[0]);
 			host.domains = domains;
 			return site;
-		}).catch(function(err) {
+		}).catch((err) => {
 			host._error = err;
 			if (host.finalize) host.finalize();
 		});
 	}
 
 	if (!host.installing && !host._error) {
-		host.installing = host.searching.then(function(site) {
+		host.installing = host.searching.then((site) => {
 			if (host._error) return;
 			site.href = host.href;
 			site.hostname = host.name;
-			return All.install(site).catch(function() {
+			return All.install(site).catch(() => {
 				// never throw an error since errors are already dealt with in install
 			});
 		});
@@ -232,23 +232,23 @@ Domains.prototype.check = function(host, forwardedBy) {
 
 	const hostname = host.name;
 
-	return Promise.resolve().then(function() {
-		if (!pageboardIps[ip]) return DNS.reverse(ip).then(function(hostnames) {
+	return Promise.resolve().then(() => {
+		if (!pageboardIps[ip]) return DNS.reverse(ip).then((hostnames) => {
 			pageboardIps[ip] = true;
-			hostnames.forEach(function(hn) {
+			hostnames.forEach((hn) => {
 				if (hn == "localhost") hn += ".localdomain";
 				hn = '.' + hn;
 				if (!pageboardNames.includes(hn)) pageboardNames.push(hn);
 			});
 		});
-	}).then(function() {
+	}).then(() => {
 		return DNS.lookup(hostname, {
 			all: false
-		}).then(function(lookup) {
+		}).then((lookup) => {
 			if (lookup.address == hostname) throw new Error("hostname is an ip " + hostname);
 			const expected = ips['ip' + lookup.family];
 			if (lookup.address != expected) {
-				setTimeout(function() {
+				setTimeout(() => {
 					// allow checking again in a minute
 					if (host._error && host._error.statusCode == 503) delete host._error;
 				}, 60000);
@@ -331,7 +331,7 @@ function errorObject(site, err) {
 		name: err.name,
 		message: err.message
 	};
-	if (err.stack) errObj.stack = err.stack.split('\n').map(function(line) {
+	if (err.stack) errObj.stack = err.stack.split('\n').map((line) => {
 		if (line == std) return;
 		const index = line.indexOf("/pageboard/");
 		if (index >= 0) return line.substring(index);
@@ -349,13 +349,13 @@ function isIPv6(ip) {
 function doWait(host) {
 	if (host.finalize) return;
 	host.isWaiting = true;
-	const subpending = new Promise(function(resolve) {
+	const subpending = new Promise((resolve) => {
 		host.finalize = function() {
 			delete host.finalize;
 			resolve();
 		};
 	});
-	host.waiting = host.installing.then(function() {
+	host.waiting = host.installing.then(() => {
 		return subpending;
 	});
 }

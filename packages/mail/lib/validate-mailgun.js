@@ -30,12 +30,12 @@ module.exports = function validateMailgun(auth, timestamp, token, signature) {
 
 	mailgunTokens[token] = true;
 
-	setTimeout(function () {
+	setTimeout(() => {
 		delete mailgunTokens[token];
 	}, mailgunExpirey + (5 * 1000));
 
 	const computed = crypto.createHmac(mailgunHashType, auth.api_key)
-		.update(new Buffer(timestamp + token, 'utf-8'))
+		.update(Buffer.from(timestamp + token))
 		.digest(mailgunSignatureEncoding);
 
 	return crypto.timingSafeEqual(Buffer.from(signature), Buffer.from(computed));

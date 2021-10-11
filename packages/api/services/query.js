@@ -6,15 +6,15 @@ exports = module.exports = function(opt) {
 };
 
 function init(All) {
-	All.app.get("/.api/query/:id", function(req, res, next) {
+	All.app.get("/.api/query/:id", (req, res, next) => {
 		All.run('search.query', req, {
 			id: req.params.id,
 			query: req.query
-		}).then(function(data) {
+		}).then((data) => {
 			All.send(res, data);
 		}).catch(next);
 	});
-	All.app.post("/.api/query", function(req, res, next) {
+	All.app.post("/.api/query", (req, res, next) => {
 		next(new HttpError.NotImplemented());
 	});
 }
@@ -22,7 +22,7 @@ function init(All) {
 exports.query = function (req, data) {
 	return All.run('block.get', req, {
 		id: data.id
-	}).then(function (form) {
+	}).then((form) => {
 		const fd = form.data || {};
 		const method = (fd.action || {}).method;
 		if (!method) {
@@ -56,7 +56,7 @@ exports.query = function (req, data) {
 			});
 			obj.metas = Object.values(metas);
 			return obj;
-		}).catch(function (err) {
+		}).catch((err) => {
 			return {
 				status: err.statusCode || err.status || err.code || 400,
 				item: {

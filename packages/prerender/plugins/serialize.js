@@ -1,6 +1,6 @@
 module.exports = function(page, settings, request, response) {
-	page.when('idle', function() {
-		if (settings.output == null) return page.run(function(done) {
+	page.when('idle', () => {
+		if (settings.output == null) return page.run((done) => {
 			/* global Page */
 			Page.finish().then((state) => {
 				if (Page.serialize) return Page.serialize(state);
@@ -8,13 +8,13 @@ module.exports = function(page, settings, request, response) {
 					mime: "text/html",
 					body: '<!DOCTYPE html>\n' + document.documentElement.outerHTML
 				};
-			}).then(function (doc) {
+			}).then((doc) => {
 				done(null, doc);
-			}).catch(function (err) {
+			}).catch((err) => {
 				console.error(err); // FIXME else nobody can actually see the error
 				done(err);
 			});
-		}).then(function(obj) {
+		}).then((obj) => {
 			if (!obj) throw new HttpError.BadRequest("Empty response");
 			// backward compatibility with old clients
 			if (typeof obj == "string") obj = {

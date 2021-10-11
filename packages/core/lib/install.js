@@ -14,14 +14,14 @@ exports.install = function(site, opt) {
 	}
 	const dataDir = Path.join(opt.dirs.data, 'sites');
 
-	return decideInstall(dataDir, site).then(function(pkg) {
+	return decideInstall(dataDir, site).then((pkg) => {
 		if (pkg.install) {
 			return doInstall(site, pkg, opt);
 		} else {
 			console.info("skipped installation of:", site.data.module, site.data.version);
 			return pkg;
 		}
-	}).then(function(pkg) {
+	}).then((pkg) => {
 		return populatePkg(site, pkg);
 	});
 };
@@ -29,7 +29,7 @@ exports.install = function(site, opt) {
 exports.config = function(moduleDir, id, module, config) {
 	Log.install("Module directory", module, moduleDir);
 	if (moduleDir == null) throw new Error(`${id} has a missing module ${module}`);
-	return fs.readFile(Path.join(moduleDir, 'package.json')).then(function(buf) {
+	return fs.readFile(Path.join(moduleDir, 'package.json')).then((buf) => {
 		const meta = JSON.parse(buf);
 		let modOpts = meta.pageboard;
 		if (!modOpts) {
@@ -47,7 +47,7 @@ exports.config = function(moduleDir, id, module, config) {
 		let directories = modOpts.directories || [];
 		if (!Array.isArray(directories)) directories = [directories];
 		Log.install("processing directories from", moduleDir, directories);
-		directories.forEach(function(mount) {
+		directories.forEach((mount) => {
 			if (typeof mount == "string") mount = {
 				from: mount,
 				to: mount
@@ -72,25 +72,25 @@ exports.config = function(moduleDir, id, module, config) {
 		let elements = modOpts.elements || [];
 		if (!Array.isArray(elements)) elements = [elements];
 		Log.install("processing elements from", moduleDir, elements);
-		return Promise.all(elements.map(function(path) {
+		return Promise.all(elements.map((path) => {
 			const absPath = Path.resolve(moduleDir, path);
-			return fs.stat(absPath).then(function(stat) {
-				if (stat.isDirectory()) return fs.readdir(absPath).then(function(paths) {
+			return fs.stat(absPath).then((stat) => {
+				if (stat.isDirectory()) return fs.readdir(absPath).then((paths) => {
 					// make sure files are ordered by basename
-					paths.sort(function(a, b) {
+					paths.sort((a, b) => {
 						a = Path.basename(a, Path.extname(a));
 						b = Path.basename(b, Path.extname(b));
 						if (a == b) return 0;
 						else if (a > b) return 1;
 						else if (a < b) return -1;
 					});
-					return paths.map(function(path) {
+					return paths.map((path) => {
 						return Path.join(absPath, path);
 					});
 				});
 				else return [absPath];
-			}).then(function(paths) {
-				paths.forEach(function(path) {
+			}).then((paths) => {
+				paths.forEach((path) => {
 					if (path.endsWith('.js')) {
 						config.elements.push({
 							path: path,
@@ -100,10 +100,10 @@ exports.config = function(moduleDir, id, module, config) {
 				});
 			});
 		}));
-	}).catch(function(err) {
+	}).catch((err) => {
 		console.error(`Error: ${id} dependency ${module} cannot be extracted`, err);
 		return true;
-	}).then(function(not) {
+	}).then((not) => {
 		if (id != "pageboard" || not === true) return;
 		return module;
 	});
@@ -111,28 +111,28 @@ exports.config = function(moduleDir, id, module, config) {
 
 exports.clean = function(site, pkg, opt) {
 	const rootSite = Path.join(opt.dirs.data, 'sites', site.id);
-	return fs.readdir(rootSite).then(function(paths) {
-		return Promise.all(paths.map(function(path) {
+	return fs.readdir(rootSite).then((paths) => {
+		return Promise.all(paths.map((path) => {
 			path = Path.join(rootSite, path);
-			return fs.stat(path).then(function(stat) {
+			return fs.stat(path).then((stat) => {
 				return {stat, path};
 			});
-		})).then(function(stats) {
-			stats.sort(function(a, b) {
+		})).then((stats) => {
+			stats.sort((a, b) => {
 				if (a.path == pkg.dir) return -1;
 				if (a.stat.mtimeMs > b.stat.mtimeMs) return -1;
 				if (a.stat.mtimeMs == b.stat.mtimeMs) return 0;
 				if (a.stat.mtimeMs < b.stat.mtimeMs) return 1;
 			});
-			return Promise.all(stats.filter(function(obj) {
+			return Promise.all(stats.filter((obj) => {
 				return Path.basename(obj.path) != "master" || opt.env != "development";
-			}).slice(2).map(function(obj) {
+			}).slice(2).map((obj) => {
 				return rimraf(obj.path, {glob: false});
 			}));
 		});
-	}).catch(function(err) {
+	}).catch((err) => {
 		console.error(err);
-	}).then(function() {
+	}).then(() => {
 		return pkg;
 	});
 };
@@ -152,13 +152,13 @@ function decideInstall(dataDir, site) {
 	}
 	const siteDir = Path.join(dataDir, site.id, version);
 
-	return getPkg(siteDir).then(function(pkg) {
+	return getPkg(siteDir).then((pkg) => {
 		if (pkg.name == null) {
 			pkg.install = true;
 			return pkg;
 		}
 		const siteModuleDir = Path.join(siteDir, 'node_modules', pkg.name);
-		return fs.lstat(siteModuleDir).catch(function() {}).then(function(stat) {
+		return fs.lstat(siteModuleDir).catch(() => {}).then((stat) => {
 			if (stat && stat.isSymbolicLink()) {
 				console.warn("detected linked module", pkg.name);
 			} else if (pkg.version == null || pkg.version != site.data.version) {
@@ -170,7 +170,7 @@ function decideInstall(dataDir, site) {
 }
 
 function doInstall(site, pkg, opt) {
-	return prepareDir(pkg).then(function() {
+	return prepareDir(pkg).then(() => {
 		const version = site.data.version;
 		let module = site.data.module;
 		if (version != null) {
@@ -186,7 +186,7 @@ function doInstall(site, pkg, opt) {
 		const baseEnv = {
 			npm_config_userconfig: ''
 		};
-		Object.entries(process.env).forEach(function([key, val]) {
+		Object.entries(process.env).forEach(([key, val]) => {
 			if (
 				['HOME', 'PATH', 'LANG', 'SHELL'].includes(key) ||
 				key.startsWith('XDG_') || key.startsWith('LC_')
@@ -228,24 +228,24 @@ function doInstall(site, pkg, opt) {
 			env: baseEnv,
 			shell: false,
 			timeout: opt.installer.timeout
-		}).catch(function(err) {
+		}).catch((err) => {
 			console.error(command);
 			console.error("in", pkg.dir);
 			throw new Error(err.stderr.toString() || err.stdout.toString());
 		});
-	}).then(function() {
-		return getPkg(pkg.dir).then(function(npkg) {
+	}).then(() => {
+		return getPkg(pkg.dir).then((npkg) => {
 			if (!npkg.name) throw new Error("Installed module has no package name");
 			return npkg;
-		}).then(function(pkg) {
-			return runPostinstall(pkg, opt).then(function(result) {
+		}).then((pkg) => {
+			return runPostinstall(pkg, opt).then((result) => {
 				if (result) Log.install(result);
 				if (pkg.server) return writePkg(pkg);
 				else return pkg;
 			});
 		});
-	}).catch(function(err) {
-		return rimraf(pkg.dir, {glob: false}).then(function() {
+	}).catch((err) => {
+		return rimraf(pkg.dir, {glob: false}).then(() => {
 			throw err;
 		});
 	});
@@ -254,7 +254,7 @@ function doInstall(site, pkg, opt) {
 function prepareDir(pkg) {
 	return fs.mkdir(pkg.dir, {
 		recursive: true
-	}).then(function() {
+	}).then(() => {
 		return writePkg(pkg);
 	});
 }
@@ -266,7 +266,7 @@ function writePkg(pkg) {
 		pageboard: {
 			server: pkg.server || null
 		}
-	}, null, ' ')).then(function() {
+	}, null, ' ')).then(() => {
 		return pkg;
 	});
 }
@@ -275,19 +275,19 @@ function populatePkg(site, pkg) {
 	const version = pkg.version || site.branch || site.data.version;
 	const pair = `${site.id}/${version}`;
 	const siteModuleDir = Path.join(pkg.dir, 'node_modules', pkg.name);
-	return fs.readFile(Path.join(siteModuleDir, "package.json")).then(function(buf) {
+	return fs.readFile(Path.join(siteModuleDir, "package.json")).then((buf) => {
 		return JSON.parse(buf.toString());
-	}).then(function(sitePkg) {
+	}).then((sitePkg) => {
 		// configure directories/elements for each dependency
-		return Promise.all(Object.keys(sitePkg.dependencies || {}).map(function(subModule) {
+		return Promise.all(Object.keys(sitePkg.dependencies || {}).map((subModule) => {
 			const moduleDir = Path.join(pkg.dir, 'node_modules', subModule);
 			return exports.config(moduleDir, pair, subModule, pkg);
-		})).then(function() {
+		})).then(() => {
 			// configure directories/elements for the module itself (so it can
 			// overrides what the dependencies have installed
 			return exports.config(siteModuleDir, pair, pkg.name, pkg);
 		});
-	}).then(function() {
+	}).then(() => {
 		return pkg;
 	});
 }
@@ -301,7 +301,7 @@ function getPkg(pkgDir) {
 		elements: []
 	};
 	if (pkgDir == null) return Promise.resolve(pkg);
-	return fs.readFile(pkgPath).then(function(buf) {
+	return fs.readFile(pkgPath).then((buf) => {
 		const obj = JSON.parse(buf.toString());
 		pkg.server = obj.pageboard && obj.pageboard.server || null;
 		const deps = Object.keys(obj.dependencies);
@@ -317,7 +317,7 @@ function getPkg(pkgDir) {
 		pkg.dependencies = obj.dependencies;
 		if (version != null) pkg.version = version;
 		return pkg;
-	}).catch(function(err) {
+	}).catch((err) => {
 		return pkg;
 	});
 }
@@ -326,9 +326,9 @@ function getDependencies(rootPkg, name, list, deps) {
 	if (!deps) deps = {};
 	const dir = Path.join(rootPkg.dir, 'node_modules', name);
 	if (deps[dir]) return;
-	return fs.readFile(Path.join(dir, 'package.json')).catch(function(err) {
+	return fs.readFile(Path.join(dir, 'package.json')).catch((err) => {
 		// nested dep
-	}).then(function(buf) {
+	}).then((buf) => {
 		if (!buf || deps[dir]) return;
 		deps[dir] = true;
 		const pkg = JSON.parse(buf);
@@ -341,7 +341,7 @@ function getDependencies(rootPkg, name, list, deps) {
 		} else if (pkg.name == "@pageboard/site" && !rootPkg.server) {
 			rootPkg.server = pkg.version.split('.').slice(0, 2).join('.');
 		}
-		return Promise.all(Object.keys(pkg.dependencies || {}).map(function(name) {
+		return Promise.all(Object.keys(pkg.dependencies || {}).map((name) => {
 			return getDependencies(rootPkg, name, list, deps);
 		}));
 	});
@@ -349,9 +349,9 @@ function getDependencies(rootPkg, name, list, deps) {
 
 function runPostinstall(rootPkg, opt) {
 	const list = [];
-	return getDependencies(rootPkg, rootPkg.name, list).then(function() {
+	return getDependencies(rootPkg, rootPkg.name, list).then(() => {
 		let firstError;
-		return Promise.all(list.reverse().map(function({pkg, dir}) {
+		return Promise.all(list.reverse().map(({pkg, dir}) => {
 			Log.install("postinstall", pkg.name, pkg.version, dir);
 			if (!pkg.postinstall) return;
 			try {
@@ -371,7 +371,7 @@ function runPostinstall(rootPkg, opt) {
 			} catch(err) {
 				if (!firstError) firstError = err;
 			}
-		})).then(function() {
+		})).then(() => {
 			if (firstError) throw firstError;
 		});
 	});

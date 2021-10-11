@@ -22,7 +22,7 @@ exports.add = function (req, data) {
 				first: true
 			}
 		})
-	]).then(function ([settings, { item: eventDate }]) {
+	]).then(([settings, { item: eventDate }]) => {
 		if (req.user.id !== settings.id) {
 			throw new HttpError.Unauthorized("Wrong user");
 		}
@@ -34,7 +34,7 @@ exports.add = function (req, data) {
 		return All.run('block.search', req, {
 			type: 'event_reservation',
 			parent: { parents }
-		}).then(function (obj) {
+		}).then((obj) => {
 			if (obj.items.length == 1) {
 				throw new HttpError.Conflict("User already has a reservation for this date");
 			}
@@ -70,10 +70,10 @@ exports.add = function (req, data) {
 				lock: { read: [`id-${req.user.id}`, 'scheduler'] }
 			};
 
-			return All.run('block.add', req, resa).then(function (resa) {
+			return All.run('block.add', req, resa).then((resa) => {
 				return eventDate.$query(req.trx).patch({
 					'data:reservations': total
-				}).then(function () {
+				}).then(() => {
 					resa.parent = eventDate;
 					return resa;
 				});
@@ -172,7 +172,7 @@ exports.save = function (req, data) {
 			type: 'event',
 			first: true
 		}
-	}).then(function ({item: eventDate}) {
+	}).then(({item: eventDate}) => {
 		const resa = eventDate.child;
 		if (!resa.type) {
 			throw new HttpError.Unauthorized("Wrong user");
@@ -204,10 +204,10 @@ exports.save = function (req, data) {
 
 		Object.assign(resa.data, reservation);
 
-		return All.run('block.save', req, resa).then(function (resa) {
+		return All.run('block.save', req, resa).then((resa) => {
 			return eventDate.$query(req.trx).patch({
 				'data:reservations': total
-			}).then(function () {
+			}).then(() => {
 				return resa;
 			});
 		});
@@ -238,7 +238,7 @@ exports.del = function (req, data) {
 				.select()
 				.orderBy('block.type');
 		}
-	}).then(function (resa) {
+	}).then((resa) => {
 		const paid = (resa.data.payment || {}).paid || 0;
 		if (paid !== 0) throw new HttpError.BadRequest("Reservation has received payments");
 		const [eventDate, settings] = resa.parents;
@@ -276,7 +276,7 @@ exports.pay = function (req, data) {
 	return All.block.get(req, {
 		type: 'event_reservation',
 		id: data.reservation
-	}).then(function (resa) {
+	}).then((resa) => {
 		if (!resa.data.payment) {
 			resa.data.payment = {};
 		}
@@ -338,9 +338,9 @@ exports.search = function ({ site, trx }, data) {
 			user(q) {
 				q.where('type', 'user').select(ref('data:email').as('email'));
 			}
-		}).then(function (eventDate) {
+		}).then((eventDate) => {
 			eventDate.parent = eventDate.parent[0];
-			eventDate.children.forEach(function (item) {
+			eventDate.children.forEach((item) => {
 				// bad test data could ruin everything
 				if (item.settings.length) item.settings = item.settings[0];
 				else console.warn("no settings event date item", data.id, item.id);

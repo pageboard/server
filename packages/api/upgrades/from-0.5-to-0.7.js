@@ -1,9 +1,9 @@
 exports.any = function(block) {
 	const locks = block.lock && block.lock.read;
-	if (locks) locks.forEach(function(lock, i) {
+	if (locks) locks.forEach((lock, i) => {
 		locks[i] = lock.replace(/^user-/, "id-");
 	});
-	if (block.content) Object.entries(block.content).forEach(function([key, str]) {
+	if (block.content) Object.entries(block.content).forEach(([key, str]) => {
 		block.content[key] = str
 			.replaceAll('<element-query', '<element-template')
 			.replaceAll('</element-query>', '</element-template>');
@@ -27,12 +27,22 @@ exports.notfound = function(block) {
 };
 
 exports.page = function(block) {
-	const tr = block.data.transition;
-	if (tr && (tr.from || tr.to)) {
-		block.data.transition = {
-			close: tr.from ? (tr.from == "fade-from" ? "fade" : tr.from.replace(/^(\w+)-from$/, 'tr-$1')) : null,
-			open: tr.to ? (tr.to == "fade-to" ? "fade" : tr.to.replace(/^(\w+)-to/, 'tr-$1')) : null
-		};
+	const tr = block.data.transition || {};
+	const from = tr.from;
+	const to = tr.to;
+	if (from || to) {
+		block.data.transition = { open: null, close: null };
+	}
+	if (from) {
+		block.data.transition.close = from == "fade-from"
+			? "fade"
+			: from.replace(/^(\w+)-from$/, 'tr-$1');
+
+	}
+	if (to) {
+		block.data.transition.open = to == "fade-to"
+			? "fade"
+			: to.replace(/^(\w+)-to/, 'tr-$1');
 	}
 };
 
@@ -134,7 +144,7 @@ exports.query = function(block) {
 					parameters: {}
 				}
 			};
-			Object.entries(old.query.vars).forEach(function([key, val]) {
+			Object.entries(old.query.vars).forEach(([key, val]) => {
 				block.expr.action.parameters[key] = `[$query.${val}]`;
 			});
 		}

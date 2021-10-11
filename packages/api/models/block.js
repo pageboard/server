@@ -6,9 +6,9 @@ const crypto = require('crypto');
 
 class Block extends Model {
 	$beforeInsert() {
-		if (!this.id) return Block.genId().then(function(id) {
+		if (!this.id) return Block.genId().then((id) => {
 			this.id = id;
-		}.bind(this));
+		});
 	}
 
 	$beforeUpdate() {
@@ -162,7 +162,7 @@ Block.extendSchema = function extendSchema(name, schemas) {
 
 	const hrefs = {};
 
-	types.forEach(function(type) {
+	types.forEach((type) => {
 		const element = Object.assign({
 			properties: {},
 			contents: {}
@@ -225,7 +225,7 @@ Block.normalizeContents = function(contents) {
 		}
 		if (!contents.nodes) {
 			// support old version
-			contents = Object.keys(contents).map(function(key) {
+			contents = Object.keys(contents).map((key) => {
 				let val = contents[key];
 				if (typeof val == "string") {
 					val = {nodes: val};
@@ -248,7 +248,7 @@ Block.normalizeContents = function(contents) {
 function contentsNames(list) {
 	const props = {};
 	if (!list) return props;
-	list.forEach(function(def) {
+	list.forEach((def) => {
 		props[def.id || ""] = {
 			type: 'string'
 		};
@@ -258,12 +258,14 @@ function contentsNames(list) {
 
 function findHrefs(schema, list, root, isArray) {
 	if (!schema.properties) return;
-	Object.keys(schema.properties).forEach(function(key) {
+	Object.keys(schema.properties).forEach((key) => {
 		const prop = schema.properties[key];
 		if (isArray) key = root;
 		else if (root) key = `${root}.${key}`;
 		const helper = prop.$helper;
 		if (helper && helper.name == "href") {
+			// FIXME $helper.name == "page" ???
+			// https://github.com/pageboard/server/issues/104
 			let ftype = helper.filter && helper.filter.type || [];
 			if (!Array.isArray(ftype)) ftype = [ftype];
 			list.push({
@@ -285,8 +287,8 @@ function findHrefs(schema, list, root, isArray) {
 */
 Block.genId = function(length) {
 	if (!length) length = 8;
-	return new Promise(function(resolve, reject) {
-		crypto.randomBytes(length, function(err, buffer) {
+	return new Promise((resolve, reject) => {
+		crypto.randomBytes(length, (err, buffer) => {
 			if (err) reject(err);
 			else resolve(buffer.toString('hex'));
 		});

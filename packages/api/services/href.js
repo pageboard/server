@@ -12,18 +12,18 @@ exports = module.exports = function (opt) {
 };
 
 function init(All) {
-	All.app.get("/.api/hrefs", All.auth.lock('webmaster'), function (req, res, next) {
-		All.run('href.search', req, req.query).then(function (href) {
+	All.app.get("/.api/hrefs", All.auth.lock('webmaster'), (req, res, next) => {
+		All.run('href.search', req, req.query).then((href) => {
 			res.send(href);
 		}).catch(next);
 	});
-	All.app.post("/.api/href", All.auth.lock('webmaster'), function (req, res, next) {
-		All.run('href.add', req, req.body).then(function (href) {
+	All.app.post("/.api/href", All.auth.lock('webmaster'), (req, res, next) => {
+		All.run('href.add', req, req.body).then((href) => {
 			res.send(href);
 		}).catch(next);
 	});
-	All.app.delete("/.api/href", All.auth.lock('webmaster'), function (req, res, next) {
-		All.run('href.del', req, req.query).then(function (href) {
+	All.app.delete("/.api/href", All.auth.lock('webmaster'), (req, res, next) => {
+		All.run('href.del', req, req.query).then((href) => {
 			res.send(href);
 		}).catch(next);
 	});
@@ -69,7 +69,7 @@ exports.search = function ({ site, trx }, data) {
 		const [url, hash] = data.url.split('#');
 		q.where('url', url);
 		if (url.startsWith('/') && hash != null) {
-			q = q.first().then(function (href) {
+			q = q.first().then((href) => {
 				if (!href) return [];
 				return All.run('block.search', { site, trx }, {
 					parent: {
@@ -84,7 +84,7 @@ exports.search = function ({ site, trx }, data) {
 					data: {
 						'id:start': hash
 					}
-				}).then(function (obj) {
+				}).then((obj) => {
 					const rows = [];
 					obj.items.forEach((item) => {
 						rows.push(Object.assign({}, href, {
@@ -111,7 +111,7 @@ exports.search = function ({ site, trx }, data) {
 		q.where('href.visible', true);
 		q.orderBy('updated_at', 'desc');
 	}
-	return q.then(function (rows) {
+	return q.then((rows) => {
 		return {
 			data: rows,
 			offset: data.offset,
@@ -165,7 +165,7 @@ exports.search.schema = {
 };
 
 exports.add = function (req, data) {
-	return All.run('href.search', req, data).then(function (obj) {
+	return All.run('href.search', req, data).then((obj) => {
 		if (obj.data.length > 0) {
 			return obj.data[0];
 		} else {
@@ -195,12 +195,12 @@ function blindAdd(req, data) {
 			data: {
 				url: objUrl.pathname
 			}
-		}).catch(function (err) {
+		}).catch((err) => {
 			if (err.statusCode == 404) {
 				console.error("reinspect cannot find block", data);
 			}
 			throw err;
-		}).then(function (answer) {
+		}).then((answer) => {
 			const block = answer.item;
 			return {
 				mime: 'text/html; charset=utf-8',
@@ -214,13 +214,13 @@ function blindAdd(req, data) {
 	} else {
 		p = callInspector(site.id, data.url, isLocal);
 	}
-	return p.then(function (result) {
+	return p.then((result) => {
 		if (!isLocal && result.url != data.url) {
 			result.canonical = result.url;
 			result.url = data.url;
 			result.pathname = objUrl.pathname;
 		}
-		return exports.get(req, data).forUpdate().then(function (href) {
+		return exports.get(req, data).forUpdate().then((href) => {
 			if (!href) {
 				return site.$relatedQuery('hrefs', trx).insert(result).returning(Href.columns);
 			} else {
@@ -247,7 +247,7 @@ exports.save = function (req, data) {
 	return exports.get(req, data)
 		.throwIfNotFound()
 		.forUpdate()
-		.then(function (href) {
+		.then((href) => {
 			return req.site.$relatedQuery('hrefs', req.trx).patchObject({
 				title: data.title
 			}).where('_id', href._id).first().returning(Href.columns);
@@ -270,10 +270,10 @@ exports.save.schema = {
 };
 
 exports.del = function (req, data) {
-	return exports.get(req, data).throwIfNotFound().then(function (href) {
+	return exports.get(req, data).throwIfNotFound().then((href) => {
 		return req.site.$relatedQuery('hrefs', req.trx).patchObject({
 			visible: false
-		}).where('_id', href._id).then(function () {
+		}).where('_id', href._id).then(() => {
 			href.visible = false;
 			return href;
 		});
@@ -463,7 +463,7 @@ exports.reinspect = function ({ site, trx }, data) {
 			.as('sub')
 	).join('block', 'block._id', 'sub._id')
 		.where('sub.count', 0)
-		.then(function (rows) {
+		.then((rows) => {
 			const urls = [];
 			rows.forEach((row) => {
 				fhrefs[row.type].forEach((desc) => {
@@ -473,7 +473,7 @@ exports.reinspect = function ({ site, trx }, data) {
 			});
 			return Promise.all(urls.map((url) => {
 				return All.run('href.add', { site, trx }, { url });
-			})).then(function (list) {
+			})).then((list) => {
 				return { missings: rows.length, added: list.length };
 			});
 		});
@@ -512,7 +512,7 @@ function callInspector(siteId, url, local) {
 	return All.inspector.get({
 		url: fileUrl,
 		local: local
-	}).then(function (obj) {
+	}).then((obj) => {
 		if (local) {
 			obj.site = null;
 			obj.url = url;

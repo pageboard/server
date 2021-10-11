@@ -263,7 +263,7 @@ exports.QueryBuilder = class CommonQueryBuilder extends QueryBuilder {
 function asPaths(obj, ret, pre, first, schema) {
 	if (!schema) schema = {};
 	const props = schema.properties || {};
-	Object.keys(obj).forEach(function(str) {
+	Object.keys(obj).forEach((str) => {
 		let val = obj[str];
 		const [key, op] = str.split(':');
 		const schem = props[key] || {};
@@ -342,7 +342,7 @@ function numericRange(val, type) {
 }
 
 function deepAssign(model, obj) {
-	Object.keys(obj).forEach(function(key) {
+	Object.keys(obj).forEach((key) => {
 		const val = obj[key];
 		const src = model[key];
 		if (val == null || typeof val != "object" || src == null) {

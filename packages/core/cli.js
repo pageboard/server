@@ -27,10 +27,10 @@ if (config._.length == 1) {
 
 console.info(`server:\t${config.version}`);
 
-pageboard.init(config).catch(function(err) {
+pageboard.init(config).catch((err) => {
 	console.error(err);
 	process.exit(1);
-}).then(function(All) {
+}).then((All) => {
 	if (All.opt._.length > 1) {
 		console.error("Cannot process arguments", All.opt._);
 		process.exit(1);
@@ -41,14 +41,14 @@ pageboard.init(config).catch(function(err) {
 
 	const command = All.opt._[0];
 	if (All.opt.help) {
-		console.log("\n", command);
-		console.log(All.help(command));
+		console.info("\n", command);
+		console.info(All.help(command));
 		process.exit(0);
 	}
 
 	const args = [command];
 	if (config.data != null) config.data = coercions(config.data);
-	return Promise.resolve().then(function() {
+	return Promise.resolve().then(() => {
 		if (config.data !== undefined && typeof config.data.data == "string") {
 			try {
 				config.data.data = JSON.parse(config.data.data);
@@ -57,8 +57,8 @@ pageboard.init(config).catch(function(err) {
 			}
 		}
 		if (All.opt.site) {
-			return All.site.get({}, { id: All.opt.site }).select('_id').then(function (site) {
-				return All.install(site).then(function (site) {
+			return All.site.get({}, { id: All.opt.site }).select('_id').then((site) => {
+				return All.install(site).then((site) => {
 					args.push({ site });
 					args.push(config.data || {});
 				});
@@ -67,14 +67,18 @@ pageboard.init(config).catch(function(err) {
 			args.push({});
 			args.push(config.data || {});
 		}
-	}).then(function() {
-		return All.run.apply(All, args).then(function(results) {
-			if (typeof results == "string") console.log(results);
-			else console.log(JSON.stringify(results, null, ' '));
+	}).then(() => {
+		return All.run.apply(All, args).then((results) => {
+			// eslint-disable-next-line no-console
+			console.log(
+				typeof results == "string"
+					? results
+					: JSON.stringify(results, null, ' ')
+			);
 			process.exit();
 		});
 	});
-}).catch(function(err) {
+}).catch((err) => {
 	console.error(err.message || err);
 	process.exit(1);
 });
@@ -82,7 +86,7 @@ pageboard.init(config).catch(function(err) {
 function coercions(data) {
 	let obj = {};
 	let keyString;
-	Object.entries(data).forEach(function([key, val]) {
+	Object.entries(data).forEach(([key, val]) => {
 		if (parseInt(key) != key) keyString = true;
 		else if (!keyString) keyString = false;
 		if (val === "") {

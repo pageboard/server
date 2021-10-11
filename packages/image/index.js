@@ -32,7 +32,7 @@ exports = module.exports = function (opt) {
 function initFile(All) {
 	sharpie.sharp.simd(true);
 	const opt = All.opt;
-	All.app.get(/^\/\.(uploads|files)\//, function (req, res, next) {
+	All.app.get(/^\/\.(uploads|files)\//, (req, res, next) => {
 		Log.image("processing", req.url);
 		const extname = Path.extname(req.path);
 		if (!extname || /png|jpe?g|gif|webp|tiff|svg/.test(extname.substring(1)) == false) {
@@ -46,7 +46,7 @@ function initFile(All) {
 			}
 		} else {
 			const wrongParams = [];
-			Object.keys(req.query).some(function (key) {
+			Object.keys(req.query).some((key) => {
 				if (!allowedParameters[key]) wrongParams.push(key);
 			});
 			if (wrongParams.length) {
@@ -60,7 +60,7 @@ function initFile(All) {
 		}
 	}, sharpie(All.opt.image));
 
-	return All.utils.which(opt.image.im).catch(function () { }).then(function (path) {
+	return All.utils.which(opt.image.im).catch(() => { }).then((path) => {
 		if (path) {
 			opt.image.im = path;
 			console.info("image:\tconverter", path);
@@ -73,7 +73,7 @@ function initFile(All) {
 
 function initService(All) {
 	console.info(`image:\tproxy at /.api/image`);
-	All.app.get('/.api/image', function (req, res, next) {
+	All.app.get('/.api/image', (req, res, next) => {
 		console.warn("/.api/image is used", req.url);
 		next();
 	}, sharpie(All.opt.image));
@@ -91,7 +91,7 @@ function request(url) {
 		"Accept-Encoding": "identity",
 		"Accept": "image/webp,*/*"
 	};
-	agent.get(obj).on('response', function (res) {
+	agent.get(obj).on('response', (res) => {
 		res.pipe(stream);
 	});
 	return stream;
@@ -116,7 +116,7 @@ exports.thumbnail = function (url) {
 		.toFormat('webp', {
 			quality: 50
 		})
-		.toBuffer().then(function (buf) {
+		.toBuffer().then((buf) => {
 			const dtu = new DataUri();
 			dtu.format('.webp', buf);
 			return dtu.content;
@@ -124,7 +124,7 @@ exports.thumbnail = function (url) {
 };
 
 exports.upload = function (file) {
-	return Promise.resolve().then(function () {
+	return Promise.resolve().then(() => {
 		const mime = file.mimetype;
 		if (!mime) {
 			console.warn("image.upload cannot inspect file without mime type", file);
@@ -154,7 +154,7 @@ exports.upload = function (file) {
 				smartSubsample: true,
 				reductionEffort: 2
 			})
-			.toFile(dst).then(function () {
+			.toFile(dst).then(() => {
 				file.mimetype = "image/webp";
 				const pathObj = Path.parse(file.path);
 				file.filename = pathObj.name + '.webp';
@@ -162,7 +162,7 @@ exports.upload = function (file) {
 					dir: pathObj.dir,
 					base: file.filename
 				});
-				return fs.rename(dst, file.path).then(function () {
+				return fs.rename(dst, file.path).then(() => {
 					return file;
 				});
 			});

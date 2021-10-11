@@ -22,7 +22,7 @@ exports = module.exports = function(opt) {
 	return {
 		name: 'upload',
 		service: function(All) {
-			return fs.mkdir(dest, {recursive: true}).then(function() {
+			return fs.mkdir(dest, {recursive: true}).then(() => {
 				return init(All);
 			});
 		}
@@ -36,7 +36,7 @@ function init(All) {
 			const date = (new Date()).toISOString().split('T').shift().substring(0, 7);
 			const curDest = Path.join(upload.path, req.site.id, date);
 
-			fs.mkdir(curDest, {recursive: true}).then(function() {
+			fs.mkdir(curDest, {recursive: true}).then(() => {
 				cb(null, curDest);
 			}).catch(cb);
 		},
@@ -50,28 +50,28 @@ function init(All) {
 				truncate: 128,
 				symbols: false
 			});
-			crypto.pseudoRandomBytes(4, function (err, raw) {
+			crypto.pseudoRandomBytes(4, (err, raw) => {
 				if (err) return cb(err);
 				cb(null, `${basename}-${raw.toString('hex')}.${ext}`);
 			});
 		}
 	});
 
-	All.app.post('/.api/upload/:id?', function(req, res, next) {
-		Promise.resolve().then(function() {
+	All.app.post('/.api/upload/:id?', (req, res, next) => {
+		Promise.resolve().then(() => {
 			const limits = {
 				files: upload.files,
 				size: upload.size,
 				types: ['*/*']
 			};
 			if (req.params.id) {
-				return All.run('block.get', req, {id: req.params.id}).then(function(input) {
+				return All.run('block.get', req, {id: req.params.id}).then((input) => {
 					return Object.assign(limits, input.data.limits);
 				});
 			} else {
 				return limits;
 			}
-		}).then(function(limits) {
+		}).then((limits) => {
 			multer({
 				storage: storage,
 				fileFilter: function(req, file, cb) {
@@ -82,10 +82,10 @@ function init(All) {
 					files: limits.files,
 					fileSize: limits.size
 				}
-			}).array('files')(req, res, function() {
-				return Promise.all(req.files.map(function(file) {
+			}).array('files')(req, res, () => {
+				return Promise.all(req.files.map((file) => {
 					return exports.file(req, file);
-				})).then(function(list) {
+				})).then((list) => {
 					// backward compatibility with elements-write's input href
 					const obj = req.params.id ? {items: list} : list;
 					res.send(obj);
@@ -102,7 +102,7 @@ exports.file = function({site}, data) {
 	if (!data.destination) data.destination = Path.dirname(data.path);
 	if (!data.mimetype) data.mimetype = mime.lookup(Path.extname(data.filename));
 
-	return All.image.upload(data).then(function() {
+	return All.image.upload(data).then(() => {
 		return '/.' + Path.join(
 			"uploads",
 			Path.relative(dest, data.destination),
@@ -138,9 +138,9 @@ exports.gc = function(id, pathname) {
 		return Promise.resolve();
 	}
 	const file = Path.join("uploads", id, pathname);
-	return fs.unlink(file).catch(function() {
+	return fs.unlink(file).catch(() => {
 		// ignore error
-	}).then(function() {
+	}).then(() => {
 		console.info("gc uploaded file", file);
 	});
 };

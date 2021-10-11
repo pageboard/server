@@ -8,16 +8,16 @@ exports = module.exports = function (opt) {
 };
 
 function init() {
-	All.app.get("/.api/settings", function (req, res, next) {
+	All.app.get("/.api/settings", (req, res, next) => {
 		All.run('settings.get', req, {
 			id: req.user.id
-		}).then(function (data) {
+		}).then((data) => {
 			All.send(res, data);
 		}).catch(next);
 	});
 
-	All.app.put('/.api/settings', All.auth.lock('webmaster'), function (req, res, next) {
-		All.run('settings.save', req, req.body).then(function (data) {
+	All.app.put('/.api/settings', All.auth.lock('webmaster'), (req, res, next) => {
+		All.run('settings.save', req, req.body).then((data) => {
 			All.send(res, data);
 		}).catch(next);
 	});
@@ -32,7 +32,7 @@ exports.get = function ({ site, trx }, data) {
 			userFilter(query) {
 				query.select().where('type', 'user');
 			}
-		}).then(function (settings) {
+		}).then((settings) => {
 			settings.parent = settings.parent[0];
 			settings.parent.lock = {
 				read: [`id-${settings.id}`]
@@ -69,7 +69,7 @@ exports.find = function ({ site, trx }, data) {
 	if (!data.id && !data.email) throw new HttpError.BadRequest("Missing id or email");
 	if (data.id) q.where('parent.id', data.id);
 	else if (data.email) q.whereJsonText('parent.data:email', data.email);
-	return q.then(function (settings) {
+	return q.then((settings) => {
 		settings.parent = settings.parent[0];
 		settings.parent.lock = {
 			read: [`id-${settings.id}`]
@@ -110,33 +110,33 @@ exports.search.schema = {
 
 exports.save = function (req, data) {
 	const site = req.site;
-	return All.settings.find(req, data).then(function (settings) {
+	return All.settings.find(req, data).then((settings) => {
 		if (!data.data) return settings;
 		if (data.data.grants) {
 			// delete data.data.grants;
 		}
 		if (Object.keys(data.data).length == 0) return settings;
-		return settings.$query(req.trx).patchObject({ data: data.data }).then(function () {
+		return settings.$query(req.trx).patchObject({ data: data.data }).then(() => {
 			return settings;
 		});
-	}).catch(function (err) {
+	}).catch((err) => {
 		if (err.statusCode != 404) throw err;
-		return All.user.get(req, { email: data.email }).select('_id').catch(function (err) {
+		return All.user.get(req, { email: data.email }).select('_id').catch((err) => {
 			if (err.statusCode != 404) throw err;
-			return All.user.add(req, { email: data.email }).then(function (user) {
+			return All.user.add(req, { email: data.email }).then((user) => {
 				return All.user.get(req, { email: data.email }).select('_id');
 			});
-		}).then(function (user) {
+		}).then((user) => {
 			const block = {
 				type: 'settings',
 				data: data.data,
 				parents: [user]
 			};
-			return site.$beforeInsert.call(block).then(function () {
+			return site.$beforeInsert.call(block).then(() => {
 				block.lock = { read: [`id-${block.id}`] };
 				return site.$relatedQuery('children', req.trx).insertGraph(block, {
 					relate: ['parents']
-				}).then(function (settings) {
+				}).then((settings) => {
 					settings.parent = settings.parents[0];
 					delete settings.parents;
 					settings.email = user.data.email;

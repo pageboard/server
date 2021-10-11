@@ -79,7 +79,7 @@ function symlinkDir(opt, name) {
 	return fs.symlink(
 		Path.join(opt.dirs.data, name),
 		Path.join(opt.dir, name)
-	).catch(function() {});
+	).catch(() => {});
 }
 
 exports.init = function(opt) {
@@ -98,15 +98,15 @@ exports.init = function(opt) {
 	All.log = initLog(opt);
 
 	const plugins = [];
-	return (opt.installer.path ? Promise.resolve(opt.installer.path) : All.utils.which(opt.installer.bin)).then(function(path) {
+	return (opt.installer.path ? Promise.resolve(opt.installer.path) : All.utils.which(opt.installer.bin)).then((path) => {
 		// eslint-disable-next-line no-console
 		console.info("core:\tinstaller.path", path);
 		opt.installer.path = path;
-	}).then(function() {
-		return Promise.all(Object.keys(opt.dependencies).map(function(module) {
+	}).then(() => {
+		return Promise.all(Object.keys(opt.dependencies).map((module) => {
 			const pkgPath = resolvePkg(module, {cwd: opt.dir});
 			return Install.config(pkgPath, "pageboard", module, All.opt);
-		})).then(function(modules) {
+		})).then((modules) => {
 			opt.plugins = modules.filter(x => Boolean(x));
 			let plugin, module;
 			while (opt.plugins.length) {
@@ -130,18 +130,18 @@ exports.init = function(opt) {
 				plugins.push(obj);
 			}
 		});
-	}).then(function() {
+	}).then(() => {
 		return initDirs(opt.dirs);
-	}).then(function() {
+	}).then(() => {
 		return initPlugins.call(All, plugins);
-	}).then(function() {
+	}).then(() => {
 		return initPlugins.call(All, plugins, 'file');
-	}).then(function() {
+	}).then(() => {
 		All.app.use(filesError);
 		All.app.use(All.log);
 		return initPlugins.call(All, plugins, 'service');
-	}).then(function() {
-		All.app.use(function(req, res, next) {
+	}).then(() => {
+		All.app.use((req, res, next) => {
 			if (req.url.startsWith('/.api/')) {
 				throw new HttpError.NotFound("Unknown api url");
 			}
@@ -149,15 +149,15 @@ exports.init = function(opt) {
 		});
 		All.app.use(servicesError);
 		if (!All.opt.cli) return initPlugins.call(All, plugins, 'view');
-	}).then(function() {
+	}).then(() => {
 		All.app.use(viewsError);
-	}).then(function() {
+	}).then(() => {
 		return All.statics.install(null, All.opt, All);
-	}).then(function() {
+	}).then(() => {
 		return All.api.install(null, All.opt, All);
-	}).then(function() {
+	}).then(() => {
 		return All.cache.install(null, All.opt, All);
-	}).then(function() {
+	}).then(() => {
 		return All;
 	});
 };
@@ -169,26 +169,26 @@ function install(site) {
 		All.domains.hold(site);
 	}
 
-	return Install.install(site, All.opt).then(function(pkg) {
-		return All.api.install(site, pkg, All).then(function(bundles) {
-			if (site.href) return All.statics.install(site, pkg, All).then(function() {
+	return Install.install(site, All.opt).then((pkg) => {
+		return All.api.install(site, pkg, All).then((bundles) => {
+			if (site.href) return All.statics.install(site, pkg, All).then(() => {
 				return All.api.validate(site, pkg, bundles);
 			});
-		}).then(function() {
+		}).then(() => {
 			return All.auth.install(site);
-		}).then(function() {
+		}).then(() => {
 			if (site.href) return All.cache.install(site);
-		}).then(function() {
+		}).then(() => {
 			return Install.clean(site, pkg, All.opt);
 		});
-	}).then(function(pkg) {
+	}).then((pkg) => {
 		site.server = pkg.server || site.data.server || All.opt.version;
 		if (site.href) {
 			All.domains.replace(site);
 			All.domains.release(site);
 		}
 		return site;
-	}).catch(function(err) {
+	}).catch((err) => {
 		if (site.href) All.domains.error(site, err);
 		if (All.opt.env == "development") console.error(err);
 		throw err;
@@ -203,7 +203,7 @@ exports.start = function(All) {
 };
 
 function initDirs(dirs) {
-	return Promise.all(Object.keys(dirs).map(function(key) {
+	return Promise.all(Object.keys(dirs).map((key) => {
 		Log.core("init dir", dirs[key]);
 		return fs.mkdir(dirs[key], {
 			recursive: true
@@ -216,11 +216,11 @@ function initPlugins(plugins, type) {
 	if (type == "service") {
 		All.services = {};
 	}
-	plugins = plugins.filter(function(obj) {
+	plugins = plugins.filter((obj) => {
 		if (type && !obj[type]) return false;
 		if (!type && (obj.file || obj.service || obj.view)) return false;
 		return true;
-	}).sort(function(a, b) {
+	}).sort((a, b) => {
 		a = a.priority != null ? a.priority : Infinity;
 		b = b.priority != null ? b.priority : Infinity;
 		if (a == b) return 0;
@@ -228,7 +228,7 @@ function initPlugins(plugins, type) {
 		else if (a < b) return -1;
 	});
 	let p = Promise.resolve();
-	plugins.forEach(function(obj) {
+	plugins.forEach((obj) => {
 		let to;
 		if (obj.name) {
 			to = All[obj.name] = All[obj.name] || {};
@@ -236,13 +236,13 @@ function initPlugins(plugins, type) {
 			to = All;
 		}
 		if (type) {
-			p = p.then(() => obj[type].call(obj, All));
+			p = p.then(() => obj[type](All));
 		} else if (obj.init) {
-			p = p.then(() => obj.init.call(obj, All));
+			p = p.then(() => obj.init(All));
 		}
-		p = p.then(function() {
+		p = p.then(() => {
 			const plugin = obj.plugin = Object.assign({}, obj.plugin); // make a copy
-			Object.keys(plugin).forEach(function(key) {
+			Object.keys(plugin).forEach((key) => {
 				if (to[key] !== undefined) throw new Error(`module conflict ${obj.name || 'All'}.${key}`);
 				to[key] = plugin[key];
 				delete plugin[key]; // we made a copy before
@@ -258,31 +258,31 @@ function initPlugins(plugins, type) {
 			});
 		});
 	});
-	return p.catch(function(err) {
+	return p.catch((err) => {
 		console.error(err);
 	});
 }
 
 function initLog(opt) {
-	morgan.token('method', function(req, res) {
+	morgan.token('method', (req, res) => {
 		return pad(req.method, 4);
 	});
-	morgan.token('status', function(req, res) {
+	morgan.token('status', (req, res) => {
 		return pad(3, res.statusCode);
 	});
-	morgan.token('time', function(req, res) {
+	morgan.token('time', (req, res) => {
 		const ms = morgan['response-time'](req, res, 0);
 		if (ms) return pad(4, ms) + 'ms';
 		else return pad(6, '');
 	});
-	morgan.token('type', function(req, res) {
+	morgan.token('type', (req, res) => {
 		return pad(4, (res.get('Content-Type') || '-').split(';').shift().split('/').pop());
 	});
-	morgan.token('size', function(req, res) {
+	morgan.token('size', (req, res) => {
 		const len = parseInt(res.get('Content-Length'));
 		return pad(6, (len && prettyBytes(len) || '0 B').replaceAll(' ', ''));
 	});
-	morgan.token('site', function(req, res) {
+	morgan.token('site', (req, res) => {
 		return pad(req.site && req.site.id && req.site.id.substring(0, 8) || req.hostname, 8);
 	});
 
@@ -302,7 +302,7 @@ function createApp(All) {
 	app.enable('trust proxy');
 	app.get("/.well-known/pageboard", (req, res, next) => All.domains.wkp(req, res, next));
 	app.use(All.domains.mw);
-	app.use(function(req, res, next) {
+	app.use((req, res, next) => {
 		res.setHeader('Referrer-Policy', 'strict-origin-when-cross-origin');
 		res.setHeader('Content-Security-Policy', [
 			"default-src 'self'",
@@ -335,7 +335,7 @@ function filesError(err, req, res, next) {
 		code = 500;
 	}
 	if (code >= 500) console.error(err);
-	if (code >= 400) All.log(req, res, function() {
+	if (code >= 400) All.log(req, res, () => {
 		res.sendStatus(code);
 	});
 	else res.sendStatus(code);

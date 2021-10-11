@@ -81,7 +81,7 @@ function absolutePaths(list, file) {
 	if (!list) return;
 	if (typeof list == "string") list = [list];
 	const obj = Array.isArray(list) ? null : {};
-	const arr = Object.entries(list).map(function([key, path]) {
+	const arr = Object.entries(list).map(([key, path]) => {
 		if (path == null) {
 			console.warn("null path in", file);
 			return;

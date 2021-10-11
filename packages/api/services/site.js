@@ -14,12 +14,12 @@ exports = module.exports = function (opt) {
 };
 
 function init(All) {
-	All.app.get('/.api/site/export', All.auth.lock('webmaster'), function (req, res, next) {
+	All.app.get('/.api/site/export', All.auth.lock('webmaster'), (req, res, next) => {
 		return All.run('site.export', req, req.query);
 	});
-	All.app.put('/.api/site', All.auth.lock('webmaster'), function (req, res, next) {
+	All.app.put('/.api/site', All.auth.lock('webmaster'), (req, res, next) => {
 		const data = Object.assign(req.body, { id: req.site.id });
-		All.run('site.save', req, data).then(function (site) {
+		All.run('site.save', req, data).then((site) => {
 			res.send(site);
 		}).catch(next);
 	});
@@ -38,7 +38,7 @@ function QuerySite({ trx }, data) {
 	const Block = All.api.Block;
 	const q = Block.query(trx).alias('site')
 		.first().throwIfNotFound()
-		.where('site.type', 'site').where(function (q) {
+		.where('site.type', 'site').where((q) => {
 			if (data.id) q.orWhere('site.id', data.id);
 			if (data.domain) q.orWhereJsonHasAny('site.data:domains', data.domain);
 		});
@@ -76,8 +76,8 @@ exports.search = function ({ trx }, data) {
 	const q = Block.query(trx).alias('site').select().where('site.type', 'site')
 		.joinRelated('children', { alias: 'settings' })
 		.where('settings.type', 'settings');
-	if (data.grants) q.where(function (builder) {
-		data.grants.forEach(function (grant) {
+	if (data.grants) q.where((builder) => {
+		data.grants.forEach((grant) => {
 			builder.orWhereJsonSupersetOf('settings.data:grants', [grant]);
 		});
 	});
@@ -86,7 +86,7 @@ exports.search = function ({ trx }, data) {
 		.whereJsonText('user.data:email', data.email)
 		.orderBy('site.updated_at', 'site.desc')
 		.offset(data.offset)
-		.limit(data.limit).then(function (rows) {
+		.limit(data.limit).then((rows) => {
 			const obj = {
 				data: rows,
 				offset: data.offset,
@@ -140,9 +140,9 @@ exports.create = function ({ trx }, data) {
 		data: Object.assign(data.data || {}, {
 			server: All.opt.version
 		})
-	}).then(function () {
+	}).then(() => {
 		return All.run('site.get', { trx }, { id: data.id });
-	}).then(function (site) {
+	}).then((site) => {
 		// CHECKME piercancom did not grant webmaster to jeanchicoteau@artkas.fr but it should have
 		return All.run('settings.save', { site, trx }, {
 			email: data.email,
@@ -175,9 +175,9 @@ exports.create.schema = {
 };
 
 exports.add = function (req, data) {
-	return QuerySite(req, { id: data.id }).then(function (site) {
+	return QuerySite(req, { id: data.id }).then((site) => {
 		console.info("There is already a site with this id", data.id);
-	}).catch(function (err) {
+	}).catch((err) => {
 		data.type = 'site';
 		data.children = [{
 			standalone: true, // this might not be needed
@@ -211,16 +211,16 @@ exports.add.schema = {
 };
 
 exports.save = function (req, data) {
-	return exports.get(req, data).then(function (site) {
+	return exports.get(req, data).then((site) => {
 		lodashMerge(site.data, data.data);
 		if (req.site && req.site.href) site.href = req.site.href;
-		return All.install(site).then(function (site) {
+		return All.install(site).then((site) => {
 			const copy = Object.assign({}, data.data);
 			if (site.server) copy.server = site.server;
 			return site.$query(req.trx).patchObject({
 				type: site.type,
 				data: copy
-			}).then(function () {
+			}).then(() => {
 				return site;
 			});
 		});
@@ -258,10 +258,10 @@ exports.del = function ({ trx }, data) {
 	return Block.query(trx).where('type', 'site')
 		.select('_id', raw('recursive_delete(_id, TRUE) AS blocks'))
 		.where('id', data.id)
-		.first().throwIfNotFound().then(function (row) {
+		.first().throwIfNotFound().then((row) => {
 			counts.blocks = row.blocks;
 			// no need to remove href thanks to delete cascade on href._parent_id
-		}).then(function () {
+		}).then(() => {
 			return counts;
 		});
 };
@@ -295,12 +295,12 @@ exports.export = function (req, data) {
 		lones(builder) {
 			return builder.select('_id').where('standalone', true).orderByRaw("data->>'url' IS NOT NULL");
 		}
-	}).then(function (site) {
+	}).then((site) => {
 		const children = site.children;
 		delete site.children;
 		const out = req.res || createWriteStream(Path.resolve(All.opt.cwd, filepath));
 		if (req.res) req.res.attachment(Path.basename(filepath));
-		const finished = new Promise(function (resolve, reject) {
+		const finished = new Promise((resolve, reject) => {
 			out.resolve = resolve;
 			out.reject = reject;
 		});
@@ -321,9 +321,9 @@ exports.export = function (req, data) {
 					).where('block.type', 'user');
 				}
 			}).joinRelated('parents', { alias: 'site' })
-			.where('site.type', 'site').then(function (settings) {
+			.where('site.type', 'site').then((settings) => {
 				const last = settings.length - 1;
-				settings.forEach(function (setting, i) {
+				settings.forEach((setting, i) => {
 					let user = setting.user;
 					delete setting.user;
 					if (user.length == 0) return;
@@ -334,15 +334,15 @@ exports.export = function (req, data) {
 					out.write(toJSON(setting));
 					if (i != last) out.write('\n,');
 				});
-			}).then(function () {
+			}).then(() => {
 				out.write(']');
-			}).then(function () {
+			}).then(() => {
 				out.write(',\n"standalones": [');
 				const last = children.length - 1;
 				let p = Promise.resolve();
 				const list = [];
-				children.forEach(function (child) {
-					p = p.then(function () {
+				children.forEach((child) => {
+					p = p.then(() => {
 						return All.api.Block.query(trx)
 							.selectWithout('tsv', '_id')
 							.first().where('_id', child._id)
@@ -356,7 +356,7 @@ exports.export = function (req, data) {
 										.where('standalone', true)
 										.orderByRaw("block.data->>'url' IS NOT NULL ASC");
 								}
-							}).then(function (lone) {
+							}).then((lone) => {
 								if (lone.standalones.length == 0) {
 									delete lone.standalones;
 									list.unshift(lone);
@@ -367,15 +367,15 @@ exports.export = function (req, data) {
 							});
 					});
 				});
-				return p.then(function () {
-					list.forEach(function (lone, i) {
+				return p.then(() => {
+					list.forEach((lone, i) => {
 						out.write(toJSON(lone));
 						if (i != last) out.write('\n,');
 					});
 				});
-			}).then(function () {
+			}).then(() => {
 				out.write('],\n"reservations": [');
-			}).then(function () {
+			}).then(() => {
 				return site.$relatedQuery('children', trx).where('block.type', 'event_reservation')
 					.select().withGraphFetched('parents(notsite) as parents').modifiers({
 						notsite(builder) {
@@ -383,32 +383,32 @@ exports.export = function (req, data) {
 								.whereIn('block.type', ['settings', 'event_date'])
 								.orderBy('block.type');
 						}
-					}).then(function (reservations) {
+					}).then((reservations) => {
 						const last = reservations.length - 1;
-						reservations.forEach(function (resa, i) {
+						reservations.forEach((resa, i) => {
 							counts.reservations++;
 							out.write(toJSON(resa));
 							if (i != last) out.write('\n,');
 						});
 					});
-			}).then(function () {
+			}).then(() => {
 				out.write('],\n"hrefs": [');
 				return All.api.Href.query(trx).selectWithout('tsv', '_id', '_parent_id')
-					.whereSite(site.id).then(function (hrefs) {
+					.whereSite(site.id).then((hrefs) => {
 						counts.hrefs = hrefs.length;
 						const last = hrefs.length - 1;
-						hrefs.forEach(function (href, i) {
+						hrefs.forEach((href, i) => {
 							out.write(JSON.stringify(href));
 							if (i != last) out.write('\n,');
 						});
 					});
-			}).then(function () {
+			}).then(() => {
 				out.write(']');
-			}).then(function () {
+			}).then(() => {
 				out.end('}');
 				return finished;
 			});
-	}).then(function () {
+	}).then(() => {
 		return counts;
 	});
 };
@@ -454,7 +454,7 @@ exports.import = function (req, data) {
 	const queues = {};
 	const mp = [];
 	let upgrader;
-	pstream.on('data', function (obj) {
+	pstream.on('data', (obj) => {
 		if (obj.site) {
 			if (!obj.site.data) obj.site.data = {};
 			const fromVersion = obj.site.data.server;
@@ -467,8 +467,8 @@ exports.import = function (req, data) {
 			upgrader.process(obj.site);
 			upgrader.finish(obj.site);
 			obj.site.id = data.id;
-			p = p.then(function () {
-				return Block.query(trx).insert(obj.site).returning('*').then(function (siteCopy) {
+			p = p.then(() => {
+				return Block.query(trx).insert(obj.site).returning('*').then((siteCopy) => {
 					counts.site++;
 					site = siteCopy;
 				});
@@ -476,26 +476,26 @@ exports.import = function (req, data) {
 		} else if (obj.lone) {
 			const lone = upgrader.process(obj.lone, site);
 			let doneLone;
-			queues[lone.id] = new Promise(function (resolve) {
+			queues[lone.id] = new Promise((resolve) => {
 				doneLone = resolve;
 			});
 			const lonesRefs = [];
-			mp.push(p.then(function () {
+			mp.push(p.then(() => {
 				const lones = lone.standalones;
 				if (!lones) return;
 				delete lone.standalones;
-				return Promise.all(lones.map(function (rlone) {
+				return Promise.all(lones.map((rlone) => {
 					// relate lone to rlone
 					const id = upgrader.get(rlone.id);
 					if (!id) throw new Error("unknown standalone " + rlone.id);
-					return queues[id].then(function (_id) {
+					return queues[id].then((_id) => {
 						lonesRefs.push({
 							"#dbRef": _id
 						});
 					});
 				}));
-			}).then(function () {
-				lone.children.forEach(function (child) {
+			}).then(() => {
+				lone.children.forEach((child) => {
 					child.parents = [{
 						"#dbRef": site._id
 					}];
@@ -504,39 +504,39 @@ exports.import = function (req, data) {
 				lone.children = lone.children.concat(lonesRefs);
 				return site.$relatedQuery('children', trx).insertGraph(lone, {
 					allowRefs: true
-				}).then(function (obj) {
+				}).then((obj) => {
 					counts.standalones++;
 					counts.blocks += lone.children.length;
 					doneLone(obj._id);
 				});
 			}));
 		} else if (obj.href) {
-			p = p.then(function () {
+			p = p.then(() => {
 				const href = obj.href;
 				if (href.pathname) {
 					href.pathname = href.pathname.replace(/\/uploads\/[^/]+\//, `/uploads/${site.id}/`);
 				}
 				counts.hrefs++;
-				return site.$relatedQuery('hrefs', trx).insert(href).catch(function (err) {
+				return site.$relatedQuery('hrefs', trx).insert(href).catch((err) => {
 					console.error(err, href);
 					throw err;
 				});
 			});
 		} else if (obj.setting) {
 			const setting = upgrader.process(obj.setting, obj.site);
-			p = p.then(function () {
+			p = p.then(() => {
 				upgrader.finish(setting);
 				return Block.query(trx).where('type', 'user')
 					.whereJsonText('data:email', setting._email).select('_id')
 					.first().throwIfNotFound()
-					.catch(function (err) {
+					.catch((err) => {
 						if (err.status != 404) throw err;
 						counts.users++;
 						return Block.query(trx).insert({
 							data: { email: setting._email },
 							type: 'user'
 						}).returning('_id');
-					}).then(function (user) {
+					}).then((user) => {
 						setting.parents = [{ '#dbRef': user._id }];
 						counts.settings++;
 						delete setting._email;
@@ -545,7 +545,7 @@ exports.import = function (req, data) {
 			});
 		} else if (obj.reservation) {
 			const resa = upgrader.process(obj.reservation, obj.site);
-			p = p.then(function () {
+			p = p.then(() => {
 				upgrader.finish(resa);
 				const parents = resa.parents || [];
 				if (parents.length != 2) {
@@ -555,13 +555,13 @@ exports.import = function (req, data) {
 				// get settings, date
 				return site.$relatedQuery('children', trx)
 					.select('_id')
-					.whereIn('block.id', parents.map(function (parent) {
+					.whereIn('block.id', parents.map((parent) => {
 						return parent.id;
-					})).then(function (parents) {
-						resa.parents = parents.map(function (parent) {
+					})).then((parents) => {
+						resa.parents = parents.map((parent) => {
 							return { "#dbRef": parent._id };
 						});
-					}).then(function () {
+					}).then(() => {
 						counts.reservations++;
 						return site.$relatedQuery('children', trx).insertGraph(resa, {
 							allowRefs: true
@@ -569,46 +569,46 @@ exports.import = function (req, data) {
 					});
 			});
 		}
-		p.catch(function (ex) {
+		p.catch((ex) => {
 			pstream.emit('error', ex);
 		});
 	});
 
 	const jstream = require('oboe')(fstream);
-	jstream.node('!.site', function (data) {
+	jstream.node('!.site', (data) => {
 		pstream.write({ site: data });
 	});
-	jstream.node('!.standalones[*]', function (data) {
+	jstream.node('!.standalones[*]', (data) => {
 		pstream.write({ lone: data });
 	});
-	jstream.node('!.hrefs[*]', function (data) {
+	jstream.node('!.hrefs[*]', (data) => {
 		pstream.write({ href: data });
 	});
-	jstream.node('!.settings[*]', function (data) {
+	jstream.node('!.settings[*]', (data) => {
 		pstream.write({ setting: data });
 	});
-	jstream.node('!.reservations[*]', function (data) {
+	jstream.node('!.reservations[*]', (data) => {
 		pstream.write({ reservation: data });
 	});
-	jstream.on('end', function () {
+	jstream.on('end', () => {
 		pstream.end();
 	});
-	jstream.on('fail', function (failObj) {
+	jstream.on('fail', (failObj) => {
 		pstream.emit('error', failObj);
 	});
 
-	const q = new Promise(function (resolve, reject) {
-		pstream.on('error', function (err) {
+	const q = new Promise((resolve, reject) => {
+		pstream.on('error', (err) => {
 			reject(err);
 		});
-		pstream.on('finish', function () {
+		pstream.on('finish', () => {
 			resolve();
 		});
 	});
-	return q.then(function () {
+	return q.then(() => {
 		mp.push(p);
 		return Promise.all(mp);
-	}).then(function () {
+	}).then(() => {
 		return counts;
 	});
 };

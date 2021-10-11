@@ -22,7 +22,7 @@ function init(All) {
 		keysize: 2048
 	}, opt.lock);
 
-	return require('./lib/keygen')(All).then(function(keys) {
+	return require('./lib/keygen')(All).then((keys) => {
 		Object.assign(opt.lock, keys);
 		const lock = Upcache.lock(opt.lock);
 
@@ -59,7 +59,7 @@ exports.filterResponse = function(req, obj, fn) {
 		obj.item = filter(req, item, fn);
 		if (!obj.item.type) delete obj.items;
 	}
-	if (obj.items) obj.items = obj.items.map(function (item) {
+	if (obj.items) obj.items = obj.items.map((item) => {
 		return filter(req, item, fn);
 	}).filter((item) => {
 		return item && item.type;
@@ -70,7 +70,7 @@ exports.filterResponse = function(req, obj, fn) {
 function grantsLevels(DomainBlock) {
 	const grants = {};
 	const list = DomainBlock.schema('settings.data.grants').items.anyOf || [];
-	list.forEach(function(grant, i) {
+	list.forEach((grant, i) => {
 		const n = grant.$level;
 		if (typeof n != 'number' || Number.isNaN(n)) {
 			// eslint-disable-next-line no-console
@@ -110,12 +110,12 @@ function locked(req, list) {
 	else if (list.length == 0) return false;
 	let minLevel = Infinity;
 	const grants = user.grants || [];
-	grants.forEach(function(grant) {
+	grants.forEach((grant) => {
 		minLevel = Math.min(site.$grants[grant] || Infinity, minLevel);
 	});
 
 	let granted = false;
-	list.forEach(function(lock) {
+	list.forEach((lock) => {
 		const lockIndex = site.$grants[lock] || -1;
 		if (lock.startsWith('id-')) {
 			if (`id-${user.id}` == lock) granted = true;
@@ -125,7 +125,7 @@ function locked(req, list) {
 		}
 		if (!locks.includes(lock)) locks.push(lock);
 	});
-	locks.sort(function(a, b) {
+	locks.sort((a, b) => {
 		const al = site.$grants[a] || -1;
 		const bl = site.$grants[b] || -1;
 		if (al == bl) return 0;
@@ -139,17 +139,17 @@ function filter(req, item, fn) {
 	if (!item.type) return item;
 	const {children, child, parents, parent, items} = item;
 	if (children) {
-		item.children = children.filter(function(item) {
+		item.children = children.filter((item) => {
 			return filter(req, item, fn);
 		});
 	}
 	if (items) {
-		item.items = items.filter(function(item) {
+		item.items = items.filter((item) => {
 			return filter(req, item, fn);
 		});
 	}
 	if (parents) {
-		item.parents = parents.filter(function(item) {
+		item.parents = parents.filter((item) => {
 			return filter(req, item, fn);
 		});
 	}
@@ -184,10 +184,10 @@ function filter(req, item, fn) {
 	}
 	delete locks['*'];
 
-	Object.keys(locks).forEach(function(path) {
+	Object.keys(locks).forEach((path) => {
 		const list = locks[path];
 		path = path.split('.');
-		path.reduce(function(obj, val, index) {
+		path.reduce((obj, val, index) => {
 			if (obj == null) return;
 			if (index == path.length - 1) {
 				if (locked(req, list)) delete obj[val];

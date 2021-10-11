@@ -95,14 +95,14 @@ function init(All) {
 		max: 2 * opt.prerender.workers
 	});
 
-	process.on('exit', function() {
+	process.on('exit', () => {
 		return pool.destroy();
 	});
 }
 
 function run(config, req, res, next) {
-	pool.acquire().promise.then(function(worker) {
-		worker.on("message", function(msg) {
+	pool.acquire().promise.then((worker) => {
+		worker.on("message", (msg) => {
 			if (msg.err) {
 				release(worker);
 				return next(objToError(msg.err));
@@ -133,7 +133,7 @@ function run(config, req, res, next) {
 				});
 			}
 		});
-		worker.once("error", function(err) {
+		worker.once("error", (err) => {
 			release(worker, true);
 			next(err);
 		});
@@ -196,13 +196,13 @@ function prerender(req, res, next) {
 			pipeline(got.stream(req.site.href + '/.well-known/404', {
 				retry: 0,
 				throwHttpErrors: false
-			}), res, function(err) {
+			}), res, (err) => {
 				if (err) next(err);
 			});
 		}
 	} else {
 		let invalid = false;
-		Object.keys(req.query).forEach(function(key) {
+		Object.keys(req.query).forEach((key) => {
 			if (/^[a-zA-Z][\w.-]*$/.test(key) === false) {
 				invalid = true;
 				delete req.query[key];
@@ -258,7 +258,7 @@ function prerender(req, res, next) {
 
 		const siteBundle = req.site.$bundles.site.meta;
 
-		const scripts = (siteBundle.scripts || []).map(function(src) {
+		const scripts = (siteBundle.scripts || []).map((src) => {
 			return `<script defer src="${src}"></script>`;
 		});
 

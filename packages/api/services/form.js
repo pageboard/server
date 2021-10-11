@@ -6,15 +6,15 @@ exports = module.exports = function(opt) {
 };
 
 function init(All) {
-	All.app.get("/.api/form", function(req, res, next) {
+	All.app.get("/.api/form", (req, res, next) => {
 		next(new HttpError.MethodNotAllowed("Only post allowed"));
 	});
-	All.app.post("/.api/form/:id", function(req, res, next) {
+	All.app.post("/.api/form/:id", (req, res, next) => {
 		All.run('form.submit', req, {
 			id: req.params.id,
 			query: req.query,
 			body: All.utils.unflatten(req.body)
-		}).then(function(data) {
+		}).then((data) => {
 			All.send(res, data);
 		}).catch(next);
 	});
@@ -23,7 +23,7 @@ function init(All) {
 exports.submit = function(req, data) {
 	return All.run('block.get', req, {
 		id: data.id
-	}).then(function(form) {
+	}).then((form) => {
 		const fd = form.data || {};
 		const method = (fd.action || {}).method;
 		if (!method) {
@@ -49,14 +49,14 @@ exports.submit = function(req, data) {
 			const el = req.site.$schema(params.type);
 			if (!el) throw new HttpError.BadRequest("Unknown element type " + params.type);
 			const newBody = {data: {}};
-			Object.keys((el.properties.data || {}).properties || {}).forEach(function(key) {
+			Object.keys((el.properties.data || {}).properties || {}).forEach((key) => {
 				const val = body[key];
 				if (val !== undefined) {
 					newBody.data[key] = val;
 					delete body[key];
 				}
 			});
-			Object.keys(el.properties).forEach(function (key) {
+			Object.keys(el.properties).forEach((key) => {
 				const mkey = '$' + key;
 				const mval = body[mkey];
 				if (mval !== undefined) {
@@ -73,7 +73,7 @@ exports.submit = function(req, data) {
 		}
 		body = All.utils.mergeObjects(body, params);
 
-		return All.run(method, req, body).catch(function (err) {
+		return All.run(method, req, body).catch((err) => {
 			return {
 				status: err.statusCode || err.status || err.code || 400,
 				item: {

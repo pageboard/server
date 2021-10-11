@@ -17,13 +17,13 @@ exports.install = function(site, pkg, All) {
 	sortPriority(allDirs);
 	sortPriority(allElts);
 
-	return Promise.all(allElts.map(function(eltObj) {
+	return Promise.all(allElts.map((eltObj) => {
 		return fs.readFile(eltObj.path);
-	})).then(function(bufs) {
+	})).then((bufs) => {
 		const elts = {};
 		const names = [];
 		const context = {};
-		bufs.forEach(function(buf, i) {
+		bufs.forEach((buf, i) => {
 			const path = allElts[i].path;
 			context.mount = getMountPath(path, id, allDirs);
 			context.path = path;
@@ -34,14 +34,14 @@ exports.install = function(site, pkg, All) {
 		const groups = {};
 		const bundles = {};
 
-		names.forEach(function(name) {
+		names.forEach((name) => {
 			const el = elts[name] = Object.assign({}, elts[name]); // drop proxy
 			el.name = name;
 			// backward compatibility with 0.7 extensions names, dropped in favor of output
 			if (updateExtension(el, eltsMap)) return;
 			eltsMap[name] = el;
 			let isPage = false; // backward compatibility with < client@0.7
-			if (el.group) el.group.split(/\s+/).forEach(function(gn) {
+			if (el.group) el.group.split(/\s+/).forEach((gn) => {
 				if (gn == "page") isPage = true;
 				let group = groups[gn];
 				if (!group) group = groups[gn] = [];
@@ -89,7 +89,7 @@ exports.install = function(site, pkg, All) {
 			All.api.Block = Block;
 		}
 		return bundles;
-	}).catch(function(err) {
+	}).catch((err) => {
 		console.error(err);
 		throw err;
 	});
@@ -109,14 +109,14 @@ function updateExtension(el, eltsMap) {
 
 exports.validate = function(site, pkg, bundles) {
 	const eltsMap = pkg.eltsMap;
-	return Promise.all(Object.entries(bundles).map(function([name, {list}]) {
+	return Promise.all(Object.entries(bundles).map(([name, {list}]) => {
 		const el = eltsMap[name];
 		return bundle(site, pkg, el, list);
-	})).then(function() {
-		return bundleSource(site, pkg, null, 'services', All.services).then(function(path) {
+	})).then(() => {
+		return bundleSource(site, pkg, null, 'services', All.services).then((path) => {
 			site.$services = path;
 		});
-	}).then(function() {
+	}).then(() => {
 		site.$scripts = pkg.eltsMap.site.scripts;
 		site.$resources = pkg.eltsMap.site.resources;
 		site.$stylesheets = pkg.eltsMap.site.stylesheets;
@@ -126,7 +126,7 @@ exports.validate = function(site, pkg, bundles) {
 };
 
 function sortPriority(list) {
-	list.sort(function(a, b) {
+	list.sort((a, b) => {
 		const pa = a.priority;
 		const pb = b.priority;
 		if (pa == pb) {
@@ -140,7 +140,7 @@ function sortPriority(list) {
 
 function bundle(site, pkg, rootEl, cobundles = []) {
 	const list = listDependencies(pkg, rootEl.group, rootEl, cobundles.slice());
-	list.sort(function(a, b) {
+	list.sort((a, b) => {
 		return (a.priority || 0) - (b.priority || 0);
 	});
 	const scripts = sortElements(list, 'scripts');
@@ -148,7 +148,7 @@ function bundle(site, pkg, rootEl, cobundles = []) {
 	const prefix = rootEl.name;
 
 	const eltsMap = {};
-	list.forEach(function(el) {
+	list.forEach((el) => {
 		if (!el.standalone) {
 			el = Object.assign({}, el);
 			delete el.scripts;
@@ -166,7 +166,7 @@ function bundle(site, pkg, rootEl, cobundles = []) {
 	return Promise.all([
 		All.statics.bundle(site, pkg, scripts, `${prefix}.js`),
 		All.statics.bundle(site, pkg, styles, `${prefix}.css`)
-	]).then(function([scripts, styles]) {
+	]).then(([scripts, styles]) => {
 		rootEl.scripts = scripts;
 		rootEl.stylesheets = styles;
 		cobundles.forEach((el) => {
@@ -176,7 +176,7 @@ function bundle(site, pkg, rootEl, cobundles = []) {
 			}
 		});
 
-		return bundleSource(site, pkg, prefix, 'elements', eltsMap).then(function(path) {
+		return bundleSource(site, pkg, prefix, 'elements', eltsMap).then((path) => {
 			if (path) metaEl.bundle = path;
 			metaEl.scripts = rootEl.group != "page" ? rootEl.scripts : [];
 			metaEl.stylesheets = rootEl.group != "page" ? rootEl.stylesheets : [];
@@ -206,9 +206,9 @@ function bundleSource(site, pkg, prefix, name, obj) {
 	const sourceUrl = `/.files/${version}/${filename}`;
 	const sourcePath = All.statics.resolve(site.id, sourceUrl);
 	const str = `Pageboard.${name} = Object.assign(Pageboard.${name} || {}, ${toSource(obj)});`;
-	return fs.writeFile(sourcePath, str).then(function() {
+	return fs.writeFile(sourcePath, str).then(() => {
 		return All.statics.bundle(site, pkg, [sourceUrl], filename);
-	}).then(function(paths) {
+	}).then((paths) => {
 		return paths[0];
 	});
 }
@@ -219,9 +219,9 @@ function listDependencies(pkg, rootGroup, el, list = [], gDone = {}, eDone = {})
 	list.push(el);
 	eDone[el.name] = true;
 	const contents = All.api.Block.normalizeContents(el.contents);
-	if (contents) contents.forEach(function(content) {
+	if (contents) contents.forEach((content) => {
 		if (!content.nodes) return;
-		content.nodes.split(/\W+/).filter(Boolean).forEach(function(word) {
+		content.nodes.split(/\W+/).filter(Boolean).forEach((word) => {
 			if (word == rootGroup) {
 				console.warn("contents contains root group", rootGroup, el.name, contents);
 				return;
@@ -254,7 +254,7 @@ function listDependencies(pkg, rootGroup, el, list = [], gDone = {}, eDone = {})
 function sortElements(elements, prop) {
 	const map = {};
 	let res = [];
-	elements.forEach(function(el) {
+	elements.forEach((el) => {
 		let list = el[prop];
 		if (!list) return;
 		if (typeof list == "string") list = [list];
@@ -265,7 +265,7 @@ function sortElements(elements, prop) {
 				if (el.priority != null) {
 					if (prev.priority == null) {
 						// move prev url on top of res
-						res = res.filter(function(lurl) {
+						res = res.filter((lurl) => {
 							return lurl != url;
 						});
 					} else if (prev.priority != el.priority) {
@@ -286,7 +286,7 @@ function sortElements(elements, prop) {
 }
 
 function getMountPath(eltPath, id, directories) {
-	const mount = directories.find(function(mount) {
+	const mount = directories.find((mount) => {
 		return eltPath.startsWith(mount.from);
 	});
 	if (!mount) return;

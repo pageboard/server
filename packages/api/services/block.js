@@ -8,20 +8,20 @@ exports = module.exports = function () {
 };
 
 function init(All) {
-	All.app.get("/.api/block", function (req, res, next) {
-		All.run('block.get', req, req.query).then(function (data) {
+	All.app.get("/.api/block", (req, res, next) => {
+		All.run('block.get', req, req.query).then((data) => {
 			All.send(res, data);
 		}).catch(next);
 	});
 
-	All.app.get("/.api/blocks", function (req, res, next) {
-		All.run('block.search', req, All.utils.unflatten(req.query)).then(function (data) {
+	All.app.get("/.api/blocks", (req, res, next) => {
+		All.run('block.search', req, All.utils.unflatten(req.query)).then((data) => {
 			All.send(res, data);
 		}).catch(next);
 	});
 
-	All.app.post('/.api/blocks', All.auth.lock('writer'), function (req, res, next) {
-		All.run('block.write', req, req.body).then(function (data) {
+	All.app.post('/.api/blocks', All.auth.lock('writer'), (req, res, next) => {
+		All.run('block.write', req, req.body).then((data) => {
 			All.send(res, data);
 		}).catch(next);
 	});
@@ -77,7 +77,7 @@ exports.search = function ({ site, trx }, data) {
 		if (parentList && Array.isArray(parentList)) {
 			if (parentList.length) {
 				valid = true;
-				parentList.forEach(function (item, i) {
+				parentList.forEach((item, i) => {
 					const alias = 'parent_' + i;
 					q.joinRelated('parents', { alias: alias });
 					if (!item.type) throw new HttpError.BadRequest("Missing parents.item.type");
@@ -141,7 +141,7 @@ exports.search = function ({ site, trx }, data) {
 		}
 	});
 
-	return q.then(function (rows) {
+	return q.then((rows) => {
 		const obj = {
 			items: rows,
 			offset: data.offset,
@@ -149,7 +149,7 @@ exports.search = function ({ site, trx }, data) {
 		};
 
 		const ids = [];
-		rows.forEach(function (row) {
+		rows.forEach((row) => {
 			ids.push(row.id);
 			if (parents && parents.first) {
 				if (row.parents && row.parents.length) row.parent = row.parents[0];
@@ -165,7 +165,7 @@ exports.search = function ({ site, trx }, data) {
 		return All.href.collect({ site, trx }, {
 			id: ids,
 			content: data.content
-		}).first().then(function (hrow) {
+		}).first().then((hrow) => {
 			obj.hrefs = hrow.hrefs;
 			return obj;
 		});
@@ -440,7 +440,7 @@ function filterSub(q, data, alias) {
 	const orders = data.order || [];
 	orders.push("updated_at");
 	const seen = {};
-	orders.forEach(function (order) {
+	orders.forEach((order) => {
 		const { col, dir } = parseOrder('block', order);
 		if (seen[col.expression]) return;
 		seen[col.expression] = true;
@@ -454,7 +454,7 @@ function filterSub(q, data, alias) {
 exports.find = function (req, data) {
 	data.limit = 1;
 	data.offset = 0;
-	return exports.search(req, data).then(function (obj) {
+	return exports.search(req, data).then((obj) => {
 		if (obj.items.length == 0) {
 			throw new HttpError.NotFound("Block not found");
 		}
@@ -478,15 +478,15 @@ exports.add = function ({ site, trx }, data) {
 	const parents = data.parents || [];
 	delete data.parents;
 
-	return site.$relatedQuery('children', trx).insert(data).then(function (child) {
+	return site.$relatedQuery('children', trx).insert(data).then((child) => {
 		if (parents.length == 0) return child;
 		return site.$relatedQuery('children', trx)
-			.whereIn(['block.id', 'block.type'], parents.map(function (item) {
+			.whereIn(['block.id', 'block.type'], parents.map((item) => {
 				if (!item.type || !item.id) throw new HttpError.BadRequest("Parents must have id, type");
 				return [item.id, item.type];
-			})).then(function (ids) {
+			})).then((ids) => {
 				return child.$relatedQuery('parents', trx).relate(ids);
-			}).then(function () {
+			}).then(() => {
 				return child;
 			});
 	});
@@ -537,13 +537,13 @@ exports.add.schema = {
 exports.add.external = true;
 
 exports.save = function (req, data) {
-	return exports.get(req, data).forUpdate().then(function (block) {
+	return exports.get(req, data).forUpdate().then((block) => {
 		const obj = {
 			type: block.type
 		};
 		if (data.data && Object.keys(data.data).length) obj.data = data.data;
 		if (data.lock && Object.keys(data.lock).length) obj.lock = data.lock;
-		return block.$query(req.trx).patchObject(obj).then(function () {
+		return block.$query(req.trx).patchObject(obj).then(() => {
 			if (!block) throw new Error(`Block not found for update ${data.id}`);
 			return block;
 		});
@@ -613,7 +613,7 @@ exports.del.external = true;
 
 exports.write = function (req, data) {
 	const list = data.operations;
-	return Promise.all(list.map(function (op) {
+	return Promise.all(list.map((op) => {
 		return All.run(`block.${op.method}`, req, op.item);
 	}));
 };
@@ -665,7 +665,7 @@ exports.gc = function ({ trx }, days) {
 		GROUP BY b._id
 	) AS usage WHERE usage.count = 0 AND block._id = usage._id`, [
 		days
-	]).then(function (result) {
+	]).then((result) => {
 		return {
 			length: result.rowCount
 		};

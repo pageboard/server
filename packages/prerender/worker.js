@@ -103,14 +103,14 @@ function init(opt) {
 	global.All = {opt: opt};
 	const conf = opt.prerender;
 
-	conf.helpers.forEach(function(path) {
+	conf.helpers.forEach((path) => {
 		const mod = require(path);
 		const name = Path.basename(path, Path.extname(path));
 		dom.helpers[name] = mod.helper || mod;
 	});
 	delete conf.helpers;
 
-	conf.plugins.forEach(function(path) {
+	conf.plugins.forEach((path) => {
 		const mod = require(path);
 		const name = Path.basename(path, Path.extname(path));
 		dom.plugins[name] = mod.plugin || mod;
@@ -127,25 +127,25 @@ function run(params) {
 	const req = new FakeRequest(params);
 	const res = new FakeResponse();
 
-	params.helpers.forEach(function(name) {
+	params.helpers.forEach((name) => {
 		const fn = dom.helpers[name];
 		if (fn) dom.settings.helpers.push(fn);
 		else console.error("Prerender missing helper", name);
 	});
-	dom(function(mw, settings, request, response) {
+	dom((mw, settings, request, response) => {
 		settings.view = params.view;
-		settings.load.plugins = params.plugins.map(function(name) {
+		settings.load.plugins = params.plugins.map((name) => {
 			const fn = dom.plugins[name];
 			if (fn) return fn;
 			else console.error("Prerender missing plugin", name);
 		});
 		Object.assign(settings, params.settings);
-	}).load()(req, res, function(err) {
+	}).load()(req, res, (err) => {
 		res.ipc(err);
 	});
 }
 
-process.on("message", function(msg) {
+process.on("message", (msg) => {
 	if (!initialized) init(msg);
 	else run(msg);
 });

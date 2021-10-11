@@ -32,11 +32,11 @@ exports.migrate = function() {
 	const opt = All.opt;
 	const dirs = opt && opt.migrations || null;
 	if (!dirs) throw new Error("Missing `migrations` directory option");
-	return Promise.all(dirs.map(function(dir) {
+	return Promise.all(dirs.map((dir) => {
 		console.info(` ${dir}`);
 		return exports.knex.migrate.latest({
 			directory: dir
-		}).spread(function(batchNo, list) {
+		}).spread((batchNo, list) => {
 			if (list.length) return list;
 			return "No migrations run in this directory";
 		});
@@ -50,13 +50,13 @@ exports.seed = function() {
 	const opt = All.opt;
 	const dirs = opt && opt.seeds || null;
 	if (!dirs) throw new Error("Missing `seeds` directory option");
-	return Promise.all(dirs.map(function(dir) {
+	return Promise.all(dirs.map((dir) => {
 		console.info(` ${dir}`);
 		return exports.knex.seed.run({
 			directory: dir
-		}).spread(function(list) {
-			if (list.length) console.log(" ", list.join("\n "));
-			else console.log("No seed files in", dir);
+		}).spread((list) => {
+			if (list.length) console.info(" ", list.join("\n "));
+			else console.info("No seed files in", dir);
 		});
 	}));
 };
@@ -66,7 +66,7 @@ exports.dump = function({trx}, {name}) {
 	const dumpDir = opt.dump && opt.dump.dir;
 	if (!dumpDir) throw new HttpError.BadRequest("Missing database.dump.dir config");
 	const file = Path.join(Path.resolve(All.opt.dir, dumpDir), `${opt.name}-${name}.dump`);
-	return exec(`pg_dump --format=custom --file=${file} --username=${opt.user} ${opt.name}`, {}).then(function() {
+	return exec(`pg_dump --format=custom --file=${file} --username=${opt.user} ${opt.name}`, {}).then(() => {
 		return file;
 	});
 };
@@ -88,11 +88,11 @@ exports.restore = function({trx}, {name}) {
 	if (!dumpDir) throw new HttpError.BadRequest("Missing database.dump.dir config");
 	const db = `${opt.name}-${name}`;
 	const file = Path.join(Path.resolve(All.opt.dir, dumpDir), `${db}.dump`);
-	return exec(`createdb -U ${opt.user} -T template1 ${db}`, {}).then(function() {
-		return exec(`pg_restore -d ${db} -U ${opt.user} ${file}`, {}).then(function() {
+	return exec(`createdb -U ${opt.user} -T template1 ${db}`, {}).then(() => {
+		return exec(`pg_restore -d ${db} -U ${opt.user} ${file}`, {}).then(() => {
 			return file;
 		});
-	}).catch(function(err) {
+	}).catch((err) => {
 		return exec(`dropdb -U ${opt.user} ${db}`, {});
 	});
 };
@@ -207,15 +207,15 @@ function initDumps(All) {
 function doDump(dir, keep) {
 	return fs.mkdir(dir, {
 		recursive: true
-	}).then(function() {
+	}).then(() => {
 		return All.run('db.dump', {trx: false}, {
 			name: (new Date()).toISOString().split('.')[0].replaceAll(/[-:]/g, '')
-		}).then(function() {
+		}).then(() => {
 			const now = Date.now();
-			fs.readdir(dir).then(function(files) {
-				return Promise.all(files.map(function(file) {
+			fs.readdir(dir).then((files) => {
+				return Promise.all(files.map((file) => {
 					file = Path.join(dir, file);
-					return fs.stat(file).then(function(stat) {
+					return fs.stat(file).then((stat) => {
 						if (stat.mtime.getTime() < now - keep - 1000) {
 							return fs.unlink(file);
 							// TODO dropdb -U ${conn.user} ${conn.database}-${stamp}

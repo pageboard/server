@@ -52,15 +52,15 @@ function init(All) {
 		}
 	});
 
-	All.app.post('/.api/mail/receive', multipart, function(req, res, next) {
-		All.run('mail.receive', req, req.body).then(function(ok) {
+	All.app.post('/.api/mail/receive', multipart, (req, res, next) => {
+		All.run('mail.receive', req, req.body).then((ok) => {
 			// https://documentation.mailgun.com/en/latest/user_manual.html#receiving-messages-via-http-through-a-forward-action
 			if (!ok) res.sendStatus(406);
 			else res.sendStatus(200);
 		}).catch(next);
 	});
-	All.app.post('/.api/mail/report', function(req, res, next) {
-		All.run('mail.report', req, req.body).then(function(ok) {
+	All.app.post('/.api/mail/report', (req, res, next) => {
+		All.run('mail.report', req, req.body).then((ok) => {
 			// https://documentation.mailgun.com/en/latest/user_manual.html#webhooks
 			if (!ok) res.sendStatus(406);
 			else res.sendStatus(200);
@@ -93,21 +93,21 @@ exports.receive = function(req, data) {
 	}
 	let senders = data.sender || '';
 	if (data.from) senders += ', ' + data.from;
-	senders = AddressParser(senders).map(function(item) { return item.address; });
+	senders = AddressParser(senders).map((item) => { return item.address; });
 	if (senders.length == 0) {
 		console.error('no senders', data.sender, data.from);
 		return false;
 	}
-	return Promise.all(AddressParser(data.recipient).map(function(item) {
+	return Promise.all(AddressParser(data.recipient).map((item) => {
 		let parts = item.address.split('@');
 		if (parts.pop() != mailer.domain) return false;
 		parts = parts[0].split('.');
 		if (parts.length != 2) return false;
-		return All.run('site.get', req, {id: parts[0]}).then(function(site) {
+		return All.run('site.get', req, {id: parts[0]}).then((site) => {
 			req.site = site;
 			return Promise.all(All.run('settings.search', req, {
 				email: senders
-			}), All.run('settings.get', req, {id: parts[1]})).then(function([senders, settings]) {
+			}), All.run('settings.get', req, {id: parts[1]})).then(([senders, settings]) => {
 				if (senders.length == 0) throw new HttpError.NotFound("No known sender");
 				return All.run('mail.to', req, {
 					from: {
@@ -122,14 +122,14 @@ exports.receive = function(req, data) {
 					html: data['stripped-html'],
 					text: data['stripped-text']
 				});
-			}).catch(function(err) {
+			}).catch((err) => {
 				if (err.status == 404) return false;
 				else throw err;
 			});
 		});
-	})).then(function(arr) {
+	})).then((arr) => {
 		return arr.some(ok => Boolean(ok));
-	}).catch(function(err) {
+	}).catch((err) => {
 		if (err.status == 404) return false;
 		else throw err;
 	});
@@ -305,7 +305,7 @@ exports.send = function (req, data) {
 		}
 	}
 
-	list.push(Promise.all(data.to.map(function(to) {
+	list.push(Promise.all(data.to.map((to) => {
 		if (to.indexOf('@') > 0) return All.run('settings.save', req, {email: to});
 		else return All.run('settings.get', req, {id:to});
 	})));
@@ -315,7 +315,7 @@ exports.send = function (req, data) {
 	return Promise.allSettled(list).then(results => results.map(item => {
 		if (item.status == "rejected") throw item.reason;
 		return item.value;
-	})).then(function(rows) {
+	})).then((rows) => {
 		const emailPage = rows[0].item;
 		if (data.from) mailOpts.from = {
 			name: site.data.title,
@@ -342,9 +342,9 @@ exports.send = function (req, data) {
 			query: data.body,
 			retry: 0,
 			timeout: 10000
-		}).then(function(response) {
+		}).then((response) => {
 			return JSON.parse(response.body);
-		}).then(function(obj) {
+		}).then((obj) => {
 			mailOpts.subject = data.subject || obj.title;
 			mailOpts.html = obj.html;
 			mailOpts.text = obj.text;

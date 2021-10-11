@@ -9,11 +9,11 @@ exports = module.exports = function(opt) {
 };
 
 function init(All) {
-	All.app.post('/.api/github', function(req, res, next) {
+	All.app.post('/.api/github', (req, res, next) => {
 		const site = req.site;
 		let pusher;
 		let version;
-		Promise.resolve().then(function() {
+		Promise.resolve().then(() => {
 			const event = req.get('X-Github-Event');
 			if (event == "ping") {
 				return res.sendStatus(200);
@@ -81,8 +81,8 @@ function init(All) {
 				msg = `Saving version ${version}`;
 			}
 			res.status(200).send(msg);
-		}).then(function() {
-			if (version != null) return All.site.save(req, site).then(function() {
+		}).then(() => {
+			if (version != null) return All.site.save(req, site).then(() => {
 				if (pusher) All.run('mail.to', req, {
 					purpose: 'transactional',
 					to: [{
@@ -96,7 +96,7 @@ function init(All) {
 					`
 				});
 			});
-		}).catch(function(err) {
+		}).catch((err) => {
 			if (pusher) All.run('mail.to', req, {
 				purpose: 'transactional',
 				to: [{

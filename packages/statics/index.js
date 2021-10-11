@@ -32,12 +32,12 @@ function init(All) {
 
 	return fs.mkdir(statics.runtime, {
 		recursive: true
-	}).then(function() {
+	}).then(() => {
 		console.info(`static:\tdirectories are served from symlinks in ${statics.runtime}`);
 
 		app.get(
 			"/:dir(.files|.uploads)/*",
-			function(req, res, next) {
+			(req, res, next) => {
 				const url = req.url;
 				switch(req.params.dir) {
 					case ".uploads":
@@ -57,7 +57,7 @@ function init(All) {
 				dotfiles: 'ignore',
 				fallthrough: true
 			}),
-			function(req, res, next) {
+			(req, res, next) => {
 				if (req.method == "GET" || req.method == "HEAD") {
 					next(new HttpError.NotFound("Static file not found"));
 				} else {
@@ -66,7 +66,7 @@ function init(All) {
 			}
 		);
 
-		All.app.get('/favicon.ico', All.cache.tag('data-:site').for('1 month'), function(req, res, next) {
+		All.app.get('/favicon.ico', All.cache.tag('data-:site').for('1 month'), (req, res, next) => {
 			const site = req.site;
 			if (!site || !site.data.favicon) {
 				res.sendStatus(204);
@@ -94,7 +94,7 @@ exports.bundle = function(site, pkg, list, filename) {
 	if (version == null) version = site.branch;
 	const outList = [];
 	const inputs = [];
-	list.forEach(function(url) {
+	list.forEach((url) => {
 		if (/^https?:\/\//.test(url)) outList.push(url);
 		else inputs.push(urlToPath(opts, site.id, url));
 	});
@@ -110,12 +110,12 @@ exports.bundle = function(site, pkg, list, filename) {
 	return Promise.all([
 		fs.mkdir(buildDir, {recursive: true}),
 		fs.mkdir(cacheDir, {recursive: true})
-	]).then(function() {
-		if (version != site.branch) return fs.stat(buildPath).catch(function(err) {})
-			.then(function(stat) {
+	]).then(() => {
+		if (version != site.branch) return fs.stat(buildPath).catch((err) => {})
+			.then((stat) => {
 				return Boolean(stat);
 			});
-	}).then(function(exists) {
+	}).then((exists) => {
 		if (exists) return;
 		const ext = fileObj.ext.substring(1);
 		if (ext != "js" && ext != "css") throw new Error("Bundles only .js or .css extensions");
@@ -124,27 +124,27 @@ exports.bundle = function(site, pkg, list, filename) {
 			cache: {
 				dir: cacheDir
 			}
-		}).catch(function(err) {
+		}).catch((err) => {
 			delete err.input;
 			delete err.source;
 			if (err.reason) delete err.message;
 			throw err;
-		}).then(function() {
+		}).then(() => {
 			return true;
 		});
-	}).then(function(copyFromRuntime) {
+	}).then((copyFromRuntime) => {
 		if (copyFromRuntime) {
 			return Promise.all([
 				fs.copyFile(output, buildPath),
-				fs.copyFile(output + '.map', buildPath + '.map').catch(function() {})
+				fs.copyFile(output + '.map', buildPath + '.map').catch(() => {})
 			]);
 		} else {
 			return Promise.all([
 				fs.copyFile(buildPath, output),
-				fs.copyFile(buildPath + '.map', output + '.map').catch(function() {})
+				fs.copyFile(buildPath + '.map', output + '.map').catch(() => {})
 			]);
 		}
-	}).then(function() {
+	}).then(() => {
 		return outList;
 	});
 };
@@ -171,9 +171,9 @@ exports.install = function(site, {directories}, All) {
 			recursive: true
 		});
 	}
-	directories.forEach(function(mount) {
-		p = p.then(function() {
-			return mountPath(mount.from, mount.to).catch(function(err) {
+	directories.forEach((mount) => {
+		p = p.then(() => {
+			return mountPath(mount.from, mount.to).catch((err) => {
 				console.error("Cannot mount", mount.from, mount.to, err);
 				console.error("directories", directories);
 			});
@@ -195,8 +195,8 @@ function mountPath(src, dst) {
 
 	return fs.mkdir(Path.dirname(absDst), {
 		recursive: true
-	}).then(function() {
-		return fs.unlink(absDst).catch(function(err) {}).then(function() {
+	}).then(() => {
+		return fs.unlink(absDst).catch((err) => {}).then(() => {
 			return fs.symlink(src, absDst);
 		});
 	});

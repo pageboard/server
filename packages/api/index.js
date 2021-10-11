@@ -115,7 +115,7 @@ function init(All) {
 	common.Model.knex(knexInst);
 
 	const models = {};
-	opt.models.forEach(function (path) {
+	opt.models.forEach((path) => {
 		const model = require(path);
 		models[model.name] = model;
 	});
@@ -127,7 +127,7 @@ function init(All) {
 		else return objection.transaction.start(knexInst);
 	};
 
-	Object.keys(utils).forEach(function (key) {
+	Object.keys(utils).forEach((key) => {
 		if (All.utils[key]) throw new Error(`Cannot reassign All.utils.${key}`);
 		All.utils[key] = utils[key];
 	});
@@ -137,7 +137,7 @@ function init(All) {
 	// api depends on site files, that tag is invalidated in cache install
 	All.app.get('/.api/*', All.cache.tag('app-:site'));
 	All.app.use('/.api/*',
-		function (req, res, next) {
+		(req, res, next) => {
 			if (req.site.data.maintenance === true && req.method != "GET") {
 				throw new HttpError.ServiceUnavailable("Site is in maintenance mode");
 			} else {
@@ -165,7 +165,7 @@ function check(fun, schema, data) {
 	if (fun.validate(data)) {
 		return data;
 	} else {
-		const messages = fun.validate.errors.map(function (err) {
+		const messages = fun.validate.errors.map((err) => {
 			if (err.dataPath) return `${err.dataPath} ${err.message}`;
 			else return err.message;
 		}).join(',\n');
@@ -196,7 +196,7 @@ All.help = function (apiStr) {
 };
 
 All.run = function (apiStr, req, data) {
-	return Promise.resolve().then(function () {
+	return Promise.resolve().then(() => {
 		const [schema, mod, fun] = getApiMethodSchema(apiStr);
 		Log.api("run %s:\n%O", apiStr, data);
 		try {
@@ -207,36 +207,36 @@ All.run = function (apiStr, req, data) {
 		}
 		// start a transaction on set trx object on site
 		let hadTrx = false;
-		return Promise.resolve().then(function () {
+		return Promise.resolve().then(() => {
 			if (!req) {
 				return;
 			} else if (req.trx) {
 				hadTrx = true;
 				return;
 			}
-			return exports.transaction().then(function (trx) {
+			return exports.transaction().then((trx) => {
 				req.trx = trx;
 				if (req.site) req.site = req.site.$clone();
 			});
-		}).then(function () {
+		}).then(() => {
 			const args = [data];
 			if (req) args.unshift(req);
 			return fun.apply(mod, args);
-		}).then(function (obj) {
+		}).then((obj) => {
 			if (!hadTrx && req && req.trx && !req.trx.isCompleted()) {
-				return req.trx.commit().then(function () {
+				return req.trx.commit().then(() => {
 					return obj;
 				});
 			} else {
 				return obj;
 			}
-		}).catch(function (err) {
+		}).catch((err) => {
 			Log.api("error %s:\n%O", apiStr, err);
 			throw err;
-		}).finally(function () {
+		}).finally(() => {
 			if (!req || !req.trx) return;
 			if (req.trx.isCompleted()) {
-				if (hadTrx) return exports.transaction().then(function (trx) {
+				if (hadTrx) return exports.transaction().then((trx) => {
 					req.trx = trx;
 				});
 			} else if (!hadTrx) {
@@ -261,7 +261,7 @@ All.send = function (res, obj) {
 			secure: host && host.protocol == "https" || false,
 			path: '/'
 		};
-		Object.keys(obj.cookies).forEach(function (key) {
+		Object.keys(obj.cookies).forEach((key) => {
 			const cookie = obj.cookies[key];
 			const val = cookie.value;
 			const maxAge = cookie.maxAge;
@@ -275,7 +275,7 @@ All.send = function (res, obj) {
 	}
 	// client needs to know what keys are supposed to be available
 	obj.grants = {};
-	(req.user.grants || []).forEach(function (grant) {
+	(req.user.grants || []).forEach((grant) => {
 		obj.grants[grant] = true;
 	});
 	if (obj.status) {
@@ -296,7 +296,7 @@ All.send = function (res, obj) {
 
 function itemFn(schema, block) {
 	if (schema.upgrade) {
-		Object.entries(schema.upgrade).forEach(function ([src, dst]) {
+		Object.entries(schema.upgrade).forEach(([src, dst]) => {
 			const val = jsonPath.get(block, src);
 			if (val !== undefined) {
 				jsonPath.set(block, dst, val);
