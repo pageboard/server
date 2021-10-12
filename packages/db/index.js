@@ -21,24 +21,23 @@ function init(All) {
 	// TODO Cron exports.gc...
 }
 
-exports.tenant = function (site) {
+exports.tenant = function ({ tenant = 'current' } = {}) {
 	const opt = All.opt.database;
-	const key = 'current';
-	const url = opt.url[key];
-	if (!url) throw new Error(`No database configured for '${key}'`);
-	let t;
-	if (tenants.has(key)) {
-		t = tenants.get(key);
+	const url = opt.url[tenant];
+	if (!url) throw new Error(`No database configured for '${tenant}'`);
+	let tknex;
+	if (tenants.has(tenant)) {
+		tknex = tenants.get(tenant);
 	}	else {
-		t = knex({
+		tknex = knex({
 			client: 'pg',
 			connection: url,
 			debug: Boolean(Log.sql.enabled),
 			asyncStackTraces: All.opt.env == "development"
 		});
-		tenants.set(key, t);
+		tenants.set(tenant, tknex);
 	}
-	return t;
+	return tknex;
 };
 
 exports.migrate = function() {
