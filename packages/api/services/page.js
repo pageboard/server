@@ -373,7 +373,7 @@ exports.search.schema = {
 			type: 'array',
 			items: {
 				type: 'string',
-				format: 'id'
+				format: 'name'
 			},
 			nullable: true
 		}
@@ -446,7 +446,7 @@ exports.all.schema = {
 			type: 'array',
 			items: {
 				type: 'string',
-				format: 'id'
+				format: 'name'
 			},
 			nullable: true
 		}

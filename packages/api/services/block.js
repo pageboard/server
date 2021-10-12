@@ -48,7 +48,7 @@ exports.get.schema = {
 		},
 		type: {
 			type: 'string',
-			format: 'id'
+			format: 'name'
 		},
 		standalone: {
 			type: 'boolean',
@@ -200,7 +200,7 @@ exports.search.schema = {
 			type: 'array',
 			items: {
 				type: 'string',
-				format: 'id'
+				format: 'name'
 			},
 			$filter: {
 				name: 'element',
@@ -276,7 +276,7 @@ exports.search.schema = {
 					type: 'array',
 					items: {
 						type: 'string',
-						format: 'id'
+						format: 'name'
 					},
 					$filter: {
 						name: 'element',
@@ -349,7 +349,7 @@ exports.search.schema = {
 					type: 'array',
 					items: {
 						type: 'string',
-						format: 'id'
+						format: 'name'
 					},
 					$filter: {
 						name: 'element',
@@ -499,7 +499,7 @@ exports.add.schema = {
 		type: {
 			title: 'type',
 			type: 'string',
-			format: 'id',
+			format: 'name',
 			$filter: {
 				name: 'element',
 				standalone: true,
@@ -515,7 +515,7 @@ exports.add.schema = {
 					type: {
 						title: 'type',
 						type: 'string',
-						format: 'id'
+						format: 'name'
 					},
 					id: {
 						title: 'id',
@@ -562,7 +562,7 @@ exports.save.schema = {
 		type: {
 			title: 'type',
 			type: 'string',
-			format: 'id',
+			format: 'name',
 			$filter: {
 				name: 'element',
 				standalone: true,
@@ -600,7 +600,7 @@ exports.del.schema = {
 		type: {
 			title: 'type',
 			type: 'string',
-			format: 'id',
+			format: 'name',
 			$filter: {
 				name: 'element',
 				standalone: true,

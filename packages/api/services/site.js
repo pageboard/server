@@ -113,7 +113,7 @@ exports.search.schema = {
 			type: 'array',
 			items: {
 				type: 'string',
-				format: 'id'
+				format: 'name'
 			}
 		},
 		limit: {
@@ -417,7 +417,7 @@ exports.export.schema = {
 	$action: 'read',
 	properties: {
 		id: {
-			title: 'Site id',
+			title: 'Site ID',
 			type: 'string',
 			format: 'id',
 			nullable: true

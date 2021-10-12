@@ -127,7 +127,7 @@ exports.search.schema = {
 			type: 'array',
 			items: {
 				type: 'string',
-				format: 'id'
+				format: 'name'
 			}
 		},
 		maxSize: {

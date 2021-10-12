@@ -58,7 +58,7 @@ Block.jsonSchema = {
 		},
 		type: {
 			type: 'string',
-			format: 'id'
+			format: 'name'
 		},
 		data: {
 			type: 'object'
@@ -87,7 +87,7 @@ Block.jsonSchema = {
 					nullable: true,
 					items: {
 						type: 'string',
-						format: 'id'
+						format: 'name'
 					},
 					uniqueItems: true
 				},
@@ -96,7 +96,7 @@ Block.jsonSchema = {
 					nullable: true,
 					items: {
 						type: 'string',
-						format: 'id'
+						format: 'name'
 					},
 					uniqueItems: true
 				}
