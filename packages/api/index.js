@@ -22,7 +22,7 @@ const ajvApiSettings = {
 	formats: {
 		singleline: /^[^\n\r]*$/,
 		pathname: /^(\/[\w-.]*)+$/,
-		id: /^[\w-]+$/
+		id: /^[A-Za-z0-9-]+$/
 	},
 	invalidDefaults: 'log'
 };
