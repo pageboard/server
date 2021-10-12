@@ -46,7 +46,7 @@ function QuerySite({ trx }, data) {
 }
 
 exports.get = function (req, data) {
-	return QuerySite(req, data).select();
+	return QuerySite(req, data).select().select("_id");
 };
 
 exports.get.schema = {

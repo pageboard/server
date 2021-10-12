@@ -82,7 +82,7 @@ function init(All) {
 			}
 			res.status(200).send(msg);
 		}).then(() => {
-			if (version != null) return All.site.save(req, site).then(() => {
+			if (version != null) return All.run('site.save', req, site).then(() => {
 				if (pusher) All.run('mail.to', req, {
 					purpose: 'transactional',
 					to: [{

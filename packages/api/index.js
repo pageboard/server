@@ -1,4 +1,4 @@
-const objection = require('objection');
+const { transaction, AjvValidator } = require('objection');
 
 const ajv = require('ajv');
 const AjvKeywords = require('ajv-keywords');
@@ -61,10 +61,9 @@ exports = module.exports = function (opt) {
 
 function init(All) {
 	const opt = All.opt;
-	const knexInst = All.db.knex;
 
 	common.Model.createValidator = function () {
-		return new objection.AjvValidator({
+		return new AjvValidator({
 			onCreateAjv: function (ajv) {
 				AjvKeywords(ajv);
 				ajv.addKeyword('coerce', {
@@ -112,7 +111,6 @@ function init(All) {
 			}
 		});
 	};
-	common.Model.knex(knexInst);
 
 	const models = {};
 	opt.models.forEach((path) => {
@@ -122,10 +120,6 @@ function init(All) {
 
 	exports.Href = models.Href;
 	exports.Block = models.Block;
-	exports.transaction = function (fn) {
-		if (fn) return knexInst.transaction(fn);
-		else return objection.transaction.start(knexInst);
-	};
 
 	Object.keys(utils).forEach((key) => {
 		if (All.utils[key]) throw new Error(`Cannot reassign All.utils.${key}`);
@@ -214,7 +208,7 @@ All.run = function (apiStr, req, data) {
 				hadTrx = true;
 				return;
 			}
-			return exports.transaction().then((trx) => {
+			return transaction.start(All.db.tenant(req.site)).then((trx) => {
 				req.trx = trx;
 				if (req.site) req.site = req.site.$clone();
 			});
@@ -236,9 +230,12 @@ All.run = function (apiStr, req, data) {
 		}).finally(() => {
 			if (!req || !req.trx) return;
 			if (req.trx.isCompleted()) {
-				if (hadTrx) return exports.transaction().then((trx) => {
-					req.trx = trx;
-				});
+				if (hadTrx) {
+					return transaction.start(All.db.tenant(req.site))
+						.then((trx) => {
+							req.trx = trx;
+						});
+				}
 			} else if (!hadTrx) {
 				return req.trx.rollback();
 			}

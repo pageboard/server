@@ -5,6 +5,7 @@ const Cron = require.lazy("cron");
 const fs = require('fs').promises;
 const knex = require('knex');
 
+const tenants = new Map();
 
 exports = module.exports = function() {
 	return {
@@ -16,17 +17,29 @@ exports = module.exports = function() {
 
 function init(All) {
 	const opt = All.opt;
-	exports.knex = knex(knexConfig(opt));
-	// normalize options
-	const dbOpts = exports.knex.client.config.connection;
-	Object.assign(opt.database, {
-		user: dbOpts.user,
-		name: dbOpts.database,
-		host: dbOpts.host
-	});
 	if (Object.keys(opt.upstreams)[0] == opt.version) initDumps(All);
 	// TODO Cron exports.gc...
 }
+
+exports.tenant = function (site) {
+	const opt = All.opt.database;
+	const key = 'current';
+	const url = opt.url[key];
+	if (!url) throw new Error(`No database configured for '${key}'`);
+	let t;
+	if (tenants.has(key)) {
+		t = tenants.get(key);
+	}	else {
+		t = knex({
+			client: 'pg',
+			connection: url,
+			debug: Boolean(Log.sql.enabled),
+			asyncStackTraces: All.opt.env == "development"
+		});
+		tenants.set(key, t);
+	}
+	return t;
+};
 
 exports.migrate = function() {
 	const opt = All.opt;
@@ -61,12 +74,13 @@ exports.seed = function() {
 	}));
 };
 
-exports.dump = function({trx}, {name}) {
+exports.dump = function ({ trx }, { name }) {
+	const appName = All.opt.name;
 	const opt = All.opt.database;
 	const dumpDir = opt.dump && opt.dump.dir;
 	if (!dumpDir) throw new HttpError.BadRequest("Missing database.dump.dir config");
-	const file = Path.join(Path.resolve(All.opt.dir, dumpDir), `${opt.name}-${name}.dump`);
-	return exec(`pg_dump --format=custom --file=${file} --username=${opt.user} ${opt.name}`, {}).then(() => {
+	const file = Path.join(Path.resolve(All.opt.dir, dumpDir), `${appName}-${name}.dump`);
+	return exec(`pg_dump --format=custom --file=${file} ${opt.url.current}`, {}).then(() => {
 		return file;
 	});
 };
@@ -107,42 +121,6 @@ exports.restore.schema = {
 		}
 	}
 };
-
-function knexConfig(opt) {
-	let dbName = opt.database.name;
-	if (!dbName) dbName = opt.database.name = opt.name;
-	const dbOpts = Object.assign({}, {
-		url: `postgres://localhost/${dbName}`
-	}, opt.database);
-	delete dbOpts.dump;
-	const parsed = require('url').parse(dbOpts.url, true);
-	delete dbOpts.url;
-	const conn = {};
-	const obj = { connection: conn };
-	if (parsed.host) conn.host = parsed.host;
-	if (parsed.pathname) conn.database = parsed.pathname.substring(1);
-	if (parsed.auth) {
-		const auth = parsed.auth.split(':');
-		conn.user = auth[0];
-		if (auth.length > 1) conn.password = auth[1];
-	}
-	if (parsed.protocol) obj.client = parsed.protocol.slice(0, -1);
-	if (dbOpts.client) {
-		obj.client = dbOpts.client;
-		delete dbOpts.client;
-	}
-	console.info(`db:\t${conn.database}`);
-	obj.debug = Log.sql.enabled;
-	if (dbOpts.debug) {
-		obj.debug = dbOpts.debug;
-		delete dbOpts.debug;
-	}
-	if (opt.env == "development") {
-		obj.asyncStackTraces = true;
-	}
-	Object.assign(conn, dbOpts);
-	return obj;
-}
 
 /*
 var gcJob;

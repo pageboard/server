@@ -173,7 +173,7 @@ Domains.prototype.init = function(hostname, path, headers) {
 				domain: host.name
 			};
 			if (id) data.id = id; // search by domain and id
-			return All.site.get({}, data).select('_id');
+			return All.run('site.get', {}, data);
 		}).then((site) => {
 			host.id = site.id;
 			sites[site.id] = site;

@@ -57,7 +57,7 @@ pageboard.init(config).catch((err) => {
 			}
 		}
 		if (All.opt.site) {
-			return All.site.get({}, { id: All.opt.site }).select('_id').then((site) => {
+			return All.run('site.get', {}, { id: All.opt.site }).then((site) => {
 				return All.install(site).then((site) => {
 					args.push({ site });
 					args.push(config.data || {});
