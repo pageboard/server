@@ -146,23 +146,13 @@ Domains.prototype.domainMapping = function(site) {
 	return map;
 };
 
-Domains.prototype.initTenant = function (hostname) {
-	const obj = { hostname };
-	const { groups = {} } = /^(?<id>[a-z0-9]+)-(?<tenant>[a-z0-9]+)(?<domain>\.[a-z0-9]+\.[a-z]+)$/.exec(hostname) || {};
-	if (groups.tenant && All.opt.database.url[groups.tenant]) {
-		obj.hostname = `${groups.id}${groups.domain}`;
-		obj.tenant = groups.tenant;
-	}
-	return obj;
-};
-
 Domains.prototype.init = function(req) {
 	const sites = this.sites;
 	const hosts = this.hosts;
-	const { path, headers } = req;
+	const { headers } = req;
 	let { hostname } = req;
 
-	const { groups = {} } = /^(?<id>[a-z0-9]+)-(?<tenant>[a-z0-9]+)(?<domain>\.[a-z0-9]+\.[a-z]+)$/.exec(hostname) || {};
+	const { groups = {} } = /^(?<tenant>[a-z0-9]+)-(?<id>[a-z0-9]+)(?<domain>\.[a-z0-9]+\.[a-z]+)$/.exec(hostname) || {};
 	if (pageboardNames.length == 0 && groups.tenant) {
 		console.error("FIXME: tenant without pageboardNames", hostname);
 	}
