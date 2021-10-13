@@ -149,9 +149,17 @@ Domains.prototype.domainMapping = function(site) {
 Domains.prototype.init = function(hostname, path, headers) {
 	const sites = this.sites;
 	const hosts = this.hosts;
-	let host = hosts[hostname];
-	if (!host) {
-		hosts[hostname] = host = {name: hostname};
+	const host = hosts[hostname] || {};
+	if (!host.name) {
+		const dashList = hostname.split('-');
+		const tenant = dashList.pop();
+		if (dashList.length >= 1 && All.opt.database.url[tenant]) {
+			host.name = dashList.join('-');
+			host.tenant = tenant;
+		} else {
+			host.name = hostname;
+		}
+		hosts[hostname] = host;
 		hostUpdatePort(host, headers.host);
 		host.protocol = headers['x-forwarded-proto'] || 'http';
 	}
@@ -200,6 +208,7 @@ Domains.prototype.init = function(hostname, path, headers) {
 			if (host._error) return;
 			site.href = host.href;
 			site.hostname = host.name;
+			site.tenant = host.tenant;
 			return All.install(site).catch(() => {
 				// never throw an error since errors are already dealt with in install
 			});
