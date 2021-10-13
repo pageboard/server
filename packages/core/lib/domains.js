@@ -163,6 +163,9 @@ Domains.prototype.init = function(req) {
 	let { hostname } = req;
 
 	const { groups = {} } = /^(?<id>[a-z0-9]+)-(?<tenant>[a-z0-9]+)(?<domain>\.[a-z0-9]+\.[a-z]+)$/.exec(hostname) || {};
+	if (pageboardNames.length == 0 && groups.tenant) {
+		console.error("FIXME: tenant without pageboardNames", hostname);
+	}
 	if (pageboardNames.includes(groups.domain) && groups.tenant && All.opt.database.url[groups.tenant]) {
 		hostname = `${groups.id}${groups.domain}`;
 		req.tenant = groups.tenant;
