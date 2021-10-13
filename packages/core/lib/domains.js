@@ -30,7 +30,7 @@ so adding an IP to pageboard and pointing a host to that IP needs a restart)
 Domains.prototype.mw = function(req, res, next) {
 	const All = this.All;
 	const path = req.path;
-	const host = this.init(req.hostname, path, req.headers);
+	const host = this.init(req);
 	let p;
 	if (path == "/.well-known/upcache") {
 		if (host.finalize) {
@@ -40,7 +40,7 @@ Domains.prototype.mw = function(req, res, next) {
 	} else if (path == "/.well-known/status" || path == "/.well-known/pageboard") {
 		if (req.accepts('json')) p = host.waiting;
 		else p = host.searching;
-	} else if (req.path == "/favicon.ico" || req.path.startsWith('/.files/') || req.path.startsWith('/.api/')) {
+	} else if (path == "/favicon.ico" || path.startsWith('/.files/') || path.startsWith('/.api/')) {
 		p = host.waiting;
 	} else if (host.isWaiting) {
 		p = new Promise((resolve) => {
@@ -146,19 +146,30 @@ Domains.prototype.domainMapping = function(site) {
 	return map;
 };
 
-Domains.prototype.init = function(hostname, path, headers) {
+Domains.prototype.initTenant = function (hostname) {
+	const obj = { hostname };
+	const { groups = {} } = /^(?<id>[a-z0-9]+)-(?<tenant>[a-z0-9]+)(?<domain>\.[a-z0-9]+\.[a-z]+)$/.exec(hostname) || {};
+	if (groups.tenant && All.opt.database.url[groups.tenant]) {
+		obj.hostname = `${groups.id}${groups.domain}`;
+		obj.tenant = groups.tenant;
+	}
+	return obj;
+};
+
+Domains.prototype.init = function(req) {
 	const sites = this.sites;
 	const hosts = this.hosts;
+	const { path, headers } = req;
+	let { hostname } = req;
+
+	const { groups = {} } = /^(?<id>[a-z0-9]+)-(?<tenant>[a-z0-9]+)(?<domain>\.[a-z0-9]+\.[a-z]+)$/.exec(hostname) || {};
+	if (pageboardNames.includes(groups.domain) && groups.tenant && All.opt.database.url[groups.tenant]) {
+		hostname = `${groups.id}${groups.domain}`;
+		req.tenant = groups.tenant;
+	}
 	const host = hosts[hostname] || {};
 	if (!host.name) {
-		const dashList = hostname.split('-');
-		const tenant = dashList.pop();
-		if (dashList.length >= 1 && All.opt.database.url[tenant]) {
-			host.name = dashList.join('-');
-			host.tenant = tenant;
-		} else {
-			host.name = hostname;
-		}
+		host.name = hostname;
 		hosts[hostname] = host;
 		hostUpdatePort(host, headers.host);
 		host.protocol = headers['x-forwarded-proto'] || 'http';
@@ -181,7 +192,7 @@ Domains.prototype.init = function(hostname, path, headers) {
 				domain: host.name
 			};
 			if (id) data.id = id; // search by domain and id
-			return All.run('site.get', {}, data);
+			return All.run('site.get', req, data);
 		}).then((site) => {
 			host.id = site.id;
 			sites[site.id] = site;
@@ -208,7 +219,6 @@ Domains.prototype.init = function(hostname, path, headers) {
 			if (host._error) return;
 			site.href = host.href;
 			site.hostname = host.name;
-			site.tenant = host.tenant;
 			return All.install(site).catch(() => {
 				// never throw an error since errors are already dealt with in install
 			});

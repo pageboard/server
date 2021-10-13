@@ -209,9 +209,11 @@ All.run = function (apiStr, req, data) {
 				hadTrx = true;
 				return;
 			}
-			return transaction.start(All.db.tenant(req.site)).then((trx) => {
+			return transaction.start(All.db.tenant(req.tenant)).then((trx) => {
 				req.trx = trx;
-				if (req.site) req.site = req.site.$clone();
+				if (req.site && req.site.$clone) {
+					req.site = req.site.$clone();
+				}
 			});
 		}).then(() => {
 			const args = [data];
@@ -232,7 +234,7 @@ All.run = function (apiStr, req, data) {
 			if (!req || !req.trx) return;
 			if (req.trx.isCompleted()) {
 				if (hadTrx) {
-					return transaction.start(All.db.tenant(req.site))
+					return transaction.start(All.db.tenant(req.tenant))
 						.then((trx) => {
 							req.trx = trx;
 						});

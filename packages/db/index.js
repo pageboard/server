@@ -21,7 +21,7 @@ function init(All) {
 	// TODO Cron exports.gc...
 }
 
-exports.tenant = function ({ tenant = 'current' } = {}) {
+exports.tenant = function (tenant = 'current') {
 	const opt = All.opt.database;
 	const url = opt.url[tenant];
 	if (!url) throw new Error(`No database configured for '${tenant}'`);
