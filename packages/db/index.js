@@ -95,18 +95,18 @@ exports.dump.schema = {
 	}
 };
 
-exports.restore = function({trx}, {name}) {
+exports.restore = function ({ trx }, { name, tenant }) {
+	const appName = All.opt.name;
 	const opt = All.opt.database;
+	const url = opt.url[tenant];
+	if (!url) {
+		throw new HttpError.BadRequest(`Unknown tenant ${tenant}`);
+	}
 	const dumpDir = opt.dump && opt.dump.dir;
 	if (!dumpDir) throw new HttpError.BadRequest("Missing database.dump.dir config");
-	const db = `${opt.name}-${name}`;
-	const file = Path.join(Path.resolve(All.opt.dir, dumpDir), `${db}.dump`);
-	return exec(`createdb -U ${opt.user} -T template1 ${db}`, {}).then(() => {
-		return exec(`pg_restore -d ${db} -U ${opt.user} ${file}`, {}).then(() => {
-			return file;
-		});
-	}).catch((err) => {
-		return exec(`dropdb -U ${opt.user} ${db}`, {});
+	const file = Path.join(Path.resolve(All.opt.dir, dumpDir), `${appName}-${name}.dump`);
+	return exec(`pg_restore -d ${url} ${file}`, {}).then(() => {
+		return file;
 	});
 };
 exports.restore.schema = {
