@@ -14,8 +14,15 @@ function Domains(All) {
 	this.sites = {}; // cache sites by id
 	this.hosts = {}; // cache hosts by hostname
 	this.mw = this.mw.bind(this);
+	this.ready = false;
+	this.holds = [];
 }
 
+Domains.prototype.unlock = function () {
+	this.ready = true;
+	for (const [req, res, next] of this.holds) this.mw(req, res, next);
+	this.holds = null;
+};
 /*
 maintain a cache (hosts) of requested hostnames
 - each hostname is checked to resolve to pageboard current IP (which is resolved and cached,
@@ -27,9 +34,17 @@ so adding an IP to pageboard and pointing a host to that IP needs a restart)
 - site installation calls upcache update url, which resolves the hanging promise
 - init returns for everyone
 */
-Domains.prototype.mw = function(req, res, next) {
+Domains.prototype.mw = function (req, res, next) {
 	const All = this.All;
 	const path = req.path;
+	if (path == "/.well-known/pageboard" && req.hostname == localhost4) {
+		this.wkp(req, res, next);
+		return;
+	} else if (!this.ready) {
+		this.holds.push([req, res, next]);
+		return;
+	}
+
 	const host = this.init(req);
 	let p;
 	if (path == "/.well-known/upcache") {
@@ -111,8 +126,7 @@ Domains.prototype.mw = function(req, res, next) {
 	}).catch(next);
 };
 
-Domains.prototype.wkp = function(req, res, next) {
-	if (req.hostname != localhost4) return next();
+Domains.prototype.wkp = function (req, res, next) {
 	All.run('site.all', req).then((list) => {
 		const map = {};
 		list.forEach((site) => {
@@ -121,6 +135,10 @@ Domains.prototype.wkp = function(req, res, next) {
 		res.type('json').end(JSON.stringify({
 			domains: map
 		}, null, ' '));
+
+		if (!this.ready) setTimeout(() => {
+			this.unlock();
+		}, 1000);
 	}).catch(next);
 };
 

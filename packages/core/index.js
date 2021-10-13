@@ -300,7 +300,6 @@ function createApp(All) {
 	app.set("env", opt.env);
 	app.disable('x-powered-by');
 	app.enable('trust proxy');
-	app.get("/.well-known/pageboard", (req, res, next) => All.domains.wkp(req, res, next));
 	app.use(All.domains.mw);
 	app.use((req, res, next) => {
 		res.setHeader('Referrer-Policy', 'strict-origin-when-cross-origin');
