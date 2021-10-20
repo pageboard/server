@@ -238,6 +238,8 @@ All.run = function (apiStr, req, data) {
 						.then((trx) => {
 							req.trx = trx;
 						});
+				} else {
+					delete req.trx;
 				}
 			} else if (!hadTrx) {
 				return req.trx.rollback();
