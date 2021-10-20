@@ -132,7 +132,7 @@ exports.send.external = true;
 
 function verifyToken(req, { email, token }) {
 	return All.user.get(req, { email }).then((user) => {
-		return userPriv({ req }, user).then((priv) => {
+		return userPriv(req, user).then((priv) => {
 			const tries = (priv.data.otp.tries || 0) + 1;
 			if (tries >= 5) {
 				const at = Date.parse(priv.data.otp.checked_at);
