@@ -506,25 +506,28 @@ exports.add.schema = {
 				contentless: true
 			}
 		},
-		parents: { // updated by element filter
+		parents: {
 			title: 'parents',
 			type: 'array',
-			items: [{
+			items: {
 				type: 'object',
 				properties: {
 					type: {
 						title: 'type',
 						type: 'string',
-						format: 'name'
+						format: 'name',
+						// semafor#convert only coerces empty strings to null if nullable
+						// however it should just "undefine" empty strings
+						nullable: true
 					},
 					id: {
 						title: 'id',
 						type: 'string',
-						format: 'id'
+						format: 'id',
+						nullable: true
 					}
 				}
-			}],
-			nullable: true,
+			},
 			$filter: 'relation'
 		},
 		data: { // updated by element filter
