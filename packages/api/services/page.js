@@ -693,7 +693,10 @@ function updatePage({ site, trx }, page, sideEffects) {
 								if (page.id == row.id) page.updated_at = date;
 							});
 						});
-				}));
+				})).catch((err) => {
+					console.error("Error with updatePage side effects", err);
+					throw err;
+				});
 			})).then(() => {
 				const Href = All.api.Href;
 				return Href.query(trx).where('_parent_id', site._id)
