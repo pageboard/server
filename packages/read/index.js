@@ -29,8 +29,7 @@ function init(All) {
 		'serialize'
 	];
 	if (opt.env != "development") {
-		opt.read.helpers.push('report');
-		opt.read.plugins.unshift('httplinkpreload', 'report');
+		opt.read.plugins.unshift('httplinkpreload');
 	}
 
 	All.app.get(
