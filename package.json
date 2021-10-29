@@ -18,18 +18,18 @@
   },
   "homepage": "https://github.com/pageboard/server#readme",
   "dependencies": {
-    "@pageboard/api": "link:./packages/api",
-    "@pageboard/auth": "link:./packages/auth",
-    "@pageboard/cache": "link:./packages/cache",
-    "@pageboard/core": "link:./packages/core",
-    "@pageboard/github-webhook": "link:./packages/github-webhook",
-    "@pageboard/image": "link:./packages/image",
-    "@pageboard/inspector": "link:./packages/inspector",
-    "@pageboard/mail": "link:./packages/mail",
-    "@pageboard/pdf": "link:./packages/pdf",
-    "@pageboard/prerender": "link:./packages/prerender",
-    "@pageboard/read": "link:./packages/read",
-    "@pageboard/statics": "link:./packages/statics",
-    "@pageboard/upload": "link:./packages/upload"
+    "@pageboard/api": "file:./packages/api",
+    "@pageboard/auth": "file:./packages/auth",
+    "@pageboard/cache": "file:./packages/cache",
+    "@pageboard/core": "file:./packages/core",
+    "@pageboard/github-webhook": "file:./packages/github-webhook",
+    "@pageboard/image": "file:./packages/image",
+    "@pageboard/inspector": "file:./packages/inspector",
+    "@pageboard/mail": "file:./packages/mail",
+    "@pageboard/pdf": "file:./packages/pdf",
+    "@pageboard/prerender": "file:./packages/prerender",
+    "@pageboard/read": "file:./packages/read",
+    "@pageboard/statics": "file:./packages/statics",
+    "@pageboard/upload": "file:./packages/upload"
   }
 }
