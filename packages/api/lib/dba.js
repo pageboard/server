@@ -38,38 +38,13 @@ exports.dump = function(conn, opt) {
 };
 
 exports.knexConfig = function(config) {
-	if (!process.env.HOME) process.env.HOME = require('passwd-user').sync(process.getuid()).homedir;
-	var dbName = config.database.name || config.name;
-	var dbOpts = Object.assign({}, {
-		url: `postgres://localhost/${dbName}`
-	}, config.database);
-	delete dbOpts.dump;
-	var parsed = require('url').parse(dbOpts.url, true);
-	delete dbOpts.url;
-	var conn = {};
-	var obj = { connection: conn };
-	if (parsed.host) conn.host = parsed.host;
-	if (parsed.pathname) conn.database = parsed.pathname.substring(1);
-	if (parsed.auth) {
-		var auth = parsed.auth.split(':');
-		conn.user = auth[0];
-		if (auth.length > 1) conn.password = auth[1];
-	}
-	if (parsed.protocol) obj.client = parsed.protocol.slice(0, -1);
-	if (dbOpts.client) {
-		obj.client = dbOpts.client;
-		delete dbOpts.client;
-	}
-	obj.debug = require('debug').enabled('pageboard:sql');
-	if (dbOpts.debug) {
-		obj.debug = dbOpts.debug;
-		delete dbOpts.debug;
-	}
-	if (config.env == "development") {
-		obj.asyncStackTraces = true;
-	}
-	Object.assign(conn, dbOpts);
-	return obj;
+	const opt = All.opt.database;
+	const url = opt.url.current;
+	return {
+		client: 'pg',
+		connection: url,
+		asyncStackTraces: config.env == "development"
+	};
 };
 
 var gcJob;
