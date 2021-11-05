@@ -91,12 +91,7 @@ exports.init = function(opt) {
 	};
 	All.utils.which = pify(require('which'));
 	All.utils.fuse = function (str, obj) {
-		return matchdom(str, obj, {
-			'||'(val) {
-				if (val == null) return '';
-				else return val;
-			}
-		});
+		return matchdom(str, obj);
 	};
 	All.install = install.bind(All);
 	All.domains = new Domains(All);
