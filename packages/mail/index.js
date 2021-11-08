@@ -2,7 +2,6 @@ const Path = require('path');
 const NodeMailer = require('nodemailer');
 const AddressParser = require('addressparser');
 const Transports = {
-	mailgun: require('nodemailer-mailgun-transport'),
 	postmark: require('nodemailer-postmark-transport')
 };
 const Mailers = {};
@@ -137,7 +136,22 @@ exports.to = function(data) {
 		if (!data.replyTo.address) delete data.replyTo;
 	}
 	data.from = sender;
-	return mailer.transport.sendMail(data);
+	if (mailer.headers) {
+		data.headers = mailer.headers;
+	}
+	if (mailer.messageStream) {
+		// specific to postmark
+		data.messageStream = mailer.messageStream;
+	}
+	return mailer.transport.sendMail(data).then(sentStatus => {
+		return {
+			accepted: sentStatus.accepted.length > 0,
+			rejected: sentStatus.rejected.length > 0
+		};
+	}).catch(err => {
+		err.statusCode = 400;
+		throw err;
+	});
 };
 exports.to.schema = {
 	$action: 'write',
@@ -149,8 +163,11 @@ exports.to.schema = {
 				title: "Transactional",
 				const: "transactional"
 			}, {
-				title: "Bulk",
-				const: "bulk"
+				title: "Conversations",
+				const: "conversations"
+			}, {
+				title: "Subscriptions",
+				const: "subscriptions"
 			}],
 			default: 'transactional'
 		},
@@ -303,17 +320,6 @@ exports.send.schema = {
 	$action: 'write',
 	required: ['url', 'to'],
 	properties: {
-		purpose: {
-			title: 'Purpose',
-			anyOf: [{
-				title: "Transactional",
-				const: "transactional"
-			}, {
-				title: "Bulk",
-				const: "bulk"
-			}],
-			default: 'transactional'
-		},
 		url: {
 			title: 'Mail page',
 			type: "string",
@@ -323,6 +329,7 @@ exports.send.schema = {
 				type: 'mail'
 			}
 		},
+		purpose: exports.to.schema.properties.purpose,
 		from: {
 			title: 'From',
 			description: 'User settings.id or email',
