@@ -297,7 +297,7 @@ exports.send = function(req, data) {
 			headers: {
 				cookie: req.get('cookie')
 			},
-			query: data.body,
+			searchParams: data.body,
 			retry: 0,
 			timeout: 10000
 		}).then(function(response) {
