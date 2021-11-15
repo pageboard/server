@@ -199,7 +199,7 @@ exports.grant.schema = {
 		grant: {
 			title: 'Grant',
 			type: 'string',
-			format: 'name',
+			format: 'grant',
 			nullable: true,
 			$filter: {
 				name: 'schema',
@@ -236,7 +236,7 @@ exports.link.schema = {
 		grant: {
 			title: 'Grant',
 			type: 'string',
-			format: 'name'
+			format: 'grant'
 		},
 		register: {
 			title: 'Register',

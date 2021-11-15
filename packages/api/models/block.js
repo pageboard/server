@@ -87,7 +87,7 @@ Block.jsonSchema = {
 					nullable: true,
 					items: {
 						type: 'string',
-						format: 'name'
+						format: 'grant'
 					},
 					uniqueItems: true
 				},
@@ -96,7 +96,7 @@ Block.jsonSchema = {
 					nullable: true,
 					items: {
 						type: 'string',
-						format: 'name'
+						format: 'grant'
 					},
 					uniqueItems: true
 				}

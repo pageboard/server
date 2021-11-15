@@ -113,7 +113,7 @@ exports.search.schema = {
 			type: 'array',
 			items: {
 				type: 'string',
-				format: 'name'
+				format: 'grant'
 			}
 		},
 		limit: {
