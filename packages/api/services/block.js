@@ -475,7 +475,9 @@ delete exports.find.schema.properties.offset;
 exports.find.external = true;
 
 exports.add = function ({ site, trx }, data) {
-	const parents = data.parents || [];
+	const parents = (data.parents || []).filter((item) => {
+		return item.id != null;
+	});
 	delete data.parents;
 
 	return site.$relatedQuery('children', trx).insert(data).then((child) => {
