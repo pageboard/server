@@ -111,9 +111,9 @@ exports.file = function(req, data) {
 			Path.relative(dest, data.destination),
 			data.filename
 		);
-		return All.run('href.add', req, { url: pathname });
-	}).then(href => {
-		return href.pathname;
+		return All.run('href.add', req, { url: pathname }).then(() => {
+			return pathname;
+		});
 	});
 };
 exports.file.schema = {
