@@ -83,6 +83,9 @@ function init(All) {
 					fileSize: limits.size
 				}
 			}).array('files')(req, res, () => {
+				if (req.files == null) {
+					return next(new HttpError.BadRequest("Missing files"));
+				}
 				return Promise.all(req.files.map((file) => {
 					return exports.file(req, file);
 				})).then((list) => {
