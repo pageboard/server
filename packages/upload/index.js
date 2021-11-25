@@ -98,19 +98,22 @@ function init(All) {
 	});
 }
 
-exports.file = function({site}, data) {
+exports.file = function(req, data) {
 	const upload = All.opt.upload;
-	const dest = Path.join(upload.path, site.id);
+	const dest = Path.join(upload.path, req.site.id);
 	if (!data.filename) data.filename = Path.basename(data.path);
 	if (!data.destination) data.destination = Path.dirname(data.path);
 	if (!data.mimetype) data.mimetype = mime.lookup(Path.extname(data.filename));
 
 	return All.image.upload(data).then(() => {
-		return '/.' + Path.join(
+		const pathname = '/.' + Path.join(
 			"uploads",
 			Path.relative(dest, data.destination),
 			data.filename
 		);
+		return All.run('href.add', req, { url: pathname });
+	}).then(href => {
+		return href.pathname;
 	});
 };
 exports.file.schema = {
