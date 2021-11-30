@@ -6,7 +6,7 @@ const AjvKeywords = require('ajv-keywords');
 const bodyParser = require.lazy('body-parser');
 const jsonPath = require.lazy('@kapouer/path');
 
-const imports = require('./lib/imports');
+const install = require('./lib/install');
 const utils = require('./lib/utils');
 const common = require('./models/common');
 const jsonDoc = require.lazy('./lib/json-doc');
@@ -128,7 +128,7 @@ function init(All) {
 		All.utils[key] = utils[key];
 	});
 
-	Object.assign(exports, imports);
+	Object.assign(exports, install);
 
 	// api depends on site files, that tag is invalidated in cache install
 	All.app.get('/.api/*', All.cache.tag('app-:site'));
