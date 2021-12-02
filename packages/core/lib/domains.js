@@ -302,8 +302,13 @@ Domains.prototype.replace = function(site) {
 	const oldDomain = cur && cur.data && cur.data.domain;
 	const newDomain = site.data && site.data.domain;
 	if (oldDomain != newDomain) {
-		this.hosts[newDomain] = this.hosts[oldDomain] || this.hosts[site.hostname];
-		if (oldDomain) delete this.hosts[oldDomain];
+		if (oldDomain) {
+			this.hosts[newDomain] = this.hosts[oldDomain];
+			delete this.hosts[oldDomain];
+		}
+		if (!this.hosts[newDomain]) {
+			this.hosts[newDomain] = this.hosts[site.hostname];
+		}
 	}
 	this.sites[site.id] = site;
 };
