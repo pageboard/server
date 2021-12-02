@@ -22,9 +22,9 @@
   },
   "homepage": "https://github.com/pageboard/server#readme",
   "dependencies": {
-    "express-dom": "^5.14.3",
-    "got": "^11.8.2",
-    "tarn": "^3.0.1",
+    "express-dom": "^5.14.4",
+    "got": "^11.8.3",
+    "tarn": "^3.0.2",
     "webkitgtk": "^4.13.2"
   },
   "pageboard": true
