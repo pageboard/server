@@ -368,7 +368,8 @@ exports.save = function(site, changes) {
 	return site.$relatedQuery('children')
 	.select('block.id', ref('block.data:url').as('url'))
 	.whereIn('block.type', pageTypes).whereNotNull(ref('block.data:url')).then(function(dbPages) {
-		pages.all.forEach(function(page) {
+		pages.all.forEach(function (page) {
+			if (page.commons) delete page.commons;
 			if (!page.data.url || page.data.url.startsWith('/$/')) {
 				delete page.data.url;
 			} else if (allUrl[page.data.url]) {
