@@ -49,8 +49,7 @@ exports.config = function(pkgOpt) {
 		global: true,
 		dirs: {
 			cache: Path.join(xdg.cache, name),
-			data: Path.join(xdg.data, name),
-			runtime: Path.join(xdg.runtime, name)
+			data: Path.join(xdg.data, name)
 		},
 		elements: [],
 		directories: [],
