@@ -11,12 +11,10 @@ const bundlers = {
 exports = module.exports = function(opt) {
 	if (!opt.statics) opt.statics = {};
 	const statics = opt.statics;
-	if (!statics.runtime) {
-		statics.runtime = Path.join(opt.dirs.runtime, 'statics');
-	} else {
-		statics.runtime = Path.resolve(statics.runtime);
-	}
-
+	statics.dirs = {
+		cache: Path.join(opt.dirs.cache, "statics"),
+		files: Path.join(opt.dirs.cache, "files")
+	};
 	statics.nocache = opt.env == "development";
 	if (statics.nocache) console.info("static:\tcache disabled for development");
 
@@ -26,54 +24,44 @@ exports = module.exports = function(opt) {
 	};
 };
 
+function staticNotFound(req, res, next) {
+	if (req.method == "GET" || req.method == "HEAD") {
+		next(new HttpError.NotFound("Static file not found"));
+	} else {
+		next();
+	}
+}
+
 function init(All) {
 	const statics = All.opt.statics;
+	const uploads = All.opt.dirs.uploads;
 	const app = All.app;
+	const serveOpts = {
+		index: false,
+		redirect: false,
+		dotfiles: 'ignore',
+		fallthrough: true
+	};
 
-	return fs.mkdir(statics.runtime, {
-		recursive: true
-	}).then(() => {
-		console.info(`static:\tdirectories are served from symlinks in ${statics.runtime}`);
+	app.get("/.files/*", (req, res, next) => {
+		const url = req.url;
+		req.url = req.site.id + url.substring(7);
+		All.cache.tag('app-:site').for(statics.nocache ? null : '1 year')(req, res, next);
+	}, serveStatic(statics.dirs.files, serveOpts), staticNotFound);
 
-		app.get(
-			"/:dir(.files|.uploads)/*",
-			(req, res, next) => {
-				const url = req.url;
-				switch(req.params.dir) {
-					case ".uploads":
-						req.url = "/uploads/" + req.site.id + url.substring(9);
-						All.cache.for(statics.nocache ? null : '1 year')(req, res, next);
-						break;
-					case ".files":
-						req.url = "/files/" + req.site.id + url.substring(7);
-						All.cache.tag('app-:site').for(statics.nocache ? null : '1 year')(req, res, next);
-						break;
-				}
-				Log.statics("Static url", url, "rewritten to", req.url);
-			},
-			serveStatic(statics.runtime, {
-				index: false,
-				redirect: false,
-				dotfiles: 'ignore',
-				fallthrough: true
-			}),
-			(req, res, next) => {
-				if (req.method == "GET" || req.method == "HEAD") {
-					next(new HttpError.NotFound("Static file not found"));
-				} else {
-					next();
-				}
-			}
-		);
+	app.get("/.uploads/*", (req, res, next) => {
+		const url = req.url;
+		req.url = req.site.id + url.substring(9);
+		All.cache.for(statics.nocache ? null : '1 year')(req, res, next);
+	}, serveStatic(uploads, serveOpts), staticNotFound);
 
-		All.app.get('/favicon.ico', All.cache.tag('data-:site').for('1 month'), (req, res, next) => {
-			const site = req.site;
-			if (!site || !site.data.favicon) {
-				res.sendStatus(204);
-			} else {
-				res.redirect(site.data.favicon + "?format=ico");
-			}
-		});
+	app.get('/favicon.ico', All.cache.tag('data-:site').for('1 month'), (req, res, next) => {
+		const site = req.site;
+		if (!site || !site.data.favicon) {
+			res.sendStatus(204);
+		} else {
+			res.redirect(site.data.favicon + "?format=ico");
+		}
 	});
 }
 
@@ -86,17 +74,17 @@ exports.bundle = function(site, pkg, list, filename) {
 	if (!suffix || !pkg.dir || !site.href) {
 		return Promise.resolve(list);
 	}
+
 	const buildDir = Path.join(pkg.dir, "builds");
-	const cacheDir = Path.join(All.opt.dirs.cache, "statics");
 	const buildPath = Path.join(buildDir, filename);
-	const opts = All.opt.statics;
+	const dirs = All.opt.statics.dirs;
 	let version = site.data.version;
 	if (version == null) version = site.branch;
 	const outList = [];
 	const inputs = [];
 	list.forEach((url) => {
 		if (/^https?:\/\//.test(url)) outList.push(url);
-		else inputs.push(urlToPath(opts, site.id, url));
+		else inputs.push(urlToPath(dirs.files, site.id, url));
 	});
 
 	const fileObj = Path.parse(filename);
@@ -105,11 +93,11 @@ exports.bundle = function(site, pkg, list, filename) {
 
 	const outUrl = `/.files/${version}/${Path.format(fileObj)}`;
 	outList.push(outUrl);
-	const output = urlToPath(opts, site.id, outUrl);
+	const output = urlToPath(dirs.files, site.id, outUrl);
 
 	return Promise.all([
 		fs.mkdir(buildDir, {recursive: true}),
-		fs.mkdir(cacheDir, {recursive: true})
+		fs.mkdir(dirs.files, {recursive: true})
 	]).then(() => {
 		if (version != site.branch) return fs.stat(buildPath).catch((err) => {})
 			.then((stat) => {
@@ -122,7 +110,7 @@ exports.bundle = function(site, pkg, list, filename) {
 		return bundlers[ext](inputs, output, {
 			minify: site.data.env == "production",
 			cache: {
-				dir: cacheDir
+				dir: dirs.cache
 			}
 		}).catch((err) => {
 			delete err.input;
@@ -132,8 +120,8 @@ exports.bundle = function(site, pkg, list, filename) {
 		}).then(() => {
 			return true;
 		});
-	}).then((copyFromRuntime) => {
-		if (copyFromRuntime) {
+	}).then((copyFromCache) => {
+		if (copyFromCache) {
 			return Promise.all([
 				fs.copyFile(output, buildPath),
 				fs.copyFile(output + '.map', buildPath + '.map').catch(() => {})
@@ -149,31 +137,31 @@ exports.bundle = function(site, pkg, list, filename) {
 	});
 };
 
-function urlToPath(opts, id, url) {
+function urlToPath(base, id, url) {
 	const obj = URL.parse(url);
 	const list = obj.pathname.substring(1).split('/');
 	if (list[0].startsWith('.') == false) throw new Error(`Bad ${id} url: ${url}`);
 	list[0] = list[0].substring(1);
 	list.splice(1, 0, id);
-	return Path.join(opts.runtime, list.join('/'));
+	return Path.join(base, list.slice(1).join('/'));
 }
 
-exports.resolve = function(id, url) {
-	return urlToPath(All.opt.statics, id, url);
+exports.resolve = function (id, url) {
+	return urlToPath(All.opt.statics.dirs.files, id, url);
 };
 
 exports.install = function(site, {directories}, All) {
 	let p = Promise.resolve();
+	const dirs = All.opt.statics.dirs;
 	if (site) {
-		const dir = Path.join("files", site.id);
-		const runSiteDir = Path.join(All.opt.statics.runtime, dir);
+		const runSiteDir = Path.join(dirs.files, site.id);
 		p = fs.mkdir(runSiteDir, {
 			recursive: true
 		});
 	}
 	directories.forEach((mount) => {
 		p = p.then(() => {
-			return mountPath(mount.from, mount.to).catch((err) => {
+			return mountPath(dirs.files, mount.from, mount.to).catch((err) => {
 				console.error("Cannot mount", mount.from, mount.to, err);
 				console.error("directories", directories);
 			});
@@ -182,10 +170,9 @@ exports.install = function(site, {directories}, All) {
 	return p;
 };
 
-function mountPath(src, dst) {
-	const base = All.opt.statics.runtime;
+function mountPath(base, src, dst) {
 	if (dst.startsWith('/.')) dst = '/' + dst.substring(2);
-	const absDst = Path.resolve(Path.join(base, dst));
+	const absDst = Path.resolve(Path.join(base, "..", dst));
 	if (absDst.startsWith(base) == false) {
 		console.error("Cannot mount outside runtime", dst);
 		return;

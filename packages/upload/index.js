@@ -10,19 +10,13 @@ exports = module.exports = function(opt) {
 	if (!opt.upload) opt.upload = {};
 	if (!opt.upload.files) opt.upload.files = 100;
 	if (!opt.upload.size) opt.upload.size = 50000000;
-
-	const dest = Path.resolve(opt.dirs.data, "uploads");
-	console.info(`upload:\t${dest}`);
-	opt.directories.push({
-		from: dest,
-		to: "uploads"
-	});
-	opt.upload.path = dest;
+	if (!opt.dirs.uploads) opt.dirs.uploads = Path.join(opt.dirs.data, "uploads");
+	console.info(`upload:\t${opt.dirs.uploads}`);
 
 	return {
 		name: 'upload',
 		service: function(All) {
-			return fs.mkdir(dest, {recursive: true}).then(() => {
+			return fs.mkdir(opt.dirs.uploads, {recursive: true}).then(() => {
 				return init(All);
 			});
 		}
@@ -31,10 +25,11 @@ exports = module.exports = function(opt) {
 
 function init(All) {
 	const upload = All.opt.upload;
+	const uploads = All.opt.dirs.uploads;
 	const storage = multer.diskStorage({
 		destination: function(req, file, cb) {
 			const date = (new Date()).toISOString().split('T').shift().substring(0, 7);
-			const curDest = Path.join(upload.path, req.site.id, date);
+			const curDest = Path.join(uploads, req.site.id, date);
 
 			fs.mkdir(curDest, {recursive: true}).then(() => {
 				cb(null, curDest);
@@ -99,8 +94,7 @@ function init(All) {
 }
 
 exports.file = function(req, data) {
-	const upload = All.opt.upload;
-	const dest = Path.join(upload.path, req.site.id);
+	const dest = Path.join(All.opt.dirs.uploads, req.site.id);
 	if (!data.filename) data.filename = Path.basename(data.path);
 	if (!data.destination) data.destination = Path.dirname(data.path);
 	if (!data.mimetype) data.mimetype = mime.lookup(Path.extname(data.filename));
