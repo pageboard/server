@@ -84,7 +84,7 @@ exports.install = function(site, pkg, All) {
 			pkg.groups = groups;
 			site.$pages = groups.page;
 			site.$bundles = {};
-			site.constructor = Block; // gni ?
+			site.constructor = Block;
 		} else {
 			All.api.Block = Block;
 		}

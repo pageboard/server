@@ -36,7 +36,7 @@ const InstanceUpdateOperation = require(
 class InstancePatchObjectOperation extends InstanceUpdateOperation {
 	async onAfter2(builder, result) {
 		const clone = this.instance.$clone();
-		result = await super.onAfter2(builder, result);
+		result = await InstanceUpdateOperation.prototype.onAfter2.call(this, builder, result);
 
 		if (!isObject(result)) {
 			deepAssign(clone, this.model);
@@ -106,7 +106,7 @@ exports.Model = class CommonModel extends Model {
 			console.trace("transactions should be passed explicitely");
 			trx = this.trx;
 		}
-		return super.$query(trx).patchObjectOperationFactory(() => {
+		return Model.prototype.$query.call(this, trx).patchObjectOperationFactory(() => {
 			return new InstancePatchObjectOperation('patch', {
 				instance: this,
 				modelOptions: { patch: true }
@@ -120,7 +120,7 @@ exports.Model = class CommonModel extends Model {
 			console.trace("transactions should be passed explicitely");
 			trx = this.trx;
 		}
-		return super.$relatedQuery(what, trx);
+		return Model.prototype.$relatedQuery.call(this, what, trx);
 	}
 
 	get $model() {
@@ -140,7 +140,7 @@ exports.Model = class CommonModel extends Model {
 	}
 
 	$formatJson(json) {
-		const superJson = super.$formatJson(json);
+		const superJson = Model.prototype.$formatJson.call(this, json);
 		delete superJson._id;
 		return superJson;
 	}
@@ -162,7 +162,7 @@ exports.QueryBuilder = class CommonQueryBuilder extends QueryBuilder {
 		model.columns.forEach((col) => {
 			if (args.includes(col) == false) list.push(`${table}.${col}`);
 		});
-		return super.select(...list);
+		return QueryBuilder.prototype.select.apply(this, list);
 	}
 	select(...args) {
 		if (args.length == 0) {
@@ -170,7 +170,7 @@ exports.QueryBuilder = class CommonQueryBuilder extends QueryBuilder {
 			const table = this.tableRefFor(model);
 			args = model.columns.map(col => `${table}.${col}`);
 		}
-		return super.select(...args);
+		return QueryBuilder.prototype.select.apply(this, args);
 	}
 	patchObjectOperationFactory(factory) {
 		this._patchObjectOperationFactory = factory;
@@ -202,6 +202,7 @@ exports.QueryBuilder = class CommonQueryBuilder extends QueryBuilder {
 	}
 	whereObject(obj, type, alias) {
 		// TODO site.$relatedQuery means this._relatedQueryFor == site
+		// FIXME mClass is a cached copy of a DomainBlock of another site !!!
 		const mClass = this.modelClass();
 		if (Array.isArray(type)) {
 			if (type.length == 1) type = type[0];
@@ -254,7 +255,7 @@ exports.QueryBuilder = class CommonQueryBuilder extends QueryBuilder {
 		return this;
 	}
 	clone() {
-		const builder = super.clone();
+		const builder = QueryBuilder.prototype.clone.call(this);
 		builder._patchObjectOperationFactory = this._patchObjectOperationFactory;
 		return builder;
 	}
