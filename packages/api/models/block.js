@@ -262,6 +262,7 @@ function findHrefs(schema, list, root, isArray) {
 		const prop = schema.properties[key];
 		if (isArray) key = root;
 		else if (root) key = `${root}.${key}`;
+		if (!prop) throw new Error("Missing prop:" + key);
 		const helper = prop.$helper;
 		if (helper && helper.name == "href") {
 			// FIXME $helper.name == "page" ???
