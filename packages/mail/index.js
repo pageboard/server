@@ -343,7 +343,12 @@ exports.send = function (req, data) {
 			retry: 0,
 			timeout: 10000
 		}).then((response) => {
-			return JSON.parse(response.body);
+			try {
+				return JSON.parse(response.body);
+			} catch (err) {
+				console.error("email export replies", response.body);
+				throw err;
+			}
 		}).then((obj) => {
 			mailOpts.subject = data.subject || obj.title;
 			mailOpts.html = obj.html;
