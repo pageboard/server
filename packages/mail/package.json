@@ -18,7 +18,7 @@
   "homepage": "https://github.com/pageboard/server#readme",
   "dependencies": {
     "addressparser": "^1.0.1",
-    "busboy": "^0.3.1",
+    "busboy": "^1.0.0",
     "got": "^11.8.3",
     "nodemailer": "^6.7.2",
     "nodemailer-postmark-transport": "^5.1.0"
