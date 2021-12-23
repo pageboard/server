@@ -127,8 +127,8 @@ exports.validate = function(site, pkg, bundles) {
 
 function sortPriority(list) {
 	list.sort((a, b) => {
-		const pa = a.priority;
-		const pb = b.priority;
+		const pa = a.priority || 0;
+		const pb = b.priority || 0;
 		if (pa == pb) {
 			if (a.path && b.path) return Path.basename(a.path).localeCompare(Path.basename(b.path));
 			else return 0;
