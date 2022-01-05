@@ -73,8 +73,8 @@ exports.search = function ({ trx }, data) {
 				offset: data.offset,
 				limit: data.limit
 			};
-			obj.schemas = {
-				site: Block.schema('site')
+			obj.schemas = { // what was my idea here ? Block doesn't have a "site" schema yet since site is defined "by domain"
+				//site: Block.schema('site')
 			};
 			return obj;
 		});
