@@ -69,16 +69,20 @@ exports.filterResponse = function(req, obj, fn) {
 
 function grantsLevels(DomainBlock) {
 	const grants = {};
-	const list = DomainBlock.schema('settings.data.grants').items.anyOf || [];
-	list.forEach((grant, i) => {
-		const n = grant.$level;
-		if (typeof n != 'number' || Number.isNaN(n)) {
-			// eslint-disable-next-line no-console
-			console.warn("grant without $level, ignoring", grant);
-			return;
-		}
-		grants[grant.const] = n;
-	});
+	try {
+		const list = DomainBlock.schema('settings.data.grants').items.anyOf || [];
+		list.forEach((grant, i) => {
+			const n = grant.$level;
+			if (typeof n != 'number' || Number.isNaN(n)) {
+				// eslint-disable-next-line no-console
+				console.warn("grant without $level, ignoring", grant);
+				return;
+			}
+			grants[grant.const] = n;
+		});
+	} catch (ex) {
+		console.warn("no settings.data.grants found");
+	}
 	return grants;
 }
 
