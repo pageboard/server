@@ -187,7 +187,7 @@ exports.del = function ({ trx }, data) {
 	const Block = All.api.Block;
 	const counts = {};
 	return Block.query(trx).where('type', 'site')
-		.select('_id', raw('recursive_delete(_id, TRUE) AS blocks'))
+		.select('_id', trx.raw('recursive_delete(_id, TRUE) AS blocks'))
 		.where('id', data.id)
 		.first().throwIfNotFound().then((row) => {
 			counts.blocks = row.blocks;
