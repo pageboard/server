@@ -46,9 +46,9 @@ exports.migrate = function() {
 	if (!dirs) throw new Error("Missing `migrations` directory option");
 	return Promise.all(dirs.map((dir) => {
 		console.info(` ${dir}`);
-		return exports.knex.migrate.latest({
+		return exports.tenant().migrate.latest({
 			directory: dir
-		}).spread((batchNo, list) => {
+		}).then(([batchNo, list]) => {
 			if (list.length) return list;
 			return "No migrations run in this directory";
 		});
