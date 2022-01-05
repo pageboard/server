@@ -217,6 +217,8 @@ exports.import = function ({site, trx}, data) {
 						site.$relatedQuery('children', trx).select('block._id').as('children')
 					);
 			}).then(() => {
+				return site.$relatedQuery('hrefs', trx).delete();
+			}).then(() => {
 				return site.$query(trx).patch({ data: obj.site.data }).then(() => {
 					counts.site++;
 				});
