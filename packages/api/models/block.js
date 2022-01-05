@@ -170,17 +170,17 @@ Block.extendSchema = function extendSchema(name, schemas) {
 		const hrefsList = [];
 		findHrefs(element, hrefsList);
 		if (hrefsList.length) hrefs[type] = hrefsList;
-		const standProp = element.standalone ? {
-			standalone: {
-				const: true,
-				default: true
-			}
-		} : {};
+
 		Traverse(element, {
 			cb: (schema, pointer, root, parentPointer, keyword, parent, name) => {
 				if (schema.type == "string" && schema.format) schema.coerce = true;
 			}
 		});
+
+		const standProp = element.standalone
+			? { standalone: Object.assign({}, blockProps.standalone, { default: true }) }
+			: {};
+
 		schema.selectCases[type] = {
 			$lock: element.$lock,
 			parents: element.parents,
