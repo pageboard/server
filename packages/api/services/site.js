@@ -115,20 +115,12 @@ exports.search.schema = {
 
 exports.add = function (req, data) {
 	return QuerySite(req, { id: data.id }).then((site) => {
-		console.info("There is already a site with this id", data.id);
-	}).catch((err) => {
-		data.type = 'site';
-		data.children = [{
-			standalone: true, // this might not be needed
-			type: 'page',
-			data: {
-				title: '404',
-				url: '/.well-known/404',
-				noindex: true,
-				nositemap: true
-			}
-		}];
-		return All.api.Block.query(req.trx).insertGraph(data);
+		if (site) {
+			throw new HttpError.Conflict("Site id already exists");
+		} else {
+			data.type = 'site';
+			return All.api.Block.query(req.trx).insert(data);
+		}
 	});
 };
 
