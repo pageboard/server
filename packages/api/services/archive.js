@@ -354,7 +354,7 @@ exports.import = function ({site, trx}, data) {
 		});
 	});
 	return q.then(() => {
-		mp.push(p);
+		mp.unshift(p);
 		return Promise.all(mp);
 	}).then(() => {
 		return counts;
