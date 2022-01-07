@@ -201,8 +201,6 @@ exports.QueryBuilder = class CommonQueryBuilder extends QueryBuilder {
 		return this;
 	}
 	whereObject(obj, type, alias) {
-		// TODO site.$relatedQuery means this._relatedQueryFor == site
-		// FIXME mClass is a cached copy of a DomainBlock of another site !!!
 		const mClass = this.modelClass();
 		if (Array.isArray(type)) {
 			if (type.length == 1) type = type[0];
