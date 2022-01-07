@@ -77,16 +77,16 @@ exports.install = function(site, pkg, All) {
 			}
 		});
 
-		const Block = All.api.Block.extendSchema(id, eltsMap);
+		const DomainBlock = All.api.Block.extendSchema(id, eltsMap);
 		if (id) {
-			pkg.Block = Block;
+			pkg.Block = DomainBlock;
 			pkg.eltsMap = eltsMap;
 			pkg.groups = groups;
 			site.$pages = groups.page;
 			site.$bundles = {};
-			site.constructor = Block;
+			site.constructor = DomainBlock;
 		} else {
-			All.api.Block = Block;
+			All.api.Block = DomainBlock;
 		}
 		return bundles;
 	}).catch((err) => {
