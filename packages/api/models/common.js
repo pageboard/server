@@ -36,7 +36,7 @@ const InstanceUpdateOperation = require(
 class InstancePatchObjectOperation extends InstanceUpdateOperation {
 	async onAfter2(builder, result) {
 		const clone = this.instance.$clone();
-		result = await InstanceUpdateOperation.prototype.onAfter2.call(this, builder, result);
+		result = await super.onAfter2(builder, result);
 
 		if (!isObject(result)) {
 			deepAssign(clone, this.model);
@@ -106,7 +106,7 @@ exports.Model = class CommonModel extends Model {
 			console.trace("transactions should be passed explicitely");
 			trx = this.trx;
 		}
-		return Model.prototype.$query.call(this, trx).patchObjectOperationFactory(() => {
+		return super.$query(trx).patchObjectOperationFactory(() => {
 			return new InstancePatchObjectOperation('patch', {
 				instance: this,
 				modelOptions: { patch: true }
@@ -120,7 +120,7 @@ exports.Model = class CommonModel extends Model {
 			console.trace("transactions should be passed explicitely");
 			trx = this.trx;
 		}
-		return Model.prototype.$relatedQuery.call(this, what, trx);
+		return super.$relatedQuery(what, trx);
 	}
 
 	get $model() {
@@ -140,7 +140,7 @@ exports.Model = class CommonModel extends Model {
 	}
 
 	$formatJson(json) {
-		const superJson = Model.prototype.$formatJson.call(this, json);
+		const superJson = super.$formatJson(json);
 		delete superJson._id;
 		return superJson;
 	}
@@ -162,7 +162,7 @@ exports.QueryBuilder = class CommonQueryBuilder extends QueryBuilder {
 		model.columns.forEach((col) => {
 			if (args.includes(col) == false) list.push(`${table}.${col}`);
 		});
-		return QueryBuilder.prototype.select.apply(this, list);
+		return super.select(list);
 	}
 	select(...args) {
 		if (args.length == 0) {
@@ -170,7 +170,7 @@ exports.QueryBuilder = class CommonQueryBuilder extends QueryBuilder {
 			const table = this.tableRefFor(model);
 			args = model.columns.map(col => `${table}.${col}`);
 		}
-		return QueryBuilder.prototype.select.apply(this, args);
+		return super.select(args);
 	}
 	patchObjectOperationFactory(factory) {
 		this._patchObjectOperationFactory = factory;
@@ -208,7 +208,7 @@ exports.QueryBuilder = class CommonQueryBuilder extends QueryBuilder {
 			if (type.length == 1) type = type[0];
 			else type = null;
 		}
-		const schema = type ? mClass.prototype.$schema(type) : null;
+		const schema = type ? mClass.schema(type) : null;
 		const table = alias || this.tableRefFor(mClass);
 		const refs = asPaths(obj, {}, table, true, schema);
 		const comps = {
@@ -255,7 +255,7 @@ exports.QueryBuilder = class CommonQueryBuilder extends QueryBuilder {
 		return this;
 	}
 	clone() {
-		const builder = QueryBuilder.prototype.clone.call(this);
+		const builder = super.clone();
 		builder._patchObjectOperationFactory = this._patchObjectOperationFactory;
 		return builder;
 	}

@@ -2,7 +2,12 @@ const objection = require('objection');
 const Model = objection.Model;
 const common = require('./common');
 
-class Href extends common.Model {}
+class Href extends common.Model {
+
+	$beforeUpdate() {
+		this.updated_at = new Date().toISOString();
+	}
+}
 
 module.exports = Href;
 
@@ -90,10 +95,6 @@ Href.jsonSchema = {
 };
 
 Href.columns = Object.keys(Href.jsonSchema.properties);
-
-Href.prototype.$beforeUpdate = function() {
-	this.updated_at = new Date().toISOString();
-};
 
 Href.relationMappings = {
 	parent: {
