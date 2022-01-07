@@ -198,12 +198,13 @@ Block.extendSchema = function extendSchema(name, schemas) {
 			})
 		};
 	});
-	const DomainBlock = class extends Block {};
+	const DomainBlock = class extends Block { };
 	Object.assign(DomainBlock, Block);
 	DomainBlock.relationMappings.children.modelClass = DomainBlock;
 	DomainBlock.relationMappings.parents.modelClass = DomainBlock;
 	DomainBlock.jsonSchema = schema;
 	DomainBlock.hrefs = hrefs;
+	DomainBlock.QueryBuilder = class extends Block.QueryBuilder { };
 
 	delete DomainBlock.$$validator;
 	DomainBlock.uniqueTag = function() {
