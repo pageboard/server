@@ -299,7 +299,7 @@ function createApp(All) {
 	app.set("env", opt.env);
 	app.disable('x-powered-by');
 	app.enable('trust proxy');
-	app.use(All.domains.mw);
+	All.domains.route(app);
 	app.use((req, res, next) => {
 		res.setHeader('Referrer-Policy', 'strict-origin-when-cross-origin');
 		res.setHeader('Content-Security-Policy', [

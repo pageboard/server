@@ -4,23 +4,31 @@ const DNS = {
 };
 const localhost4 = "127.0.0.1";
 // const localhost6 = "::1";
-const pageboardNames = [];
-const pageboardIps = {};
 
 module.exports = class Domains {
 	constructor(All) {
 		this.All = All;
 		this.sites = {}; // cache sites by id
 		this.hosts = {}; // cache hosts by hostname
-		this.mw = this.mw.bind(this);
-		this.ready = false;
-		this.holds = [];
+		this.byHost = this.byHost.bind(this);
+		this.byIP = this.byIP.bind(this);
+		this.byInit = this.byInit.bind(this);
+		this.state = {
+			ready: false,
+			done: () => {
+				this.state.ready = true;
+				this.state.resolve();
+			}
+		};
+		this.state.wait = new Promise((resolve) => {
+			this.state.resolve = resolve;
+		});
+		this.ips = {};
+		this.names = [];
 	}
 
-	unlock() {
-		this.ready = true;
-		for (const [req, res, next] of this.holds) this.mw(req, res, next);
-		this.holds = null;
+	route(app) {
+		app.use(this.byInit, this.byIP, this.byHost);
 	}
 	/*
 maintain a cache (hosts) of requested hostnames
@@ -33,17 +41,35 @@ so adding an IP to pageboard and pointing a host to that IP needs a restart)
 - site installation calls upcache update url, which resolves the hanging promise
 - init returns for everyone
 */
-	mw(req, res, next) {
+	byInit(req, res, next) {
+		if (req.path == "/.well-known/pageboard" && req.hostname == localhost4) {
+			this.wkp(req, res, next);
+		} else if (!this.state.ready) {
+			this.state.wait.then(next);
+		} else {
+			next();
+		}
+	}
+	byIP(req, res, next) {
+		const ip = req.headers['x-forwarded-by'];
+		if (!ip) return Promise.reject(new Error("Missing X-Forwarded-By header"));
+		const rec = this.ips[ip] || {};
+		if (!rec.queue) {
+			this.ips[ip] = rec;
+			rec.queue = DNS.reverse(ip).then((hostnames) => {
+				Object.assign(rec, ipFamily(ip));
+				hostnames.forEach((hn) => {
+					if (hn == "localhost") hn += ".localdomain";
+					hn = '.' + hn;
+					if (!this.names.includes(hn)) this.names.push(hn);
+				});
+			});
+		}
+		rec.queue.then(next);
+	}
+	byHost(req, res, next) {
 		const All = this.All;
 		const path = req.path;
-		if (path == "/.well-known/pageboard" && req.hostname == localhost4) {
-			this.wkp(req, res, next);
-			return;
-		} else if (!this.ready) {
-			this.holds.push([req, res, next]);
-			return;
-		}
-
 		const host = this.init(req);
 		let p;
 		if (path == "/.well-known/upcache") {
@@ -135,8 +161,8 @@ so adding an IP to pageboard and pointing a host to that IP needs a restart)
 				domains: map
 			}, null, ' '));
 
-			if (!this.ready) setTimeout(() => {
-				this.unlock();
+			if (!this.state.ready) setTimeout(() => {
+				this.state.done();
 			}, 1000);
 		}).catch(next);
 	}
@@ -170,10 +196,10 @@ so adding an IP to pageboard and pointing a host to that IP needs a restart)
 		let { hostname } = req;
 
 		const { groups = {} } = /^(?<tenant>[a-z0-9]+)-(?<id>[a-z0-9]+)(?<domain>\.[a-z0-9]+\.[a-z]+)$/.exec(hostname) || {};
-		if (pageboardNames.length == 0 && groups.tenant) {
+		if (this.names.length == 0 && groups.tenant) {
 			console.error("FIXME: tenant without pageboardNames", hostname);
 		}
-		if (pageboardNames.includes(groups.domain) && groups.tenant && All.opt.database.url[groups.tenant]) {
+		if (this.names.includes(groups.domain) && groups.tenant && All.opt.database.url[groups.tenant]) {
 			hostname = `${groups.id}${groups.domain}`;
 			req.tenant = groups.tenant;
 		}
@@ -192,7 +218,7 @@ so adding an IP to pageboard and pointing a host to that IP needs a restart)
 				const site = host.id && sites[host.id];
 				if (site) return site;
 				let id;
-				pageboardNames.some((hn) => {
+				this.names.some((hn) => {
 					if (hostname.endsWith(hn)) {
 						id = hostname.substring(0, hostname.length - hn.length);
 						return true;
@@ -209,7 +235,7 @@ so adding an IP to pageboard and pointing a host to that IP needs a restart)
 				if (!site.data) site.data = {};
 
 				// there was a miss, so update domains list
-				const domains = (site.data.domains || []).concat(pageboardNames.map((hn) => {
+				const domains = (site.data.domains || []).concat(this.names.map((hn) => {
 					return host.id + hn;
 				}));
 				domains.forEach((domain) => {
@@ -240,51 +266,22 @@ so adding an IP to pageboard and pointing a host to that IP needs a restart)
 		return host;
 	}
 
-	check(host, forwardedBy) {
-		let fam = 4;
-		let ip = forwardedBy;
-		if (!ip) return Promise.reject(new Error("Missing X-Forwarded-By header"));
-		if (isIPv6(ip)) fam = 6;
-
-		const ips = {};
-		ips['ip' + fam] = ip;
-		const prefix = '::ffff:';
-		if (fam == 6) {
-			if (ip.startsWith(prefix)) {
-				const tryFour = ip.substring(prefix.length);
-				if (!isIPv6(tryFour)) {
-					ips.ip4 = tryFour;
-					ip = tryFour;
-				}
-			}
-		}
-
+	check(host, ip) {
+		const rec = this.ips[ip];
 		const hostname = host.name;
-
-		return Promise.resolve().then(() => {
-			if (!pageboardIps[ip]) return DNS.reverse(ip).then((hostnames) => {
-				pageboardIps[ip] = true;
-				hostnames.forEach((hn) => {
-					if (hn == "localhost") hn += ".localdomain";
-					hn = '.' + hn;
-					if (!pageboardNames.includes(hn)) pageboardNames.push(hn);
-				});
-			});
-		}).then(() => {
-			return DNS.lookup(hostname, {
-				all: false
-			}).then((lookup) => {
-				if (lookup.address == hostname) throw new Error("hostname is an ip " + hostname);
-				const expected = ips['ip' + lookup.family];
-				if (lookup.address != expected) {
-					setTimeout(() => {
-						// allow checking again in a minute
-						if (host._error && host._error.statusCode == 503) delete host._error;
-					}, 60000);
-					throw new HttpError.ServiceUnavailable(`${hostname} ${lookup.family} ${lookup.address} does not match ${expected}`);
-				}
-				return hostname;
-			});
+		return DNS.lookup(hostname, {
+			all: false
+		}).then((lookup) => {
+			if (lookup.address == hostname) throw new Error("hostname is an ip " + hostname);
+			const expected = rec['ip' + lookup.family];
+			if (lookup.address != expected) {
+				setTimeout(() => {
+					// allow checking again in a minute
+					if (host._error && host._error.statusCode == 503) delete host._error;
+				}, 60000);
+				throw new HttpError.ServiceUnavailable(`${hostname} ${lookup.family} ${lookup.address} does not match ${expected}`);
+			}
+			return hostname;
 		});
 	}
 
@@ -379,6 +376,23 @@ function errorObject(site, err) {
 
 function isIPv6(ip) {
 	return ip.indexOf(':') >= 0;
+}
+
+function ipFamily(ip) {
+	const fam = isIPv6(ip) ? 6 : 4;
+	const ips = {};
+	ips['ip' + fam] = ip;
+	const prefix = '::ffff:';
+	if (fam == 6) {
+		if (ip.startsWith(prefix)) {
+			const tryFour = ip.substring(prefix.length);
+			if (!isIPv6(tryFour)) {
+				ips.ip4 = tryFour;
+				ip = tryFour;
+			}
+		}
+	}
+	return ips;
 }
 
 function doWait(host) {
