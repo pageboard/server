@@ -118,7 +118,10 @@ exports.add = function (req, data) {
 		if (site) {
 			throw new HttpError.Conflict("Site id already exists");
 		} else {
-			data.type = 'site';
+			Object.assign(data, {
+				type: 'site',
+				standalone: true
+			});
 			return All.api.Block.query(req.trx).insert(data);
 		}
 	});
