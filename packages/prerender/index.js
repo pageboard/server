@@ -170,30 +170,31 @@ function objToError(obj) {
 
 function prerender(req, res, next) {
 	const opt = All.opt;
-	let el = req.site.$schema('page');
+	const site = req.site;
+	let el = site.$schema('page');
 
 	const pattern = el && el.properties.data && el.properties.data.properties.url.pattern;
 	if (!pattern) throw new Error("Missing page element missing schema for data.url.pattern");
 	const urlRegex = new RegExp(pattern);
-	let path = req.path;
+	let pathname = req.path;
 	// backward compat
-	let ext = Path.extname(path);
+	let ext = Path.extname(pathname);
 	if (ext) {
 		ext = ext.substring(1);
 		if (ext == "rss") ext = "page"; // feed@0.8 kludge
-		const extEl = req.site.$schema(ext);
+		const extEl = site.$schema(ext);
 		if (extEl) {
 			el = extEl;
-			path = path.slice(0, -ext.length - 1); // urlRegex does not allow extname
+			pathname = pathname.slice(0, -ext.length - 1); // urlRegex does not allow extname
 		}
 	}
 	res.vary('Accept');
 
-	if (urlRegex.test(path) == false) {
+	if (urlRegex.test(pathname) == false) {
 		if (req.accepts(['json', 'html']) == 'json') {
 			throw new HttpError.NotFound("Malformed path");
 		} else {
-			pipeline(got.stream(req.site.href + '/.well-known/404', {
+			pipeline(got.stream(site.href + '/.well-known/404', {
 				retry: 0,
 				throwHttpErrors: false
 			}), res, (err) => {
@@ -201,17 +202,17 @@ function prerender(req, res, next) {
 			});
 		}
 	} else {
+		const { query } = req;
 		let invalid = false;
-		Object.keys(req.query).forEach((key) => {
+		Object.keys(query).forEach((key) => {
 			if (/^[a-zA-Z][\w.-]*$/.test(key) === false) {
 				invalid = true;
-				delete req.query[key];
+				delete query[key];
 			}
 		});
-		if (invalid) return res.redirect(URL.format({
-			pathname: path,
-			query: req.query
-		}));
+		if (invalid) {
+			return res.redirect(URL.format({ pathname, query }));
+		}
 
 		const plugins = opt.read.plugins.slice();
 		const settings = {
@@ -225,18 +226,20 @@ function prerender(req, res, next) {
 		else if (ext == "rss") settings.mime = "application/xml";
 
 		const outputOpts = el.output || {};
+		const { mime = "text/html" } = outputOpts;
 
-		if (req.query.develop !== undefined) { // TODO also when site.data.env == development
+		if (site.data.env != "production" && mime == "text/html" && query.develop === undefined) {
+			query.develop = null;
+		}
+		if (query.develop !== undefined) {
 			All.cache.map(res, '/.well-known/200');
-			// FIXME
-			// build csp out of site elements right now
 			res.set('Content-Security-Policy', "");
 		} else {
 			if (outputOpts.pdf) {
 				// pdf plugin bypasses serialize
 				plugins.push('pdf');
 			}
-			if (outputOpts.mime) settings.mime = outputOpts.mime;
+			settings.mime = mime;
 			if (!outputOpts.medias) {
 				settings['auto-load-images'] = false;
 				settings.extensions.list.push('js', 'json', 'html', 'xml');
@@ -245,7 +248,7 @@ function prerender(req, res, next) {
 				settings.extensions.list.push('woff', 'woff2', 'ttf', 'eot', 'otf');
 			}
 		}
-		if (!outputOpts.mime || outputOpts.mime == "text/html") {
+		if (mime == "text/html") {
 			plugins.push('redirect');
 			if (opt.env != "development") {
 				plugins.unshift('httplinkpreload');
@@ -256,7 +259,7 @@ function prerender(req, res, next) {
 		}
 		plugins.push('serialize');
 
-		const siteBundle = req.site.$bundles.site.meta;
+		const siteBundle = site.$bundles.site.meta;
 
 		const scripts = (siteBundle.scripts || []).map((src) => {
 			return `<script defer src="${src}"></script>`;
