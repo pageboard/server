@@ -1,5 +1,4 @@
-const objection = require('objection');
-const Model = objection.Model;
+const { Model } = require('objection');
 const common = require('./common');
 
 class Href extends common.Model {
