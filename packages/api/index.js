@@ -211,10 +211,11 @@ All.run = function (apiStr, req, data) {
 				hadTrx = true;
 				return;
 			}
-			return transaction.start(All.db.tenant(req.tenant)).then((trx) => {
+			const site = req.site;
+			return transaction.start(All.db.tenant(site && site.tenant)).then((trx) => {
 				req.trx = trx;
-				if (req.site && req.site.$clone) {
-					req.site = req.site.$clone();
+				if (site && site.$clone) {
+					req.site = site.$clone();
 				}
 			});
 		}).then(() => {
