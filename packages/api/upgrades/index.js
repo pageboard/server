@@ -20,25 +20,22 @@ module.exports = class Upgrader {
 		if (this.copy) return this.idMap[id];
 		else return id;
 	}
-	process(block, parent) {
+	process(block) {
 		if (this.copy) {
 			const old = block.id;
 			block.id = this.idMap[old] = this.Block.genIdSync();
-			if (block.parents) block.parents.forEach((parent) => {
-				const id = parent.id;
-				parent.id = this.idMap[id];
-				console.warn("remap parent", id, "to", parent.id);
+			if (block.parents) block.parents = block.parents.map(id => {
+				return this.idMap[id];
 			});
-			if (block.type == "site") delete block.data.domains;
 		}
-		if (block.children) block.children = block.children.map((child) => {
-			return this.process(child, block);
-		});
+		// if (block.children) block.children = block.children.map((child) => {
+		// 	return this.process(child, block);
+		// });
 		const mod = this.module;
 		if (!mod) return block;
 		try {
 			if (mod.any) mod.any.call(this, block);
-			if (mod[block.type]) block = mod[block.type].call(this, block, parent) || block;
+			if (mod[block.type]) block = mod[block.type].call(this, block) || block;
 		} catch (ex) {
 			console.error(ex.message);
 			console.error(block);
@@ -48,9 +45,9 @@ module.exports = class Upgrader {
 	}
 	finish(block) {
 		if (this.copy) {
-			if (block.children) block.children.forEach((child) => {
-				this.finish(child);
-			});
+			// if (block.children) block.children.forEach((child) => {
+			// 	this.finish(child);
+			// });
 			this.copyContent(block);
 			this.copyLock(block);
 		}

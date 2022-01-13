@@ -1,6 +1,5 @@
-const { ref } = require('objection');
-const { PassThrough } = require('stream');
 const { createReadStream, createWriteStream } = require('fs');
+const ndjson = require('ndjson');
 const Upgrader = require('../upgrades');
 
 const Path = require('path');
@@ -22,138 +21,82 @@ function init(All) {
 	});
 }
 
-// export all data but files
 exports.export = function ({ site, trx, res }, data) {
 	// TODO allow export of a selection of pages and/or standalones (by types, by url, by id...)
 	const id = site.id;
 	const filepath = data.file || (id + '-' + (new Date()).toISOString().split('.')[0].replace(/[-:]/g, '').replace('T', '-').slice(0, -2) + '.json');
 	const counts = {
-		site: 0,
+		users: 0,
 		blocks: 0,
+		relations: 0,
 		hrefs: 0,
-		relations: 0
+		standalones: 0
 	};
 
-	// FIXME
-	// export all site.children
-	// then all site.hrefs
-	// then all relations of site.children
+	const out = res || createWriteStream(Path.resolve(All.opt.cwd, filepath));
+	if (res) res.attachment(Path.basename(filepath));
+	const finished = new Promise((resolve, reject) => {
+		out.resolve = resolve;
+		out.reject = reject;
+	});
+	out.once('finish', out.resolve);
+	out.once('error', out.reject);
+	const jstream = ndjson.stringify();
+	jstream.pipe(out);
+	jstream.write(site);
 
-	return site.$relatedQuery('children', trx)
-		.select('_id').where('standalone', true).orderByRaw("data->>'url' IS NOT NULL").then((children) => {
-			const out = res || createWriteStream(Path.resolve(All.opt.cwd, filepath));
-			if (res) res.attachment(Path.basename(filepath));
-			const finished = new Promise((resolve, reject) => {
-				out.resolve = resolve;
-				out.reject = reject;
-			});
-			out.once('finish', out.resolve);
-			out.once('error', out.reject);
-			counts.site = 1;
-			counts.standalones = children.length;
-			out.write('{"site": ');
-			out.write(toJSON(site));
-			// TODO extend to any non-standalone block that is child of user or settings
-			// TODO fix calendar so that reservations are made against a user, not against its settings
-			out.write(',\n"settings": [');
-			return site.$relatedQuery('children', trx).where('block.type', 'settings')
-				.select().withGraphFetched('[parents(user) as user]').modifiers({
-					user(builder) {
-						return builder.select(
-							ref('data:email').castText().as('email')
-						).where('block.type', 'user');
-					}
-				}).joinRelated('parents', { alias: 'site' })
-				.where('site.type', 'site').then((settings) => {
-					const last = settings.length - 1;
-					settings.forEach((setting, i) => {
-						let user = setting.user;
-						delete setting.user;
-						if (user.length == 0) return;
-						user = user[0];
-						if (!user.email) return;
-						counts.settings++;
-						setting._email = user.email;
-						out.write(toJSON(setting));
-						if (i != last) out.write('\n,');
-					});
-				}).then(() => {
-					out.write(']');
-				}).then(() => {
-					out.write(',\n"standalones": [');
-					const last = children.length - 1;
-					let p = Promise.resolve();
-					const list = [];
-					children.forEach((child) => {
-						p = p.then(() => {
-							return All.api.Block.query(trx)
-								.selectWithout('tsv', '_id')
-								.first().where('_id', child._id)
-								.withGraphFetched('[children(notlones) as children,children(lones) as standalones]')
-								.modifiers({
-									notlones(builder) {
-										return builder.selectWithout('tsv', '_id').where('standalone', false);
-									},
-									lones(builder) {
-										return builder.select('block.id')
-											.where('standalone', true)
-											.orderByRaw("block.data->>'url' IS NOT NULL ASC");
-									}
-								}).then((lone) => {
-									if (lone.standalones.length == 0) {
-										delete lone.standalones;
-										list.unshift(lone);
-									} else {
-										list.push(lone);
-									}
-									counts.blocks += lone.children.length;
-								});
-						});
-					});
-					return p.then(() => {
-						list.forEach((lone, i) => {
-							out.write(toJSON(lone));
-							if (i != last) out.write('\n,');
-						});
-					});
-				}).then(() => {
-					out.write('],\n"reservations": [');
-				}).then(() => {
-					return site.$relatedQuery('children', trx).where('block.type', 'event_reservation')
-						.select().withGraphFetched('parents(notsite) as parents').modifiers({
-							notsite(builder) {
-								return builder.select('block.id', 'block.type')
-									.whereIn('block.type', ['settings', 'event_date'])
-									.orderBy('block.type');
-							}
-						}).then((reservations) => {
-							const last = reservations.length - 1;
-							reservations.forEach((resa, i) => {
-								counts.reservations++;
-								out.write(toJSON(resa));
-								if (i != last) out.write('\n,');
-							});
-						});
-				}).then(() => {
-					out.write('],\n"hrefs": [');
-					return All.api.Href.query(trx).selectWithout('tsv', '_id', '_parent_id')
-						.whereSite(site.id).then((hrefs) => {
-							counts.hrefs = hrefs.length;
-							const last = hrefs.length - 1;
-							hrefs.forEach((href, i) => {
-								out.write(JSON.stringify(href));
-								if (i != last) out.write('\n,');
-							});
-						});
-				}).then(() => {
-					out.write(']');
-				}).then(() => {
-					out.end('}');
-					return finished;
-				});
-		}).then(() => {
-			return counts;
+	return site.$relatedQuery('children', trx).selectWithout('tsv', '_id').withGraphJoined('[parents(parents)]').modifiers({
+		parents(q) {
+			return q.selectWithout('tsv', '_id').whereNot('block.id', site.id);
+		}
+	}).then(blocks => {
+		// child without parents first, parents before children
+		blocks.sort((a, b) => {
+			if (a.id == b.id) return 0;
+			if (a.parents.length == 0) return -1;
+			else if (a.parents.find(p => p.id == b.id)) return 1;
+			else return -1;
 		});
+		// users are not children of site
+		const users = [];
+		for (const block of blocks) {
+			// keep only id
+			if (block.standalone) counts.standalones += 1;
+			if (block.parents) block.parents = block.parents.map(p => {
+				if (!blocks.find(b => b.id == p.id)) {
+					if (p.type == "user") {
+						users.push(p);
+					} else {
+						console.warn("parent is an orphan of unsupported type:", p);
+					}
+				}
+				return p.id;
+			});
+			const len = block.parents.length;
+			if (len == 0) {
+				delete block.parents;
+			} else {
+				counts.relations += len;
+			}
+		}
+		counts.users = users.length;
+		counts.blocks = blocks.length - counts.standalones;
+		for (const user of users) jstream.write(user);
+		for (const block of blocks) jstream.write(block);
+	}).then(() => {
+		const q = All.api.Href.query(trx).whereSite(site.id);
+		return q.selectWithout('tsv', '_id', '_parent_id').then((hrefs) => {
+			counts.hrefs = hrefs.length;
+			for (const href of hrefs) {
+				jstream.write(href);
+			}
+		});
+	}).then(() => {
+		jstream.end();
+		return finished;
+	}).then(() => {
+		return counts;
+	});
 };
 exports.export.schema = {
 	title: 'Export site',
@@ -205,46 +148,47 @@ exports.import = function ({site, trx}, data) {
 	// TODO allow import of partial extracts (like some pages and standalones without site nor settings)
 	const Block = All.api.Block;
 	const counts = {
-		site: 0,
-		blocks: 0,
-		standalones: 0,
-		settings: 0,
 		users: 0,
+		blocks: 0,
+		relations: 0,
 		hrefs: 0,
-		reservations: 0
+		standalones: 0
 	};
 	let p = Promise.resolve();
-	const fstream = createReadStream(Path.resolve(All.opt.cwd, data.file));
-	const pstream = new PassThrough({
-		objectMode: true,
-		highWaterMark: 1
-	});
-	const queues = {};
-	const mp = [];
+	const fstream = createReadStream(Path.resolve(All.opt.cwd, data.file)).pipe(ndjson.parse());
+
 	let upgrader;
 	let hadError = false;
 	const errorStop = (obj) => {
 		return (err) => {
 			if (!hadError) {
-				pstream.emit('error', err);
 				console.error("Error importing", obj, err);
 				hadError = true;
 				throw err;
 			}
 		};
 	};
-	pstream.on('data', (obj) => {
-		if (obj.site) {
-			if (!obj.site.data) obj.site.data = {};
-			const fromVersion = obj.site.data.server;
-			Object.assign(obj.site.data, { domains: null }, data.data || {});
+	const refs = {};
+	fstream.on('data', (obj) => {
+		if (!obj.id) {
+			p = p.then(() => {
+				if (obj.pathname) {
+					obj.pathname = obj.pathname.replace(/\/uploads\/[^/]+\//, `/uploads/${site.id}/`);
+				}
+				counts.hrefs++;
+				return site.$relatedQuery('hrefs', trx).insert(obj);
+			}).catch(errorStop(obj));
+		} else if (obj.type == "site") {
+			if (!obj.data) obj.data = {};
+			const fromVersion = obj.data.server;
+			Object.assign(obj.data, { domains: null }, data.data || {});
 			upgrader = new Upgrader(Block, {
 				copy: data.copy,
 				from: fromVersion,
-				to: obj.site.data.server
+				to: obj.data.server
 			});
-			upgrader.process(obj.site);
-			upgrader.finish(obj.site);
+			upgrader.process(obj);
+			upgrader.finish(obj);
 			// need to remove all blocks during import
 			p = p.then(() => {
 				// FIXME use archive.empty
@@ -255,140 +199,59 @@ exports.import = function ({site, trx}, data) {
 			}).then(() => {
 				return site.$relatedQuery('hrefs', trx).delete();
 			}).then(() => {
-				return site.$query(trx).patch({ data: obj.site.data }).then(() => {
-					counts.site++;
-				});
-			}).catch(errorStop(obj.site));
-		} else if (obj.lone) {
-			const lone = upgrader.process(obj.lone, site);
-			let doneLone;
-			queues[lone.id] = new Promise((resolve) => {
-				doneLone = resolve;
-			});
-			const lonesRefs = [];
-			mp.push(p.then(() => {
-				const lones = lone.standalones;
-				if (!lones) return;
-				delete lone.standalones;
-				return Promise.all(lones.map((rlone) => {
-					// relate lone to rlone
-					const id = upgrader.get(rlone.id);
-					if (!id) throw new Error("unknown standalone " + rlone.id);
-					return queues[id].then((_id) => {
-						lonesRefs.push({
-							"#dbRef": _id
-						});
-					});
-				}));
-			}).then(() => {
-				lone.children.forEach((child) => {
-					child.parents = [{
-						"#dbRef": site._id
-					}];
-				});
-				upgrader.finish(lone);
-				lone.children = lone.children.concat(lonesRefs);
-				return site.$relatedQuery('children', trx).insertGraph(lone, {
-					allowRefs: true
-				}).then((obj) => {
-					counts.standalones++;
-					counts.blocks += lone.children.length;
-					doneLone(obj._id);
-				});
-			}).catch(errorStop(lone)));
-		} else if (obj.href) {
-			const href = obj.href;
+				return site.$query(trx).patch({ data: obj.data });
+			}).catch(errorStop(obj));
+		} else if (obj.type == "user") {
+			// FIXME user cannot change its id
+			// obj = upgrader.process(obj);
 			p = p.then(() => {
-				if (href.pathname) {
-					href.pathname = href.pathname.replace(/\/uploads\/[^/]+\//, `/uploads/${site.id}/`);
-				}
-				counts.hrefs++;
-				return site.$relatedQuery('hrefs', trx).insert(href);
-			}).catch(errorStop(href));
-		} else if (obj.setting) {
-			const setting = upgrader.process(obj.setting, site);
-			p = p.then(() => {
-				upgrader.finish(setting);
 				return Block.query(trx).where('type', 'user')
-					.whereJsonText('data:email', setting._email).select('_id')
+					.whereJsonText('data:email', obj.data.email).select('_id', 'id')
 					.first().throwIfNotFound()
 					.catch((err) => {
 						if (err.status != 404) throw err;
+						return Block.query(trx).insert(obj).returning('_id, id');
+					}).then(user => {
 						counts.users++;
-						return Block.query(trx).insert({
-							data: { email: setting._email },
-							type: 'user'
-						}).returning('_id');
-					}).then((user) => {
-						setting.parents = [{ '#dbRef': user._id }];
-						counts.settings++;
-						delete setting._email;
-						return site.$relatedQuery('children', trx).insertGraph(setting);
+						// upgrader.finish(obj);
+						refs[obj.id] = user._id;
 					});
-			}).catch(errorStop(setting));
-		} else if (obj.reservation) {
-			const resa = upgrader.process(obj.reservation, site);
+			}).catch(errorStop(obj));
+		} else {
+			obj = upgrader.process(obj);
+			if (obj.parents) {
+				obj.parents = obj.parents.map(id => {
+					const pid = refs[id];
+					if (!pid) console.warn("Missing parent_id", id, obj);
+					return { "#dbRef": refs[id] };
+				});
+			}
 			p = p.then(() => {
-				upgrader.finish(resa);
-				const parents = resa.parents || [];
-				if (parents.length != 2) {
-					console.warn("Ignoring reservation", resa);
-					return;
-				}
-				// get settings, date
-				return site.$relatedQuery('children', trx)
-					.select('_id')
-					.whereIn('block.id', parents.map((parent) => {
-						return parent.id;
-					})).then((parents) => {
-						resa.parents = parents.map((parent) => {
-							return { "#dbRef": parent._id };
-						});
-					}).then(() => {
-						counts.reservations++;
-						return site.$relatedQuery('children', trx).insertGraph(resa, {
-							allowRefs: true
-						});
-					});
-			}).catch(errorStop(resa));
+				return site.$relatedQuery('children', trx).insertGraph(obj, {
+					allowRefs: true
+				}).returning('_id').then(row => {
+					if (obj.standalone) counts.standalones += 1;
+					else counts.blocks += 1;
+					if (obj.parents) counts.relations += obj.parents.length;
+					upgrader.finish(obj);
+					refs[obj.id] = row._id;
+				});
+			}).catch(errorStop(obj));
 		}
 	});
 
-	const jstream = require('oboe')(fstream);
-	jstream.node('!.site', (data) => {
-		pstream.write({ site: data });
-	});
-	jstream.node('!.standalones[*]', (data) => {
-		pstream.write({ lone: data });
-	});
-	jstream.node('!.hrefs[*]', (data) => {
-		pstream.write({ href: data });
-	});
-	jstream.node('!.settings[*]', (data) => {
-		pstream.write({ setting: data });
-	});
-	jstream.node('!.reservations[*]', (data) => {
-		pstream.write({ reservation: data });
-	});
-	jstream.on('end', () => {
-		pstream.end();
-	});
-	jstream.on('fail', (failObj) => {
-		pstream.emit('error', failObj);
-	});
-
 	const q = new Promise((resolve, reject) => {
-		pstream.on('error', (err) => {
+		fstream.on('error', (err) => {
 			reject(err);
 		});
-		pstream.on('finish', () => {
+		fstream.on('finish', () => {
 			resolve();
 		});
 	});
 	return q.then(() => {
 		return p;
 	}).then(() => {
-		return Promise.all(mp);
+		//return Promise.all(mp);
 	}).then(() => {
 		return counts;
 	});
@@ -414,10 +277,3 @@ exports.import.schema = {
 		}
 	}
 };
-
-
-function toJSON(obj) {
-	return JSON.stringify(obj, null, " ");
-}
-
-
