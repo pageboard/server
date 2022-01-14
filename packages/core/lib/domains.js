@@ -51,7 +51,7 @@ module.exports = class Domains {
 
 	byInit(req, res, next) {
 		if (req.path == "/.well-known/pageboard" && req.hostname == localhost4) {
-			this.wkp(req, res, next);
+			this.syncSites(req, res, next);
 		} else if (!this.state.ready) {
 			this.state.wait.then(next);
 		} else {
@@ -170,7 +170,7 @@ module.exports = class Domains {
 		}).catch(next);
 	}
 
-	wkp(req, res, next) {
+	syncSites(req, res, next) {
 		this.All.run('site.all', req).then(list => {
 			const map = {};
 			const siteMap = {};
@@ -293,6 +293,22 @@ module.exports = class Domains {
 		if (!host) return;
 		host.isWaiting = false;
 		delete host.parked;
+	}
+
+	idByDomainUpdate(site, old) {
+		const id = site.id;
+		if (old) for (const domain of old.data.domains) this.idByDomain[domain] = null;
+		for (const domain of site.data.domains) this.idByDomain[domain] = id;
+		for (const suffix of this.suffixes) {
+			this.idByDomain[`${id}${suffix}`] = id;
+		}
+	}
+
+	update(site) {
+		const orig = this.siteById[site.id];
+		if (!site.data.domains) site.data.domains = [];
+		this.idByDomainUpdate(site, orig);
+		Object.assign(orig.data, site.data);
 	}
 
 	error(site, err) {

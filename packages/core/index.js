@@ -167,8 +167,8 @@ function install(site) {
 		All.domains.hold(site);
 	}
 
-	return Install.install(site, All.opt).then((pkg) => {
-		return All.api.install(site, pkg, All).then((bundles) => {
+	return Install.install(site, All.opt).then(pkg => {
+		return All.api.install(site, pkg, All).then(bundles => {
 			if (site.url) return All.statics.install(site, pkg, All).then(() => {
 				return All.api.validate(site, pkg, bundles);
 			});
@@ -177,14 +177,14 @@ function install(site) {
 		}).then(() => {
 			if (site.url) return All.cache.install(site);
 		}).then(() => {
-			return Install.clean(site, pkg, All.opt);
+			if (All.opt.env != "development") return Install.clean(site, pkg, All.opt);
+		}).then(() => {
+			if (!site.data.server) site.data.server = pkg.server || All.opt.version;
+			if (site.url) {
+				All.domains.release(site);
+			}
+			return site;
 		});
-	}).then((pkg) => {
-		if (!site.data.server) site.data.server = pkg.server || All.opt.version;
-		if (site.url) {
-			All.domains.release(site);
-		}
-		return site;
 	}).catch((err) => {
 		if (site.url) All.domains.error(site, err);
 		if (All.opt.env == "development") console.error(err);
