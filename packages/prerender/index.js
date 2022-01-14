@@ -194,7 +194,7 @@ function prerender(req, res, next) {
 		if (req.accepts(['json', 'html']) == 'json') {
 			throw new HttpError.NotFound("Malformed path");
 		} else {
-			pipeline(got.stream(site.href + '/.well-known/404', {
+			pipeline(got.stream(new URL('/.well-known/404', site.url), {
 				retry: 0,
 				throwHttpErrors: false
 			}), res, (err) => {

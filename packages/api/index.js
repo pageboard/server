@@ -211,12 +211,8 @@ All.run = function (apiStr, req, data) {
 				hadTrx = true;
 				return;
 			}
-			const site = req.site;
-			return transaction.start(All.db.tenant(site && site.tenant)).then((trx) => {
+			return transaction.start(All.db.tenant(req.tenant)).then((trx) => {
 				req.trx = trx;
-				if (site && site.$clone) {
-					req.site = site.$clone();
-				}
 			});
 		}).then(() => {
 			const args = [data];
@@ -259,11 +255,10 @@ All.send = function (res, obj) {
 		obj = {};
 	}
 	if (obj.cookies) {
-		const host = All.domains.hosts[req.hostname];
 		const cookieParams = {
 			httpOnly: true,
 			sameSite: true,
-			secure: host && host.protocol == "https" || false,
+			secure: req.site.url.protocol == "https:",
 			path: '/'
 		};
 		Object.keys(obj.cookies).forEach((key) => {

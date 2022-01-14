@@ -163,32 +163,30 @@ exports.init = function(opt) {
 
 function install(site) {
 	const All = this;
-	if (site.href) {
-		All.domains.promote(site);
+	if (site.url) {
 		All.domains.hold(site);
 	}
 
 	return Install.install(site, All.opt).then((pkg) => {
 		return All.api.install(site, pkg, All).then((bundles) => {
-			if (site.href) return All.statics.install(site, pkg, All).then(() => {
+			if (site.url) return All.statics.install(site, pkg, All).then(() => {
 				return All.api.validate(site, pkg, bundles);
 			});
 		}).then(() => {
 			return All.auth.install(site);
 		}).then(() => {
-			if (site.href) return All.cache.install(site);
+			if (site.url) return All.cache.install(site);
 		}).then(() => {
 			return Install.clean(site, pkg, All.opt);
 		});
 	}).then((pkg) => {
-		site.server = pkg.server || site.data.server || All.opt.version;
-		if (site.href) {
-			All.domains.replace(site);
+		if (!site.data.server) site.data.server = pkg.server || All.opt.version;
+		if (site.url) {
 			All.domains.release(site);
 		}
 		return site;
 	}).catch((err) => {
-		if (site.href) All.domains.error(site, err);
+		if (site.url) All.domains.error(site, err);
 		if (All.opt.env == "development") console.error(err);
 		throw err;
 	});
@@ -282,7 +280,7 @@ function initLog(opt) {
 		return pad(6, (len && prettyBytes(len) || '0 B').replaceAll(' ', ''));
 	});
 	morgan.token('site', (req, res) => {
-		return pad(req.site && req.site.id && req.site.id.substring(0, 8) || req.hostname, 8);
+		return pad(req.site && req.site.id && req.site.id.substring(0, 8) || "-", 8);
 	});
 
 	return morgan(opt.core.log, {

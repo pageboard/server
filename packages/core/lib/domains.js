@@ -2,17 +2,29 @@ const DNS = {
 	lookup: require('util').promisify(require('dns').lookup),
 	reverse: require('util').promisify(require('dns').reverse)
 };
-const Hosts = require('./hosts');
 
 const localhost4 = "127.0.0.1";
 // const localhost6 = "::1";
+
+class Host {
+	constructor(id) {
+		this.id = id;
+		this.tenants = {};
+	}
+}
 
 module.exports = class Domains {
 	constructor(All) {
 		this.All = All;
 		this.opt = All.opt;
-		this.sites = {}; // cache sites by id
-		this.hosts = new Hosts();
+
+		this.ips = {};
+		this.suffixes = [];
+
+		this.idByDomain = {};
+		this.hostById = {};
+		this.siteById = {};
+
 		this.state = {
 			ready: false,
 			done: () => {
@@ -23,8 +35,7 @@ module.exports = class Domains {
 		this.state.wait = new Promise((resolve) => {
 			this.state.resolve = resolve;
 		});
-		this.ips = {};
-		this.names = [];
+
 		this.middlewares = [
 			(req, res, next) => {
 				this.byInit(req, res, next);
@@ -37,17 +48,7 @@ module.exports = class Domains {
 			}
 		];
 	}
-	/*
-maintain a cache (hosts) of requested hostnames
-- each hostname is checked to resolve to pageboard current IP (which is resolved and cached,
-so adding an IP to pageboard and pointing a host to that IP needs a restart)
-- then each hostname, if it is a subdomain of pageboard, gives a site.id, or if not, a site.domain
-- site instance is loaded and cached
-- /.well-known/status returns here
-- site is installed and init() is holded by a hanging promise
-- site installation calls upcache update url, which resolves the hanging promise
-- init returns for everyone
-*/
+
 	byInit(req, res, next) {
 		if (req.path == "/.well-known/pageboard" && req.hostname == localhost4) {
 			this.wkp(req, res, next);
@@ -57,6 +58,7 @@ so adding an IP to pageboard and pointing a host to that IP needs a restart)
 			next();
 		}
 	}
+
 	byIP(req, res, next) {
 		const ip = req.headers['x-forwarded-by'];
 		if (!ip) return next(new Error("Missing X-Forwarded-By header"));
@@ -68,15 +70,30 @@ so adding an IP to pageboard and pointing a host to that IP needs a restart)
 				hostnames.forEach((hn) => {
 					if (hn == "localhost") hn += ".localdomain";
 					hn = '.' + hn;
-					if (!this.names.includes(hn)) this.names.push(hn);
+					if (!this.suffixes.includes(hn)) this.suffixes.push(hn);
 				});
+			}).then(() => {
+				const idMap = {};
+				for (const id in this.siteById) {
+					const site = this.siteById[id];
+					for (const domain of site.data.domains) {
+						idMap[domain] = id;
+					}
+					for (const suffix of this.suffixes) {
+						idMap[`${id}${suffix}`] = id;
+					}
+				}
+				this.idByDomain = idMap;
 			});
 		}
 		rec.queue.then(next);
 	}
+
 	byHost(req, res, next) {
+		this.initTenant(req);
 		const { path } = req;
 		const host = this.init(req);
+		if (!host) return next(new HttpError.NotFound("site not found"));
 		let p;
 		if (path == "/.well-known/upcache") {
 			if (host.finalize) {
@@ -103,36 +120,37 @@ so adding an IP to pageboard and pointing a host to that IP needs a restart)
 			p = host.waiting;
 		}
 		return p.then(() => {
-			if (!next) return;
-			if (host.error) throw host.error;
-			const site = this.sites[host.id];
-			if (!host.id || !site) {
-				// this should never actually happen !
-				throw new HttpError.ServiceUnavailable(`Missing host.id or site for ${host.name}`);
+			if (req.tenant && !host.tenants[req.tenant]) {
+				return All.run('site.get', req, { id: host.id });
 			}
-			// calls to api use All.run which does site.$clone() to avoid concurrency issues
-			req.site = site;
-			return site;
-		}).then((site) => {
-			if (!next) return;
-			if (req.hostname != host.domains[0] && !req.path.startsWith('/.')) {
-				req.hostname = host.domains[0];
+		}).then(tsite => {
+			const site = this.siteById[host.id].$clone();
+			if (req.tenant) {
+				if (tsite) host.tenants[req.tenant] = tsite._id;
+				site._id = host.tenants[req.tenant];
+				site.data = Object.assign({}, site.data, {
+					env: 'dev',
+					domains: []
+				});
+			}
+			if (!next) return site;
+			if (host.error) throw host.error;
+
+			if (site.data.domains.length && req.hostname != site.data.domains[0] && !req.path.startsWith('/.')) {
+				Object.defineProperty(req, 'hostname', {
+					value: site.data.domains[0]
+				});
 				const rhost = this.init(req);
 				rhost.waiting.then(() => {
 					this.All.cache.tag('data-:site')(req, res, () => {
-						res.redirect(308, rhost.href + req.url);
+						res.redirect(308, site.url.href + req.url);
 					});
 				});
-				return site;
-			} else {
-				return site;
 			}
+			return site;
 		}).then((site) => {
 			if (!next) return;
-			// this sets the site hostname, shared amongst all sites
-			site.href = host.href;
-			site.hostname = host.name; // at this point it should be == host.domains[0]
-
+			req.site = site;
 			if (path == "/.well-known/status" || path == "/.well-known/pageboard") {
 				// /.well-known/pageboard is kept during transition
 				// this is expected by proxy/statics/status.html
@@ -140,7 +158,7 @@ so adding an IP to pageboard and pointing a host to that IP needs a restart)
 					errors: site.errors
 				});
 			} else {
-				const version = site.server || site.data.server || this.opt.version;
+				const version = site.data.server || this.opt.version;
 				if (version != this.opt.version) {
 					res.set('X-Pageboard-Peer', this.opt.upstreams[version]);
 					if (req.method == "GET") res.redirect(307, req.url);
@@ -153,11 +171,25 @@ so adding an IP to pageboard and pointing a host to that IP needs a restart)
 	}
 
 	wkp(req, res, next) {
-		this.All.run('site.all', req).then((list) => {
+		this.All.run('site.all', req).then(list => {
 			const map = {};
-			list.forEach((site) => {
+			const siteMap = {};
+			const hostMap = {};
+			for (const site of list) {
+				let domains = site.data.domains || [];
+				if (typeof domains == "string") domains = [domains];
+				site.data.domains = domains;
 				Object.assign(map, this.domainMapping(site));
-			});
+				const cur = siteMap[site.id] = this.siteById[site.id];
+				if (cur) Object.assign(site, cur);
+				else siteMap[site.id] = site;
+
+				const host = hostMap[site.id] = this.hostById[site.id];
+				if (!host) hostMap[site.id] = new Host(site.id);
+			}
+			this.siteById = siteMap;
+			this.hostById = hostMap;
+
 			res.type('json').end(JSON.stringify({
 				domains: map
 			}, null, ' '));
@@ -170,19 +202,14 @@ so adding an IP to pageboard and pointing a host to that IP needs a restart)
 
 	domainMapping(site) {
 		const map = {};
-		const rsite = this.sites[site.id];
-		const version = rsite && rsite.server || site.data.server || this.opt.version;
+		const version = site.data.server || this.opt.version;
 		const upstream = this.opt.upstreams[version];
-		let domains = site.data.domains;
-		if (!domains) domains = [];
-		else if (typeof domains == "string") domains = [domains];
+		const domains = site.data.domains;
 		const domain = domains.shift();
 		if (domain != null) {
-			domains = domains.slice();
-			domains.push(site.id);
-			domains.forEach((secondary) => {
+			for (const secondary of domains.concat([site.id])) {
 				map[secondary] = '=' + domain;
-			});
+			}
 			map[domain] = upstream;
 		} else {
 			map[site.id] = upstream;
@@ -190,56 +217,42 @@ so adding an IP to pageboard and pointing a host to that IP needs a restart)
 		return map;
 	}
 
+	initTenant(req) {
+		const {
+			groups: { tenant, id, domain }
+		} = /^(?:(?<tenant>[a-z0-9]+)-)?(?<id>[a-z0-9]+)(?<domain>\.[a-z0-9]+\.[a-z]+)$/.exec(req.hostname) || { groups: {} };
+
+		if (tenant && this.suffixes.includes(domain)) {
+			req.tenant = this.opt.database.url[tenant];
+			if (req.tenant) Object.defineProperty(req, 'hostname', {
+				value: `${id}${domain}`
+			});
+		}
+	}
+
 	init(req) {
-		const sites = this.sites;
-		const host = this.hosts.provision(req);
+		const id = this.idByDomain[req.hostname];
+		if (!id) return null;
+		const site = this.siteById[id];
+		if (!site) return null;
+		const host = this.hostById[id];
+		host.by = req.headers['x-forwarded-by'];
+
+		site.url = new URL("http://a.a");
+		site.url.protocol = req.protocol;
+		site.url.hostname = site.data.domains[0] || req.hostname;
+		site.url.port = portFromHost(req.headers.host);
 
 		if (!host.searching && !host.error) {
-			host.searching = Promise.resolve().then(() => {
-				return this.resolvableHost(host);
-			}).then(() => {
-				this.normalizeHost(host);
-				const site = host.id && sites[`${host.tenant || 'current'}-${host.id}`];
-				if (site) {
-					return site;
-				} else {
-					const data = {};
-					if (host.id) {
-						data.id = host.id;
-					} else {
-						data.domain = host.name;
-					}
-					return this.All.run('site.get', req, data);
-				}
-			}).then((site) => {
-				host.id = site.id;
-				sites[`${host.tenant || 'current'}-${host.id}`] = site;
-				if (!site.data) site.data = {};
-
-				if (host.tenant) {
-					site.data.env = 'dev';
-					site.data.domains = [];
-					site.tenant = host.tenant;
-				}
-
-				// there was a miss, so update domains list
-				const domains = (site.data.domains || []).concat(this.names.map((hn) => {
-					return host.id + hn;
-				}));
-				host.name = domains[0];
-				this.hosts.associate(host, domains);
-				return site;
-			}).catch((err) => {
+			host.searching = this.resolvableHost(site.url.hostname, host).catch(err => {
 				host.error = err;
 				if (host.finalize) host.finalize();
 			});
 		}
 
 		if (!host.installing && !host.error) {
-			host.installing = host.searching.then((site) => {
+			host.installing = host.searching.then(() => {
 				if (host.error) return;
-				site.href = host.href;
-				site.hostname = host.name;
 				return this.All.install(site).catch(() => {
 					// never throw an error since errors are already dealt with in install
 				});
@@ -251,9 +264,8 @@ so adding an IP to pageboard and pointing a host to that IP needs a restart)
 		return host;
 	}
 
-	resolvableHost(host) {
+	resolvableHost(hostname, host) {
 		const rec = this.ips[host.by];
-		const hostname = host.name;
 		return DNS.lookup(hostname, {
 			all: false
 		}).then((lookup) => {
@@ -269,34 +281,15 @@ so adding an IP to pageboard and pointing a host to that IP needs a restart)
 		});
 	}
 
-	promote(site) {
-		const cur = this.sites[site.id] || {};
-		cur.errors = [];
-		site.href = site.href || cur.href;
-		site.hostname = site.hostname || cur.hostname || site.data.domains[0];
-		site.errors = cur.errors;
-	}
-
-	replace(site) {
-		const cur = this.sites[site.id];
-		const oldList = cur && cur.data && cur.data.domains || [];
-		const newList = site.data && site.data.domains || [];
-		if (JSON.stringify(oldList) != JSON.stringify(newList)) {
-			const host = this.hosts.get(cur.hostname);
-			this.hosts.associate(host, newList);
-		}
-		this.sites[site.id] = site;
-	}
-
 	hold(site) {
 		if (site.data.env == "production" && site.$model) return; // do not hold
-		const host = this.hosts.get(site.hostname);
+		const host = this.hostById[site.id];
 		if (!host) return;
 		doWait(host);
 	}
 
 	release(site) {
-		const host = this.hosts.get(site.hostname);
+		const host = this.hostById[site.id];
 		if (!host) return;
 		host.isWaiting = false;
 		delete host.parked;
@@ -304,8 +297,8 @@ so adding an IP to pageboard and pointing a host to that IP needs a restart)
 
 	error(site, err) {
 		try {
-			if (!site.hostname) console.warn("All.domains.error(site) missing site.hostname");
-			const host = this.hosts.get(site.hostname);
+			if (!site.url) console.warn("All.domains.error(site) missing site.url");
+			const host = this.hostById[site.id];
 			if (!host) {
 				console.error("Error", site.id, err);
 				return;
@@ -321,28 +314,6 @@ so adding an IP to pageboard and pointing a host to that IP needs a restart)
 		} catch (ex) {
 			console.error(ex);
 		}
-	}
-
-	normalizeHost(host) {
-		if (host.id) return;
-		const hn = host.name;
-		const {
-			groups: { tenant, id, domain }
-		} = /^(?<tenant>[a-z0-9]+)-(?<id>[a-z0-9]+)(?<domain>\.[a-z0-9]+\.[a-z]+)$/.exec(hn) || { groups: {} };
-
-		if (tenant && this.names.includes(domain)) {
-			if (this.opt.database.url[tenant]) {
-				host.tenant = tenant;
-			} else {
-				host.name = `${id}${domain}`;
-			}
-		}
-		this.names.some((suffix) => {
-			if (hn.endsWith(suffix)) {
-				host.id = hn.substring(0, hn.length - suffix.length);
-				return true;
-			}
-		});
 	}
 };
 
@@ -382,6 +353,13 @@ function ipFamily(ip) {
 		}
 	}
 	return ips;
+}
+
+function portFromHost(host) {
+	const parts = host.split(':');
+	const port = parts.length == 2 ? parseInt(parts[1]) : null;
+	if (!Number.isNaN(port)) return port;
+	else return null;
 }
 
 function doWait(host) {

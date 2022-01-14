@@ -1,5 +1,6 @@
 const { ref, raw } = require('objection');
 const URL = require('url');
+const jsonPath = require.lazy('@kapouer/path');
 
 exports = module.exports = function (opt) {
 	return {
@@ -88,7 +89,7 @@ function init(All) {
 		}).then((obj) => {
 			res.type('text/plain');
 			All.auth.filter(req, obj);
-			res.send(obj.items.map(page => req.site.href + page.data.url).join('\n'));
+			res.send(obj.items.map(page => new URL(page.data.url, req.site.url).href).join('\n'));
 		}).catch(next);
 	});
 }
@@ -579,11 +580,15 @@ exports.save.schema = {
 };
 
 function stripHostname(site, block) {
-	const url = block.data && block.data.url; // FIXME use site.$model.hrefs
-	if (url) {
-		const objUrl = URL.parse(url);
-		if (objUrl.hostname == site.hostname) {
-			block.data.url = objUrl.path;
+	const list = site.$model.hrefs[block.type];
+	if (!list) return;
+	for (const desc of list) {
+		const url = jsonPath.get(block.data, desc.path);
+		if (url) {
+			const objUrl = new URL(url, site.url);
+			if (objUrl.hostname == site.url.hostname) {
+				jsonPath.set(block.data, desc.path, objUrl.pathname + objUrl.search);
+			}
 		}
 	}
 }
@@ -816,7 +821,7 @@ exports.robots = function (req) {
 	const lines = [];
 	let p;
 	if (req.site.data.env == "production") {
-		lines.push(`Sitemap: ${req.site.href}/sitemap.txt`);
+		lines.push(`Sitemap: ${new URL("/sitemap.txt", req.site.url)}`);
 		lines.push('User-agent: *');
 		p = listPages(req, { disallow: true, type: ['page', 'blog'] }).then((pages) => {
 			pages.forEach((page) => {

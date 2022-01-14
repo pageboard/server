@@ -44,8 +44,9 @@ module.exports =
 				return;
 			}
 			setTimeout(() => {
-				if (site.href) got.post(`${site.href}/.well-known/upcache`, {
-					timeout: 5000
+				if (site.url) got.post(new URL("/.well-known/upcache", site.url), {
+					timeout: 5000,
+					retry: false
 				}).catch((err) => {
 					console.error(err);
 				});

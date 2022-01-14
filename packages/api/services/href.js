@@ -177,12 +177,10 @@ exports.add = function (req, data) {
 function blindAdd(req, data) {
 	const { site, trx } = req;
 	const Href = All.api.Href;
-	const url = data.url;
-	const objUrl = URL.parse(url);
+	const url = new URL(data.url, site.url);
 	let isLocal = false;
-	if (!objUrl.hostname) objUrl.hostname = site.hostname;
-	if (site.hostname == objUrl.hostname) {
-		data.url = objUrl.path;
+	if (site.url.hostname == url.hostname) {
+		data.url = url.pathname + url.search;
 		isLocal = true;
 	}
 
@@ -193,7 +191,7 @@ function blindAdd(req, data) {
 		p = All.run('block.find', req, {
 			type: site.$pages,
 			data: {
-				url: objUrl.pathname
+				url: url.pathname
 			}
 		}).catch((err) => {
 			if (err.statusCode == 404) {
@@ -207,8 +205,8 @@ function blindAdd(req, data) {
 				type: 'link',
 				title: block.data && block.data.title || "",
 				site: null,
-				pathname: objUrl.pathname,
-				url: objUrl.path
+				pathname: url.pathname,
+				url: url.pathname + url.search
 			};
 		});
 	} else {
@@ -218,7 +216,7 @@ function blindAdd(req, data) {
 		if (!isLocal && result.url != data.url) {
 			result.canonical = result.url;
 			result.url = data.url;
-			result.pathname = objUrl.pathname;
+			result.pathname = url.pathname;
 		}
 		return exports.get(req, data).forUpdate().then((href) => {
 			if (!href) {

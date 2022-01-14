@@ -89,10 +89,10 @@ function init(All) {
 						name: pusher.name,
 						address: pusher.email
 					}],
-					subject: `Pageboard deployed ${site.data.module} to ${req.site.href}`,
+					subject: `Pageboard deployed ${site.data.module} to ${site.url.href}`,
 					text: Text`
 						The version ${site.data.version} is immediately available at
-						${req.site.href}
+						${site.url.href}
 					`
 				});
 			});
@@ -103,7 +103,7 @@ function init(All) {
 					name: pusher.name,
 					address: pusher.email
 				}],
-				subject: `Pageboard error deploying ${site.data.module} to ${req.site.href}`,
+				subject: `Pageboard error deploying ${site.data.module} to ${site.url.href}`,
 				text: Text`
 					An error occurred while deploying from repository:
 					${err.message}

@@ -333,7 +333,7 @@ exports.send = function (req, data) {
 		if (purpose == "transactional" && (Object.keys(domains).length > 2 || mailOpts.to.length > 10)) {
 			throw new Error("Transactional mail allowed for at most two different recipients domains and ten recipients");
 		}
-		const emailUrl = site.href + emailPage.data.url;
+		const emailUrl = new URL(emailPage.data.url, site.url);
 
 		return got(emailUrl + ".mail", { // TODO when all 0.7 are migrated, drop .mail
 			headers: {

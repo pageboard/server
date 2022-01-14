@@ -57,7 +57,7 @@ function generate(req, data) {
 
 exports.send = function (req, data) {
 	const site = req.site;
-	if (!site.href) {
+	if (!site.url) {
 		return "login.send requires a hostname. Use login.link";
 	}
 	return generate(req, data).then((token) => {
@@ -88,14 +88,14 @@ exports.send = function (req, data) {
 			mail.text = Text`
 				${tokenStr}
 				Ce message est envoyé depuis
-				${site.href}
+				${site.url.href}
 				et peut être ignoré.`;
 		} else {
 			mail.subject = `${prefix}verification token: ${tokenStr}`;
 			mail.text = Text`
 				${tokenStr}
 				This message is sent from
-				${site.href}
+				${site.url.href}
 				and can be ignored.`;
 		}
 		return All.run('mail.to', req, mail).then(() => {

@@ -71,7 +71,7 @@ exports.bundle = function(site, pkg, list, filename) {
 	if (suffix == "production") suffix = ".min";
 	else if (suffix == "staging") suffix = ".max";
 	else suffix = "";
-	if (!suffix || !pkg.dir || !site.href) {
+	if (!suffix || !pkg.dir || !site.url) {
 		return Promise.resolve(list);
 	}
 

@@ -21,13 +21,13 @@ function init(All) {
 	// TODO Cron exports.gc...
 }
 
-exports.tenant = function (tenant = 'current') {
+exports.tenant = function (tenantUrl) {
 	const opt = All.opt.database;
-	const url = opt.url[tenant];
-	if (!url) throw new Error(`No database configured for '${tenant}'`);
+	const url = tenantUrl || opt.url.current;
+	if (!url) throw new Error(`No database configured`);
 	let tknex;
-	if (tenants.has(tenant)) {
-		tknex = tenants.get(tenant);
+	if (tenants.has(url)) {
+		tknex = tenants.get(url);
 	}	else {
 		tknex = knex({
 			client: 'pg',
@@ -35,7 +35,7 @@ exports.tenant = function (tenant = 'current') {
 			debug: Boolean(Log.sql.enabled),
 			asyncStackTraces: All.opt.env == "development"
 		});
-		tenants.set(tenant, tknex);
+		tenants.set(url, tknex);
 	}
 	return tknex;
 };

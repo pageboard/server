@@ -32,7 +32,7 @@ function init(All) {
 		All.auth.cookie = function({site, user}) {
 			return {
 				value: lock.sign(user, Object.assign({
-					hostname: site.hostname
+					hostname: site.url.hostname
 				}, opt.lock)),
 				maxAge: opt.lock.maxAge * 1000
 			};
