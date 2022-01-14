@@ -109,7 +109,7 @@ exports.config = function(moduleDir, id, module, config) {
 	});
 };
 
-exports.clean = function(site, pkg, opt) {
+exports.clean = function (site, pkg, opt) {
 	const rootSite = Path.join(opt.dirs.data, 'sites', site.id);
 	return fs.readdir(rootSite).then((paths) => {
 		return Promise.all(paths.map((path) => {
@@ -124,10 +124,8 @@ exports.clean = function(site, pkg, opt) {
 				if (a.stat.mtimeMs == b.stat.mtimeMs) return 0;
 				if (a.stat.mtimeMs < b.stat.mtimeMs) return 1;
 			});
-			return Promise.all(stats.filter((obj) => {
-				return Path.basename(obj.path) != "master" || opt.env != "development";
-			}).slice(2).map((obj) => {
-				return rimraf(obj.path, {glob: false});
+			return Promise.all(stats.slice(2).map(obj => {
+				return rimraf(obj.path, { glob: false });
 			}));
 		});
 	}).catch((err) => {
