@@ -47,6 +47,7 @@
     ]
   },
   "devDependencies": {
-    "@kapouer/eslint-config": "^1.6.0"
+    "eslint": ">= 7",
+    "@kapouer/eslint-config": "^1.6.2"
   }
 }
