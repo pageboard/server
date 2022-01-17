@@ -14,8 +14,8 @@ exports = module.exports = function(opt) {
 
 function init(All) {
 	All.cache.map = Upcache.map;
-	All.cache.tag = paramSiteWrap(Upcache.tag);
-	All.cache.for = paramSiteWrap(Upcache.tag.for);
+	All.cache.tag = Upcache.tag;
+	All.cache.for = Upcache.tag.for;
 	All.cache.disable = Upcache.tag.disable;
 	return state.init(All).then(() => {
 		All.app.get('*', Upcache.tag('app'));
@@ -23,16 +23,4 @@ function init(All) {
 			res.sendStatus(204);
 		});
 	});
-}
-
-function paramSiteWrap(fn) {
-	return function() {
-		const mw = fn.apply(null, Array.from(arguments));
-		function omw(req, res, next) {
-			req.params.site = req.site.id;
-			mw(req, res, next);
-		}
-		if (mw.for) omw.for = paramSiteWrap(mw.for);
-		return omw;
-	};
 }

@@ -132,10 +132,10 @@ function init(All) {
 	Object.assign(exports, install);
 
 	// api depends on site files, that tag is invalidated in cache install
-	All.app.get('/.api/*', All.cache.tag('app-:site'));
+	All.app.get('/.api/*', All.cache.tag('app-:site'), All.cache.tag('db-:tenant'));
 	All.app.use('/.api/*',
 		(req, res, next) => {
-			if (req.site.data.maintenance === true && req.method != "GET") {
+			if (req.params.tenant && req.method != "GET") {
 				throw new HttpError.ServiceUnavailable("Site is in maintenance mode");
 			} else {
 				next();
@@ -215,7 +215,7 @@ All.run = function (apiStr, req, data) {
 				hadTrx = true;
 				return;
 			}
-			return transaction.start(All.db.tenant(req.tenant)).then((trx) => {
+			return transaction.start(All.db.tenant(req.params.tenant)).then((trx) => {
 				req.trx = trx;
 			});
 		}).then(() => {
@@ -237,7 +237,7 @@ All.run = function (apiStr, req, data) {
 			if (!req || !req.trx) return;
 			if (req.trx.isCompleted()) {
 				if (hadTrx) {
-					return transaction.start(All.db.tenant(req.tenant))
+					return transaction.start(All.db.tenant(req.params.tenant))
 						.then((trx) => {
 							req.trx = trx;
 						});

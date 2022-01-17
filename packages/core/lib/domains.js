@@ -120,14 +120,15 @@ module.exports = class Domains {
 			p = host.waiting;
 		}
 		return p.then(() => {
-			if (req.tenant && !host.tenants[req.tenant]) {
+			if (req.params.tenant && !host.tenants[req.params.tenant]) {
 				return All.run('site.get', req, { id: host.id });
 			}
 		}).then(tsite => {
 			const site = this.siteById[host.id].$clone();
-			if (req.tenant) {
-				if (tsite) host.tenants[req.tenant] = tsite._id;
-				site._id = host.tenants[req.tenant];
+			const { tenant } = req.params;
+			if (tenant) {
+				if (tsite) host.tenants[tenant] = tsite._id;
+				site._id = host.tenants[tenant];
 				site.data = Object.assign({}, site.data, {
 					env: 'dev',
 					domains: []
@@ -151,6 +152,7 @@ module.exports = class Domains {
 		}).then((site) => {
 			if (!next) return;
 			req.site = site;
+			req.params.site = site.id;
 			if (path == "/.well-known/status" || path == "/.well-known/pageboard") {
 				// /.well-known/pageboard is kept during transition
 				// this is expected by proxy/statics/status.html
@@ -223,7 +225,7 @@ module.exports = class Domains {
 		} = /^(?:(?<tenant>[a-z0-9]+)-)?(?<id>[a-z0-9]+)(?<domain>\.[a-z0-9]+\.[a-z]+)$/.exec(req.hostname) || { groups: {} };
 
 		if (tenant && this.suffixes.includes(domain) && tenant in this.opt.database.url) {
-			req.tenant = tenant;
+			req.params.tenant = tenant;
 			Object.defineProperty(req, 'hostname', {
 				value: `${id}${domain}`
 			});
