@@ -115,7 +115,14 @@ exports.copy.schema = {
 
 exports.dump = function ({ file }) {
 	const opt = All.opt.database;
-	return exec('pg_dump', ['--format', 'custom', '--file', file, '--dbname', opt.url.current]).then(() => {
+	return exec('pg_dump', [
+		'--format', 'custom',
+		'--table', 'block',
+		'--table', 'href',
+		'--table', 'relation',
+		'--file', file,
+		'--dbname', opt.url.current
+	]).then(() => {
 		return file;
 	});
 };
