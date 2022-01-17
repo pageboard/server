@@ -1,8 +1,8 @@
 const { createReadStream, createWriteStream } = require('fs');
-const ndjson = require('ndjson');
-const Upgrader = require('../upgrades');
-
 const Path = require('path');
+
+const ndjson = require.lazy('ndjson');
+const Upgrader = require.lazy('../upgrades');
 
 exports = module.exports = function (opt) {
 	return {
