@@ -222,9 +222,9 @@ module.exports = class Domains {
 			groups: { tenant, id, domain }
 		} = /^(?:(?<tenant>[a-z0-9]+)-)?(?<id>[a-z0-9]+)(?<domain>\.[a-z0-9]+\.[a-z]+)$/.exec(req.hostname) || { groups: {} };
 
-		if (tenant && this.suffixes.includes(domain)) {
-			req.tenant = this.opt.database.url[tenant];
-			if (req.tenant) Object.defineProperty(req, 'hostname', {
+		if (tenant && this.suffixes.includes(domain) && tenant in this.opt.database.url) {
+			req.tenant = tenant;
+			Object.defineProperty(req, 'hostname', {
 				value: `${id}${domain}`
 			});
 		}
