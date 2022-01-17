@@ -64,7 +64,6 @@ pageboard.init(config).catch((err) => {
 				});
 			});
 		} else {
-			args.push({});
 			args.push(config.data || {});
 		}
 	}).then(() => {
