@@ -132,7 +132,7 @@ function init(All) {
 	Object.assign(exports, install);
 
 	// api depends on site files, that tag is invalidated in cache install
-	All.app.get('/.api/*', All.cache.tag('app-:site'), All.cache.tag('db-:tenant'));
+	All.app.get('/.api/*', All.cache.tag('app-:site'), All.cache.tag('db-:tenant').for('1day'));
 	All.app.use('/.api/*',
 		(req, res, next) => {
 			if (req.params.tenant && req.method != "GET") {
