@@ -136,13 +136,6 @@ function init(All) {
 	// api depends on site files, that tag is invalidated in cache install
 	All.app.get('/.api/*', All.cache.tag('app-:site'), All.cache.tag('db-:tenant').for(`${tenantsLen}day`));
 	All.app.use('/.api/*',
-		(req, res, next) => {
-			if (res.locals.tenant && req.method != "GET") {
-				throw new HttpError.ServiceUnavailable("Site is in maintenance mode");
-			} else {
-				next();
-			}
-		},
 		// invalid site by site
 		All.cache.tag('data-:site'),
 		// parse json bodies
