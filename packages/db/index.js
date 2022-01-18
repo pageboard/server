@@ -88,7 +88,7 @@ function scheduleTenantCopy(All) {
 	});
 }
 
-exports.copy = function ({ tenant }) {
+exports.copy = function (req, { tenant }) {
 	const { opt } = All;
 	const dir = Path.join(opt.dirs.cache, 'dumps');
 	const file = Path.join(dir, `${opt.name}-${tenant}.dump`);
@@ -113,7 +113,7 @@ exports.copy.schema = {
 	}
 };
 
-exports.dump = function ({ file }) {
+exports.dump = function (req, { file }) {
 	const opt = All.opt.database;
 	return exec('pg_dump', [
 		'--format', 'custom',
@@ -137,7 +137,7 @@ exports.dump.schema = {
 	}
 };
 
-exports.restore = function ({ file, tenant }) {
+exports.restore = function (req, { file, tenant }) {
 	const opt = All.opt.database;
 	const url = opt.url[tenant];
 	if (!url) {

@@ -20,7 +20,7 @@
     "fast-json-stable-stringify": "^2.1.0",
     "glob": "^7.2.0",
     "got": "^11.8.3",
-    "upcache": "^2.3.1"
+    "upcache": "^2.4.1"
   },
   "pageboard": true
 }
