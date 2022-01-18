@@ -23,8 +23,8 @@ const ajvApiSettings = {
 		singleline: /^[^\n\r]*$/,
 		pathname: /^(\/[\w-.]*)+$/,
 		id: /^[A-Za-z0-9]+$/,
-		name: /^\w+$/,
-		grant: /^[a-z0-9-]+$/
+		name: /^\w+$/, // this should be the "type" format
+		grant: /^[a-z0-9-]+$/ // this should be the name format !
 	},
 	invalidDefaults: 'log'
 };
