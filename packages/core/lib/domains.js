@@ -62,6 +62,7 @@ module.exports = class Domains {
 	byIP(req, res, next) {
 		const ip = req.headers['x-forwarded-by'];
 		if (!ip) return next(new Error("Missing X-Forwarded-By header"));
+
 		const rec = this.ips[ip] || {};
 		if (!rec.queue) {
 			this.ips[ip] = rec;
@@ -76,7 +77,7 @@ module.exports = class Domains {
 				const idMap = {};
 				for (const id in this.siteById) {
 					const site = this.siteById[id];
-					for (const domain of site.data.domains) {
+					for (const domain of castArray(site.data.domains)) {
 						idMap[domain] = id;
 					}
 					for (const suffix of this.suffixes) {
@@ -136,10 +137,11 @@ module.exports = class Domains {
 			}
 			if (!next) return site;
 			if (host.error) throw host.error;
+			const domains = castArray(site.data.domains);
 
-			if (site.data.domains.length && req.hostname != site.data.domains[0] && !req.path.startsWith('/.')) {
+			if (domains.length && req.hostname != domains[0] && !req.path.startsWith('/.')) {
 				Object.defineProperty(req, 'hostname', {
-					value: site.data.domains[0]
+					value: domains[0]
 				});
 				const rhost = this.init(req);
 				rhost.waiting.then(() => {
@@ -178,9 +180,6 @@ module.exports = class Domains {
 			const siteMap = {};
 			const hostMap = {};
 			for (const site of list) {
-				let domains = site.data.domains || [];
-				if (typeof domains == "string") domains = [domains];
-				site.data.domains = domains;
 				Object.assign(map, this.domainMapping(site));
 				const cur = siteMap[site.id] = this.siteById[site.id];
 				if (cur) Object.assign(site, cur);
@@ -206,7 +205,7 @@ module.exports = class Domains {
 		const map = {};
 		const version = site.data.server || this.opt.version;
 		const upstream = this.opt.upstreams[version];
-		const domains = site.data.domains;
+		const domains = castArray(site.data.domains).slice();
 		const domain = domains.shift();
 		if (domain != null) {
 			for (const secondary of domains.concat([site.id])) {
@@ -242,7 +241,7 @@ module.exports = class Domains {
 
 		site.url = new URL("http://a.a");
 		site.url.protocol = req.protocol;
-		site.url.hostname = site.data.domains[0] || req.hostname;
+		site.url.hostname = castArray(site.data.domains)[0] || req.hostname;
 		site.url.port = portFromHost(req.headers.host);
 
 		if (!host.searching && !host.error) {
@@ -299,8 +298,8 @@ module.exports = class Domains {
 
 	idByDomainUpdate(site, old) {
 		const id = site.id;
-		if (old) for (const domain of old.data.domains) this.idByDomain[domain] = null;
-		for (const domain of site.data.domains) this.idByDomain[domain] = id;
+		if (old) for (const domain of castArray(old.data.domains)) this.idByDomain[domain] = null;
+		for (const domain of castArray(site.data.domains)) this.idByDomain[domain] = id;
 		for (const suffix of this.suffixes) {
 			this.idByDomain[`${id}${suffix}`] = id;
 		}
@@ -310,7 +309,7 @@ module.exports = class Domains {
 		const orig = this.siteById[site.id];
 		if (!site.data.domains) site.data.domains = [];
 		this.idByDomainUpdate(site, orig);
-		Object.assign(orig.data, site.data);
+		if (orig) Object.assign(orig.data, site.data);
 	}
 
 	error(site, err) {
@@ -392,5 +391,12 @@ function doWait(host) {
 	host.waiting = host.installing.then(() => {
 		return subpending;
 	});
+}
+
+function castArray(prop) {
+	if (prop == null) return [];
+	if (typeof prop == "string") return [prop];
+	if (Array.isArray(prop)) return prop;
+	else throw new Error("Cannot castArray " + typeof prop);
 }
 
