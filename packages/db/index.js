@@ -83,7 +83,7 @@ function scheduleTenantCopy(All) {
 	}
 	console.info("Scheduling tenant db copies:", slots.join(', '));
 	schedule.scheduleJob('0 0 * * *', (date) => {
-		const tenant = slots[date.getDay() % slots.length];
+		const tenant = slots[(date.getDay() - 1) % slots.length];
 		return All.run('db.copy', { tenant });
 	});
 }
