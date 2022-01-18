@@ -147,7 +147,7 @@ exports.add.schema = {
 exports.save = function (req, data) {
 	return exports.get(req, data).then((site) => {
 		lodashMerge(site.data, data.data);
-		if (req.site.url) site.url = req.site.url;
+		if (req.site && req.site.url) site.url = req.site.url;
 		return All.install(site).then((site) => {
 			const copy = Object.assign({}, data.data);
 			return site.$query(req.trx).patchObject({
