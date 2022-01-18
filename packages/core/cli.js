@@ -79,7 +79,7 @@ pageboard.init(config).catch((err) => {
 		});
 	});
 }).catch((err) => {
-	console.error(err.message || err);
+	console.error(err.statusCode ? err.name + ': ' + err.message : err);
 	process.exit(1);
 });
 
