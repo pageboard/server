@@ -161,7 +161,7 @@ function check(fun, schema, data) {
 			if (err.dataPath) return `${err.dataPath} ${err.message}`;
 			else return err.message;
 		}).join(',\n');
-		throw new HttpError.BadRequest(`Bad api parameters: \n${messages}`);
+		throw new HttpError.BadRequest(messages);
 	}
 }
 
