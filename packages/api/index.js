@@ -195,10 +195,6 @@ All.help = function (apiStr) {
 All.run = function (apiStr, req, data) {
 	return Promise.resolve().then(() => {
 		const [schema, mod, fun] = getApiMethodSchema(apiStr);
-		if (fun.length == 1 && data == null) {
-			data = req;
-			req = null;
-		}
 		Log.api("run %s:\n%O", apiStr, data);
 		try {
 			data = check(fun, schema, data);
