@@ -46,7 +46,8 @@ module.exports =
 			setTimeout(() => {
 				if (site.url) got.post(new URL("/.well-known/upcache", site.url), {
 					timeout: 5000,
-					retry: false
+					retry: false,
+					https: { rejectUnauthorized: false }
 				}).catch((err) => {
 					console.error(err);
 				});
