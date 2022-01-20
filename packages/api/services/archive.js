@@ -1,5 +1,6 @@
 const { createReadStream, createWriteStream } = require('fs');
 const Path = require('path');
+const util = require('util');
 
 const ndjson = require.lazy('ndjson');
 const Upgrader = require.lazy('../upgrades');
@@ -254,9 +255,11 @@ exports.import = function ({ site, trx }, data) {
 		for (let obj of list) {
 			obj = upgrader.process(obj);
 			p = p.then(() => {
-				if (!error) return afterEach(obj);
-			}).catch(err => {
-				error = err;
+				if (error) return;
+				return afterEach(obj).catch(err => {
+					error = err;
+					error.message = (error.message || "") + `\nwhile processing ${util.inspect(obj, false, Infinity)}`;
+				});
 			});
 		}
 		return p;
