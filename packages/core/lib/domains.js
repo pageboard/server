@@ -61,7 +61,7 @@ module.exports = class Domains {
 
 	byIP(req, res, next) {
 		const ip = req.headers['x-forwarded-by'];
-		if (!ip) return next(new Error("Missing X-Forwarded-By header"));
+		if (!ip) return next(new HttpError.BadRequest("Wrong proxy headers"));
 
 		const rec = this.ips[ip] || {};
 		if (!rec.queue) {
