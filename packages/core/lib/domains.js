@@ -182,8 +182,11 @@ module.exports = class Domains {
 			for (const site of list) {
 				Object.assign(map, this.domainMapping(site));
 				const cur = siteMap[site.id] = this.siteById[site.id];
-				if (cur) Object.assign(site, cur);
-				else siteMap[site.id] = site;
+				if (cur) {
+					Object.assign(cur, site);
+				} else {
+					siteMap[site.id] = site;
+				}
 
 				const host = hostMap[site.id] = this.hostById[site.id];
 				if (!host) hostMap[site.id] = new Host(site.id);
