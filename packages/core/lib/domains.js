@@ -125,7 +125,9 @@ module.exports = class Domains {
 				return All.run('site.get', req, { id: host.id });
 			}
 		}).then(tsite => {
+			if (!next) return;
 			if (host.error) throw host.error;
+
 			const site = this.siteById[host.id].$clone();
 			const { tenant } = res.locals;
 			if (tenant) {
@@ -135,21 +137,19 @@ module.exports = class Domains {
 					env: 'dev',
 					domains: []
 				});
-				return site;
-			}
-			if (!next) return site;
-			const domains = castArray(site.data.domains);
-
-			if (domains.length && req.hostname != domains[0] && !req.path.startsWith('/.')) {
-				Object.defineProperty(req, 'hostname', {
-					value: domains[0]
-				});
-				const rhost = this.init(req);
-				rhost.waiting.then(() => {
-					this.All.cache.tag('data-:site')(req, res, () => {
-						res.redirect(308, site.url.href + req.url);
+			} else {
+				const domains = castArray(site.data.domains);
+				if (domains.length && req.hostname != domains[0] && !req.path.startsWith('/.')) {
+					Object.defineProperty(req, 'hostname', {
+						value: domains[0]
 					});
-				});
+					const rhost = this.init(req);
+					rhost.waiting.then(() => {
+						this.All.cache.tag('data-:site')(req, res, () => {
+							res.redirect(308, site.url.href + req.url);
+						});
+					});
+				}
 			}
 			return site;
 		}).then((site) => {
