@@ -3,7 +3,7 @@ const got = require.lazy('got');
 const { pipeline } = require('stream');
 const { Pool } = require('tarn');
 const fork = require('child_process').fork;
-const URL = require('url');
+const urlFormat = require('url').format;
 
 let pool;
 
@@ -211,7 +211,7 @@ function prerender(req, res, next) {
 			}
 		});
 		if (invalid) {
-			return res.redirect(URL.format({ pathname, query }));
+			return res.redirect(urlFormat({ pathname, query }));
 		}
 
 		const plugins = opt.read.plugins.slice();

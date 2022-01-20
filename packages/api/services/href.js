@@ -1,5 +1,4 @@
 const Path = require('path');
-const URL = require('url');
 const { ref, raw, val } = require('objection');
 const jsonPath = require.lazy('@kapouer/path');
 

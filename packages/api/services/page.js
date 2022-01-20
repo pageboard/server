@@ -1,5 +1,4 @@
 const { ref, raw } = require('objection');
-const URL = require('url');
 const jsonPath = require.lazy('@kapouer/path');
 
 exports = module.exports = function (opt) {
