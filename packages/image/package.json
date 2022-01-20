@@ -19,7 +19,7 @@
   "dependencies": {
     "datauri": "^2.0.0",
     "sharp": "^0.28.3",
-    "sharpie": "^4.7.1"
+    "sharpie": "^4.8.0"
   },
   "pageboard": true
 }
