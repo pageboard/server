@@ -205,7 +205,7 @@ exports.import = function ({ site, trx }, data) {
 				.first().throwIfNotFound()
 				.catch((err) => {
 					if (err.status != 404) throw err;
-					return Block.query(trx).insert(obj).returning('_id, id');
+					return Block.query(trx).insert(obj).returning('_id', 'id');
 				}).then(user => {
 					counts.users++;
 					refs[obj.id] = user._id;
