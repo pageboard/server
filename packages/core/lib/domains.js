@@ -125,6 +125,7 @@ module.exports = class Domains {
 				return All.run('site.get', req, { id: host.id });
 			}
 		}).then(tsite => {
+			if (host.error) throw host.error;
 			const site = this.siteById[host.id].$clone();
 			const { tenant } = res.locals;
 			if (tenant) {
@@ -134,9 +135,9 @@ module.exports = class Domains {
 					env: 'dev',
 					domains: []
 				});
+				return site;
 			}
 			if (!next) return site;
-			if (host.error) throw host.error;
 			const domains = castArray(site.data.domains);
 
 			if (domains.length && req.hostname != domains[0] && !req.path.startsWith('/.')) {
