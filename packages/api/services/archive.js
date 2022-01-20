@@ -45,38 +45,46 @@ exports.export = function ({ site, trx, res }, data) {
 	jstream.pipe(out);
 	jstream.write(site);
 
-	return site.$relatedQuery('children', trx).selectWithout('tsv', '_id').withGraphJoined('[parents(parents)]').modifiers({
-		parents(q) {
-			return q.selectWithout('tsv', '_id').whereNot('block.id', site.id);
-		}
-	}).then(blocks => {
-		// child without parents first, parents before children
-		blocks.sort((a, b) => {
-			if (a.id == b.id) return 0;
-			if (a.parents.length == 0) return -1;
-			else if (a.parents.find(p => p.id == b.id)) return 1;
-			else return -1;
+	const query = site.$relatedQuery('children', trx)
+		.selectWithout('tsv', '_id')
+		.withGraphFetched('[children.^(children),parents(users)]')
+		.modifiers({
+			children(q) {
+				return q.select('id');
+			},
+			users(q) {
+				return q.selectWithout('_id', 'tsv').where('type', 'user');
+			}
 		});
-		// users are not children of site
+	return query.then(blocks => {
+		const depthIds = {};
+		function trav(b, d) {
+			const id = b.id;
+			if (id) depthIds[id] = Math.max(depthIds[id] || 0, d);
+			for (const c of b.children) trav(c, d + 1);
+		}
+		trav({ children: blocks }, 0);
+
+		blocks.sort((a, b) => {
+			return depthIds[b.id] - depthIds[a.id];
+		});
 		const users = [];
 		for (const block of blocks) {
-			// keep only id
 			if (block.standalone) counts.standalones += 1;
-			if (block.parents) block.parents = block.parents.map(p => {
-				if (!blocks.find(b => b.id == p.id)) {
-					if (p.type == "user") {
-						users.push(p);
-					} else {
-						console.warn("parent is an orphan of unsupported type:", p);
-					}
+			block.parents = block.parents.map(parent => {
+				if (!users.some(item => item.id == parent.id)) {
+					users.push(parent);
 				}
-				return p.id;
+				return parent.id;
 			});
-			const len = block.parents.length;
-			if (len == 0) {
-				delete block.parents;
+			if (block.parents.length == 0) delete block.parents;
+
+			block.children = (block.children || []).map(item => item.id);
+			const cLen = block.children.length;
+			if (cLen == 0) {
+				delete block.children;
 			} else {
-				counts.relations += len;
+				counts.relations += cLen;
 			}
 		}
 		counts.users = users.length;
@@ -143,7 +151,7 @@ exports.empty.schema = {
 };
 
 // import all data but files
-exports.import = function ({site, trx}, data) {
+exports.import = function ({ site, trx }, data) {
 	// TODO use multer to preprocess request stream into a temporary data.file = req.files[0] if any
 	// TODO allow import of partial extracts (like some pages and standalones without site nor settings)
 	const Block = All.api.Block;
@@ -154,30 +162,16 @@ exports.import = function ({site, trx}, data) {
 		hrefs: 0,
 		standalones: 0
 	};
-	let p = Promise.resolve();
 	const fstream = createReadStream(Path.resolve(All.opt.cwd, data.file)).pipe(ndjson.parse());
 
 	let upgrader;
-	let hadError = false;
-	const errorStop = (obj) => {
-		return (err) => {
-			if (!hadError) {
-				console.error("Error importing", obj, err);
-				hadError = true;
-				throw err;
-			}
-		};
-	};
 	const refs = {};
-	fstream.on('data', (obj) => {
+	const beforeEach = (obj) => {
 		if (!obj.id) {
-			p = p.then(() => {
-				if (obj.pathname) {
-					obj.pathname = obj.pathname.replace(/\/uploads\/[^/]+\//, `/uploads/${site.id}/`);
-				}
-				counts.hrefs++;
-				return site.$relatedQuery('hrefs', trx).insert(obj);
-			}).catch(errorStop(obj));
+			if (obj.pathname) {
+				obj.pathname = obj.pathname.replace(/\/uploads\/[^/]+\//, `/uploads/${site.id}/`);
+			}
+			return obj;
 		} else if (obj.type == "site") {
 			if (!obj.data) obj.data = {};
 			const fromVersion = obj.data.server;
@@ -187,60 +181,67 @@ exports.import = function ({site, trx}, data) {
 				from: fromVersion,
 				to: obj.data.server
 			});
-			upgrader.process(obj);
-			upgrader.finish(obj);
+		}
+		return upgrader.beforeEach(obj);
+	};
+	const afterEach = (obj) => {
+		if (!obj.id) {
+			counts.hrefs++;
+			return site.$relatedQuery('hrefs', trx).insert(obj);
+		} else if (obj.type == "site") {
+			upgrader.afterEach(obj);
 			// need to remove all blocks during import
-			p = p.then(() => {
-				// FIXME use archive.empty
-				return Block.query(trx)
-					.select(trx.raw('recursive_delete(children._id, TRUE)')).from(
-						site.$relatedQuery('children', trx).select('block._id').as('children')
-					);
-			}).then(() => {
+			// FIXME use archive.empty
+			return site.$relatedQuery('children', trx).select(trx.raw('recursive_delete(block._id, TRUE)')).then(children => {
 				return site.$relatedQuery('hrefs', trx).delete();
 			}).then(() => {
 				return site.$query(trx).patch({ data: obj.data });
-			}).catch(errorStop(obj));
+			});
 		} else if (obj.type == "user") {
-			// FIXME user cannot change its id
-			// obj = upgrader.process(obj);
-			p = p.then(() => {
-				return Block.query(trx).where('type', 'user')
-					.whereJsonText('data:email', obj.data.email).select('_id', 'id')
-					.first().throwIfNotFound()
-					.catch((err) => {
-						if (err.status != 404) throw err;
-						return Block.query(trx).insert(obj).returning('_id, id');
-					}).then(user => {
-						counts.users++;
-						// upgrader.finish(obj);
-						refs[obj.id] = user._id;
-					});
-			}).catch(errorStop(obj));
+			upgrader.afterEach(obj);
+			return Block.query(trx).where('type', 'user')
+				.whereJsonText('data:email', obj.data.email).select('_id', 'id')
+				.first().throwIfNotFound()
+				.catch((err) => {
+					if (err.status != 404) throw err;
+					return Block.query(trx).insert(obj).returning('_id, id');
+				}).then(user => {
+					counts.users++;
+					refs[obj.id] = user._id;
+				});
 		} else {
-			obj = upgrader.process(obj);
+			upgrader.afterEach(obj);
 			if (obj.parents) {
 				obj.parents = obj.parents.map(id => {
-					const pid = refs[id];
-					if (!pid) console.warn("Missing parent_id", id, obj);
-					return { "#dbRef": refs[id] };
+					const kid = refs[id];
+					if (!kid) throw new HttpError.BadRequest(`Missing parent id: ${upgrader.reverseMap[id] || id}`);
+					return { "#dbRef": kid };
 				});
 			}
-			p = p.then(() => {
-				return site.$relatedQuery('children', trx).insertGraph(obj, {
-					allowRefs: true
-				}).returning('_id').then(row => {
-					if (obj.standalone) counts.standalones += 1;
-					else counts.blocks += 1;
-					if (obj.parents) counts.relations += obj.parents.length;
-					upgrader.finish(obj);
-					refs[obj.id] = row._id;
+			if (obj.children) {
+				obj.children = obj.children.map(id => {
+					const kid = refs[id];
+					if (!kid) throw new HttpError.BadRequest(`Missing child id: ${upgrader.reverseMap[id] || id}`);
+					return { "#dbRef": kid };
 				});
-			}).catch(errorStop(obj));
+			}
+			return site.$relatedQuery('children', trx).insertGraph(obj, {
+				allowRefs: true
+			}).returning('_id').then(row => {
+				if (obj.standalone) counts.standalones += 1;
+				else counts.blocks += 1;
+				if (obj.children) counts.relations += obj.children.length;
+				refs[obj.id] = row._id;
+			});
 		}
+	};
+
+	const list = [];
+	fstream.on('data', (obj) => {
+		list.push(beforeEach(obj));
 	});
 
-	const q = new Promise((resolve, reject) => {
+	let p = new Promise((resolve, reject) => {
 		fstream.on('error', (err) => {
 			reject(err);
 		});
@@ -248,10 +249,19 @@ exports.import = function ({site, trx}, data) {
 			resolve();
 		});
 	});
-	return q.then(() => {
+	let error;
+	return p.then(() => {
+		for (let obj of list) {
+			obj = upgrader.process(obj);
+			p = p.then(() => {
+				if (!error) return afterEach(obj);
+			}).catch(err => {
+				error = err;
+			});
+		}
 		return p;
 	}).then(() => {
-		//return Promise.all(mp);
+		if (error) throw error;
 	}).then(() => {
 		return counts;
 	});

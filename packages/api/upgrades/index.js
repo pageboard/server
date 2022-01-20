@@ -3,6 +3,7 @@ module.exports = class Upgrader {
 		this.copy = Boolean(opts.copy);
 		this.Block = Block;
 		this.idMap = {};
+		this.reverseMap = {};
 		if (opts.from != opts.to && opts.from && opts.to) {
 			try {
 				this.module = require(`./from-${opts.from}-to-${opts.to}`);
@@ -20,17 +21,22 @@ module.exports = class Upgrader {
 		if (this.copy) return this.idMap[id];
 		else return id;
 	}
-	process(block) {
-		if (this.copy) {
+	beforeEach(block) {
+		if (this.copy && block.type != "user") {
 			const old = block.id;
 			block.id = this.idMap[old] = this.Block.genIdSync();
-			if (block.parents) block.parents = block.parents.map(id => {
-				return this.idMap[id];
+			this.reverseMap[block.id] = old;
+		}
+		return block;
+	}
+	process(block) {
+		if (this.copy) {
+			block.children = (block.children || []).map(id => {
+				const nid = this.idMap[id];
+				if (nid == null) throw new Error("Cannot remap child: " + id);
+				return nid;
 			});
 		}
-		// if (block.children) block.children = block.children.map((child) => {
-		// 	return this.process(child, block);
-		// });
 		const mod = this.module;
 		if (!mod) return block;
 		try {
@@ -43,11 +49,8 @@ module.exports = class Upgrader {
 		}
 		return block;
 	}
-	finish(block) {
+	afterEach(block) {
 		if (this.copy) {
-			// if (block.children) block.children.forEach((child) => {
-			// 	this.finish(child);
-			// });
 			this.copyContent(block);
 			this.copyLock(block);
 		}
@@ -63,7 +66,9 @@ module.exports = class Upgrader {
 			let bad = false;
 			block.content[key] = str.replaceAll(/block-id="(\w+)"/g, (match, id, pos, str) => {
 				const cid = this.idMap[id];
-				if (cid) return `block-id="${cid}"`;
+				if (cid) {
+					return `block-id="${cid}"`;
+				}
 				console.warn(`Cannot replace id: '${id}' in content
 					${str.substring(pos - 5, pos + 35)}`);
 				bad = true;
