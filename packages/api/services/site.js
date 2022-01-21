@@ -154,7 +154,6 @@ exports.save = function (req, data) {
 				type: site.type,
 				data: copy
 			}).then(() => {
-				All.domains.update(site);
 				return site;
 			});
 		});

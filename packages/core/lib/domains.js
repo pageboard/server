@@ -300,6 +300,11 @@ module.exports = class Domains {
 	release(site) {
 		const host = this.hostById[site.id];
 		if (!host) return;
+
+		if (!site.data.domains) site.data.domains = [];
+		this.idByDomainUpdate(site, this.siteById[site.id]);
+		this.siteById[site.id] = site;
+
 		host.isWaiting = false;
 		delete host.parked;
 	}
@@ -311,13 +316,6 @@ module.exports = class Domains {
 		for (const suffix of this.suffixes) {
 			this.idByDomain[`${id}${suffix}`] = id;
 		}
-	}
-
-	update(site) {
-		const orig = this.siteById[site.id];
-		if (!site.data.domains) site.data.domains = [];
-		this.idByDomainUpdate(site, orig);
-		if (orig) Object.assign(orig.data, site.data);
 	}
 
 	error(site, err) {
