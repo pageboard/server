@@ -328,6 +328,7 @@ module.exports = class Domains {
 				console.error("Error", site.id, err);
 				return;
 			}
+			if (!site.errors) site.errors = [];
 			site.errors.push(errorObject(site, err));
 			if (site.data.env == "production" && site.$model) {
 				// do nothing
