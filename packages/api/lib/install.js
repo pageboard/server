@@ -117,9 +117,9 @@ exports.validate = function(site, pkg, bundles) {
 			site.$services = path;
 		});
 	}).then(() => {
-		site.$scripts = pkg.eltsMap.site.scripts;
-		site.$resources = pkg.eltsMap.site.resources;
-		site.$stylesheets = pkg.eltsMap.site.stylesheets;
+		site.$scripts = pkg.eltsMap.site.scripts.slice();
+		site.$resources = Object.assign({}, pkg.eltsMap.site.resources);
+		site.$stylesheets = pkg.eltsMap.site.stylesheets.slice();
 		delete pkg.eltsMap;
 		delete pkg.Block;
 	});
