@@ -128,7 +128,11 @@ module.exports = class Domains {
 			if (!next) return;
 			if (host.error) throw host.error;
 
-			const site = this.siteById[host.id].$clone();
+			const origSite = this.siteById[host.id];
+			const site = origSite.$clone();
+			site.errors = origSite.errors;
+			site.url = new URL(origSite.url);
+
 			const { tenant } = res.locals;
 			if (tenant) {
 				if (tsite) host.tenants[tenant] = tsite._id;

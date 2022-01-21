@@ -37,11 +37,6 @@ class Block extends Model {
 	set $source(source) {
 		this.$$source = source;
 	}
-	$clone() {
-		const copy = super.$clone();
-		Object.assign(copy, this);
-		return copy;
-	}
 }
 
 module.exports = Block;
