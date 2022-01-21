@@ -84,7 +84,7 @@ function scheduleTenantCopy(All) {
 	console.info("Scheduling tenant db copies:", slots.join(', '));
 	schedule.scheduleJob('0 0 * * *', (date) => {
 		const tenant = slots[(date.getDay() - 1) % slots.length];
-		return All.run('db.copy', { tenant });
+		return All.run('db.copy', {}, { tenant });
 	});
 }
 
@@ -95,9 +95,9 @@ exports.copy = function (req, { tenant }) {
 	return fs.mkdir(dir, {
 		recursive: true
 	}).then(() => {
-		return All.run('db.dump', { file });
+		return All.run('db.dump', {}, { file });
 	}).then(() => {
-		return All.run('db.restore', { file, tenant });
+		return All.run('db.restore', {}, { file, tenant });
 	});
 };
 exports.copy.schema = {
