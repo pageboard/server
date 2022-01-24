@@ -586,7 +586,7 @@ function stripHostname(site, block) {
 		if (url) {
 			const objUrl = new URL(url, site.url);
 			if (objUrl.hostname == site.url.hostname) {
-				jsonPath.set(block.data, desc.path, objUrl.pathname + objUrl.search);
+				jsonPath.set(block.data, desc.path, objUrl.pathname + objUrl.search + objUrl.hash);
 			}
 		}
 	}
