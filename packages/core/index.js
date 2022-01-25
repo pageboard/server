@@ -19,6 +19,7 @@ const toml = require.lazy('toml');
 const xdg = require('xdg-basedir');
 const resolvePkg = require('resolve-pkg');
 const http = require.lazy('http');
+const rimraf = require.lazy('rimraf');
 const fs = require('fs').promises;
 const matchdom = require('matchdom');
 
@@ -49,7 +50,8 @@ exports.config = function(pkgOpt) {
 		global: true,
 		dirs: {
 			cache: Path.join(xdg.cache, name),
-			data: Path.join(xdg.data, name)
+			data: Path.join(xdg.data, name),
+			tmp: Path.join(xdg.cache, name, 'tmp')
 		},
 		elements: [],
 		directories: [],
@@ -202,6 +204,12 @@ exports.start = function(All) {
 function initDirs(dirs) {
 	return Promise.all(Object.keys(dirs).map((key) => {
 		Log.core("init dir", dirs[key]);
+		if (key == "tmp") {
+			// clean up pageboard tmp dir
+			rimraf(dirs[key] + '/*', err => {
+				if (err) console.error(err);
+			});
+		}
 		return fs.mkdir(dirs[key], {
 			recursive: true
 		});
