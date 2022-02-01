@@ -5,7 +5,6 @@ var fs = {
 	rename: pify(require('fs').rename)
 };
 
-var BufferList = require('bl');
 var DataUri = require('datauri');
 var allowedParameters = {
 	rs: true,
@@ -38,19 +37,23 @@ function initFile(All) {
 	if (uploadDir) {
 		uploadDir = "." + uploadDir;
 		console.info("Uploaded images resizable by upload at", "/" + uploadDir);
-		All.app.get(`:url(/${uploadDir}/*)`, function(req, res, next) {
-			var hasParam = false;
-			var wrongParam = false;
-			Object.keys(req.query).forEach(function(key) {
-				if (allowedParameters[key]) hasParam = true;
-				else wrongParam = true;
+		All.app.get(`:url(/${uploadDir}/\\d{4}-\\d{2}/[\\w-]+.(png|jpe?g|gif|webp|tiff|svg))`, function(req, res, next) {
+			if (req.query.raw === "" || req.query.raw === null) {
+				if (Object.keys(req.query).length != 1) {
+					res.sendStatus(400);
+				} else {
+					next('route');
+				}
+			} else {
+				var wrongParam = Object.keys(req.query).some(function(key) {
+					return !allowedParameters[key];
 			});
 			if (wrongParam) {
 				res.sendStatus(400);
-			} else if (hasParam) {
+				} else {
+					req.params.url += req.params.url.includes('?') ? '&raw' : '?raw';
 				next();
-			} else {
-				next('route');
+				}
 			}
 		}, sharpie(All.opt.image));
 	}
@@ -83,7 +86,7 @@ function request(url) {
 	obj.headers = {
 		"User-Agent": "Mozilla/5.0 (compatible; Googlebot/2.1; +http://www.google.com/bot.html)",
 		"Accept-Encoding": "identity",
-		"Accept": "*/*"
+		"Accept": "image/webp,*/*"
 	};
 	agent.get(obj).on('response', function(res) {
 		res.pipe(stream);
@@ -100,16 +103,19 @@ exports.thumbnail = function(url) {
 		request(url).pipe(pipeline);
 	}
 	return pipeline
-	.resize(null, 64)
-	.max()
-	.background('white')
-	.flatten()
-	.toFormat('jpeg', {
-		quality: 65
+	.resize({
+		fit: "inside",
+		height: 64
+	})
+	.flatten({
+		background: 'white'
+	})
+	.toFormat('webp', {
+		quality: 50
 	})
 	.toBuffer().then(function(buf) {
 		var dtu = new DataUri();
-		dtu.format('.jpeg', buf);
+		dtu.format('.webp', buf);
 		return dtu.content;
 	});
 };

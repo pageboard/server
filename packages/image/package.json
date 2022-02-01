@@ -1,6 +1,6 @@
 {
   "name": "@pageboard/image",
-  "version": "0.5.0",
+  "version": "0.5.1",
   "description": "",
   "main": "index.js",
   "scripts": {
@@ -17,10 +17,9 @@
   },
   "homepage": "https://github.com/pageboard/server#readme",
   "dependencies": {
-    "bl": "^1.2.2",
-    "datauri": "^1.1.0",
-    "express-urlrewrite": "^1.2.0",
-    "sharpie": "^3.4.0"
+    "datauri": "^2.0.0",
+    "sharp": "^0.24.1",
+    "sharpie": "^4.6.0"
   },
   "pageboard": true
 }
