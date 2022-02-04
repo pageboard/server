@@ -137,6 +137,7 @@ module.exports = class Domains {
 			if (tenant) {
 				if (tsite) host.tenants[tenant] = tsite._id;
 				site._id = host.tenants[tenant];
+				site.url.hostname = req.hostname;
 				site.data = Object.assign({}, site.data, {
 					env: 'dev',
 					domains: []
@@ -233,14 +234,15 @@ module.exports = class Domains {
 
 		if (tenant && this.suffixes.includes(domain) && tenant in this.opt.database.url) {
 			req.res.locals.tenant = tenant;
-			Object.defineProperty(req, 'hostname', {
-				value: `${id}${domain}`
-			});
 		}
 	}
 
 	init(req) {
-		const id = this.idByDomain[req.hostname];
+		const origHost = ((t, h) => {
+			if (!t) return h;
+			else if (h.startsWith(t + '-')) return h.substring(t.length + 1);
+		})(req.res.locals.tenant, req.hostname);
+		const id = this.idByDomain[origHost];
 		if (!id) return null;
 		const site = this.siteById[id];
 		if (!site) return null;
