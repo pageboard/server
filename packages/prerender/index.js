@@ -168,36 +168,56 @@ function objToError(obj) {
 	return err;
 }
 
+function requestedSchema({ site }, { pathname }) {
+	const ext = Path.extname(pathname);
+	// backward compat for rss
+	let type = ext.substring(1) || "page";
+	const fake = type == "rss" ? "page" : type;
+
+	if (!site.$pages.includes(fake)) {
+		type = 'page';
+	} else if (ext.length) {
+		pathname = pathname.slice(0, -ext.length);
+	}
+	pathname = All.api.check({
+		type: 'object',
+		properties: {
+			pathname: {
+				type: 'string',
+				format: 'page'
+			}
+		}
+	}, { pathname });
+	return {
+		type, pathname,
+		schema: site.$schema(fake)
+	};
+}
+
 function prerender(req, res, next) {
 	const opt = All.opt;
 	const site = req.site;
-	let el = site.$schema('page');
-
-	const pattern = el && el.properties.data && el.properties.data.properties.url.pattern;
-	if (!pattern) throw new Error("Missing page element missing schema for data.url.pattern");
-	const urlRegex = new RegExp(pattern);
-	let pathname = req.path;
-	// backward compat
-	let ext = Path.extname(pathname);
-	if (ext) {
-		ext = ext.substring(1);
-		if (ext == "rss") ext = "page"; // feed@0.8 kludge
-		const extEl = site.$schema(ext);
-		if (extEl) {
-			el = extEl;
-			pathname = pathname.slice(0, -ext.length - 1); // urlRegex does not allow extname
-		}
-	}
 	res.vary('Accept');
 
-	if (urlRegex.test(pathname) == false) {
-		if (req.accepts(['json', 'html']) == 'json') {
+	const { pathname, schema, type } = requestedSchema(req, { pathname: req.path });
+
+	if (pathname === false) {
+		if (req.accepts(['image/*', 'json', 'html']) != 'html') {
 			throw new HttpError.NotFound("Malformed path");
 		} else {
-			pipeline(got.stream(new URL('/.well-known/404', site.url), {
+			const gs = got.stream(new URL('/.well-known/404', site.url), {
 				retry: 0,
-				throwHttpErrors: false
-			}), res, (err) => {
+				decompress: false,
+				throwHttpErrors: false,
+				headers: req.headers,
+				https: {
+					rejectUnauthorized: false
+				}
+			});
+			gs.on('response', (gres) => {
+				res.status(404);
+			});
+			pipeline(gs, res, (err) => {
 				if (err) next(err);
 			});
 		}
@@ -221,19 +241,35 @@ function prerender(req, res, next) {
 				list: []
 			}
 		};
-		// backward compatibility with 0.7 clients using ext names
-		if (ext == "mail") settings.mime = "application/json";
-		else if (ext == "rss") settings.mime = "application/xml";
 
-		const outputOpts = el.output || {};
+		const outputOpts = schema.output || {};
+
+		// begin compat (0.7 clients using ext names)
+		if (type == "mail" && outputOpts.mime == null) {
+			outputOpts.mime = "application/json";
+		}
+		if (type == "rss" && outputOpts.mime == null) {
+			outputOpts.mime = "application/xml";
+		}
+		/* end compat */
+
 		const { mime = "text/html" } = outputOpts;
 
 		if (site.data.env != "production" && mime == "text/html" && query.develop === undefined) {
 			query.develop = null;
 		}
 		if (query.develop !== undefined) {
-			All.cache.map(res, '/.well-known/200');
 			res.set('Content-Security-Policy', "");
+			let mapTo;
+			if (req.path.startsWith("/.well-known/")) {
+				// ends with a status code, not set in develop mode
+				mapTo = req.path;
+				res.status(req.path.split('/').pop());
+			} else {
+				mapTo = "/.well-known/200";
+			}
+			All.cache.map(res, mapTo);
+
 		} else {
 			if (outputOpts.pdf) {
 				// pdf plugin bypasses serialize
