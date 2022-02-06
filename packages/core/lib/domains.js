@@ -229,7 +229,7 @@ module.exports = class Domains {
 
 	initTenant(req) {
 		const {
-			groups: { tenant, id, domain }
+			groups: { tenant, domain }
 		} = /^(?:(?<tenant>[a-z0-9]+)-)?(?<id>[a-z0-9]+)(?<domain>\.[a-z0-9]+\.[a-z]+)$/.exec(req.hostname) || { groups: {} };
 
 		if (tenant && this.suffixes.includes(domain) && tenant in this.opt.database.url) {
