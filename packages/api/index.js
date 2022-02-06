@@ -130,6 +130,10 @@ function init(All) {
 		All.utils[key] = utils[key];
 	});
 
+	exports.check = (schema, data) => {
+		return ajvApiWithDefaults.validate(schema, data);
+	};
+
 	Object.assign(exports, install);
 
 	const tenantsLen = Object.keys(opt.database.url).length - 1;
