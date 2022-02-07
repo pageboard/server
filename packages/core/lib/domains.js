@@ -1,7 +1,5 @@
-const DNS = {
-	lookup: require('util').promisify(require('dns').lookup),
-	reverse: require('util').promisify(require('dns').reverse)
-};
+const dns = require('dns').promises;
+const Deferred = require('./deferred');
 
 const localhost4 = "127.0.0.1";
 // const localhost6 = "::1";
@@ -25,15 +23,8 @@ module.exports = class Domains {
 		this.hostById = {};
 		this.siteById = {};
 
-		this.state = {
-			ready: false,
-			done: () => {
-				this.state.ready = true;
-				this.state.resolve();
-			}
-		};
-		this.state.wait = new Promise((resolve) => {
-			this.state.resolve = resolve;
+		this.wait = new Deferred(() => {
+			this.ready = true;
 		});
 
 		this.middlewares = [
@@ -49,31 +40,34 @@ module.exports = class Domains {
 		];
 	}
 
-	byInit(req, res, next) {
+	async byInit(req, res, next) {
 		if (req.path == "/.well-known/pageboard" && req.hostname == localhost4) {
 			this.syncSites(req, res, next);
-		} else if (!this.state.ready) {
-			this.state.wait.then(next);
+		} else if (!this.ready) {
+			await this.wait;
+			next();
 		} else {
 			next();
 		}
 	}
 
-	byIP(req, res, next) {
+	async byIP(req, res, next) {
 		const ip = req.headers['x-forwarded-by'];
-		if (!ip) return next(new HttpError.BadRequest("Wrong proxy headers"));
+		if (!ip) {
+			next(new HttpError.BadRequest("Wrong proxy headers"));
+			return;
+		}
 
 		const rec = this.ips[ip] || {};
 		if (!rec.queue) {
 			this.ips[ip] = rec;
-			rec.queue = DNS.reverse(ip).then((hostnames) => {
+			rec.queue = dns.reverse(ip).then((hostnames) => {
 				Object.assign(rec, ipFamily(ip));
 				hostnames.forEach((hn) => {
 					if (hn == "localhost") hn += ".localdomain";
 					hn = '.' + hn;
 					if (!this.suffixes.includes(hn)) this.suffixes.push(hn);
 				});
-			}).then(() => {
 				const idMap = {};
 				for (const id in this.siteById) {
 					const site = this.siteById[id];
@@ -87,10 +81,11 @@ module.exports = class Domains {
 				this.idByDomain = idMap;
 			});
 		}
-		rec.queue.then(next);
+		await rec.queue;
+		next();
 	}
 
-	byHost(req, res, next) {
+	async byHost(req, res, next) {
 		this.initTenant(req);
 		const { path } = req;
 		const host = this.init(req);
@@ -107,107 +102,97 @@ module.exports = class Domains {
 		} else if (path == "/favicon.ico" || path.startsWith('/.files/') || path.startsWith('/.api/')) {
 			p = host.waiting;
 		} else if (host.isWaiting) {
-			p = new Promise((resolve) => {
-				setTimeout(resolve, host.parked ? 0 : 2000);
-			}).then(() => {
-				if (host.isWaiting && !req.path.startsWith('/.') && this.opt.env != "development") {
-					next = null;
-					res.type('html').sendStatus(503);
-				} else {
-					return host.waiting;
-				}
-			});
+			p = new Deferred();
+			setTimeout(p.resolve, host.parked ? 0 : 2000);
+			await p;
+			if (host.isWaiting && !req.path.startsWith('/.') && this.opt.env != "development") {
+				next = null;
+				res.type('html').sendStatus(503);
+			} else {
+				p = host.waiting;
+			}
 		} else {
 			p = host.waiting;
 		}
-		return p.then(() => {
-			if (res.locals.tenant && !host.tenants[res.locals.tenant]) {
-				return All.run('site.get', req, { id: host.id });
+		await p;
+		if (!next) return;
+		if (host.error) throw host.error;
+		const origSite = this.siteById[host.id];
+		const site = origSite.$clone();
+		site.errors = origSite.errors;
+		site.url = new URL(origSite.url);
+		const { tenant } = res.locals;
+		if (tenant) {
+			if (!host.tenants[tenant]) {
+				const tsite = await All.run('site.get', req, { id: host.id });
+				host.tenants[tenant] = tsite._id;
 			}
-		}).then(tsite => {
-			if (!next) return;
-			if (host.error) throw host.error;
-
-			const origSite = this.siteById[host.id];
-			const site = origSite.$clone();
-			site.errors = origSite.errors;
-			site.url = new URL(origSite.url);
-
-			const { tenant } = res.locals;
-			if (tenant) {
-				if (tsite) host.tenants[tenant] = tsite._id;
-				site._id = host.tenants[tenant];
-				site.url.hostname = req.hostname;
-				site.data = Object.assign({}, site.data, {
-					env: 'dev',
-					domains: []
+			site._id = host.tenants[tenant];
+			site.url.hostname = req.hostname;
+			site.data = Object.assign({}, site.data, {
+				env: 'dev',
+				domains: []
+			});
+		} else {
+			const domains = castArray(site.data.domains);
+			if (domains.length && req.hostname != domains[0] && !req.path.startsWith('/.')) {
+				Object.defineProperty(req, 'hostname', {
+					value: domains[0]
 				});
-			} else {
-				const domains = castArray(site.data.domains);
-				if (domains.length && req.hostname != domains[0] && !req.path.startsWith('/.')) {
-					Object.defineProperty(req, 'hostname', {
-						value: domains[0]
-					});
-					const rhost = this.init(req);
-					rhost.waiting.then(() => {
-						this.All.cache.tag('data-:site')(req, res, () => {
-							res.redirect(308, site.url.href + req.url);
-						});
-					});
-				}
-			}
-			return site;
-		}).then((site) => {
-			if (!next) return;
-			req.site = site;
-			res.locals.site = site.id;
-			if (path == "/.well-known/status" || path == "/.well-known/pageboard") {
-				// /.well-known/pageboard is kept during transition
-				// this is expected by proxy/statics/status.html
-				res.send({
-					errors: site.errors
+				const rhost = this.init(req);
+				await rhost.waiting;
+				this.All.cache.tag('data-:site')(req, res, () => {
+					res.redirect(308, site.url.href + req.url);
 				});
-			} else {
-				const version = site.data.server || this.opt.version;
-				if (version != this.opt.version) {
-					res.set('X-Pageboard-Peer', this.opt.upstreams[version]);
-					if (req.method == "GET") res.redirect(307, req.url);
-					else next();
-				} else {
-					next();
-				}
 			}
-		}).catch(next);
+		}
+		req.site = site;
+		res.locals.site = site.id;
+		if (path == "/.well-known/status" || path == "/.well-known/pageboard") {
+			// /.well-known/pageboard is kept during transition
+			// this is expected by proxy/statics/status.html
+			res.send({
+				errors: site.errors
+			});
+		} else {
+			const version = site.data.server || this.opt.version;
+			if (version != this.opt.version) {
+				res.set('X-Pageboard-Peer', this.opt.upstreams[version]);
+				if (req.method == "GET") res.redirect(307, req.url);
+				else next();
+			} else {
+				next();
+			}
+		}
 	}
 
-	syncSites(req, res, next) {
-		this.All.run('site.all', req).then(list => {
-			const map = {};
-			const siteMap = {};
-			const hostMap = {};
-			for (const site of list) {
-				Object.assign(map, this.domainMapping(site));
-				const cur = siteMap[site.id] = this.siteById[site.id];
-				if (cur) {
-					Object.assign(cur, site);
-				} else {
-					siteMap[site.id] = site;
-				}
-
-				const host = hostMap[site.id] = this.hostById[site.id];
-				if (!host) hostMap[site.id] = new Host(site.id);
+	async syncSites(req, res) {
+		const list = await this.All.run('site.all', req);
+		const map = {};
+		const siteMap = {};
+		const hostMap = {};
+		for (const site of list) {
+			Object.assign(map, this.domainMapping(site));
+			const cur = siteMap[site.id] = this.siteById[site.id];
+			if (cur) {
+				Object.assign(cur, site);
+			} else {
+				siteMap[site.id] = site;
 			}
-			this.siteById = siteMap;
-			this.hostById = hostMap;
 
-			res.type('json').end(JSON.stringify({
-				domains: map
-			}, null, ' '));
+			const host = hostMap[site.id] = this.hostById[site.id];
+			if (!host) hostMap[site.id] = new Host(site.id);
+		}
+		this.siteById = siteMap;
+		this.hostById = hostMap;
 
-			if (!this.state.ready) setTimeout(() => {
-				this.state.done();
-			}, 1000);
-		}).catch(next);
+		res.type('json').end(JSON.stringify({
+			domains: map
+		}, null, ' '));
+
+		if (!this.ready) setTimeout(() => {
+			this.wait.resolve();
+		}, 1000);
 	}
 
 	domainMapping(site) {
@@ -237,7 +222,7 @@ module.exports = class Domains {
 		}
 	}
 
-	init(req) {
+	async init(req) {
 		const origHost = ((t, h) => {
 			if (!t) return h;
 			else if (h.startsWith(t + '-')) return h.substring(t.length + 1);
@@ -255,19 +240,22 @@ module.exports = class Domains {
 		site.url.port = portFromHost(req.headers.host);
 
 		if (!host.searching && !host.error) {
-			host.searching = this.resolvableHost(site.url.hostname, host).catch(err => {
+			try {
+				host.searching = await this.resolvableHost(site.url.hostname, host);
+			} catch (err) {
 				host.error = err;
 				if (host.finalize) host.finalize();
-			});
+			}
 		}
 
 		if (!host.installing && !host.error) {
-			host.installing = host.searching.then(() => {
-				if (host.error) return;
-				return this.All.install(site).catch(() => {
-					// never throw an error since errors are already dealt with in install
-				});
-			});
+			host.installing = await host.searching;
+			if (host.error) return;
+			try {
+				await this.All.install(site);
+			} catch (err) {
+				// never throw an error since errors are already dealt with in install
+			}
 		}
 		if (!host.waiting && !host.error) {
 			doWait(host);
@@ -275,21 +263,25 @@ module.exports = class Domains {
 		return host;
 	}
 
-	resolvableHost(hostname, host) {
+	async resolvableHost(hostname, host) {
 		const rec = this.ips[host.by];
-		return DNS.lookup(hostname, {
+		const lookup = await dns.lookup(hostname, {
 			all: false
-		}).then((lookup) => {
-			if (lookup.address == hostname) throw new Error("hostname is an ip " + hostname);
-			const expected = rec['ip' + lookup.family];
-			if (lookup.address != expected) {
-				setTimeout(() => {
-					// allow checking again in a minute
-					if (host.error && host.error.statusCode == 503) delete host.error;
-				}, 60000);
-				throw new HttpError.ServiceUnavailable(`${hostname} ${lookup.family} ${lookup.address} does not match ${expected}`);
-			}
 		});
+		if (lookup.address == hostname) {
+			throw new Error("hostname is an ip " + hostname);
+		}
+		const expected = rec['ip' + lookup.family];
+		if (lookup.address != expected) {
+			setTimeout(() => {
+				// allow checking again in a minute
+				if (host.error && host.error.statusCode == 503) delete host.error;
+			}, 60000);
+			throw new HttpError.ServiceUnavailable(
+				Text`${hostname} ${lookup.family} ${lookup.address}
+				does not match ${expected}`
+			);
+		}
 	}
 
 	hold(site) {
@@ -313,8 +305,14 @@ module.exports = class Domains {
 
 	idByDomainUpdate(site, old) {
 		const id = site.id;
-		if (old) for (const domain of castArray(old.data.domains)) this.idByDomain[domain] = null;
-		for (const domain of castArray(site.data.domains)) this.idByDomain[domain] = id;
+		if (old) {
+			for (const domain of castArray(old.data.domains)) {
+				this.idByDomain[domain] = null;
+			}
+		}
+		for (const domain of castArray(site.data.domains)) {
+			this.idByDomain[domain] = id;
+		}
 		for (const suffix of this.suffixes) {
 			this.idByDomain[`${id}${suffix}`] = id;
 		}
@@ -322,7 +320,9 @@ module.exports = class Domains {
 
 	error(site, err) {
 		try {
-			if (!site.url) console.warn("All.domains.error(site) missing site.url");
+			if (!site.url) {
+				console.warn("All.domains.error(site) missing site.url");
+			}
 			const host = this.hostById[site.id];
 			if (!host) {
 				console.error("Error", site.id, err);
@@ -388,7 +388,7 @@ function portFromHost(host) {
 	else return null;
 }
 
-function doWait(host) {
+async function doWait(host) {
 	if (host.finalize) return;
 	host.isWaiting = true;
 	const subpending = new Promise((resolve) => {
@@ -397,9 +397,8 @@ function doWait(host) {
 			resolve();
 		};
 	});
-	host.waiting = host.installing.then(() => {
-		return subpending;
-	});
+	host.waiting = await host.installing;
+	return subpending;
 }
 
 function castArray(prop) {
