@@ -179,15 +179,9 @@ function requestedSchema({ site }, { pathname }) {
 	} else if (ext.length) {
 		pathname = pathname.slice(0, -ext.length);
 	}
-	pathname = All.api.check({
-		type: 'object',
-		properties: {
-			pathname: {
-				type: 'string',
-				format: 'page'
-			}
-		}
-	}, { pathname });
+	if (All.api.check({ type: 'string', format: 'page' }, pathname) === false) {
+		pathname = null;
+	}
 	return {
 		type, pathname,
 		schema: site.$schema(fake)
@@ -201,7 +195,7 @@ function prerender(req, res, next) {
 
 	const { pathname, schema, type } = requestedSchema(req, { pathname: req.path });
 
-	if (pathname === false) {
+	if (pathname == null) {
 		if (req.accepts(['image/*', 'json', 'html']) != 'html') {
 			throw new HttpError.NotFound("Malformed path");
 		} else {
