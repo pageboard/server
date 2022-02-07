@@ -19,7 +19,6 @@ const toml = require.lazy('toml');
 const xdg = require('xdg-basedir');
 const resolvePkg = require('resolve-pkg');
 const http = require.lazy('http');
-const rimraf = require.lazy('rimraf');
 const fs = require('fs').promises;
 const matchdom = require('matchdom');
 
@@ -51,7 +50,7 @@ exports.config = function(pkgOpt) {
 		dirs: {
 			cache: Path.join(xdg.cache, name),
 			data: Path.join(xdg.data, name),
-			tmp: Path.join(xdg.cache, name, 'tmp')
+			tmp: Path.join(xdg.data, '../tmp', name)
 		},
 		elements: [],
 		directories: [],
@@ -83,7 +82,7 @@ function symlinkDir(opt, name) {
 	).catch(() => {});
 }
 
-exports.init = function(opt) {
+exports.init = async function(opt) {
 	const All = {
 		opt: opt,
 		utils: {}
@@ -99,99 +98,65 @@ exports.init = function(opt) {
 	All.log = initLog(opt);
 
 	const plugins = [];
-	return (opt.installer.path ? Promise.resolve(opt.installer.path) : All.utils.which(opt.installer.bin)).then((path) => {
-		// eslint-disable-next-line no-console
-		console.info("core:\tinstaller.path", path);
-		opt.installer.path = path;
-	}).then(() => {
-		return Promise.all(Object.keys(opt.dependencies).map((module) => {
-			const pkgPath = resolvePkg(module, {cwd: opt.dir});
-			return Install.config(pkgPath, "pageboard", module, All.opt);
-		})).then((modules) => {
-			opt.plugins = modules.filter(x => Boolean(x));
-			let plugin, module;
-			while (opt.plugins.length) {
-				module = opt.plugins.shift();
-				try {
-					plugin = require(module);
-				} catch(ex) {
-					console.error("Error loading module", ex);
-					plugin = null;
-					continue;
-				}
-				if (typeof plugin != "function") {
-					continue;
-				}
-				const obj = plugin(opt);
-				if (!obj) {
-					console.warn("plugin not configured", module);
-					continue;
-				}
-				obj.plugin = plugin;
-				plugins.push(obj);
-			}
-		});
-	}).then(() => {
-		return initDirs(opt.dirs);
-	}).then(() => {
-		return initPlugins.call(All, plugins);
-	}).then(() => {
-		return initPlugins.call(All, plugins, 'file');
-	}).then(() => {
-		All.app.use(filesError);
-		All.app.use(All.log);
-		return initPlugins.call(All, plugins, 'service');
-	}).then(() => {
-		All.app.use((req, res, next) => {
-			if (req.url.startsWith('/.api/')) {
-				throw new HttpError.NotFound("Unknown api url");
-			}
-			next();
-		});
-		All.app.use(servicesError);
-		if (!All.opt.cli) return initPlugins.call(All, plugins, 'view');
-	}).then(() => {
-		All.app.use(viewsError);
-	}).then(() => {
-		return All.statics.install(null, All.opt, All);
-	}).then(() => {
-		return All.api.install(null, All.opt, All);
-	}).then(() => {
-		return All.cache.install(null, All.opt, All);
-	}).then(() => {
-		return All;
+	if (!opt.installer.path) {
+		opt.installer.path = await All.utils.which(opt.installer.bin);
+	}
+	// eslint-disable-next-line no-console
+	console.info("core:\tinstaller.path", opt.installer.path);
+	const modules = await Promise.all(Object.keys(opt.dependencies).map((module) => {
+		const pkgPath = resolvePkg(module, { cwd: opt.dir });
+		return Install.config(pkgPath, "pageboard", module, All.opt);
+	}));
+	opt.plugins = modules.filter(x => Boolean(x)).map(module => {
+		return require(module)(opt);
 	});
+	await initDirs(opt.dirs);
+	await initPlugins.call(All, plugins);
+	await initPlugins.call(All, plugins, 'file');
+	All.app.use(filesError);
+	All.app.use(All.log);
+	await initPlugins.call(All, plugins, 'service');
+	All.app.use((req) => {
+		if (req.url.startsWith('/.api/')) {
+			throw new HttpError.NotFound("Unknown api url");
+		}
+	});
+	All.app.use(servicesError);
+	if (!All.opt.cli) await initPlugins.call(All, plugins, 'view');
+	All.app.use(viewsError);
+	await All.statics.install(null, All.opt, All);
+	await All.api.install(null, All.opt, All);
+	await All.cache.install(null, All.opt, All);
+	return All;
 };
 
-function install(site) {
+async function install(site) {
 	const All = this;
 	if (site.url) {
 		All.domains.hold(site);
 	}
-
-	return Install.install(site, All.opt).then(pkg => {
-		return All.api.install(site, pkg, All).then(bundles => {
-			if (site.url) return All.statics.install(site, pkg, All).then(() => {
-				return All.api.validate(site, pkg, bundles);
-			});
-		}).then(() => {
-			return All.auth.install(site);
-		}).then(() => {
-			if (site.url) return All.cache.install(site);
-		}).then(() => {
-			if (All.opt.env != "development") return Install.clean(site, pkg, All.opt);
-		}).then(() => {
-			if (!site.data.server) site.data.server = pkg.server || All.opt.version;
-			if (site.url) {
-				All.domains.release(site);
-			}
-			return site;
-		});
-	}).catch((err) => {
+	try {
+		const pkg = await Install.install(site, All.opt);
+		const bundles = All.api.install(site, pkg, All);
+		if (site.url) {
+			await All.statics.install(site, pkg, All);
+			await All.api.validate(site, pkg, bundles);
+		}
+		await All.auth.install(site);
+		if (site.url) await All.cache.install(site);
+		if (All.opt.env != "development") await Install.clean(site, pkg, All.opt);
+		if (!site.data.server) {
+			site.data.server = pkg.server || All.opt.version;
+		}
+	} catch (err) {
 		if (site.url) All.domains.error(site, err);
 		if (All.opt.env == "development") console.error(err);
 		throw err;
-	});
+	}
+	if (site.url) {
+		All.domains.release(site);
+	}
+	return site;
 }
 
 exports.start = function(All) {
@@ -201,29 +166,29 @@ exports.start = function(All) {
 	console.info(`port:\t${All.opt.port}`);
 };
 
-function initDirs(dirs) {
-	return Promise.all(Object.keys(dirs).map((key) => {
-		Log.core("init dir", dirs[key]);
+async function initDirs(dirs) {
+	for (const [key, dir] of Object.entries(dirs)) {
+		Log.core("init dir", dir);
 		if (key == "tmp") {
 			// clean up pageboard tmp dir
-			rimraf(dirs[key] + '/*', err => {
-				if (err) console.error(err);
-			});
+			await fs.rmdir(dir, { recursive: true });
 		}
-		return fs.mkdir(dirs[key], {
-			recursive: true
-		});
-	}));
+		await fs.mkdir(dir, { recursive: true });
+	}
 }
 
-function initPlugins(plugins, type) {
+async function initPlugins(plugins, type) {
 	const All = this;
 	if (type == "service") {
 		All.services = {};
 	}
-	plugins = plugins.filter((obj) => {
-		if (type && !obj[type]) return false;
-		if (!type && (obj.file || obj.service || obj.view)) return false;
+	plugins = plugins.filter((plugin) => {
+		if (type && !plugin[type]) {
+			return false;
+		}
+		if (!type && (plugin.file || plugin.service || plugin.view)) {
+			return false;
+		}
 		return true;
 	}).sort((a, b) => {
 		a = a.priority != null ? a.priority : Infinity;
@@ -232,40 +197,36 @@ function initPlugins(plugins, type) {
 		else if (a > b) return 1;
 		else if (a < b) return -1;
 	});
-	let p = Promise.resolve();
-	plugins.forEach((obj) => {
+
+	for (const plugin of plugins) {
 		let to;
-		if (obj.name) {
-			to = All[obj.name] = All[obj.name] || {};
+		const { name, constructor: PClass } = plugin;
+		if (name) {
+			to = All[name] = All[name] || {};
 		} else {
 			to = All;
 		}
 		if (type) {
-			p = p.then(() => obj[type](All));
-		} else if (obj.init) {
-			p = p.then(() => obj.init(All));
+			await plugin[type](All);
+		} else if (plugin.init) {
+			await plugin.init(All);
 		}
-		p = p.then(() => {
-			const plugin = obj.plugin = Object.assign({}, obj.plugin); // make a copy
-			Object.keys(plugin).forEach((key) => {
-				if (to[key] !== undefined) throw new Error(`module conflict ${obj.name || 'All'}.${key}`);
-				to[key] = plugin[key];
-				delete plugin[key]; // we made a copy before
-				if (type == "service" && obj.name != "api" && Object.prototype.hasOwnProperty.call(to[key], 'schema')) {
-					if (!All.services[obj.name]) All.services[obj.name] = {};
-					Object.defineProperty(All.services[obj.name], key, {
-						enumerable: to[key].external,
-						get: function() {
-							return to[key].schema;
-						}
-					});
-				}
-			});
-		});
-	});
-	return p.catch((err) => {
-		console.error(err);
-	});
+		for (const key of PClass) {
+			if (to[key] !== undefined) {
+				throw new Error(`plugin conflict ${name || 'All'}.${key}`);
+			}
+			to[key] = plugin[key];
+			if (type == "service" && name != "api") {
+				if (!All.services[name]) All.services[name] = {};
+				Object.defineProperty(All.services[name], key, {
+					enumerable: PClass[key].external,
+					get: function() {
+						return PClass[key].schema;
+					}
+				});
+			}
+		}
+	}
 }
 
 function initLog(opt) {
@@ -299,14 +260,14 @@ function initLog(opt) {
 }
 
 function createApp(All) {
-	const app = express();
+	const app = require('./lib/express-async')(express)();
 	const opt = All.opt;
 	// site-specific headers are built by page element and csp filter + prerender
 	app.set("env", opt.env);
 	app.disable('x-powered-by');
 	app.enable('trust proxy');
 	app.use(...All.domains.middlewares);
-	app.use((req, res, next) => {
+	app.use((req, res) => {
 		res.setHeader('Referrer-Policy', 'strict-origin-when-cross-origin');
 		res.setHeader('Content-Security-Policy', [
 			"default-src 'self'",
@@ -317,7 +278,6 @@ function createApp(All) {
 		res.setHeader('X-XSS-Protection','1;mode=block');
 		res.setHeader('X-Frame-Options', 'sameorigin');
 		res.setHeader('X-Content-Type-Options', 'nosniff');
-		next();
 	});
 	return app;
 }
