@@ -13,7 +13,7 @@ exports = module.exports = function (opt) {
 };
 
 function init(All) {
-	All.app.get('/.api/archive', All.auth.lock('webmaster'), (req, res, next) => {
+	All.app.get('/.api/archive', All.cache.disable, All.auth.lock('webmaster'), (req, res, next) => {
 		return All.run('archive.export', req, req.query);
 	});
 	All.app.put('/.api/archive', All.auth.lock('webmaster'), (req, res, next) => {
