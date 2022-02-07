@@ -1,15 +1,17 @@
 module.exports = class Deferred extends Promise {
 	constructor(final) {
-		super((pass, fail) => {
-			this.resolve = (obj) => {
-				final();
-				pass(obj);
-			};
-			this.reject = (err) => {
-				final();
-				fail(err);
-			};
+		let pass, fail;
+		super((resolve, reject) => {
+			pass = resolve;
+			fail = reject;
 		});
-		this.final = final;
+		this.resolve = (obj) => {
+			final();
+			pass(obj);
+		};
+		this.reject = (err) => {
+			final();
+			fail(err);
+		};
 	}
 };
