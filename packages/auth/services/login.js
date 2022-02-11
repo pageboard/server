@@ -1,36 +1,36 @@
 const otp = require.lazy('otplib');
 const qrcode = require.lazy('qrcode');
-const URL = require('url');
 
-exports = module.exports = function (opt) {
-	return {
-		name: 'login',
-		service: init
-	};
-};
+module.exports = class LoginModule {
+	name = 'login';
 
-function init(All) {
-	otp.authenticator.options = {
-		step: 30, // do not change this value, we want third-party otp apps to work with us
-		window: [40, 1] // ten minutes-old tokens are still valid
-	};
-	All.app.get("/.api/login", (req, res, next) => {
-		All.run('login.grant', req, req.query).then((data) => {
-			All.send(res, data);
-		}).catch(next);
-	});
+	constructor(app) {
+		this.app = app;
+	}
+	service() {
+		otp.authenticator.options = {
+			step: 30, // do not change this value, we want third-party otp apps to work with us
+			window: [40, 1] // ten minutes-old tokens are still valid
+		};
+		this.app.get("/.api/login", (req, res, next) => {
+			this.app.run('login.grant', req, req.query).then((data) => {
+				this.app.send(res, data);
+			}).catch(next);
+		});
 
-	All.app.get("/.api/logout", (req, res, next) => {
-		All.run('login.clear', req, req.query).then((data) => {
-			All.send(res, data);
-		}).catch(next);
-	});
-}
+		this.app.get("/.api/logout", (req, res, next) => {
+			this.app.run('login.clear', req, req.query).then((data) => {
+				this.app.send(res, data);
+			}).catch(next);
+		});
+	}
 
-function userPriv({ trx }, user) {
-	return user.$relatedQuery('children', trx).alias('privs')
-		.where('privs.type', 'priv')
-		.first().throwIfNotFound().select().catch((err) => {
+	async #userPriv({ trx }, user) {
+		try {
+			return await user.$relatedQuery('children', trx).alias('privs')
+				.where('privs.type', 'priv')
+				.first().throwIfNotFound().select();
+		} catch (err) {
 			if (err.statusCode != 404) throw err;
 			return user.$relatedQuery('children', trx).insert({
 				type: 'priv',
@@ -40,38 +40,32 @@ function userPriv({ trx }, user) {
 					}
 				}
 			}).returning('*');
-		});
-}
-
-function generate(req, data) {
-	return Promise.resolve().then(() => {
-		if (data.register) return All.user.add(req, { email: data.email });
-	}).then(() => {
-		return All.user.get(req, { email: data.email }).select('_id');
-	}).then((user) => {
-		return userPriv(req, user);
-	}).then((priv) => {
-		return otp.authenticator.generate(priv.data.otp.secret);
-	});
-}
-
-exports.send = function (req, data) {
-	const site = req.site;
-	if (!site.url) {
-		return "login.send requires a hostname. Use login.link";
+		}
 	}
-	return generate(req, data).then((token) => {
-		let p = Promise.resolve();
+
+	async #generate(req, data) {
+		if (data.register) await this.app.run('user.add', req, {
+			email: data.email
+		});
+		const user = await this.app.run('user.get', req, {
+			email: data.email
+		});
+		const priv = await this.#userPriv(req, user);
+		return otp.authenticator.generate(priv.data.otp.secret);
+	}
+
+	async send(req, data) {
+		const site = req.site;
+		if (!site.url) {
+			return "login.send requires a hostname. Use login.link";
+		}
+		const token = await this.#generate(req, data);
 		const settings = data.settings || {};
 		delete settings.grants;
-		p = All.settings.save(req, {
+		await this.app.run('settings.save', req, {
 			email: data.email,
 			data: settings
 		});
-		return p.then(() => {
-			return token;
-		});
-	}).then((token) => {
 		const mail = {
 			purpose: 'transactional',
 			from: {
@@ -98,202 +92,186 @@ exports.send = function (req, data) {
 				${site.url.href}
 				and can be ignored.`;
 		}
-		return All.run('mail.to', req, mail).then(() => {
-			// do not return information about that
-			return {};
-		});
-	});
-};
-exports.send.schema = {
-	title: 'Send token',
-	$action: 'write',
-	required: ['email'],
-	properties: {
-		email: {
-			title: 'Email',
-			type: 'string',
-			format: 'email'
-		},
-		register: {
-			title: 'Register',
-			description: 'Allow unknown email',
-			type: 'boolean',
-			default: false
-		},
-		settings: {
-			title: 'Settings',
-			description: 'Default user settings',
-			type: 'object'
-		}
+		await this.app.run('mail.to', req, mail);
+		return {};
 	}
-};
-exports.send.external = true;
-
-
-function verifyToken(req, { email, token }) {
-	return All.user.get(req, { email }).then((user) => {
-		return userPriv(req, user).then((priv) => {
-			const tries = (priv.data.otp.tries || 0) + 1;
-			if (tries >= 5) {
-				const at = Date.parse(priv.data.otp.checked_at);
-				if (!Number.isNaN(at) && Date.now() - at < 1000 * otp.authenticator.options.step / 2) {
-					throw new HttpError.TooManyRequests();
-				}
+	static send = {
+		title: 'Send token',
+		external: true,
+		$action: 'write',
+		required: ['email'],
+		properties: {
+			email: {
+				title: 'Email',
+				type: 'string',
+				format: 'email'
+			},
+			register: {
+				title: 'Register',
+				description: 'Allow unknown email',
+				type: 'boolean',
+				default: false
+			},
+			settings: {
+				title: 'Settings',
+				description: 'Default user settings',
+				type: 'object'
 			}
-			token = token.replaceAll(/\s/g, '');
-			const verified = otp.authenticator.check(token, priv.data.otp.secret);
-			return priv.$query(req.trx).patch({
-				'data:otp.checked_at': new Date().toISOString(),
-				'data:otp.tries': verified ? 0 : tries
-			}).then(() => {
-				return verified;
-			});
-		});
-	});
-}
-
-exports.grant = function (req, data) {
-	return verifyToken(req, data).then((verified) => {
-		if (!verified) throw new HttpError.BadRequest("Bad token");
-		return All.run('settings.find', req, {
-			email: data.email
-		}).then((settings) => {
-			const grants = req.user && req.user.grants || [];
-			const user = req.user = {
-				id: settings.id,
-				grants: settings.data && settings.data.grants || []
-			};
-			if (user.grants.length == 0) user.grants.push('user');
-			const locks = data.grant ? [data.grant] : [];
-			if (All.auth.locked(req, locks)) {
-				throw new HttpError.Forbidden("User has insufficient grants");
-			}
-			user.grants = locks;
-			req.granted = grants.join(',') != locks.join(',');
-			return {
-				item: settings,
-				cookies: {
-					bearer: All.auth.cookie(req)
-				}
-			};
-		});
-	});
-};
-
-exports.grant.schema = {
-	title: 'Grant',
-	description: 'Sets cookie with grants',
-	$action: 'write',
-	required: ['email', 'token'],
-	properties: {
-		email: {
-			title: 'Email',
-			type: 'string',
-			format: 'email'
-		},
-		token: {
-			title: 'Token',
-			type: 'string',
-			pattern: '^[\\s\\d]{1,10}$'
-		},
-		grant: {
-			title: 'Grant',
-			type: 'string',
-			format: 'grant',
-			nullable: true,
-			$filter: {
-				name: 'schema',
-				path: 'settings.properties.grants.items'
-			}
-		}
-	}
-};
-
-exports.grant.external = true;
-
-exports.link = function (req, data) {
-	return generate(req, data).then((token) => {
-		return URL.format({
-			pathname: "/.api/login",
-			query: {
-				email: data.email,
-				grant: 'webmaster',
-				token: token
-			}
-		});
-	});
-};
-exports.link.schema = {
-	title: 'Internal login link',
-	$action: 'write',
-	required: ['email', 'grant'],
-	properties: {
-		email: {
-			title: 'Email',
-			type: 'string',
-			format: 'email'
-		},
-		grant: {
-			title: 'Grant',
-			type: 'string',
-			format: 'grant'
-		},
-		register: {
-			title: 'Register',
-			description: 'Allow unknown email',
-			type: 'boolean',
-			default: false
-		}
-	}
-};
-
-
-exports.clear = function (req, data) {
-	req.granted = true;
-	return {
-		cookies: {
-			bearer: {}
 		}
 	};
-};
-
-exports.clear.schema = {
-	title: 'Logout',
-	description: 'Clear cookie',
-	$action: 'write'
-};
-
-exports.clear.external = true;
-
-exports.key = function (req, data) {
-	return All.user.get(req, { email: data.email }).then((user) => {
-		return userPriv(req, user).then((priv) => {
-			const uri = otp.authenticator.keyuri(user.data.email, All.opt.name, priv.data.otp.secret);
-			if (data.qr) {
-				return qrcode.toString(uri, {
-					type: 'terminal',
-					errorCorrectionLevel: 'L'
-				});
-			} else {
-				return uri;
+	async #verifyToken(req, { email, token }) {
+		const user = await this.app.run('user.get', req, { email });
+		const priv = await this.#userPriv(req, user);
+		const tries = (priv.data.otp.tries || 0) + 1;
+		if (tries >= 5) {
+			const at = Date.parse(priv.data.otp.checked_at);
+			if (!Number.isNaN(at) && Date.now() - at < 1000 * otp.authenticator.options.step / 2) {
+				throw new HttpError.TooManyRequests();
 			}
+		}
+		token = token.replaceAll(/\s/g, '');
+		const verified = otp.authenticator.check(token, priv.data.otp.secret);
+		await priv.$query(req.trx).patch({
+			'data:otp.checked_at': new Date().toISOString(),
+			'data:otp.tries': verified ? 0 : tries
 		});
-	});
-};
-exports.key.schema = {
-	title: 'Private Key URI',
-	$action: 'read',
-	required: ['email'],
-	properties: {
-		email: {
-			title: 'Email',
-			type: 'string',
-			format: 'email'
-		},
-		qr: {
-			title: 'QR Code',
-			type: 'boolean',
-			default: false
+		return verified;
+	}
+
+	async grant(req, data) {
+		const verified = await this.#verifyToken(req, data);
+		if (!verified) throw new HttpError.BadRequest("Bad token");
+		const settings = await this.app.run('settings.find', req, {
+			email: data.email
+		});
+		const grants = req.user && req.user.grants || [];
+		const user = req.user = {
+			id: settings.id,
+			grants: settings.data && settings.data.grants || []
+		};
+		if (user.grants.length == 0) user.grants.push('user');
+		const locks = data.grant ? [data.grant] : [];
+		if (this.app.auth.locked(req, locks)) {
+			throw new HttpError.Forbidden("User has insufficient grants");
+		}
+		user.grants = locks;
+		req.granted = grants.join(',') != locks.join(',');
+		return {
+			item: settings,
+			cookies: {
+				bearer: this.app.auth.cookie(req)
+			}
+		};
+	}
+	static grant = {
+		title: 'Grant',
+		external: true,
+		description: 'Sets cookie with grants',
+		$action: 'write',
+		required: ['email', 'token'],
+		properties: {
+			email: {
+				title: 'Email',
+				type: 'string',
+				format: 'email'
+			},
+			token: {
+				title: 'Token',
+				type: 'string',
+				pattern: '^[\\s\\d]{1,10}$'
+			},
+			grant: {
+				title: 'Grant',
+				type: 'string',
+				format: 'grant',
+				nullable: true,
+				$filter: {
+					name: 'schema',
+					path: 'settings.properties.grants.items'
+				}
+			}
+		}
+	};
+
+	async link(req, data) {
+		const token = await this.generate(req, data);
+		return "/.api/login?" + new URLSearchParams({
+			email: data.email,
+			grant: 'webmaster',
+			token: token
+		}).toString();
+	}
+	static link = {
+		title: 'Internal login link',
+		$action: 'write',
+		required: ['email', 'grant'],
+		properties: {
+			email: {
+				title: 'Email',
+				type: 'string',
+				format: 'email'
+			},
+			grant: {
+				title: 'Grant',
+				type: 'string',
+				format: 'grant'
+			},
+			register: {
+				title: 'Register',
+				description: 'Allow unknown email',
+				type: 'boolean',
+				default: false
+			}
+		}
+	};
+
+	clear(req, data) {
+		req.granted = true;
+		return {
+			cookies: {
+				bearer: {}
+			}
+		};
+	}
+	static clear = {
+		title: 'Logout',
+		external: true,
+		description: 'Clear cookie',
+		$action: 'write'
+	};
+
+	async key(req, data) {
+		const user = await this.app.run('user.get', req, {
+			email: data.email
+		});
+		const priv = await this.#userPriv(req, user);
+		const uri = otp.authenticator.keyuri(
+			user.data.email, this.app.name, priv.data.otp.secret
+		);
+		if (data.qr) {
+			return qrcode.toString(uri, {
+				type: 'terminal',
+				errorCorrectionLevel: 'L'
+			});
+		} else {
+			return uri;
 		}
 	}
+	static key = {
+		title: 'Private Key URI',
+		$action: 'read',
+		required: ['email'],
+		properties: {
+			email: {
+				title: 'Email',
+				type: 'string',
+				format: 'email'
+			},
+			qr: {
+				title: 'QR Code',
+				type: 'boolean',
+				default: false
+			}
+		}
+	};
 };

@@ -1,6 +1,6 @@
 const dom = require('express-dom');
 const Path = require('path');
-const {PassThrough} = require('stream');
+const { PassThrough } = require('stream');
 
 class FakeRequest {
 	constructor(params) {

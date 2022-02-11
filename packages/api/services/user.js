@@ -1,80 +1,81 @@
-exports = module.exports = function (opt) {
-	return {
-		name: 'user',
-		service: init
-	};
-};
+module.exports = class UserService {
+	static name = 'user';
 
-function init() {
-
-}
-
-function QueryUser({ trx }, data) {
-	const Block = All.api.Block;
-	const q = Block.query(trx).alias('user').select()
-		.first().throwIfNotFound().where('user.type', 'user');
-	if (!data.id && !data.email) throw new HttpError.BadRequest("Missing id or email");
-	if (data.id) {
-		q.where('user.id', data.id);
-	} else if (data.email) {
-		q.whereJsonText('user.data:email', data.email);
-	}
-	return q;
-}
-
-exports.get = function (req, data) {
-	return QueryUser(req, data);
-};
-exports.get.schema = {
-	$action: 'read',
-	anyOf: [{
-		required: ['email']
-	}, {
-		required: ['id']
-	}],
-	properties: {
-		id: {
-			type: 'string',
-			minLength: 1,
-			format: 'id'
-		},
-		email: {
-			title: 'User email',
-			type: 'string',
-			format: 'email',
-			transform: ['trim', 'toLowerCase']
+	async #QueryUser({ trx, Block }, data) {
+		if (!data.id && !data.email) {
+			throw new HttpError.BadRequest("Missing id or email");
 		}
+		return Block.query(trx).alias('user').select()
+			.first().throwIfNotFound()
+			.where('user.type', 'user')
+			.where(q => {
+				if (data.id) {
+					q.where('user.id', data.id);
+				} else if (data.email) {
+					q.whereJsonText('user.data:email', data.email);
+				}
+			});
 	}
-};
 
-exports.add = function (req, data) {
-	return QueryUser(req, {
-		email: data.email
-	}).catch((err) => {
-		if (err.status != 404) throw err;
-		return All.api.Block.query(req.trx).insert({
+	service(server) {
+		// needed to expose app.user
+	}
+
+	async get(req, data) {
+		return this.#QueryUser(req, data);
+	}
+	static get = {
+		$action: 'read',
+		anyOf: [{
+			required: ['email']
+		}, {
+			required: ['id']
+		}],
+		properties: {
+			id: {
+				type: 'string',
+				minLength: 1,
+				format: 'id'
+			},
+			email: {
+				title: 'User email',
+				type: 'string',
+				format: 'email',
+				transform: ['trim', 'toLowerCase']
+			}
+		}
+	};
+
+	async add({ trx, Block }, data) {
+		try {
+			return await this.#QueryUser({ trx, Block }, data);
+		} catch (err) {
+			if (err.status != 404) throw err;
+		}
+		return Block.query(trx).insert({
 			data: { email: data.email },
 			type: 'user'
-		}).returning('id');
+		}).returning('*');
+	}
+	static add = {
+		$action: 'add',
+		required: ['email'],
+		properties: {
+			email: {
+				title: 'User email',
+				type: 'string',
+				format: 'email',
+				transform: ['trim', 'toLowerCase']
+			}
+		}
+	};
+
+	async del(req, data) {
+		return this.#QueryUser(req, data).del();
+	}
+	static del = Object.assign({}, this.add, {
+		$action: 'del'
 	});
 };
-exports.add.schema = {
-	$action: 'add',
-	required: ['email'],
-	properties: {
-		email: {
-			title: 'User email',
-			type: 'string',
-			format: 'email',
-			transform: ['trim', 'toLowerCase']
-		}
-	}
-};
 
-exports.del = function (req, data) {
-	return QueryUser(req, data).del();
-};
-exports.del.schema = Object.assign({}, exports.get.schema, {
-	$action: 'del'
-});
 

@@ -1,48 +1,45 @@
-exports = module.exports = function(opt) {
-	return {
-		name: 'search',
-		service: init
-	};
-};
+module.exports = class SearchService {
+	static name = 'search';
 
-function init(All) {
-	All.app.get("/.api/query/:id", (req, res, next) => {
-		All.run('search.query', req, {
-			id: req.params.id,
-			query: req.query
-		}).then((data) => {
-			All.send(res, data);
-		}).catch(next);
-	});
-	All.app.post("/.api/query", (req, res, next) => {
-		next(new HttpError.NotImplemented());
-	});
-}
+	service(app, server) {
+		server.get("/.api/query/:id", async (req, res) => {
+			const data = await app.run('search.query', req, {
+				id: req.params.id,
+				query: req.query
+			});
+			app.send(res, data);
+		});
+		server.post("/.api/query", (req, res, next) => {
+			next(new HttpError.NotImplemented());
+		});
+	}
 
-exports.query = function (req, data) {
-	return All.run('block.get', req, {
-		id: data.id
-	}).then((form) => {
+	async query(req, data) {
+		const { app, site } = req;
+		const form = await app.run('block.get', req, {
+			id: data.id
+		});
 		const fd = form.data || {};
 		const method = (fd.action || {}).method;
 		if (!method) {
 			throw new HttpError.BadRequest("Missing method");
 		}
-		if (All.auth.locked(req, (form.lock || {}).read)) {
+		if (app.auth.locked(req, (form.lock || {}).read)) {
 			throw new HttpError.Unauthorized("Check user permissions");
 		}
 		// build parameters
 		const expr = ((form.expr || {}).action || {}).parameters || {};
-		let params = All.utils.mergeParameters(expr, {
+		let params = app.utils.mergeParameters(expr, {
 			$query: data.query || {},
 			$user: req.user
 		});
-		params = All.utils.mergeObjects(params, fd.action.parameters);
-		return All.run(method, req, params).then(obj => {
+		params = app.utils.mergeObjects(params, fd.action.parameters);
+		try {
+			const obj = await app.run(method, req, params);
 			// check if a non-page bundle is needed
 			const bundles = {};
-			Object.keys(req.site.$bundles).forEach(key => {
-				const bundle = req.site.$bundles[key];
+			Object.keys(site.$bundles).forEach(key => {
+				const bundle = site.$bundles[key];
 				if (bundle.meta.group != "page") bundles[key] = bundle;
 			});
 			const metas = {};
@@ -56,7 +53,7 @@ exports.query = function (req, data) {
 			});
 			obj.metas = Object.values(metas);
 			return obj;
-		}).catch((err) => {
+		} catch(err) {
 			return {
 				status: err.statusCode || err.status || err.code || 400,
 				item: {
@@ -66,24 +63,23 @@ exports.query = function (req, data) {
 					}
 				}
 			};
-		});
-	});
-};
-
-exports.query.schema = {
-	$action: 'read',
-	required: ['id'],
-	properties: {
-		id: {
-			type: 'string',
-			format: 'id'
-		},
-		query: {
-			type: 'object',
-			nullable: true
 		}
-	},
-	additionalProperties: false
+	}
+	static query = {
+		$action: 'read',
+		required: ['id'],
+		properties: {
+			id: {
+				type: 'string',
+				format: 'id'
+			},
+			query: {
+				type: 'object',
+				nullable: true
+			}
+		},
+		additionalProperties: false
+	};
 };
 
 function fillTypes(list, obj) {

@@ -1,62 +1,61 @@
-exports = module.exports = function(opt) {
-	return {
-		name: 'form',
-		service: init
-	};
-};
+module.exports = class FormService {
+	static name = 'form';
 
-function init(All) {
-	All.app.get("/.api/form", (req, res, next) => {
-		next(new HttpError.MethodNotAllowed("Only post allowed"));
-	});
-	All.app.post("/.api/form/:id", (req, res, next) => {
-		All.run('form.submit', req, {
-			id: req.params.id,
-			query: req.query,
-			body: All.utils.unflatten(req.body)
-		}).then((data) => {
-			All.send(res, data);
-		}).catch(next);
-	});
-}
+	service(app, server) {
+		server.get("/.api/form", () => {
+			throw new HttpError.MethodNotAllowed("Only post allowed");
+		});
+		server.post("/.api/form/:id", async (req, res) => {
+			const data = await app.run('form.submit', req, {
+				id: req.params.id,
+				query: req.query,
+				body: app.utils.unflatten(req.body)
+			});
+			app.send(res, data);
+		});
+	}
 
-exports.submit = function(req, data) {
-	return All.run('block.get', req, {
-		id: data.id
-	}).then((form) => {
+	async submit(req, data) {
+		const { app, site } = req;
+		const form = await app.run('block.get', req, {
+			id: data.id
+		});
+
 		const fd = form.data || {};
 		const method = (fd.action || {}).method;
 		if (!method) {
 			throw new HttpError.BadRequest("Missing method");
 		}
-		if (All.auth.locked(req, (form.lock || {}).write)) {
+		if (app.auth.locked(req, (form.lock || {}).write)) {
 			throw new HttpError.Unauthorized("Check user permissions");
 		}
 		let body = data.body;
 		// build parameters
 		const expr = ((form.expr || {}).action || {}).parameters || {};
-		let params = All.utils.mergeParameters(expr, {
+		let params = app.utils.mergeParameters(expr, {
 			$request: body,
 			$query: data.query || {},
 			$user: req.user
 		});
-		params = All.utils.mergeObjects(params, fd.action.parameters);
+		params = app.utils.mergeObjects(params, fd.action.parameters);
 
 		Log.api("form params", params, req.user, data.query);
 
 		// build body
 		if (params.type && Object.keys(body).length > 0) {
-			const el = req.site.$schema(params.type);
-			if (!el) throw new HttpError.BadRequest("Unknown element type " + params.type);
-			const newBody = {data: {}};
-			Object.keys((el.properties.data || {}).properties || {}).forEach((key) => {
+			const el = site.$schema(params.type);
+			if (!el) {
+				throw new HttpError.BadRequest("Unknown element type " + params.type);
+			}
+			const newBody = { data: {} };
+			for (const key of Object.keys((el.properties.data || {}).properties || {})) {
 				const val = body[key];
 				if (val !== undefined) {
 					newBody.data[key] = val;
 					delete body[key];
 				}
-			});
-			Object.keys(el.properties).forEach((key) => {
+			}
+			for (const key of Object.keys(el.properties)) {
 				const mkey = '$' + key;
 				const mval = body[mkey];
 				if (mval !== undefined) {
@@ -68,12 +67,12 @@ exports.submit = function(req, data) {
 						newBody[key] = val;
 					}
 				}
-			});
+			}
 			body = newBody;
 		}
-		body = All.utils.mergeObjects(body, params);
+		body = app.utils.mergeObjects(body, params);
 
-		return All.run(method, req, body).catch((err) => {
+		return app.run(method, req, body).catch((err) => {
 			return {
 				status: err.statusCode || err.status || err.code || 400,
 				item: {
@@ -84,25 +83,23 @@ exports.submit = function(req, data) {
 				}
 			};
 		});
-	});
-};
-
-exports.submit.schema = {
-	$action: 'write',
-	required: ["id"],
-	properties: {
-		id: {
-			type: 'string',
-			format: 'id'
-		},
-		query: {
-			type: 'object',
-			nullable: true
-		},
-		body: {
-			type: 'object',
-			nullable: true
-		}
 	}
+	static submit = {
+		$action: 'write',
+		required: ["id"],
+		properties: {
+			id: {
+				type: 'string',
+				format: 'id'
+			},
+			query: {
+				type: 'object',
+				nullable: true
+			},
+			body: {
+				type: 'object',
+				nullable: true
+			}
+		}
+	};
 };
-

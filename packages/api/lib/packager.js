@@ -6,20 +6,25 @@ const fs = require('fs').promises;
 const vm = require('vm');
 const translateJSON = require('./translate');
 
-exports.install = function(site, pkg, All) {
-	const elements = pkg.elements;
-	const directories = pkg.directories;
-	const id = site ? site.id : null;
-	Log.imports("installing", id, elements, directories);
-	const allDirs = id ? All.opt.directories.concat(directories) : directories;
-	const allElts = id ? All.opt.elements.concat(elements) : elements;
+module.exports = class Packager {
+	constructor(app) {
+		this.app = app;
+		this.Block = app.api.Block;
+	}
+	async run(site, pkg) {
+		const elements = pkg.elements;
+		const directories = pkg.directories;
+		const id = site ? site.id : null;
+		Log.imports("installing", id, elements, directories);
+		const allDirs = id ? this.app.directories.concat(directories) : directories;
+		const allElts = id ? this.app.elements.concat(elements) : elements;
 
-	sortPriority(allDirs);
-	sortPriority(allElts);
+		sortPriority(allDirs);
+		sortPriority(allElts);
 
-	return Promise.all(allElts.map((eltObj) => {
-		return fs.readFile(eltObj.path);
-	})).then((bufs) => {
+		const bufs = await Promise.all(allElts.map((eltObj) => {
+			return fs.readFile(eltObj.path);
+		}));
 		const elts = {};
 		const names = [];
 		const context = {};
@@ -29,16 +34,14 @@ exports.install = function(site, pkg, All) {
 			context.path = path;
 			loadFromFile(buf, elts, names, context);
 		});
-
 		const eltsMap = {};
 		const groups = {};
 		const bundles = {};
-
-		names.forEach((name) => {
+		for (const name of names) {
 			const el = elts[name] = Object.assign({}, elts[name]); // drop proxy
 			el.name = name;
 			// backward compatibility with 0.7 extensions names, dropped in favor of output
-			if (updateExtension(el, eltsMap)) return;
+			if (updateExtension(el, eltsMap)) continue;
 			eltsMap[name] = el;
 			let isPage = false; // backward compatibility with < client@0.7
 			if (el.group) el.group.split(/\s+/).forEach((gn) => {
@@ -75,25 +78,140 @@ exports.install = function(site, pkg, All) {
 				}
 				delete el.intl;
 			}
-		});
+		}
 
-		const DomainBlock = All.api.Block.extendSchema(id, eltsMap);
+		const DomainBlock = this.Block.extendSchema(id, eltsMap);
 		if (id) {
-			pkg.Block = DomainBlock;
 			pkg.eltsMap = eltsMap;
 			pkg.groups = groups;
 			site.$pages = groups.page;
 			site.$bundles = {};
 			site.constructor = DomainBlock;
-		} else {
-			All.api.Block = DomainBlock;
 		}
 		return bundles;
-	}).catch((err) => {
-		console.error(err);
-		throw err;
-	});
+	}
+
+	async validate(site, pkg, bundles) {
+		const { eltsMap } = pkg;
+		await Promise.all(Object.entries(bundles).map(([name, { list }]) => {
+			const el = eltsMap[name];
+			return this.#bundle(site, pkg, el, list);
+		}));
+		site.$services = await this.#bundleSource(site, pkg, null, 'services', this.app.services);
+		site.$scripts = eltsMap.site.scripts.slice();
+		site.$resources = Object.assign({}, eltsMap.site.resources);
+		site.$stylesheets = eltsMap.site.stylesheets.slice();
+		// clear up some space
+		delete pkg.eltsMap;
+	}
+
+	async #bundle(site, pkg, rootEl, cobundles = []) {
+		const list = this.#listDependencies(pkg, rootEl.group, rootEl, cobundles.slice());
+		list.sort((a, b) => {
+			return (a.priority || 0) - (b.priority || 0);
+		});
+		const scriptsList = sortElements(list, 'scripts');
+		const stylesList = sortElements(list, 'stylesheets');
+		const prefix = rootEl.name;
+
+		const eltsMap = {};
+		list.forEach((el) => {
+			if (!el.standalone) {
+				el = Object.assign({}, el);
+				delete el.scripts;
+				delete el.stylesheets;
+			}
+			eltsMap[el.name] = el;
+		});
+		const metaEl = Object.assign({}, rootEl);
+		const metaKeys = Object.keys(eltsMap);
+		site.$bundles[rootEl.name] = {
+			meta: metaEl,
+			elements: metaKeys
+		};
+
+		const [scripts, styles] = await Promise.all([
+			this.app.statics.bundle(site, pkg, scriptsList, `${prefix}.js`),
+			this.app.statics.bundle(site, pkg, stylesList, `${prefix}.css`)
+		]);
+		rootEl.scripts = scripts;
+		rootEl.stylesheets = styles;
+		for (const el of cobundles) {
+			if (el.group == "page") {
+				pkg.eltsMap[el.name].scripts = scripts;
+				pkg.eltsMap[el.name].stylesheets = styles;
+			}
+			const path = await this.#bundleSource(site, pkg, prefix, 'elements', eltsMap);
+			if (path) metaEl.bundle = path;
+			metaEl.scripts = rootEl.group != "page" ? rootEl.scripts : [];
+			metaEl.stylesheets = rootEl.group != "page" ? rootEl.stylesheets : [];
+			metaEl.resources = rootEl.resources;
+			for (const el of cobundles) {
+				if (el.group == "page") {
+					site.$bundles[el.name] = {
+						meta: Object.assign({}, el, {
+							scripts: metaEl.scripts,
+							stylesheets: metaEl.stylesheets,
+							resources: metaEl.resources,
+							bundle: metaEl.bundle
+						}),
+						elements: metaKeys
+					};
+				}
+			}
+		}
+	}
+
+	async #bundleSource(site, pkg, prefix, name, obj) {
+		if (prefix && prefix.startsWith('ext-')) return;
+		const filename = [prefix, name].filter(Boolean).join('-') + '.js';
+		const version = site.data.version ?? site.branch;
+		const sourceUrl = `/.files/${version}/${filename}`;
+		const sourcePath = this.app.statics.resolve(site.id, sourceUrl);
+		const str = `Pageboard.${name} = Object.assign(Pageboard.${name} || {}, ${toSource(obj)});`;
+		await fs.writeFile(sourcePath, str);
+		const paths = await this.app.statics.bundle(site, pkg, [sourceUrl], filename);
+		return paths[0];
+	}
+
+	#listDependencies(pkg, rootGroup, el, list = [], gDone = {}, eDone = {}) {
+		if (!el || eDone[el.name]) return list;
+		const elts = pkg.eltsMap;
+		list.push(el);
+		eDone[el.name] = true;
+		const contents = this.Block.normalizeContents(el.contents);
+		if (contents) for (const content of contents) {
+			if (!content.nodes) continue;
+			content.nodes.split(/\W+/).filter(Boolean).forEach((word) => {
+				if (word == rootGroup) {
+					console.warn("contents contains root group", rootGroup, el.name, contents);
+					return;
+				}
+				if (word == "text") return;
+				let group = pkg.groups[word];
+				if (group) {
+					if (gDone[word]) return;
+					gDone[word] = true;
+				} else {
+					group = [word];
+				}
+				for (const sub of group) {
+					this.#listDependencies(pkg, rootGroup, elts[sub], list, gDone, eDone);
+				}
+			});
+		}	else if (el.name == rootGroup) {
+			const group = pkg.groups[el.name];
+			if (group) {
+				gDone[el.name] = true;
+				for (const sub of group) {
+					this.#listDependencies(pkg, rootGroup, elts[sub], list, gDone, eDone);
+				}
+			}
+		}
+		return list;
+	}
 };
+
 
 function updateExtension(el, eltsMap) {
 	const extPage = {
@@ -107,24 +225,6 @@ function updateExtension(el, eltsMap) {
 	return true;
 }
 
-exports.validate = function(site, pkg, bundles) {
-	const eltsMap = pkg.eltsMap;
-	return Promise.all(Object.entries(bundles).map(([name, {list}]) => {
-		const el = eltsMap[name];
-		return bundle(site, pkg, el, list);
-	})).then(() => {
-		return bundleSource(site, pkg, null, 'services', All.services).then((path) => {
-			site.$services = path;
-		});
-	}).then(() => {
-		site.$scripts = pkg.eltsMap.site.scripts.slice();
-		site.$resources = Object.assign({}, pkg.eltsMap.site.resources);
-		site.$stylesheets = pkg.eltsMap.site.stylesheets.slice();
-		delete pkg.eltsMap;
-		delete pkg.Block;
-	});
-};
-
 function sortPriority(list) {
 	list.sort((a, b) => {
 		const pa = a.priority || 0;
@@ -136,119 +236,6 @@ function sortPriority(list) {
 		if (pa < pb) return -1;
 		else return 1;
 	});
-}
-
-function bundle(site, pkg, rootEl, cobundles = []) {
-	const list = listDependencies(pkg, rootEl.group, rootEl, cobundles.slice());
-	list.sort((a, b) => {
-		return (a.priority || 0) - (b.priority || 0);
-	});
-	const scripts = sortElements(list, 'scripts');
-	const styles = sortElements(list, 'stylesheets');
-	const prefix = rootEl.name;
-
-	const eltsMap = {};
-	list.forEach((el) => {
-		if (!el.standalone) {
-			el = Object.assign({}, el);
-			delete el.scripts;
-			delete el.stylesheets;
-		}
-		eltsMap[el.name] = el;
-	});
-	const metaEl = Object.assign({}, rootEl);
-	const metaKeys = Object.keys(eltsMap);
-	site.$bundles[rootEl.name] = {
-		meta: metaEl,
-		elements: metaKeys
-	};
-
-	return Promise.all([
-		All.statics.bundle(site, pkg, scripts, `${prefix}.js`),
-		All.statics.bundle(site, pkg, styles, `${prefix}.css`)
-	]).then(([scripts, styles]) => {
-		rootEl.scripts = scripts;
-		rootEl.stylesheets = styles;
-		cobundles.forEach((el) => {
-			if (el.group == "page") {
-				pkg.eltsMap[el.name].scripts = scripts;
-				pkg.eltsMap[el.name].stylesheets = styles;
-			}
-		});
-
-		return bundleSource(site, pkg, prefix, 'elements', eltsMap).then((path) => {
-			if (path) metaEl.bundle = path;
-			metaEl.scripts = rootEl.group != "page" ? rootEl.scripts : [];
-			metaEl.stylesheets = rootEl.group != "page" ? rootEl.stylesheets : [];
-			metaEl.resources = rootEl.resources;
-			cobundles.forEach((el) => {
-				if (el.group == "page") {
-					site.$bundles[el.name] = {
-						meta: Object.assign({}, el, {
-							scripts: metaEl.scripts,
-							stylesheets: metaEl.stylesheets,
-							resources: metaEl.resources,
-							bundle: metaEl.bundle
-						}),
-						elements: metaKeys
-					};
-				}
-			});
-		});
-	});
-}
-
-function bundleSource(site, pkg, prefix, name, obj) {
-	if (prefix && prefix.startsWith('ext-')) return Promise.resolve();
-	const filename = [prefix, name].filter(Boolean).join('-') + '.js';
-	let version = site.data.version;
-	if (version == null) version = site.branch;
-	const sourceUrl = `/.files/${version}/${filename}`;
-	const sourcePath = All.statics.resolve(site.id, sourceUrl);
-	const str = `Pageboard.${name} = Object.assign(Pageboard.${name} || {}, ${toSource(obj)});`;
-	return fs.writeFile(sourcePath, str).then(() => {
-		return All.statics.bundle(site, pkg, [sourceUrl], filename);
-	}).then((paths) => {
-		return paths[0];
-	});
-}
-
-function listDependencies(pkg, rootGroup, el, list = [], gDone = {}, eDone = {}) {
-	if (!el || eDone[el.name]) return list;
-	const elts = pkg.eltsMap;
-	list.push(el);
-	eDone[el.name] = true;
-	const contents = All.api.Block.normalizeContents(el.contents);
-	if (contents) contents.forEach((content) => {
-		if (!content.nodes) return;
-		content.nodes.split(/\W+/).filter(Boolean).forEach((word) => {
-			if (word == rootGroup) {
-				console.warn("contents contains root group", rootGroup, el.name, contents);
-				return;
-			}
-			if (word == "text") return;
-			let group = pkg.groups[word];
-			if (group) {
-				if (gDone[word]) return;
-				gDone[word] = true;
-			} else {
-				group = [word];
-			}
-			group.forEach((sub) => {
-				listDependencies(pkg, rootGroup, elts[sub], list, gDone, eDone);
-			});
-		});
-	});
-	else if (el.name == rootGroup) {
-		const group = pkg.groups[el.name];
-		if (group) {
-			gDone[el.name] = true;
-			group.forEach((sub) => {
-				listDependencies(pkg, rootGroup, elts[sub], list, gDone, eDone);
-			});
-		}
-	}
-	return list;
 }
 
 function sortElements(elements, prop) {

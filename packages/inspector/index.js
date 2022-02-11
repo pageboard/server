@@ -1,71 +1,69 @@
 const inspector = require.lazy('url-inspector');
-const URL = require('url');
 
-exports = module.exports = function(opt) {
-	if (!opt.inspector) opt.inspector = {};
-	return {
-		name: 'inspector'
-	};
-};
+module.exports = class InspectorModule {
+	static name = 'inspector';
 
-exports.get = function({url, local}) {
-	return new Promise((resolve, reject) => {
+	constructor(app, opts) {
+		this.opts = opts;
+	}
+
+	async request(urlObj) {
+		return inspector.get(urlObj);
+	}
+
+	async get({ url, local }) {
+		const opts = Object.assign({}, this.opts, {
+			nofavicon: local,
+			file: local
+		});
 		try {
-			inspector(url, Object.assign({}, All.opt.inspector, {
-				nofavicon: local,
-				file: local
-			}), (err, result) => {
-				if (err) reject(err);
-				else resolve(result);
-			});
-		} catch(err) {
-			reject(err);
+			const result = this.#filterResult(await inspector(url, opts));
+			return this.#preview(result);
+		} catch (err) {
+			if (typeof err == 'number') throw new HttpError[err]("Inspector failure");
+			else throw err;
 		}
-	}).catch((err) => {
-		if (typeof err == 'number') err = new HttpError[err]("Inspector failure");
-		throw err;
-	})
-		.then(filterResult)
-		.then(preview);
+	}
+
+	#filterResult(result) {
+		const obj = {meta:{}};
+		['mime', 'url', 'type', 'title', 'icon', 'site']
+			.forEach((key) => {
+				if (result[key] !== undefined) obj[key] = result[key];
+			});
+		if (obj.icon == "data:/,") delete obj.icon;
+		if (result.url) obj.pathname = (new URL(result.url)).pathname;
+		['width', 'height', 'duration', 'size', 'thumbnail', 'description']
+			.forEach((key) => {
+				if (result[key] !== undefined) obj.meta[key] = result[key];
+			});
+		if (obj.type == "image" && obj.mime != "text/html") {
+			if (!obj.meta.thumbnail) obj.meta.thumbnail = obj.url;
+			if (!obj.meta.width || !obj.meta.height) throw new HttpError.BadRequest("Bad image.\nCheck it does not embed huge metadata (thumbnail, icc profile, ...).");
+			obj.meta.width = Math.round(obj.meta.width);
+			obj.meta.height = Math.round(obj.meta.height);
+		}
+		return obj;
+	}
+
+	async #preview(obj) {
+		const desc = obj.meta.description || '';
+		delete obj.meta.description;
+		const thumb = obj.meta.thumbnail;
+		delete obj.meta.thumbnail;
+		if (thumb != null) {
+			try {
+				const datauri = await this.app.image.thumbnail(thumb);
+				obj.preview = `<img src="${datauri}" alt="${desc}" />`;
+			} catch (err) {
+				console.error("Error embedding thumbnail", thumb, err);
+			}
+		}
+		if (desc) {
+			obj.preview = desc;
+		}
+		return obj;
+	}
 };
 
-function filterResult(result) {
-	const obj = {meta:{}};
-	['mime', 'url', 'type', 'title', 'icon', 'site']
-		.forEach((key) => {
-			if (result[key] !== undefined) obj[key] = result[key];
-		});
-	if (obj.icon == "data:/,") delete obj.icon;
-	if (result.url) obj.pathname = URL.parse(result.url).pathname;
-	['width', 'height', 'duration', 'size', 'thumbnail', 'description']
-		.forEach((key) => {
-			if (result[key] !== undefined) obj.meta[key] = result[key];
-		});
-	if (obj.type == "image" && obj.mime != "text/html") {
-		if (!obj.meta.thumbnail) obj.meta.thumbnail = obj.url;
-		if (!obj.meta.width || !obj.meta.height) throw new HttpError.BadRequest("Bad image.\nCheck it does not embed huge metadata (thumbnail, icc profile, ...).");
-		obj.meta.width = Math.round(obj.meta.width);
-		obj.meta.height = Math.round(obj.meta.height);
-	}
-	return obj;
-}
 
-function preview(obj) {
-	const desc = obj.meta.description || '';
-	delete obj.meta.description;
-	const thumb = obj.meta.thumbnail;
-	delete obj.meta.thumbnail;
-	if (thumb != null) {
-		return All.image.thumbnail(thumb).then((datauri) => {
-			obj.preview = `<img src="${datauri}" alt="${desc}" />`;
-		}).catch((err) => {
-			console.error("Error embedding thumbnail", thumb, err);
-		}).then(() => {
-			return obj;
-		});
-	}
-	if (desc) {
-		obj.preview = desc;
-	}
-	return Promise.resolve(obj);
-}

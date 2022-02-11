@@ -2,350 +2,431 @@ const Path = require('path');
 const { ref, raw, val } = require('objection');
 const jsonPath = require.lazy('@kapouer/path');
 
-exports = module.exports = function (opt) {
-	this.opt = opt;
-	return {
-		name: 'href',
-		service: init
-	};
-};
+module.exports = class HrefService {
+	static name = 'href';
 
-function init(All) {
-	All.app.get("/.api/hrefs", All.auth.lock('webmaster'), (req, res, next) => {
-		All.run('href.search', req, req.query).then((href) => {
+	service(app, server) {
+		server.get("/.api/hrefs", app.auth.lock('webmaster'), async (req, res) => {
+			const href = await app.run('href.search', req, req.query);
 			res.send(href);
-		}).catch(next);
-	});
-	All.app.post("/.api/href", All.auth.lock('webmaster'), (req, res, next) => {
-		All.run('href.add', req, req.body).then((href) => {
+		});
+		server.post("/.api/href", app.auth.lock('webmaster'), async (req, res) => {
+			const href = app.run('href.add', req, req.body);
 			res.send(href);
-		}).catch(next);
-	});
-	All.app.delete("/.api/href", All.auth.lock('webmaster'), (req, res, next) => {
-		All.run('href.del', req, req.query).then((href) => {
+		});
+		server.delete("/.api/href", app.auth.lock('webmaster'), async (req, res) => {
+			const href = app.run('href.del', req, req.query);
 			res.send(href);
-		}).catch(next);
-	});
-}
+		});
+	}
 
-exports.get = function ({ site, trx }, data) {
-	return All.api.Href.query(trx).select('href._id')
-		.whereSite(site.id)
-		.where('href.url', data.url).first();
-};
-
-exports.get.schema = {
-	$action: 'read',
-	required: ['url'],
-	properties: {
-		url: {
-			type: 'string',
-			format: 'uri-reference'
+	async get({ Href, site, trx }, data) {
+		return Href.query(trx).select('href._id')
+			.whereSite(site.id)
+			.where('href.url', data.url).first();
+	}
+	static get = {
+		$action: 'read',
+		required: ['url'],
+		properties: {
+			url: {
+				type: 'string',
+				format: 'uri-reference'
+			}
 		}
-	}
-};
+	};
 
-exports.search = function ({ site, trx }, data) {
-	// TODO use .page() and/or .resultSize() see objection doc
-	const Href = All.api.Href;
-	let q = Href.query(trx).select().whereSite(site.id);
+	async search(req, data) {
+		const { Href, app, site, trx } = req;
+		// TODO use .page() and/or .resultSize() see objection doc
+		const q = Href.query(trx).select().whereSite(site.id);
 
-	if (data.type) {
-		q.whereIn('href.type', data.type);
-	}
-	if (data.maxSize) {
-		q.where(ref('href.meta:size'), '<=', data.maxSize);
-	}
-	if (data.maxWidth) {
-		q.where(ref('href.meta:width'), '<=', data.maxWidth);
-	}
-	if (data.maxHeight) {
-		q.where(ref('href.meta:height'), '<=', data.maxHeight);
-	}
-	q.offset(data.offset).limit(data.limit);
+		if (data.type) {
+			q.whereIn('href.type', data.type);
+		}
+		if (data.maxSize) {
+			q.where(ref('href.meta:size'), '<=', data.maxSize);
+		}
+		if (data.maxWidth) {
+			q.where(ref('href.meta:width'), '<=', data.maxWidth);
+		}
+		if (data.maxHeight) {
+			q.where(ref('href.meta:height'), '<=', data.maxHeight);
+		}
+		q.offset(data.offset).limit(data.limit);
 
-	if (data.url) {
-		const [url, hash] = data.url.split('#');
-		q.where('url', url);
-		if (url.startsWith('/') && hash != null) {
-			q = q.first().then((href) => {
-				if (!href) return [];
-				return All.run('block.search', { site, trx }, {
-					parent: {
-						type: site.$pages,
+		let items = [];
+
+		if (data.url) {
+			const [url, hash] = data.url.split('#');
+			q.where('url', url);
+			if (url.startsWith('/') && hash != null) {
+				const href = await q.first();
+				if (href) {
+					const obj = await app.run('block.search', req, {
+						parent: {
+							type: site.$pages,
+							data: {
+								url: url
+							}
+						},
+						type: "heading",
+						offset: data.offset,
+						limit: data.limit,
 						data: {
-							url: url
+							'id:start': hash
 						}
-					},
-					type: "heading",
-					offset: data.offset,
-					limit: data.limit,
-					data: {
-						'id:start': hash
-					}
-				}).then((obj) => {
-					const rows = [];
-					obj.items.forEach((item) => {
-						rows.push(Object.assign({}, href, {
+					});
+					for (const item of obj.items) {
+						items.push(Object.assign({}, href, {
 							title: href.title + ' #' + item.data.id,
 							url: href.url + '#' + item.data.id
 						}));
-					});
-					return rows;
-				});
-			});
-		}
-	} else if (data.text) {
-		if (/^\w+$/.test(data.text)) {
-			q.from(raw("to_tsquery('unaccent', ?) AS query, ??", [data.text + ':*', 'href']));
+					}
+				}
+			}
+		} else if (data.text) {
+			if (/^\w+$/.test(data.text)) {
+				q.from(raw("to_tsquery('unaccent', ?) AS query, ??", [data.text + ':*', 'href']));
+			} else {
+				q.from(raw("websearch_to_tsquery('unaccent', href_tsv_url(?)) AS query, ??", [data.text, 'href']));
+			}
+			q.whereRaw('query @@ href.tsv');
+			q.orderByRaw('ts_rank(href.tsv, query) DESC');
+			q.orderBy(ref('href.url'));
+			q.where('href.visible', true);
+			q.orderBy('updated_at', 'desc');
+			items = await q;
 		} else {
-			q.from(raw("websearch_to_tsquery('unaccent', href_tsv_url(?)) AS query, ??", [data.text, 'href']));
+			q.where('href.visible', true);
+			q.orderBy('updated_at', 'desc');
+			items = await q;
 		}
-		q.whereRaw('query @@ href.tsv');
-		q.orderByRaw('ts_rank(href.tsv, query) DESC');
-		q.orderBy(ref('href.url'));
-		q.where('href.visible', true);
-		q.orderBy('updated_at', 'desc');
-	} else {
-		q.where('href.visible', true);
-		q.orderBy('updated_at', 'desc');
-	}
-	return q.then((rows) => {
 		return {
-			data: rows,
+			data: items,
 			offset: data.offset,
 			limit: data.limit
 		};
-	});
-};
-
-exports.search.schema = {
-	$action: 'read',
-	properties: {
-		type: {
-			type: 'array',
-			items: {
-				type: 'string',
-				format: 'name'
-			}
-		},
-		maxSize: {
-			type: 'integer',
-			minimum: 0
-		},
-		maxWidth: {
-			type: 'integer',
-			minimum: 0
-		},
-		maxHeight: {
-			type: 'integer',
-			minimum: 0
-		},
-		url: {
-			type: 'string',
-			format: 'uri-reference'
-		},
-		text: {
-			type: 'string',
-			format: 'singleline'
-		},
-		limit: {
-			type: 'integer',
-			minimum: 0,
-			maximum: 1000,
-			default: 10
-		},
-		offset: {
-			type: 'integer',
-			minimum: 0,
-			default: 0
-		}
 	}
-};
 
-exports.add = function (req, data) {
-	return All.run('href.search', req, data).then((obj) => {
+	static search = {
+		$action: 'read',
+		properties: {
+			type: {
+				type: 'array',
+				items: {
+					type: 'string',
+					format: 'name'
+				}
+			},
+			maxSize: {
+				type: 'integer',
+				minimum: 0
+			},
+			maxWidth: {
+				type: 'integer',
+				minimum: 0
+			},
+			maxHeight: {
+				type: 'integer',
+				minimum: 0
+			},
+			url: {
+				type: 'string',
+				format: 'uri-reference'
+			},
+			text: {
+				type: 'string',
+				format: 'singleline'
+			},
+			limit: {
+				type: 'integer',
+				minimum: 0,
+				maximum: 1000,
+				default: 10
+			},
+			offset: {
+				type: 'integer',
+				minimum: 0,
+				default: 0
+			}
+		}
+	};
+
+	async add(req, data) {
+		const obj = await req.app.run('href.search', req, data);
 		if (obj.data.length > 0) {
 			return obj.data[0];
 		} else {
-			return blindAdd(req, data);
+			return this.#blindAdd(req, data);
 		}
-	});
-};
-
-function blindAdd(req, data) {
-	const { site, trx } = req;
-	const Href = All.api.Href;
-	const url = new URL(data.url, site.url);
-	let isLocal = false;
-	if (site.url.hostname == url.hostname) {
-		data.url = url.pathname + url.search;
-		isLocal = true;
 	}
 
-	let p;
+	async #blindAdd(req, data) {
+		const { app, site, trx, Href } = req;
+		const url = new URL(data.url, site.url);
+		let local = false;
+		if (site.url.hostname == url.hostname) {
+			data.url = url.pathname + url.search;
+			local = true;
+		}
 
-	if (isLocal && !data.url.startsWith('/.')) {
-		// consider it's a page
-		p = All.run('block.find', req, {
-			type: site.$pages,
-			data: {
-				url: url.pathname
+		let result;
+
+		if (local && !data.url.startsWith('/.')) {
+			// consider it's a page
+			try {
+				const { item } = await app.run('block.find', req, {
+					type: site.$pages,
+					data: {
+						url: url.pathname
+					}
+				});
+				result = {
+					mime: 'text/html; charset=utf-8',
+					type: 'link',
+					title: item.data && item.data.title || "",
+					site: null,
+					pathname: url.pathname,
+					url: url.pathname + url.search
+				};
+			} catch (err) {
+				if (err.statusCode == 404) {
+					console.error("reinspect cannot find block", data);
+				}
+				throw err;
 			}
-		}).catch((err) => {
-			if (err.statusCode == 404) {
-				console.error("reinspect cannot find block", data);
-			}
-			throw err;
-		}).then((answer) => {
-			const block = answer.item;
-			return {
-				mime: 'text/html; charset=utf-8',
-				type: 'link',
-				title: block.data && block.data.title || "",
-				site: null,
-				pathname: url.pathname,
-				url: url.pathname + url.search
-			};
-		});
-	} else {
-		p = callInspector(site.id, data.url, isLocal);
-	}
-	return p.then((result) => {
-		if (!isLocal && result.url != data.url) {
+		} else {
+			result = await callInspector(req, { url: data.url, local });
+		}
+		if (!local && result.url != data.url) {
 			result.canonical = result.url;
 			result.url = data.url;
 			result.pathname = url.pathname;
 		}
-		return exports.get(req, data).forUpdate().then((href) => {
-			if (!href) {
-				return site.$relatedQuery('hrefs', trx).insert(result).returning(Href.columns);
-			} else {
-				return site.$relatedQuery('hrefs', trx).patchObject(result).where('_id', href._id)
-					.first().returning(Href.columns);
+		const href = await this.get(req, data).forUpdate();
+		if (!href) {
+			return site.$relatedQuery('hrefs', trx)
+				.insert(result)
+				.returning(Href.columns);
+		} else {
+			return site.$relatedQuery('hrefs', trx)
+				.patchObject(result)
+				.where('_id', href._id)
+				.first()
+				.returning(Href.columns);
+		}
+	}
+
+	static add = {
+		$action: 'add',
+		required: ['url'],
+		properties: {
+			url: {
+				type: 'string',
+				format: 'uri-reference'
 			}
-		});
-	});
-}
-
-exports.add.schema = {
-	$action: 'add',
-	required: ['url'],
-	properties: {
-		url: {
-			type: 'string',
-			format: 'uri-reference'
 		}
-	}
-};
+	};
 
-exports.save = function (req, data) {
-	const Href = All.api.Href;
-	return exports.get(req, data)
-		.throwIfNotFound()
-		.forUpdate()
-		.then((href) => {
-			return req.site.$relatedQuery('hrefs', req.trx).patchObject({
+	async save(req, data) {
+		const { Href, site, trx } = req;
+		const href = await this.get(req, data)
+			.throwIfNotFound()
+			.forUpdate();
+		return site.$relatedQuery('hrefs', trx)
+			.where('_id', href._id)
+			.first()
+			.patchObject({
 				title: data.title
-			}).where('_id', href._id).first().returning(Href.columns);
-		});
-};
-
-exports.save.schema = {
-	$action: 'save',
-	required: ['url', 'title'],
-	properties: {
-		url: {
-			type: 'string',
-			format: 'uri-reference'
-		},
-		title: {
-			type: 'string',
-			format: 'singleline'
-		}
+			})
+			.returning(Href.columns);
 	}
-};
+	static save = {
+		$action: 'save',
+		required: ['url', 'title'],
+		properties: {
+			url: {
+				type: 'string',
+				format: 'uri-reference'
+			},
+			title: {
+				type: 'string',
+				format: 'singleline'
+			}
+		}
+	};
 
-exports.del = function (req, data) {
-	return exports.get(req, data).throwIfNotFound().then((href) => {
-		return req.site.$relatedQuery('hrefs', req.trx).patchObject({
+	async del(req, data) {
+		const { site, trx } = req;
+		const href = await this.get(req, data).throwIfNotFound();
+		await site.$relatedQuery('hrefs', trx).patchObject({
 			visible: false
-		}).where('_id', href._id).then(() => {
-			href.visible = false;
-			return href;
-		});
-	});
-};
-
-exports.del.schema = {
-	$action: 'del',
-	required: ['url'],
-	properties: {
-		url: {
-			type: 'string',
-			format: 'uri-reference'
-		}
+		}).where('_id', href._id);
+		href.visible = false;
+		return href;
 	}
-};
-
-exports.collect = function ({ site, trx }, data = {}) {
-	const hrefs = site.$model.hrefs;
-	const Block = All.api.Block;
-	const qList = (q) => {
-		const urlQueries = [];
-		Object.entries(hrefs).forEach(([type, list]) => {
-			if (!list.some((desc) => {
-				return desc.types.some((type) => {
-					return ['image', 'video', 'audio', 'svg'].includes(type);
-				});
-			})) return;
-			list.forEach(desc => {
-				const bq = Block.query(trx).from('blocks')
-					.where('type', type)
-					.whereNotNull(ref(`data:${desc.path}`));
-				if (desc.array) {
-					bq.select(raw("jsonb_array_elements_text(??) AS url", [
-						ref(`data:${desc.path}`)
-					]));
-					bq.where(raw("jsonb_typeof(??)", [ref(`data:${desc.path}`)]), 'array');
-				} else {
-					bq.select(ref(`data:${desc.path}`).castText().as('url'));
-				}
-
-				urlQueries.push(bq);
-			});
-		});
-		q.unionAll(urlQueries, true);
-	};
-
-	const qBlocks = (q) => {
-		const qList = [
-			collectBlockUrls({ site, trx }, data, 0)
-		];
-		if (data.content) {
-			qList.push(collectBlockUrls({ site, trx }, data, 1));
-			qList.push(collectBlockUrls({ site, trx }, data, 2));
+	static del = {
+		$action: 'del',
+		required: ['url'],
+		properties: {
+			url: {
+				type: 'string',
+				format: 'uri-reference'
+			}
 		}
-		q.unionAll(qList, true);
 	};
-	const q = All.api.Href.query(trx)
-		.with('blocks', qBlocks)
-		.with('list', qList)
-		.select(raw(`jsonb_object_agg(
-				href.url,
-				jsonb_set(href.meta, '{mime}', to_jsonb(href.mime))
-			) AS hrefs`))
-		.where('href._parent_id', site._id)
-		.join('list', 'href.url', 'list.url');
-	return q;
+
+	async collect(req, data) {
+		const { Block, Href, site, trx } = req;
+		const hrefs = site.$model.hrefs;
+		const qList = q => {
+			const urlQueries = [];
+			for (const [type, list] of Object.entries(hrefs)) {
+				if (!list.some((desc) => {
+					return desc.types.some((type) => {
+						return ['image', 'video', 'audio', 'svg'].includes(type);
+					});
+				})) continue;
+				for (const desc of list) {
+					const bq = Block.query(trx).from('blocks')
+						.where('type', type)
+						.whereNotNull(ref(`data:${desc.path}`));
+					if (desc.array) {
+						bq.select(raw("jsonb_array_elements_text(??) AS url", [
+							ref(`data:${desc.path}`)
+						]));
+						bq.where(
+							raw("jsonb_typeof(??)", [ref(`data:${desc.path}`)]),
+							'array'
+						);
+					} else {
+						bq.select(ref(`data:${desc.path}`).castText().as('url'));
+					}
+					urlQueries.push(bq);
+				}
+			}
+			q.unionAll(urlQueries, true);
+		};
+
+		const qBlocks = (q) => {
+			const qList = [
+				collectBlockUrls({ site, trx }, data, 0)
+			];
+			if (data.content) {
+				qList.push(collectBlockUrls({ site, trx }, data, 1));
+				qList.push(collectBlockUrls({ site, trx }, data, 2));
+			}
+			q.unionAll(qList, true);
+		};
+		return Href.query(trx)
+			.with('blocks', qBlocks)
+			.with('list', qList)
+			.select(raw(`jsonb_object_agg(
+					href.url,
+					jsonb_set(href.meta, '{mime}', to_jsonb(href.mime))
+				) AS hrefs`))
+			.where('href._parent_id', site._id)
+			.join('list', 'href.url', 'list.url');
+	}
+
+	async reinspect(req, data) {
+		const { app, site, trx, Block } = req;
+		const hrefs = site.$model.hrefs;
+		const fhrefs = {};
+		for (const [type, list] of Object.entries(hrefs)) {
+			if (data.type && type != data.type) continue;
+			const flist = list.filter((desc) => {
+				return !data.types.length || desc.types.some((type) => {
+					return data.types.includes(type);
+				});
+			});
+			if (site.$pages.includes(type)) flist.push({
+				path: 'url',
+				types: ['link']
+			});
+			if (flist.length) fhrefs[type] = flist;
+		}
+		if (Object.keys(fhrefs).length === 0) {
+			throw new Error(`No types selected: ${data.types.join(',')}`);
+		}
+
+		const rows = Block.query(trx).select().from(
+			site.$relatedQuery('children', trx).select('block._id')
+				.whereIn('block.type', Object.keys(fhrefs))
+				.leftOuterJoin('href', function () {
+					this.on('href._parent_id', site._id);
+					this.on(function () {
+						for (const [type, list] of Object.entries(fhrefs)) {
+							this.orOn(function () {
+								this.on('block.type', val(type));
+								this.on(function () {
+									for (const desc of list) {
+										if (desc.array) {
+											this.orOn(ref(`data:${desc.path}`).from('block'), '@>', ref('href.url').castJson());
+										} else {
+											this.orOn('href.url', ref(`data:${desc.path}`).from('block').castText());
+										}
+									}
+								});
+							});
+						}
+					});
+				})
+				.groupBy('block._id')
+				.count({ count: 'href.*' })
+				.as('sub')
+		).join('block', 'block._id', 'sub._id')
+			.where('sub.count', 0);
+		const urls = [];
+		for (const row of rows) {
+			for (const desc of fhrefs[row.type]) {
+				const url = jsonPath.get(row.data, desc.path);
+				if (url && !urls.includes(url) && !url.startsWith('/.well-known/')) {
+					urls.push(url);
+				}
+			}
+		}
+		const list = await Promise.all(urls.map((url) => {
+			return app.run('href.add', req, { url });
+		}));
+		return {
+			missings: rows.length,
+			added: list.length
+		};
+	}
+	static reinspect = {
+		$action: 'write',
+		properties: {
+			all: {
+				title: 'All',
+				type: 'boolean',
+				default: false
+			},
+			type: {
+				title: 'Type',
+				nullable: true,
+				type: 'string'
+			},
+			types: {
+				title: 'Href Types',
+				default: [],
+				type: 'array',
+				items: {
+					type: 'string'
+				}
+			}
+		}
+	};
 };
 
-function collectBlockUrls({ site, trx }, data, level) {
+
+function collectBlockUrls({ Block, site, trx }, data, level) {
 	const hrefs = site.$model.hrefs;
 	const types = Object.keys(hrefs);
 	const table = ['root', 'root:block', 'root:shared:block'][level];
 
-	const qRoot = All.api.Block.query(trx)
+	const qRoot = Block.query(trx)
 		.select(table + '.*')
 		.where('block._id', site._id);
 	const blockRelation = {
@@ -413,107 +494,24 @@ exports.gc = function ({ trx }, days) {
 	*/
 };
 
-exports.reinspect = function ({ site, trx }, data) {
-	const hrefs = site.$model.hrefs;
-	const fhrefs = {};
-	Object.entries(hrefs).forEach(([type, list]) => {
-		if (data.type && type != data.type) return;
-		const flist = list.filter((desc) => {
-			return !data.types.length || desc.types.some((type) => {
-				return data.types.includes(type);
-			});
-		});
-		if (site.$pages.includes(type)) flist.push({
-			path: 'url',
-			types: ['link']
-		});
-		if (flist.length) fhrefs[type] = flist;
-	});
-	if (Object.keys(fhrefs).length === 0) {
-		throw new Error(`No types selected: ${data.types.join(',')}`);
-	}
 
-	return All.api.Block.query(trx).select().from(
-		site.$relatedQuery('children', trx).select('block._id')
-			.whereIn('block.type', Object.keys(fhrefs))
-			.leftOuterJoin('href', function () {
-				this.on('href._parent_id', site._id);
-				this.on(function () {
-					Object.entries(fhrefs).forEach(([type, list]) => {
-						this.orOn(function () {
-							this.on('block.type', val(type));
-							this.on(function () {
-								list.forEach((desc) => {
-									if (desc.array) {
-										this.orOn(ref(`data:${desc.path}`).from('block'), '@>', ref('href.url').castJson());
-									} else {
-										this.orOn('href.url', ref(`data:${desc.path}`).from('block').castText());
-									}
-								});
-							});
-						});
-					});
-				});
-			})
-			.groupBy('block._id')
-			.count({ count: 'href.*' })
-			.as('sub')
-	).join('block', 'block._id', 'sub._id')
-		.where('sub.count', 0)
-		.then((rows) => {
-			const urls = [];
-			rows.forEach((row) => {
-				fhrefs[row.type].forEach((desc) => {
-					const url = jsonPath.get(row.data, desc.path);
-					if (url && !urls.includes(url) && !url.startsWith('/.well-known/')) urls.push(url);
-				});
-			});
-			return Promise.all(urls.map((url) => {
-				return All.run('href.add', { site, trx }, { url });
-			})).then((list) => {
-				return { missings: rows.length, added: list.length };
-			});
-		});
-};
-exports.reinspect.schema = {
-	$action: 'write',
-	properties: {
-		all: {
-			title: 'All',
-			type: 'boolean',
-			default: false
-		},
-		type: {
-			title: 'Type',
-			nullable: true,
-			type: 'string'
-		},
-		types: {
-			title: 'Href Types',
-			default: [],
-			type: 'array',
-			items: {
-				type: 'string'
-			}
-		}
-	}
-};
 
-function callInspector(siteId, url, local) {
+async function callInspector({ app, site }, { url, local }) {
 	let fileUrl = url;
-	if (local === undefined) local = url.startsWith(`/.uploads/`);
-	if (local) {
-		fileUrl = url.replace(`/.uploads/`, `uploads/${siteId}/`);
-		fileUrl = "file://" + Path.join(All.opt.dirs.data, fileUrl);
+	if (local === undefined) {
+		local = url.startsWith(`/.uploads/`);
 	}
-	return All.inspector.get({
+	if (local) {
+		fileUrl = url.replace(`/.uploads/`, `uploads/${site.id}/`);
+		fileUrl = "file://" + Path.join(app.dirs.data, fileUrl);
+	}
+	const obj = await app.inspector.get({
 		url: fileUrl,
 		local: local
-	}).then((obj) => {
-		if (local) {
-			obj.site = null;
-			obj.url = url;
-		}
-		return obj;
 	});
+	if (local) {
+		obj.site = null;
+		obj.url = url;
+	}
+	return obj;
 }

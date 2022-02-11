@@ -1,167 +1,143 @@
 const Path = require('path');
-const pify = require('util').promisify;
-const exec = pify(require('child_process').execFile);
+const { promisify } = require('util');
+const exec = promisify(require('child_process').execFile);
 const schedule = require.lazy("node-schedule");
 const fs = require('fs').promises;
 const knex = require('knex');
 
 const tenants = new Map();
 
-exports = module.exports = function() {
-	return {
-		name: 'db',
-		priority: -100,
-		service: init
-	};
-};
+module.exports = class DatabaseModule {
+	static name = 'database';
+	static priority = -100;
 
-function init(All) {
-	const opt = All.opt;
-	if (Object.keys(opt.upstreams)[0] == opt.version) scheduleTenantCopy(All);
-	// TODO Cron exports.gc...
-}
-
-exports.tenant = function (tenant = 'current') {
-	const url = All.opt.database.url[tenant];
-	if (!url) throw new Error(`No database configured`);
-	let tknex;
-	if (tenants.has(tenant)) {
-		tknex = tenants.get(tenant);
-	}	else {
-		tknex = knex({
-			client: 'pg',
-			connection: url,
-			debug: Boolean(Log.sql.enabled),
-			asyncStackTraces: All.opt.env == "development"
-		});
-		tenants.set(tenant, tknex);
+	constructor(app, opts) {
+		this.opts = opts;
+		if (!opts.dumps) opts.dumps = Path.join(app.dirs.cache, 'dumps');
 	}
-	return tknex;
-};
+	init() {
+		if (Object.keys(this.opts.upstreams)[0] == this.opts.version) {
+			this.#scheduleTenantCopy();
+		}
+	}
+	tenant(tenant = 'current') {
+		const url = this.opts.url[tenant];
+		if (!url) throw new Error(`No database configured`);
+		let tknex;
+		if (tenants.has(tenant)) {
+			tknex = tenants.get(tenant);
+		}	else {
+			tknex = knex({
+				client: 'pg',
+				connection: url,
+				debug: Boolean(Log.sql.enabled),
+				asyncStackTraces: this.app.env == "development"
+			});
+			tenants.set(tenant, tknex);
+		}
+		return tknex;
+	}
 
-exports.migrate = function() {
-	const opt = All.opt;
-	const dirs = opt && opt.migrations || null;
-	if (!dirs) throw new Error("Missing `migrations` directory option");
-	return Promise.all(dirs.map((dir) => {
-		console.info(` ${dir}`);
-		return exports.tenant().migrate.latest({
-			directory: dir
-		}).then(([batchNo, list]) => {
+	async migrate() {
+		const dirs = this.opts.migrations;
+		if (!dirs) throw new Error("Missing `migrations` directory option");
+		return Promise.all(dirs.map(async dir => {
+			console.info(` ${dir}`);
+			const [batchNo, list] = await exports.tenant().migrate.latest({
+				directory: dir
+			});
 			if (list.length) return list;
 			return "No migrations run in this directory";
+		}));
+	}
+	static migrate = {
+		$action: 'write'
+	};
+
+	#scheduleTenantCopy() {
+		const tenants = Object.assign({}, this.opts.url);
+		delete tenants.current;
+		const slots = Object.keys(tenants);
+		if (slots.length == 0) {
+			// only current tenant
+			return;
+		}
+		console.info("Scheduling tenant db copies:", slots.join(', '));
+		schedule.scheduleJob('0 0 * * *', (date) => {
+			const tenant = slots[(date.getDay() - 1) % slots.length];
+			return this.app.run('database.copy', {}, { tenant });
 		});
-	}));
-};
-exports.migrate.schema = {
-	$action: 'write'
-};
+	}
 
-exports.seed = function() {
-	const opt = All.opt;
-	const dirs = opt && opt.seeds || null;
-	if (!dirs) throw new Error("Missing `seeds` directory option");
-	return Promise.all(dirs.map((dir) => {
-		console.info(` ${dir}`);
-		return exports.knex.seed.run({
-			directory: dir
-		}).spread((list) => {
-			if (list.length) console.info(" ", list.join("\n "));
-			else console.info("No seed files in", dir);
+	async copy(req, { tenant }) {
+		const dir = this.opts.dumps;
+		const file = Path.join(dir, `${this.app.name}-${tenant}.dump`);
+		await fs.mkdir(dir, {
+			recursive: true
 		});
-	}));
-};
-
-function scheduleTenantCopy(All) {
-	const { opt } = All;
-	const tenants = Object.assign({}, opt.database.url);
-	delete tenants.current;
-	const slots = Object.keys(tenants);
-	if (slots.length == 0) {
-		// only current tenant
-		return;
+		await this.app.run('database.dump', {}, { file });
+		await this.app.run('database.restore', {}, { file, tenant });
 	}
-	console.info("Scheduling tenant db copies:", slots.join(', '));
-	schedule.scheduleJob('0 0 * * *', (date) => {
-		const tenant = slots[(date.getDay() - 1) % slots.length];
-		return All.run('db.copy', {}, { tenant });
-	});
-}
-
-exports.copy = function (req, { tenant }) {
-	const { opt } = All;
-	const dir = Path.join(opt.dirs.cache, 'dumps');
-	const file = Path.join(dir, `${opt.name}-${tenant}.dump`);
-	return fs.mkdir(dir, {
-		recursive: true
-	}).then(() => {
-		return All.run('db.dump', {}, { file });
-	}).then(() => {
-		return All.run('db.restore', {}, { file, tenant });
-	});
-};
-exports.copy.schema = {
-	title: 'Copy current db to tenant db',
-	$action: 'write',
-	required: ['tenant'],
-	properties: {
-		tenant: {
-			title: 'Tenant',
-			type: 'string',
-			format: 'id'
+	static copy = {
+		title: 'Copy current db to tenant db',
+		$action: 'write',
+		required: ['tenant'],
+		properties: {
+			tenant: {
+				title: 'Tenant',
+				type: 'string',
+				format: 'id'
+			}
 		}
-	}
-};
+	};
 
-exports.dump = function (req, { file }) {
-	const opt = All.opt.database;
-	return exec('pg_dump', [
-		'--format', 'custom',
-		'--table', 'block',
-		'--table', 'href',
-		'--table', 'relation',
-		'--file', file,
-		'--dbname', opt.url.current
-	]).then(() => {
+	async dump(req, { file }) {
+		await exec('pg_dump', [
+			'--format', 'custom',
+			'--table', 'block',
+			'--table', 'href',
+			'--table', 'relation',
+			'--file', file,
+			'--dbname', this.opts.url.current
+		]);
 		return file;
-	});
-};
-exports.dump.schema = {
-	$action: 'read',
-	required: ['file'],
-	properties: {
-		file: {
-			title: 'File path',
-			type: 'string'
-		}
 	}
-};
+	static dump = {
+		$action: 'read',
+		required: ['file'],
+		properties: {
+			file: {
+				title: 'File path',
+				type: 'string'
+			}
+		}
+	};
 
-exports.restore = function (req, { file, tenant }) {
-	const opt = All.opt.database;
-	const url = opt.url[tenant];
-	if (!url) {
-		throw new HttpError.BadRequest(`Unknown tenant ${tenant}`);
-	}
-	return exec('pg_restore', ['--dbname', url, '--clean', file]).then(() => {
-		return file;
-	});
-};
-exports.restore.schema = {
-	title: 'Restore file to tenant db',
-	$action: 'write',
-	required: ['file', 'tenant'],
-	properties: {
-		file: {
-			title: 'File path',
-			type: 'string'
-		},
-		tenant: {
-			title: 'Tenant',
-			type: 'string',
-			format: 'id'
+	async restore(req, { file, tenant }) {
+		const url = this.opts.url[tenant];
+		if (!url) {
+			throw new HttpError.BadRequest(`Unknown tenant ${tenant}`);
 		}
+		await exec('pg_restore', ['--dbname', url, '--clean', file]);
+		return file;
 	}
+	static restore = {
+		title: 'Restore file to tenant db',
+		$action: 'write',
+		required: ['file', 'tenant'],
+		properties: {
+			file: {
+				title: 'File path',
+				type: 'string'
+			},
+			tenant: {
+				title: 'Tenant',
+				type: 'string',
+				format: 'id'
+			}
+		}
+	};
+
 };
 
 /*

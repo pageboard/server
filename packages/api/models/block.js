@@ -1,7 +1,6 @@
 const common = require('./common');
-const Model = common.Model;
+const { Model } = common;
 const Traverse = require('json-schema-traverse');
-
 const crypto = require('crypto');
 
 class Block extends Model {
@@ -263,30 +262,27 @@ function contentsNames(list) {
 	return props;
 }
 
-function findHrefs(schema, list, root, isArray) {
+function findHrefs(schema, list, root, array) {
 	if (!schema.properties) return;
-	Object.keys(schema.properties).forEach((key) => {
-		const prop = schema.properties[key];
-		if (isArray) key = root;
-		else if (root) key = `${root}.${key}`;
+	for (const [key, prop] of Object.entries(schema.properties)) {
 		if (!prop) throw new Error("Missing prop:" + key);
+		let path;
+		if (array) path = root;
+		else if (root) path = `${root}.${key}`;
+		else path = key;
 		const helper = prop.$helper;
 		if (helper && helper.name == "href") {
 			// FIXME $helper.name == "page" ???
 			// https://github.com/pageboard/server/issues/104
-			let ftype = helper.filter && helper.filter.type || [];
-			if (!Array.isArray(ftype)) ftype = [ftype];
-			list.push({
-				path: key,
-				types: ftype,
-				array: isArray
-			});
+			let types = helper.filter && helper.filter.type || [];
+			if (!Array.isArray(types)) types = [types];
+			list.push({ path, types, array });
 		} else if (prop.type == "array") {
-			findHrefs({properties: {items: prop.items}}, list, key, true);
+			findHrefs({properties: {items: prop.items}}, list, path, true);
 		} else {
-			findHrefs(prop, list, key);
+			findHrefs(prop, list, path);
 		}
-	});
+	}
 }
 
 /**

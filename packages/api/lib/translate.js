@@ -2,16 +2,18 @@ module.exports = translateJSON;
 
 function translateJSON(keys, obj, dict) {
 	if (!obj) return;
-	Object.entries(obj).forEach(([key, val]) => {
-		if (val == null) return;
+	for (const [key, val] of Object.entries(obj)) {
+		if (val == null) continue;
 		if (typeof val == "string") {
 			if (keys.includes(key)) obj[key] = translate(val, dict);
 		} else if (Array.isArray(val)) {
-			val.forEach(val => translateJSON(keys, val, dict));
+			for (const str of val) {
+				translateJSON(keys, str, dict);
+			}
 		} else if (typeof val == "object") {
 			translateJSON(keys, val, dict);
 		}
-	});
+	}
 }
 
 function translate(str, dict) {

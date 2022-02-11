@@ -1,11 +1,10 @@
-module.exports = function(opt) {
-	return {
-		priority: 1, // after prerender plugin
-		view: init
-	};
+module.exports = class PdfModule {
+	static name = 'pdf';
+	static priority = 1;
+
+	view(server) {
+		this.app.opts.prerender.plugins.push(require.resolve('./lib/pdf'));
+	}
 };
 
-function init(All) {
-	All.opt.prerender.plugins.push(require.resolve('./lib/pdf'));
-}
 

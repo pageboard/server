@@ -1,19 +1,17 @@
 const semver = require('semver');
 const crypto = require('crypto');
 
-exports = module.exports = function(opt) {
-	return {
-		name: 'api',
-		service: init
-	};
-};
+module.exports = class GitModule {
+	static name = 'git';
 
-function init(All) {
-	All.app.post('/.api/github', (req, res, next) => {
-		const site = req.site;
-		let pusher;
-		let version;
-		Promise.resolve().then(() => {
+	constructor(app, opts) {
+		this.app = app;
+		this.opts = opts;
+	}
+	init(server) {
+		server.post('/.api/github', async (req, res, next) => {
+			const { site } = req;
+			let version;
 			const event = req.get('X-Github-Event');
 			if (event == "ping") {
 				return res.sendStatus(200);
@@ -31,7 +29,7 @@ function init(All) {
 			}
 
 			const payload = req.body;
-			pusher = payload.pusher;
+			const pusher = payload.pusher;
 			const mod = parseRefs(site.data.module);
 
 			if (!mod.repo || mod.repo != payload.repository.full_name) {
@@ -81,9 +79,10 @@ function init(All) {
 				msg = `Saving version ${version}`;
 			}
 			res.status(200).send(msg);
-		}).then(() => {
-			if (version != null) return All.run('site.save', req, site).then(() => {
-				if (pusher) All.run('mail.to', req, {
+
+			if (version != null) try {
+				await this.app.run('site.save', req, site);
+				if (pusher) this.app.run('mail.to', req, {
 					purpose: 'transactional',
 					to: [{
 						name: pusher.name,
@@ -95,24 +94,25 @@ function init(All) {
 						${site.url.href}
 					`
 				});
-			});
-		}).catch((err) => {
-			if (pusher) All.run('mail.to', req, {
-				purpose: 'transactional',
-				to: [{
-					name: pusher.name,
-					address: pusher.email
-				}],
-				subject: `Pageboard error deploying ${site.data.module} to ${site.url.href}`,
-				text: Text`
-					An error occurred while deploying from repository:
-					${err.message}
-				`
-			});
-			else console.error(err);
+
+			} catch (err) {
+				if (pusher) this.app.run('mail.to', req, {
+					purpose: 'transactional',
+					to: [{
+						name: pusher.name,
+						address: pusher.email
+					}],
+					subject: `Pageboard error deploying ${site.data.module} to ${site.url.href}`,
+					text: Text`
+						An error occurred while deploying from repository:
+						${err.message}
+					`
+				});
+				else console.error(err);
+			}
 		});
-	});
-}
+	}
+};
 
 function getRefs(pay) {
 	if (!pay.ref && !pay.after || pay.deleted) return;

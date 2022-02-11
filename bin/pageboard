@@ -1,7 +1,9 @@
-#!/usr/bin/node --experimental-worker
-var Path = require('path');
-process.env.JSC_SIGNAL_FOR_GC = 30;
-require(
-	Path.join(Path.dirname(require.resolve('@pageboard/core')), 'cli.js')
-);
+#!/usr/bin/node
 
+const Path = require('path');
+
+process.env.JSC_SIGNAL_FOR_GC = 30;
+
+require(
+	Path.join(__dirname, '..', 'index.js')
+);

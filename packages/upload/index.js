@@ -1,74 +1,78 @@
 const multer = require.lazy('multer');
 const Path = require('path');
-const crypto = require.lazy('crypto');
+const randomBytes = require('util').promisify(require('crypto').pseudoRandomBytes);
 const typeis = require('type-is');
 const mime = require.lazy('mime-types');
 const speaking = require.lazy('speakingurl');
 const fs = require('fs').promises;
 
-exports = module.exports = function(opt) {
-	if (!opt.upload) opt.upload = {};
-	if (!opt.upload.files) opt.upload.files = 100;
-	if (!opt.upload.size) opt.upload.size = 50000000;
-	if (!opt.dirs.uploads) opt.dirs.uploads = Path.join(opt.dirs.data, "uploads");
-	console.info(`upload:\t${opt.dirs.uploads}`);
+module.exports = class UploadModule {
+	static name = 'upload';
 
-	return {
-		name: 'upload',
-		service: function(All) {
-			return fs.mkdir(opt.dirs.uploads, {recursive: true}).then(() => {
-				return init(All);
-			});
+	constructor(app, opts) {
+		this.app = app;
+		this.opts = opts;
+		if (!opts.dir) {
+			opts.dir = Path.join(app.dirs.data, "uploads");
 		}
-	};
-};
+		opts.tmp = app.dirs.tmp;
+		console.info(`uploads:\t${opts.dir}`);
+		console.info(`tmp dir:\t${opts.tmp}`);
 
-function init(All) {
-	const upload = All.opt.upload;
-	const uploads = All.opt.dirs.uploads;
-	const storage = multer.diskStorage({
-		destination: function(req, file, cb) {
+		opts.limits = Object.assign({
+			files: 100,
+			size: 50000000
+		}, opts.limits);
+
+		this.store = multer.diskStorage(this);
+	}
+	async init() {
+		return fs.mkdir(this.opts.dir, { recursive: true });
+	}
+	async service(server) {
+		server.post('/.api/upload/:id?', async (req) => {
+			const limits = Object.assign({}, this.opts.limits);
+			if (req.params.id) {
+				const input = await this.app.run('block.get', req, { id: req.params.id });
+				Object.assign(limits, input.data.limits);
+			}
+			const files = await this.parse(req, limits);
+			const list = await Promise.all(files.map((file) => {
+				return this.file(req, file);
+			}));
+			// backward compatibility with elements-write's input href
+			const obj = req.params.id ? { items: list } : list;
+			return obj;
+		});
+	}
+	async destination(req, file, cb) {
+		if (req.site) {
 			const date = (new Date()).toISOString().split('T').shift().substring(0, 7);
-			const curDest = Path.join(uploads, req.site.id, date);
-
-			fs.mkdir(curDest, {recursive: true}).then(() => {
+			const curDest = Path.join(this.opts.dir, req.site.id, date);
+			await fs.mkdir(curDest, { recursive: true }).then(() => {
 				cb(null, curDest);
 			}).catch(cb);
-		},
-		filename: function (req, file, cb) {
-			const parts = file.originalname.split('.');
-			const ext = speaking(parts.pop(), {
-				truncate: 8,
-				symbols: false
-			});
-			const basename = speaking(parts.join('-'), {
-				truncate: 128,
-				symbols: false
-			});
-			crypto.pseudoRandomBytes(4, (err, raw) => {
-				if (err) return cb(err);
-				cb(null, `${basename}-${raw.toString('hex')}.${ext}`);
-			});
+		} else {
+			cb(null, this.opts.tmp);
 		}
-	});
-
-	All.app.post('/.api/upload/:id?', (req, res, next) => {
-		Promise.resolve().then(() => {
-			const limits = {
-				files: upload.files,
-				size: upload.size,
-				types: ['*/*']
-			};
-			if (req.params.id) {
-				return All.run('block.get', req, {id: req.params.id}).then((input) => {
-					return Object.assign(limits, input.data.limits);
-				});
-			} else {
-				return limits;
-			}
-		}).then((limits) => {
+	}
+	filename(req, file, cb) {
+		const parts = file.originalname.split('.');
+		const ext = speaking(parts.pop(), {
+			truncate: 8,
+			symbols: false
+		});
+		const basename = speaking(parts.join('-'), {
+			truncate: 128,
+			symbols: false
+		});
+		return randomBytes(4).then(raw => `${basename}-${raw.toString('hex')}.${ext}`);
+	}
+	parse(req, limits) {
+		limits = Object.assign({}, this.limits, limits);
+		return new Promise((resolve, reject) => {
 			multer({
-				storage: storage,
+				storage: this.store,
 				fileFilter: function(req, file, cb) {
 					const types = limits.types.length ? limits.types : ['*/*'];
 					cb(null, Boolean(typeis.is(file.mimetype, types)));
@@ -77,71 +81,92 @@ function init(All) {
 					files: limits.files,
 					fileSize: limits.size
 				}
-			}).array('files')(req, res, () => {
-				if (req.files == null) {
-					return next(new HttpError.BadRequest("Missing files"));
+			}).array('files')(req, null, (err, req, res, next) => {
+				if (err) {
+					reject(err);
 				}
-				return Promise.all(req.files.map((file) => {
-					return exports.file(req, file);
-				})).then((list) => {
-					// backward compatibility with elements-write's input href
-					const obj = req.params.id ? {items: list} : list;
-					res.send(obj);
-				}).catch(next);
+				if (req.files == null) {
+					reject(new HttpError.BadRequest("Missing files"));
+				} else {
+					resolve(req.files.map(file => {
+						return {
+							name: file.fieldname,
+							title: file.originalname,
+							path: file.path,
+							mime: file.mimetype,
+							size: file.size
+						};
+					}));
+				}
 			});
 		});
-	});
-}
-
-exports.file = function(req, data) {
-	const dest = Path.join(All.opt.dirs.uploads, req.site.id);
-	if (!data.filename) data.filename = Path.basename(data.path);
-	if (!data.destination) data.destination = Path.dirname(data.path);
-	if (!data.mimetype) data.mimetype = mime.lookup(Path.extname(data.filename));
-
-	return All.image.upload(data).then(() => {
-		const pathname = '/.' + Path.join(
-			"uploads",
-			Path.relative(dest, data.destination),
-			data.filename
-		);
-		return All.run('href.add', req, { url: pathname }).then(() => {
-			return pathname;
-		});
-	});
-};
-exports.file.schema = {
-	title: 'Upload file',
-	required: ['path'],
-	properties: {
-		path: {
-			title: 'File path',
-			type: 'string'
-		},
-		filename: {
-			type: 'string',
-			nullable: true
-		},
-		destination: {
-			type: 'string',
-			nullable: true
-		},
-		mimetype: {
-			type: 'string',
-			nullable: true
+	}
+	static parse = {
+		title: 'Parse request',
+		description: 'Returns a list of { name, title, path, mime, size }',
+		properties: {
+			files: {
+				title: 'Files',
+				description: 'Max number of files',
+				type: 'integer',
+				default: 1
+			},
+			size: {
+				title: 'Size',
+				description: 'Max file size in octets',
+				type: 'integer',
+				nullable: true
+			},
+			types: {
+				title: 'Types',
+				description: 'Content type patterns',
+				type: 'array',
+				items: {
+					type: 'string'
+				},
+				default: ['*/*']
+			}
 		}
-	}
-};
+	};
 
-exports.gc = function(id, pathname) {
-	if (!id || !pathname.startsWith('/.uploads')) {
-		return Promise.resolve();
+	async file(req, data) {
+		const image = await this.app.run('image.upload', req, {
+			path: data.path,
+			mime: mime.lookup(Path.extname(data.path))
+		});
+		const root = Path.join(this.opts.dir, req.site.id);
+		const pathname = Path.join(
+			"/.uploads",
+			Path.relative(root, image.path)
+		);
+		await this.app.run('href.add', req, { url: pathname });
+		return pathname;
 	}
-	const file = Path.join("uploads", id, pathname);
-	return fs.unlink(file).catch(() => {
-		// ignore error
-	}).then(() => {
-		console.info("gc uploaded file", file);
-	});
-};
+	static file = {
+		title: 'Upload file',
+		required: ['path'],
+		properties: {
+			path: {
+				title: 'File path',
+				type: 'string'
+			},
+			title: {
+				type: 'string',
+				nullable: true
+			}
+		}
+	};
 
+	gc(id, pathname) {
+		if (!id || !pathname.startsWith('/.uploads')) {
+			return Promise.resolve();
+		}
+		const file = Path.join("uploads", id, pathname);
+		return fs.unlink(file).catch(() => {
+			// ignore error
+		}).then(() => {
+			console.info("gc uploaded file", file);
+		});
+	}
+
+};
