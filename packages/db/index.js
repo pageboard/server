@@ -117,9 +117,6 @@ exports.dump = function (req, { file }) {
 	const opt = All.opt.database;
 	return exec('pg_dump', [
 		'--format', 'custom',
-		'--table', 'block',
-		'--table', 'href',
-		'--table', 'relation',
 		'--file', file,
 		'--dbname', opt.url.current
 	]).then(() => {
@@ -143,7 +140,19 @@ exports.restore = function (req, { file, tenant }) {
 	if (!url) {
 		throw new HttpError.BadRequest(`Unknown tenant ${tenant}`);
 	}
-	return exec('pg_restore', ['--dbname', url, '--clean', file]).then(() => {
+	return exec('pg_restore', [
+		'--dbname', url,
+		'--clean', file,
+		'--no-owner',
+		'--table', 'block',
+		'--table', 'href',
+		'--table', 'relation',
+		'--function', 'block_tsv_update()',
+		'--function', 'href_tsv_update()',
+		'--function', 'href_tsv_url(text)',
+		'--function', 'jsonb_set_recursive(jsonb, text[], jsonb)',
+		'--function', 'recursive_delete(integer, boolean)'
+	]).then(() => {
 		return file;
 	});
 };
