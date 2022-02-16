@@ -40,36 +40,24 @@ exports.tenant = function (tenant = 'current') {
 };
 
 exports.migrate = function() {
-	const opt = All.opt;
-	const dirs = opt && opt.migrations || null;
-	if (!dirs) throw new Error("Missing `migrations` directory option");
-	return Promise.all(dirs.map((dir) => {
-		console.info(` ${dir}`);
-		return exports.tenant().migrate.latest({
-			directory: dir
-		}).then(([batchNo, list]) => {
-			if (list.length) return list;
-			return "No migrations run in this directory";
-		});
-	}));
+	return exports.tenant().migrate.latest({
+		directory: Path.join(__dirname, 'migrations')
+	}).then(([batchNo, list]) => {
+		if (list.length) return list;
+		return "No migrations";
+	});
 };
 exports.migrate.schema = {
 	$action: 'write'
 };
 
 exports.seed = function() {
-	const opt = All.opt;
-	const dirs = opt && opt.seeds || null;
-	if (!dirs) throw new Error("Missing `seeds` directory option");
-	return Promise.all(dirs.map((dir) => {
-		console.info(` ${dir}`);
-		return exports.knex.seed.run({
-			directory: dir
-		}).spread((list) => {
-			if (list.length) console.info(" ", list.join("\n "));
-			else console.info("No seed files in", dir);
-		});
-	}));
+	return exports.knex.seed.run({
+		directory: Path.join(__dirname, 'seeds')
+	}).spread((list) => {
+		if (list.length) console.info(" ", list.join("\n "));
+		else console.info("No seeds");
+	});
 };
 
 function scheduleTenantCopy(All) {
@@ -87,6 +75,38 @@ function scheduleTenantCopy(All) {
 		return All.run('db.copy', {}, { tenant });
 	});
 }
+
+exports.init = function (req, { tenant, file }) {
+	const opt = All.opt.database;
+	const url = opt.url[tenant];
+	if (!url) {
+		throw new HttpError.BadRequest(`Unknown tenant ${tenant}`);
+	}
+	return exec('psql', [
+		'--dbname', url,
+		'--file',
+		file
+	]).then(() => {
+		return file;
+	});
+};
+exports.init.schema = {
+	title: 'Init tenant db',
+	$action: 'write',
+	required: ['file', 'tenant'],
+	properties: {
+		file: {
+			title: 'File path',
+			type: 'string',
+			default: Path.join(__dirname, 'sql/schema.sql')
+		},
+		tenant: {
+			title: 'Tenant',
+			type: 'string',
+			format: 'id'
+		}
+	}
+};
 
 exports.copy = function (req, { tenant }) {
 	const { opt } = All;
@@ -113,13 +133,21 @@ exports.copy.schema = {
 	}
 };
 
-exports.dump = function (req, { file }) {
+exports.dump = function (req, { file, schema, format }) {
 	const opt = All.opt.database;
-	return exec('pg_dump', [
-		'--format', 'custom',
+	const args = [
+		'--format', format,
+		'--clean',
+		'--if-exists',
+		'--no-owner',
+		'--no-comments',
+		'--no-tablespaces',
+		'--schema', 'public',
 		'--file', file,
 		'--dbname', opt.url.current
-	]).then(() => {
+	];
+	if (schema) args.unshift('--schema-only');
+	return exec('pg_dump', args).then(() => {
 		return file;
 	});
 };
@@ -130,6 +158,20 @@ exports.dump.schema = {
 		file: {
 			title: 'File path',
 			type: 'string'
+		},
+		schema: {
+			title: 'Only schema',
+			type: 'boolean',
+			default: false
+		},
+		format: {
+			title: 'File format',
+			default: 'custom',
+			anyOf: [{
+				const: 'custom'
+			}, {
+				const: 'plain'
+			}]
 		}
 	}
 };
@@ -142,16 +184,12 @@ exports.restore = function (req, { file, tenant }) {
 	}
 	return exec('pg_restore', [
 		'--dbname', url,
-		'--clean', file,
+		'--clean',
+		'--if-exists',
 		'--no-owner',
-		'--table', 'block',
-		'--table', 'href',
-		'--table', 'relation',
-		'--function', 'block_tsv_update()',
-		'--function', 'href_tsv_update()',
-		'--function', 'href_tsv_url(text)',
-		'--function', 'jsonb_set_recursive(jsonb, text[], jsonb)',
-		'--function', 'recursive_delete(integer, boolean)'
+		'--no-comments',
+		'--schema', 'public',
+		file
 	]).then(() => {
 		return file;
 	});
