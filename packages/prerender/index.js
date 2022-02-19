@@ -7,7 +7,8 @@ module.exports = function(opt) {
 		cacheDir: Path.join(opt.dirs.cache, "prerender"),
 		stall: 20000,
 		allow: "same-origin",
-		console: true
+		console: true,
+		workers: 2
 	}, opt.prerender);
 
 	if (opt.develop) {
@@ -54,9 +55,9 @@ module.exports = function(opt) {
 			if (!child.killed) child.kill();
 		},
 		acquireTimeoutMillis: 5000,
-		idleTimeoutMillis: 300000,
-		min: 0,
-		max: 8
+		idleTimeoutMillis: 10000,
+		min: opt.prerender.workers,
+		max: 2 * opt.prerender.workers
 	});
 	process.on('exit', function() {
 		return pool.destroy();
@@ -66,6 +67,7 @@ module.exports = function(opt) {
 		pool.acquire().promise.then(function(worker) {
 			worker.on("message", function(msg) {
 				if (msg.err) {
+					release(worker);
 					return next(objToError(msg.err));
 				}
 				if (msg.locks) All.auth.headers(res, msg.locks);
@@ -95,7 +97,7 @@ module.exports = function(opt) {
 				}
 			});
 			worker.once("error", function(err) {
-				release(true);
+				release(worker, true);
 				next(err);
 			});
 			worker.send({
@@ -109,7 +111,7 @@ module.exports = function(opt) {
 				cookies: req.cookies,
 				xhr: req.xhr
 			});
-			function release(kill) {
+			function release(worker, kill) {
 				worker.stdout.removeAllListeners('data');
 				worker.removeAllListeners("message");
 				worker.removeAllListeners("error");
