@@ -342,7 +342,13 @@ exports.send = function (req, data) {
 			searchParams: data.body,
 			retry: 0,
 			timeout: 10000
-		}).then((response) => {
+		}).catch(err => {
+			if (err && err.response && err.response.statusCode) {
+				throw new HttpError[err.response.statusCode];
+			} else {
+				throw err;
+			}
+		}).then(response => {
 			try {
 				return JSON.parse(response.body);
 			} catch (err) {
