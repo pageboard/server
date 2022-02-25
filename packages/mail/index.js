@@ -142,6 +142,7 @@ exports.receive.schema = {
 exports.to = function(req, data) {
 	const purpose = data.purpose;
 	data = Object.assign({}, data);
+	if (req.site) data.tag = req.site.id;
 	delete data.purpose;
 	const mailer = Mailers[purpose];
 	if (!mailer) throw new Error("Unknown mailer purpose " + purpose);
