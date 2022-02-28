@@ -33,12 +33,9 @@ module.exports = class ArchiveService {
 
 		const out = res || createWriteStream(Path.resolve(app.cwd, filepath));
 		if (res) res.attachment(Path.basename(filepath));
-		const finished = new Promise((resolve, reject) => {
-			out.resolve = resolve;
-			out.reject = reject;
-		});
-		out.once('finish', out.resolve);
-		out.once('error', out.reject);
+		const finished = new app.utils.Deferred();
+		out.once('finish', finished.resolve);
+		out.once('error', finished.reject);
 		const jstream = ndjson.stringify();
 		jstream.pipe(out);
 		jstream.write(site);
