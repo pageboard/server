@@ -2,7 +2,6 @@ const Path = require('path');
 const { promisify } = require('util');
 const exec = promisify(require('child_process').execFile);
 const schedule = require.lazy("node-schedule");
-const fs = require('fs').promises;
 const knex = require('knex');
 
 const tenants = new Map();
@@ -41,16 +40,11 @@ module.exports = class DatabaseModule {
 	}
 
 	async migrate() {
-		const dirs = this.opts.migrations;
-		if (!dirs) throw new Error("Missing `migrations` directory option");
-		return Promise.all(dirs.map(async dir => {
-			console.info(` ${dir}`);
-			const [batchNo, list] = await exports.tenant().migrate.latest({
-				directory: dir
-			});
-			if (list.length) return list;
-			return "No migrations run in this directory";
-		}));
+		const [, list] = await this.tenant().migrate.latest({
+			directory: Path.join(__dirname, 'migrations')
+		});
+		if (list.length) return list;
+		return "No migrations";
 	}
 	static migrate = {
 		$action: 'write'
@@ -71,6 +65,36 @@ module.exports = class DatabaseModule {
 		});
 	}
 
+	async init(req, { tenant, file }) {
+		const url = this.opts.url[tenant];
+		if (!url) {
+			throw new HttpError.BadRequest(`Unknown tenant ${tenant}`);
+		}
+		await exec('psql', [
+			'--dbname', url,
+			'--file',
+			file
+		]);
+		return file;
+	}
+	static init = {
+		title: 'Init tenant db',
+		$action: 'write',
+		required: ['file', 'tenant'],
+		properties: {
+			file: {
+				title: 'File path',
+				type: 'string',
+				default: Path.join(__dirname, 'sql/schema.sql')
+			},
+			tenant: {
+				title: 'Tenant',
+				type: 'string',
+				format: 'id'
+			}
+		}
+	};
+
 	async copy({ app }, { tenant }) {
 		const file = Path.join(this.opts.dumps, `${app.name}-${tenant}.dump`);
 		await app.run('database.dump', {}, { file });
@@ -89,15 +113,20 @@ module.exports = class DatabaseModule {
 		}
 	};
 
-	async dump(req, { file }) {
-		await exec('pg_dump', [
-			'--format', 'custom',
-			'--table', 'block',
-			'--table', 'href',
-			'--table', 'relation',
+	async dump(req, { file, schema, format }) {
+		const args = [
+			'--format', format,
+			'--clean',
+			'--if-exists',
+			'--no-owner',
+			'--no-comments',
+			'--no-tablespaces',
+			'--schema', 'public',
 			'--file', file,
 			'--dbname', this.opts.url.current
-		]);
+		];
+		if (schema) args.unshift('--schema-only');
+		await exec('pg_dump', args);
 		return file;
 	}
 	static dump = {
@@ -107,6 +136,20 @@ module.exports = class DatabaseModule {
 			file: {
 				title: 'File path',
 				type: 'string'
+			},
+			schema: {
+				title: 'Only schema',
+				type: 'boolean',
+				default: false
+			},
+			format: {
+				title: 'File format',
+				default: 'custom',
+				anyOf: [{
+					const: 'custom'
+				}, {
+					const: 'plain'
+				}]
 			}
 		}
 	};
@@ -116,7 +159,15 @@ module.exports = class DatabaseModule {
 		if (!url) {
 			throw new HttpError.BadRequest(`Unknown tenant ${tenant}`);
 		}
-		await exec('pg_restore', ['--dbname', url, '--clean', file]);
+		await exec('pg_restore', [
+			'--dbname', url,
+			'--clean',
+			'--if-exists',
+			'--no-owner',
+			'--no-comments',
+			'--schema', 'public',
+			file
+		]);
 		return file;
 	}
 	static restore = {
