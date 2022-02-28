@@ -18,7 +18,7 @@ module.exports = class DatabaseModule {
 		if (app.env == "development") opts.asyncStackTraces = true;
 	}
 	apiRoutes(app) {
-		if (Object.keys(app.upstreams)[0] == app.version) {
+		if (app.version == app.upstream) {
 			this.#scheduleTenantCopy(app);
 		}
 	}
