@@ -3,7 +3,7 @@ const ref = require('objection').ref;
 module.exports = class SettingsService {
 	static name = 'settings';
 
-	service(app, server) {
+	apiRoutes(app, server) {
 		server.get("/.api/settings", async (req, res) => {
 			const data = await app.run('settings.get', req, {
 				id: req.user.id

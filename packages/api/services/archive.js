@@ -8,7 +8,7 @@ const Upgrader = require.lazy('../upgrades');
 module.exports = class ArchiveService {
 	static name = 'archive';
 
-	service(app, server) {
+	apiRoutes(app, server) {
 		server.get('/.api/archive', app.cache.disable, app.auth.lock('webmaster'), (req) => {
 			return app.run('archive.export', req, req.query);
 		});

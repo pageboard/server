@@ -7,13 +7,12 @@ const vm = require('vm');
 const translateJSON = require('./translate');
 
 module.exports = class Packager {
-	constructor(app) {
+	constructor(app, Block) {
 		this.app = app;
-		this.Block = app.api.Block;
+		this.Block = Block;
 	}
 	async run(site, pkg) {
-		const elements = pkg.elements;
-		const directories = pkg.directories;
+		const { elements = [], directories = [] } = pkg || {};
 		const id = site ? site.id : null;
 		Log.imports("installing", id, elements, directories);
 		const allDirs = id ? this.app.directories.concat(directories) : directories;
@@ -179,7 +178,7 @@ module.exports = class Packager {
 		const elts = pkg.eltsMap;
 		list.push(el);
 		eDone[el.name] = true;
-		const contents = this.Block.normalizeContents(el.contents);
+		const contents = this.app.Block.normalizeContents(el.contents);
 		if (contents) for (const content of contents) {
 			if (!content.nodes) continue;
 			content.nodes.split(/\W+/).filter(Boolean).forEach((word) => {

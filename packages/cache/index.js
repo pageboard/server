@@ -27,8 +27,14 @@ module.exports = class CacheModule {
 	disable(...args) {
 		return Upcache.tag.disable(...args);
 	}
-	async init(server) {
-		this.data = JSON.parse(await fs.readFile(this.opts.file, { flag: 'a+' }).toString()) || {};
+	async apiRoutes(app, server) {
+		try {
+			this.data = JSON.parse(
+				await fs.readFile(this.opts.file, { flag: 'a+' })
+			) || {};
+		} catch (err) {
+			console.error("Cannot read", this.opts.file);
+		}
 		server.get('*', Upcache.tag('app'));
 		server.post('/.well-known/upcache', (req, res, next) => {
 			this.mw(req, res, next);

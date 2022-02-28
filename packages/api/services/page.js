@@ -4,7 +4,7 @@ const jsonPath = require.lazy('@kapouer/path');
 module.exports = class PageService {
 	static name = 'page';
 
-	service(app, server) {
+	apiRoutes(app, server) {
 		server.get('/.api/page', async (req, res) => {
 			const { site, query } = req;
 			const isWebmaster = !app.auth.locked(req, ['webmaster']);

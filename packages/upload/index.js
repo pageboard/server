@@ -15,6 +15,7 @@ module.exports = class UploadModule {
 		if (!opts.dir) {
 			opts.dir = Path.join(app.dirs.data, "uploads");
 		}
+		app.dirs.uploads = opts.dir;
 		opts.tmp = app.dirs.tmp;
 		console.info(`uploads:\t${opts.dir}`);
 		console.info(`tmp dir:\t${opts.tmp}`);
@@ -26,10 +27,7 @@ module.exports = class UploadModule {
 
 		this.store = multer.diskStorage(this);
 	}
-	async init() {
-		return fs.mkdir(this.opts.dir, { recursive: true });
-	}
-	async service(server) {
+	async apiRoutes(app, server) {
 		server.post('/.api/upload/:id?', async (req) => {
 			const limits = Object.assign({}, this.opts.limits);
 			if (req.params.id) {

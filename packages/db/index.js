@@ -14,10 +14,12 @@ module.exports = class DatabaseModule {
 	constructor(app, opts) {
 		this.opts = opts;
 		if (!opts.dumps) opts.dumps = Path.join(app.dirs.cache, 'dumps');
+		app.dirs.dumps = opts.dumps;
+		if (app.env == "development") opts.asyncStackTraces = true;
 	}
-	init() {
-		if (Object.keys(this.opts.upstreams)[0] == this.opts.version) {
-			this.#scheduleTenantCopy();
+	apiRoutes(app) {
+		if (Object.keys(app.upstreams)[0] == app.version) {
+			this.#scheduleTenantCopy(app);
 		}
 	}
 	tenant(tenant = 'current') {
@@ -31,7 +33,7 @@ module.exports = class DatabaseModule {
 				client: 'pg',
 				connection: url,
 				debug: Boolean(Log.sql.enabled),
-				asyncStackTraces: this.app.env == "development"
+				asyncStackTraces: this.opts.asyncStackTraces
 			});
 			tenants.set(tenant, tknex);
 		}
@@ -54,7 +56,7 @@ module.exports = class DatabaseModule {
 		$action: 'write'
 	};
 
-	#scheduleTenantCopy() {
+	#scheduleTenantCopy(app) {
 		const tenants = Object.assign({}, this.opts.url);
 		delete tenants.current;
 		const slots = Object.keys(tenants);
@@ -65,18 +67,14 @@ module.exports = class DatabaseModule {
 		console.info("Scheduling tenant db copies:", slots.join(', '));
 		schedule.scheduleJob('0 0 * * *', (date) => {
 			const tenant = slots[(date.getDay() - 1) % slots.length];
-			return this.app.run('database.copy', {}, { tenant });
+			return app.run('database.copy', {}, { tenant });
 		});
 	}
 
-	async copy(req, { tenant }) {
-		const dir = this.opts.dumps;
-		const file = Path.join(dir, `${this.app.name}-${tenant}.dump`);
-		await fs.mkdir(dir, {
-			recursive: true
-		});
-		await this.app.run('database.dump', {}, { file });
-		await this.app.run('database.restore', {}, { file, tenant });
+	async copy({ app }, { tenant }) {
+		const file = Path.join(this.opts.dumps, `${app.name}-${tenant}.dump`);
+		await app.run('database.dump', {}, { file });
+		await app.run('database.restore', {}, { file, tenant });
 	}
 	static copy = {
 		title: 'Copy current db to tenant db',

@@ -1,7 +1,7 @@
 module.exports = class FormService {
 	static name = 'form';
 
-	service(app, server) {
+	apiRoutes(app, server) {
 		server.get("/.api/form", () => {
 			throw new HttpError.MethodNotAllowed("Only post allowed");
 		});
@@ -37,7 +37,7 @@ module.exports = class FormService {
 			$query: data.query || {},
 			$user: req.user
 		});
-		params = app.utils.mergeObjects(params, fd.action.parameters);
+		params = app.utils.mergeExpressions(params, fd.action.parameters);
 
 		Log.api("form params", params, req.user, data.query);
 
@@ -70,7 +70,7 @@ module.exports = class FormService {
 			}
 			body = newBody;
 		}
-		body = app.utils.mergeObjects(body, params);
+		body = app.utils.mergeExpressions(body, params);
 
 		return app.run(method, req, body).catch((err) => {
 			return {

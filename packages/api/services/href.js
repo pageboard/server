@@ -5,7 +5,7 @@ const jsonPath = require.lazy('@kapouer/path');
 module.exports = class HrefService {
 	static name = 'href';
 
-	service(app, server) {
+	apiRoutes(app, server) {
 		server.get("/.api/hrefs", app.auth.lock('webmaster'), async (req, res) => {
 			const href = await app.run('href.search', req, req.query);
 			res.send(href);

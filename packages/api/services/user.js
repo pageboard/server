@@ -17,10 +17,6 @@ module.exports = class UserService {
 			});
 	}
 
-	service(server) {
-		// needed to expose app.user
-	}
-
 	async get(req, data) {
 		return this.#QueryUser(req, data);
 	}

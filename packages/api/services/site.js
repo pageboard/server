@@ -1,9 +1,7 @@
-const lodashMerge = require.lazy('lodash.merge');
-
 module.exports = class SiteService {
 	static name = 'site';
 
-	service(app, server) {
+	apiRoutes(app, server) {
 		server.put('/.api/site', app.auth.lock('webmaster'), async (req, res) => {
 			const data = Object.assign(req.body, { id: req.site.id });
 			const site = await app.run('site.save', req, data);
@@ -11,9 +9,10 @@ module.exports = class SiteService {
 		});
 	}
 
-	async #QuerySite({ trx, Block }, data) {
+	#QuerySite({ trx, Block }, data) {
 		return Block.query(trx).alias('site').first()
-			.where('site.type', 'site').where(q => {
+			.where('site.type', 'site')
+			.where(q => {
 				if (data.id) {
 					q.orWhere('site.id', data.id);
 				}
@@ -139,18 +138,19 @@ module.exports = class SiteService {
 	};
 
 	async save(req, data) {
-		const site = await this.get(req, data);
-		lodashMerge(site.data, data.data);
-		if (req.site && req.site.url) {
-			site.url = req.site.url;
+		const { app, site } = req;
+		const dbSite = await this.get(req, data);
+		app.utils.mergeRecursive(dbSite.data, data.data);
+		if (site && site.url) {
+			dbSite.url = site.url;
 		}
-		const nsite = await req.app.install(site);
+		const runSite = await app.install(dbSite);
 		const copy = Object.assign({}, data.data);
-		await nsite.$query(req.trx).patchObject({
-			type: nsite.type,
+		await runSite.$query(req.trx).patchObject({
+			type: runSite.type,
 			data: copy
 		});
-		return nsite;
+		return runSite;
 	}
 	static save = {
 		title: 'Save site',

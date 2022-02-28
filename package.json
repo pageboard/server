@@ -33,11 +33,13 @@
     "@pageboard/prerender": "file:./packages/prerender",
     "@pageboard/statics": "file:./packages/statics",
     "@pageboard/upload": "file:./packages/upload",
-	  "debug": "^4.3.3",
+    "debug": "^4.3.3",
     "express": "^4.17.2",
     "http-errors": "^2.0.0",
     "import-lazy": "^4.0.0",
+    "lodash.merge": "^4.6.2",
     "matchdom": "^5.10.7",
+    "minimist": "^1.2.5",
     "morgan": "^1.10.0",
     "outdent": "^0.8.0",
     "pad": "^3.2.0",
@@ -65,7 +67,7 @@
     ]
   },
   "devDependencies": {
-    "eslint": ">= 7",
-    "@kapouer/eslint-config": "^1.6.2"
+    "@kapouer/eslint-config": "^1.6.2",
+    "eslint": ">= 7"
   }
 }

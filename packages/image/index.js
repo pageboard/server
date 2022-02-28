@@ -27,7 +27,7 @@ module.exports = class ImageModule {
 		}, opts);
 	}
 
-	file(server) {
+	fileRoutes(app, server) {
 		sharpie.sharp.simd(true);
 		server.get(/^\/\.(uploads|files)\//, (req, res, next) => {
 			Log.image("processing", req.url);

@@ -20,7 +20,7 @@ module.exports = class AuthModule {
 		}, opts);
 	}
 
-	async service(server) {
+	async apiRoutes(app, server) {
 		const keys = await this.#keygen(
 			Path.join(this.app.dirs.data, 'keys.json')
 		);

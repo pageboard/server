@@ -5,10 +5,9 @@ module.exports = class GitModule {
 	static name = 'git';
 
 	constructor(app, opts) {
-		this.app = app;
 		this.opts = opts;
 	}
-	init(server) {
+	apiRoutes(app, server) {
 		server.post('/.api/github', async (req, res, next) => {
 			const { site } = req;
 			let version;
@@ -81,8 +80,8 @@ module.exports = class GitModule {
 			res.status(200).send(msg);
 
 			if (version != null) try {
-				await this.app.run('site.save', req, site);
-				if (pusher) this.app.run('mail.to', req, {
+				await app.run('site.save', req, site);
+				if (pusher) app.run('mail.to', req, {
 					purpose: 'transactional',
 					to: [{
 						name: pusher.name,
@@ -96,7 +95,7 @@ module.exports = class GitModule {
 				});
 
 			} catch (err) {
-				if (pusher) this.app.run('mail.to', req, {
+				if (pusher) app.run('mail.to', req, {
 					purpose: 'transactional',
 					to: [{
 						name: pusher.name,

@@ -1,7 +1,7 @@
 module.exports = class SearchService {
 	static name = 'search';
 
-	service(app, server) {
+	apiRoutes(app, server) {
 		server.get("/.api/query/:id", async (req, res) => {
 			const data = await app.run('search.query', req, {
 				id: req.params.id,
@@ -33,7 +33,7 @@ module.exports = class SearchService {
 			$query: data.query || {},
 			$user: req.user
 		});
-		params = app.utils.mergeObjects(params, fd.action.parameters);
+		params = app.utils.mergeExpressions(params, fd.action.parameters);
 		try {
 			const obj = await app.run(method, req, params);
 			// check if a non-page bundle is needed

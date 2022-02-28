@@ -4,10 +4,10 @@ module.exports = class BlockService {
 	static name = 'block';
 
 	constructor(app) {
-		BlockService.Block = app.api.Block;
+		BlockService.Block = app.Block;
 	}
 
-	service(app, server) {
+	apiRoutes(app, server) {
 		server.get("/.api/block", async (req, res) => {
 			const data = await app.run('block.get', req, req.query);
 			app.send(res, data);

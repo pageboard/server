@@ -11,7 +11,6 @@ const multipart = require.lazy('./lib/multipart.js');
 
 module.exports = class MailModule {
 	constructor(app, opts) {
-		this.app = app;
 		this.opts = opts;
 
 		Object.entries(opts).forEach(([purpose, conf]) => {
@@ -33,7 +32,7 @@ module.exports = class MailModule {
 			}
 		});
 	}
-	init(server) {
+	apiRoutes(app, server) {
 		Object.entries(this.opts).forEach(([purpose, conf]) => {
 			Log.mail(purpose, conf);
 			try {
@@ -48,14 +47,14 @@ module.exports = class MailModule {
 			}
 		});
 		server.post('/.api/mail/receive', multipart, (req, res, next) => {
-			this.app.run('mail.receive', req, req.body).then((ok) => {
+			app.run('mail.receive', req, req.body).then((ok) => {
 				// https://documentation.mailgun.com/en/latest/user_manual.html#receiving-messages-via-http-through-a-forward-action
 				if (!ok) res.sendStatus(406);
 				else res.sendStatus(200);
 			}).catch(next);
 		});
 		server.post('/.api/mail/report', (req, res, next) => {
-			this.app.run('mail.report', req, req.body).then((ok) => {
+			app.run('mail.report', req, req.body).then((ok) => {
 				// https://documentation.mailgun.com/en/latest/user_manual.html#webhooks
 				if (!ok) res.sendStatus(406);
 				else res.sendStatus(200);
@@ -70,7 +69,7 @@ module.exports = class MailModule {
 			return false;
 		}
 		const event = data['event-data'];
-		return this.app.run('mail.to', req, {
+		return req.app.run('mail.to', req, {
 			to: [mailer.sender],
 			subject: 'Pageboard mail delivery failure to ' + event.message.headers.to,
 			text: JSON.stringify(event, null, ' ')
@@ -98,15 +97,15 @@ module.exports = class MailModule {
 			if (parts.pop() != mailer.domain) return false;
 			parts = parts[0].split('.');
 			if (parts.length != 2) return false;
-			const site = await this.app.run('site.get', req, { id: parts[0] });
+			const site = await req.app.run('site.get', req, { id: parts[0] });
 			req.site = site;
 			try {
 				const [fromSettings, toSettings] = await Promise.all([
-					this.app.run('settings.find', req, { email: senders }),
-					this.app.run('settings.get', req, { id: parts[1] })
+					req.app.run('settings.find', req, { email: senders }),
+					req.app.run('settings.get', req, { id: parts[1] })
 				]);
 
-				await this.app.run('mail.to', req, {
+				await req.app.run('mail.to', req, {
 					from: {
 						name: site.data.title,
 						address: `${site.id}.${fromSettings.id}@${mailer.domain}`
@@ -152,10 +151,6 @@ module.exports = class MailModule {
 		data.from = sender;
 		if (mailer.headers) {
 			data.headers = mailer.headers;
-		}
-		if (mailer.messageStream) {
-			// specific to postmark
-			data.messageStream = mailer.messageStream;
 		}
 		Log.mail("mail.to", data);
 		return mailer.transport.sendMail(data).then(sentStatus => {
@@ -263,13 +258,16 @@ module.exports = class MailModule {
 		if (!data.from && !data.replyTo) {
 			throw new HttpError.NotFound("Missing parameters");
 		}
+		const { site, app } = req;
 		const purpose = data.purpose;
 		data = Object.assign({}, data);
 		delete data.purpose;
 		const mailer = Mailers[purpose];
-		if (!mailer) throw new Error("Unknown mailer purpose " + purpose);
+		if (!mailer) {
+			throw new Error("Unknown mailer purpose " + purpose);
+		}
 
-		const list = [this.app.run('block.find', req, {
+		const list = [app.run('block.find', req, {
 			type: 'mail',
 			data: { url: data.url }
 		})];
@@ -278,16 +276,16 @@ module.exports = class MailModule {
 		};
 		if (data.from) {
 			if (data.from.indexOf('@') > 0) {
-				list.push(this.app.run('settings.find', req, { email: data.from }));
+				list.push(app.run('settings.find', req, { email: data.from }));
 			} else {
-				list.push(this.app.run('settings.get', req, { id: data.from }));
+				list.push(app.run('settings.get', req, { id: data.from }));
 			}
 		}
 		if (data.replyTo) {
 			if (data.replyTo.indexOf('@') > 0) {
 				mailOpts.replyTo = AddressParser(data.replyTo);
 			} else {
-				list.push(this.app.run('settings.get', req, {
+				list.push(app.run('settings.get', req, {
 					id: data.replyTo
 				}).then((settings) => {
 					mailOpts.replyTo = {
@@ -298,11 +296,12 @@ module.exports = class MailModule {
 		}
 
 		list.push(Promise.all(data.to.map((to) => {
-			if (to.indexOf('@') > 0) return this.app.run('settings.save', req, {email: to});
-			else return this.app.run('settings.get', req, {id:to});
+			if (to.indexOf('@') > 0) {
+				return app.run('settings.save', req, { email: to });
+			} else {
+				return app.run('settings.get', req, { id: to });
+			}
 		})));
-
-		const site = req.site;
 
 		const results = await Promise.allSettled(list);
 		const rows = results.map(item => {
@@ -346,7 +345,7 @@ module.exports = class MailModule {
 		// 	filename: 'test.txt', // optional
 		// 	contentType: 'text/plain' // optional
 		// }];
-		await this.app.run('mail.to', req, mailOpts);
+		return app.run('mail.to', req, mailOpts);
 	}
 	static send = {
 		title: 'Send email',

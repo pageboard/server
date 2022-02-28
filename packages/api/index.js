@@ -31,7 +31,7 @@ module.exports = class ApiModule {
 		});
 	}
 
-	init(server) {
+	apiRoutes(app, server) {
 		const tenantsLen = Object.keys(this.app.opts.database.url).length - 1;
 		// api depends on site files, that tag is invalidated in cache install
 		server.get('/.api/*', this.app.cache.tag('app-:site'), this.app.cache.tag('db-:tenant').for(`${tenantsLen}day`));
@@ -59,31 +59,36 @@ module.exports = class ApiModule {
 		else return data;
 	}
 
-	#getApiMethodSchema(apiStr) {
+	#getService(apiStr) {
 		const [modName, funName] = apiStr.split('.');
 		const mod = this.app.services[modName];
-		if (!mod) throw new HttpError.BadRequest(Text`
-			Unknown api module ${modName}
-				${Object.getOwnPropertyNames(this.app.services).sort().join(', ')}
-		`);
+		if (!mod) {
+			throw new HttpError.BadRequest(Text`
+				Unknown api module ${modName}
+					${Object.keys(this.app.services).sort().join(', ')}
+			`);
+		}
 		const schema = mod[funName];
-		const fun = this.app[modName][funName];
+		const inst = this.app[modName];
+		const fun = inst[funName];
 		if (!fun) throw new HttpError.BadRequest(Text`
 			Unknown api method ${apiStr}
-				${Object.getOwnPropertyNames(mod).sort().join(', ')}
+				${Object.keys(mod).sort().join(', ')}
 		`);
-		if (!schema) throw new HttpError.BadRequest(`Internal api method ${apiStr}`);
-		return [schema, mod, fun];
+		if (!schema) {
+			throw new HttpError.BadRequest(`Internal api method ${apiStr}`);
+		}
+		return [schema, inst, fun];
 	}
 
 	help(apiStr) {
-		const [schema] = this.#getApiMethodSchema(apiStr);
+		const [schema] = this.#getService(apiStr);
 		return jsonDoc(schema, this.app.opts.cli);
 	}
 
 	async run(apiStr, req, data) {
 		const { app } = this;
-		const [schema, mod, fun] = this.#getApiMethodSchema(apiStr);
+		const [schema, mod, fun] = this.#getService(apiStr);
 		Log.api("run %s:\n%O", apiStr, data);
 		try {
 			data = this.validate(schema, data, fun);
@@ -106,24 +111,23 @@ module.exports = class ApiModule {
 
 		try {
 			const obj = await fun.apply(mod, args);
-			if (!hadTrx && req && req.trx && !req.trx.isCompleted()) {
+			if (!hadTrx && req.trx && !req.trx.isCompleted()) {
 				await req.trx.commit();
 			}
 			return obj;
 		} catch(err) {
 			Log.api("error %s:\n%O", apiStr, err);
+			if (!hadTrx && !req.trx.isCompleted()) {
+				await req.trx.rollback();
+			}
 			throw err;
 		} finally {
-			if (!req || !req.trx) {
-				// pass
-			} else if (req.trx.isCompleted()) {
+			if (req.trx && req.trx.isCompleted()) {
 				if (hadTrx) {
 					req.trx = transaction.start(app.database.tenant(locals.tenant));
 				} else {
 					delete req.trx;
 				}
-			} else if (!hadTrx) {
-				await req.trx.rollback();
 			}
 		}
 	}

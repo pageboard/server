@@ -16,11 +16,15 @@ module.exports = class StaticsModule {
 			files: Path.join(app.dirs.cache, "files"),
 			nocache: app.env == "development"
 		}, opts);
+		app.dirs.staticsCache = this.opts.cache;
+		app.dirs.staticsFiles = this.opts.files;
 
-		if (this.opts.nocache) console.info("static:\tcache disabled for development");
+		if (this.opts.nocache) {
+			console.info("static:\tcache disabled for development");
+		}
 	}
 
-	init(server) {
+	fileRoutes(app, server) {
 		const { opts } = this;
 		const serveOpts = {
 			index: false,
@@ -32,16 +36,16 @@ module.exports = class StaticsModule {
 		server.get("/.files/*", (req, res, next) => {
 			const { url, site } = req;
 			req.url = site.id + url.substring(7);
-			this.app.cache.tag('app-:site').for(opts.nocache ? null : '1 year')(req, res, next);
+			app.cache.tag('app-:site').for(opts.nocache ? null : '1 year')(req, res, next);
 		}, serveStatic(opts.files, serveOpts), staticNotFound);
 
 		server.get("/.uploads/*", (req, res, next) => {
 			const { url, site } = req;
 			req.url = site.id + url.substring(9);
-			this.app.cache.for(opts.nocache ? null : '1 year')(req, res, next);
-		}, serveStatic(this.app.opts.uploads.dir, serveOpts), staticNotFound);
+			app.cache.for(opts.nocache ? null : '1 year')(req, res, next);
+		}, serveStatic(app.upload.opts.dir, serveOpts), staticNotFound);
 
-		server.get('/favicon.ico', this.app.cache.tag('data-:site').for('1 month'), ({ site }, res, next) => {
+		server.get('/favicon.ico', app.cache.tag('data-:site').for('1 month'), ({ site }, res, next) => {
 			if (!site || !site.data.favicon) {
 				res.sendStatus(204);
 			} else {
@@ -79,10 +83,7 @@ module.exports = class StaticsModule {
 		outList.push(outUrl);
 		const output = urlToPath(this.opts.files, site.id, outUrl);
 
-		await Promise.all([
-			fs.mkdir(buildDir, { recursive: true }),
-			fs.mkdir(this.opts.files, { recursive: true })
-		]);
+		await fs.mkdir(buildDir, { recursive: true });
 
 		let copyFromCache = false;
 		if (version != site.branch) try {
@@ -123,12 +124,12 @@ module.exports = class StaticsModule {
 		return outList;
 	}
 
-	async install(site, {directories}) {
+	async install(site, { directories } = {}) {
 		if (site) {
 			const runSiteDir = Path.join(this.opts.files, site.id);
 			await fs.mkdir(runSiteDir, { recursive: true });
 		}
-		for (const mount of directories) {
+		if (directories) for (const mount of directories) {
 			try {
 				await mountPath(this.opts.files, mount.from, mount.to);
 			} catch (err) {
