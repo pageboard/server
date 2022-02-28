@@ -37,7 +37,7 @@ module.exports = class Packager {
 		const groups = {};
 		const bundles = {};
 		for (const name of names) {
-			const el = elts[name] = Object.assign({}, elts[name]); // drop proxy
+			const el = Object.assign({}, elts[name]); // drop proxy
 			el.name = name;
 			// backward compatibility with 0.7 extensions names, dropped in favor of output
 			if (updateExtension(el, eltsMap)) continue;
