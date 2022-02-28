@@ -149,8 +149,9 @@ module.exports = class MailModule {
 			if (!data.replyTo.address) delete data.replyTo;
 		}
 		data.from = sender;
-		if (mailer.headers) {
-			data.headers = mailer.headers;
+		data.headers = Object.assign({}, mailer.headers);
+		if (req.site.id) {
+			data.headers["X-PM-Tag"] = req.site.id;
 		}
 		Log.mail("mail.to", data);
 		return mailer.transport.sendMail(data).then(sentStatus => {
