@@ -17,7 +17,7 @@ exports = module.exports = function() {
 
 function init(All) {
 	const opt = All.opt;
-	if (Object.keys(opt.upstreams)[0] == opt.version) scheduleTenantCopy(All);
+	if (opt.upstream == opt.version) scheduleTenantCopy(All);
 	// TODO Cron exports.gc...
 }
 
