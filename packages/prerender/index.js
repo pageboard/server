@@ -242,7 +242,7 @@ module.exports = class PrerenderModule {
 
 			const { mime = "text/html" } = outputOpts;
 
-			if (site.data.env != "production" && mime == "text/html" && query.develop === undefined) {
+			if (site.data.env == "dev" && mime == "text/html" && query.develop === undefined) {
 				query.develop = null;
 			}
 			if (query.develop !== undefined) {
