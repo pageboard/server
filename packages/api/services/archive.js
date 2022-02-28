@@ -31,8 +31,16 @@ module.exports = class ArchiveService {
 			standalones: 0
 		};
 
-		const out = res || createWriteStream(Path.resolve(app.cwd, filepath));
-		if (res) res.attachment(Path.basename(filepath));
+		let out;
+		if (res) {
+			counts.file = Path.basename(filepath);
+			res.attachment(counts.file);
+			out = res;
+		} else {
+			counts.file = Path.resolve(app.cwd, filepath);
+			out = createWriteStream(counts.file);
+		}
+
 		const finished = new app.utils.Deferred();
 		out.once('finish', finished.resolve);
 		out.once('error', finished.reject);
