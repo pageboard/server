@@ -1,0 +1,50 @@
+[installer]
+bin = "npm"
+timeout = 60000
+
+[database.url]
+current = "postgres://pageboard@localhost/pageboard"
+monday = "postgres://pageboard@localhost/pageboard_monday"
+
+[image]
+hostnames = true
+im = "/usr/bin/convert-im6"
+
+[mail.conversations]
+sender = '"no reply" <noreply@example.com>'
+transport = "postmark"
+domain = "example.com"
+[mail.conversations.headers]
+X-PM-Message-Stream = "conversations"
+[mail.conversations.auth]
+apiKey = "xxx"
+
+[mail.subscriptions]
+sender = '"no reply" <noreply@example.com>'
+transport = "postmark"
+domain = "example.com"
+[mail.subscriptions.headers]
+X-PM-Message-Stream = "subscriptions"
+[mail.subscriptions.auth]
+apiKey = "xxx"
+
+[mail.transactional]
+sender = '"no reply" <noreply@example.com>'
+transport = "postmark"
+domain = "example.com"
+[mail.transactional.auth]
+apiKey = "xxx"
+
+[prerender]
+# display = "1600x1200x32:1"
+
+[report]
+# to = "https://pageboard.report-uri.com/a/d/g"
+# csp = "https://pageboard.report-uri.com/r/d/csp/wizard"
+# xpp = "https://pageboard.report-uri.com/r/d/xss/enforce"
+
+[commons.csp]
+google_translate = "https://translate-pa.googleapis.com 'sha256-76OsbIVmiCTptsUpu/BXWWeJx8ontCdRh7CORy11khQ=' 'sha256-76OsbIVmiCTptsUpu/BXWWeJx8ontCdRh7CORy11khQ='"
+
+[upstreams]
+"0.10" = "127.0.0.1:17010"
