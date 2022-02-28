@@ -57,6 +57,11 @@ if (process.argv.length > 2) {
 		console.error("Cannot process arguments", args._);
 		process.exit(1);
 	}
+	if (command) {
+		args.cli = true;
+		console.info = () => { };
+	}
+
 	const app = new Pageboard(args);
 	const { opts } = app;
 	await app.init();
@@ -65,13 +70,11 @@ if (process.argv.length > 2) {
 		console.info(`server:\t${app.version}`);
 		return app.start();
 	}
-	opts.cli = true;
 	if (args.help) {
 		console.info("\n", command);
 		console.info(app.help(command));
 		process.exit(0);
 	}
-	console.info = () => { };
 
 	if (data !== undefined && typeof data.data == "string") {
 		try {
