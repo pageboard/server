@@ -37,12 +37,12 @@ exports.config = function(pkgOpt) {
 	const dir = Path.resolve(__dirname, '..', '..');
 	pkgOpt = Object.assign({}, require(Path.join(dir, 'package.json')), pkgOpt);
 	const name = pkgOpt.name;
+	const version = pkgOpt.version.split('.').slice(0, 2).join('.');
 	const opt = rc(name, {
 		cwd: process.cwd(),
 		dir: dir,
 		env: pkgOpt.env || process.env.NODE_ENV || 'development',
 		name: name,
-		version: pkgOpt.version.split('.').slice(0, 2).join('.'),
 		installer: {
 			bin: 'npm',
 			timeout: 60000
@@ -63,7 +63,8 @@ exports.config = function(pkgOpt) {
 		commons: {},
 		upstreams: {}
 	}, null, (str) => toml.parse(str));
-	opt.upstream = opt.upstreams[opt.version];
+	opt.version = version;
+	opt.upstream = opt.upstreams[version];
 	if (!opt.port) {
 		if (opt.upstream) opt.port = opt.upstream.split(':').pop();
 		else opt.port = 3000;
