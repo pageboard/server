@@ -86,7 +86,7 @@ module.exports = class ApiModule {
 		return jsonDoc(schema, this.app.cli);
 	}
 
-	async run(apiStr, req, data) {
+	async run(apiStr, req, data = {}) {
 		const { app } = this;
 		const [schema, mod, fun] = this.#getService(apiStr);
 		Log.api("run %s:\n%O", apiStr, data);
