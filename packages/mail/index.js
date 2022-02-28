@@ -326,25 +326,33 @@ module.exports = class MailModule {
 			throw new Error("Transactional mail allowed for at most two different recipients domains and ten recipients");
 		}
 		const emailUrl = new URL(emailPage.data.url, site.url);
-
-		const response = await got(emailUrl + ".mail", { // TODO when all 0.7 are migrated, drop .mail
-			headers: {
-				cookie: req.get('cookie')
-			},
-			json: true,
-			searchParams: data.body,
-			retry: 0,
-			timeout: 10000
-		});
-		const mailObj = response.body;
-		mailOpts.subject = data.subject || mailObj.title;
-		mailOpts.html = mailObj.html;
-		mailOpts.text = mailObj.text;
-		// mailOpts.attachments = [{
-		// 	path: '/path/to/test.txt',
-		// 	filename: 'test.txt', // optional
-		// 	contentType: 'text/plain' // optional
-		// }];
+		try {
+			// TODO when all 0.7 are migrated, drop .mail extension
+			const response = await got(emailUrl + ".mail", {
+				headers: {
+					cookie: req.get('cookie')
+				},
+				json: true,
+				searchParams: data.body,
+				retry: 0,
+				timeout: 10000
+			});
+			const mailObj = response.body;
+			mailOpts.subject = data.subject || mailObj.title;
+			mailOpts.html = mailObj.html;
+			mailOpts.text = mailObj.text;
+			// mailOpts.attachments = [{
+			// 	path: '/path/to/test.txt',
+			// 	filename: 'test.txt', // optional
+			// 	contentType: 'text/plain' // optional
+			// }];
+		} catch (err) {
+			if (err && err.response && err.response.statusCode) {
+				throw new HttpError[err.response.statusCode];
+			} else {
+				throw err;
+			}
+		}
 		return app.run('mail.to', req, mailOpts);
 	}
 	static send = {
