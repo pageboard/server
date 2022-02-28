@@ -150,7 +150,7 @@ exports.init = function(opt) {
 	}).then(function() {
 		return All.cache.install(null, All.opt, All);
 	}).then(function() {
-		if (Object.keys(opt.upstreams)[0] == opt.version) initDumps(All);
+		if (opt.upstream == opt.version) initDumps(All);
 		return All;
 	});
 };
