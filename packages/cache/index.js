@@ -10,6 +10,7 @@ module.exports = class CacheModule {
 	#to;
 
 	constructor(app, opts) {
+		this.app = app;
 		if (!opts.file) {
 			opts.file = Path.join(app.dirs.data, 'cache.json');
 		}
@@ -81,7 +82,7 @@ module.exports = class CacheModule {
 
 		if (!this.hash) {
 			const hash = crypto.createHash('sha256');
-			hash.update(Stringify(this.opt));
+			hash.update(Stringify(this.app.opts));
 			this.hash = hash.digest('hex');
 		}
 		if (dobj.hash === undefined) {
