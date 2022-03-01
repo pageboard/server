@@ -26,7 +26,6 @@ module.exports = class ApiModule {
 		this.app = app;
 
 		this.opts = Object.assign(opts, {
-			seeds: [Path.join(__dirname, 'seeds')],
 			migrations: [Path.join(__dirname, 'migrations')]
 		});
 	}
