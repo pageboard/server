@@ -95,7 +95,7 @@ module.exports = class CacheModule {
 			console.info("detected application change");
 		}
 		tags.push('app-:site');
-		this.tag(tags)(req, res, next);
+		this.tag(...tags)(req, res, next);
 		if (doSave) this.#save();
 	}
 };
