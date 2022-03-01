@@ -1,11 +1,8 @@
 const { ref, raw } = require('objection');
+const Block = require('../models/block');
 
 module.exports = class BlockService {
 	static name = 'block';
-
-	constructor(app) {
-		BlockService.Block = app.Block;
-	}
 
 	apiRoutes(app, server) {
 		server.get("/.api/block", async (req, res) => {
@@ -441,7 +438,7 @@ module.exports = class BlockService {
 		external: true,
 		required: ['type'],
 		get properties() {
-			const obj = Object.assign({}, this.search.properties);
+			const obj = Object.assign({}, BlockService.search.properties);
 			delete obj.limit;
 			delete obj.offset;
 			return obj;
@@ -553,9 +550,7 @@ module.exports = class BlockService {
 				type: 'object',
 				nullable: true
 			},
-			get lock() {
-				return this.Block.jsonSchema.properties.lock;
-			}
+			lock: Block.jsonSchema.properties.lock
 		}
 	};
 
