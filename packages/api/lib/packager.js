@@ -90,7 +90,7 @@ module.exports = class Packager {
 		return bundles;
 	}
 
-	async validate(site, pkg, bundles) {
+	async finishInstall(site, pkg, bundles) {
 		const { eltsMap } = pkg;
 		await Promise.all(Object.entries(bundles).map(([name, { list }]) => {
 			const el = eltsMap[name];
