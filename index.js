@@ -84,15 +84,18 @@ if (process.argv.length > 2) {
 		}
 	}
 	const req = {};
+	req.run = (command, data) => {
+		return app.run(req, command, data);
+	};
 	if (opts.site) {
 		req.site = await app.install(
-			await app.run('site.get', req, {
+			await req.run('site.get', {
 				id: opts.site
 			})
 		);
 	}
 
-	const results = await app.run(command, req, data);
+	const results = await req.run(command, data);
 	console.log(
 		typeof results == "string"
 			? results

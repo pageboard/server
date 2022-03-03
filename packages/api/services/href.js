@@ -7,15 +7,15 @@ module.exports = class HrefService {
 
 	apiRoutes(app, server) {
 		server.get("/.api/hrefs", app.auth.lock('webmaster'), async (req, res) => {
-			const href = await app.run('href.search', req, req.query);
+			const href = await req.run('href.search', req.query);
 			res.send(href);
 		});
 		server.post("/.api/href", app.auth.lock('webmaster'), async (req, res) => {
-			const href = app.run('href.add', req, req.body);
+			const href = await req.run('href.add', req.body);
 			res.send(href);
 		});
 		server.delete("/.api/href", app.auth.lock('webmaster'), async (req, res) => {
-			const href = app.run('href.del', req, req.query);
+			const href = await req.run('href.del', req.query);
 			res.send(href);
 		});
 	}
@@ -37,7 +37,7 @@ module.exports = class HrefService {
 	};
 
 	async search(req, data) {
-		const { Href, app, site, trx } = req;
+		const { Href, site, trx } = req;
 		// TODO use .page() and/or .resultSize() see objection doc
 		const q = Href.query(trx).select().whereSite(site.id);
 
@@ -63,7 +63,7 @@ module.exports = class HrefService {
 			if (url.startsWith('/') && hash != null) {
 				const href = await q.first();
 				if (href) {
-					const obj = await app.run('block.search', req, {
+					const obj = await req.run('block.search', {
 						parent: {
 							type: site.$pages,
 							data: {
@@ -154,7 +154,7 @@ module.exports = class HrefService {
 	};
 
 	async add(req, data) {
-		const obj = await req.app.run('href.search', req, data);
+		const obj = await req.run('href.search', data);
 		if (obj.data.length > 0) {
 			return obj.data[0];
 		} else {
@@ -163,7 +163,7 @@ module.exports = class HrefService {
 	}
 
 	async #blindAdd(req, data) {
-		const { app, site, trx, Href } = req;
+		const { site, trx, Href } = req;
 		const url = new URL(data.url, site.url);
 		let local = false;
 		if (site.url.hostname == url.hostname) {
@@ -176,7 +176,7 @@ module.exports = class HrefService {
 		if (local && !data.url.startsWith('/.')) {
 			// consider it's a page
 			try {
-				const { item } = await app.run('block.find', req, {
+				const { item } = await req.run('block.find', {
 					type: site.$pages,
 					data: {
 						url: url.pathname
@@ -197,7 +197,7 @@ module.exports = class HrefService {
 				throw err;
 			}
 		} else {
-			result = await callInspector(req, { url: data.url, local });
+			result = await this.#inspect(req, { url: data.url, local });
 		}
 		if (!local && result.url != data.url) {
 			result.canonical = result.url;
@@ -388,7 +388,7 @@ module.exports = class HrefService {
 			}
 		}
 		const list = await Promise.all(urls.map((url) => {
-			return app.run('href.add', req, { url });
+			return req.run('href.add', { url });
 		}));
 		return {
 			missings: rows.length,
@@ -418,6 +418,26 @@ module.exports = class HrefService {
 			}
 		}
 	};
+
+	async #inspect({ site }, { url, local }) {
+		let fileUrl = url;
+		if (local === undefined) {
+			local = url.startsWith(`/.uploads/`);
+		}
+		if (local) {
+			fileUrl = url.replace(`/.uploads/`, `uploads/${site.id}/`);
+			fileUrl = "file://" + Path.join(this.app.dirs.data, fileUrl);
+		}
+		const obj = await this.app.inspector.get({
+			url: fileUrl,
+			local: local
+		});
+		if (local) {
+			obj.site = null;
+			obj.url = url;
+		}
+		return obj;
+	}
 };
 
 
@@ -494,24 +514,3 @@ exports.gc = function ({ trx }, days) {
 	*/
 };
 
-
-
-async function callInspector({ app, site }, { url, local }) {
-	let fileUrl = url;
-	if (local === undefined) {
-		local = url.startsWith(`/.uploads/`);
-	}
-	if (local) {
-		fileUrl = url.replace(`/.uploads/`, `uploads/${site.id}/`);
-		fileUrl = "file://" + Path.join(app.dirs.data, fileUrl);
-	}
-	const obj = await app.inspector.get({
-		url: fileUrl,
-		local: local
-	});
-	if (local) {
-		obj.site = null;
-		obj.url = url;
-	}
-	return obj;
-}

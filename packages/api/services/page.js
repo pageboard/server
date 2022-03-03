@@ -7,11 +7,11 @@ module.exports = class PageService {
 	apiRoutes(app, server) {
 		server.get('/.api/page', async (req, res) => {
 			const { site, query } = req;
-			const isWebmaster = !app.auth.locked(req, ['webmaster']);
+			const isWebmaster = !req.locked(['webmaster']);
 			const dev = query.develop == "write";
 			delete query.develop;
 			if (isWebmaster && !dev) {
-				app.send(res, {
+				res.return({
 					item: {
 						type: 'write',
 						data: {}
@@ -21,7 +21,7 @@ module.exports = class PageService {
 					commons: app.opts.commons
 				});
 			} else {
-				const data = await app.run('page.get', req, query);
+				const data = await req.run('page.get', query);
 				const resources = site.$bundles.write.meta.resources;
 				if (dev && resources.develop) {
 					if (!data.meta) data.meta = { scripts: [] };
@@ -35,12 +35,12 @@ module.exports = class PageService {
 					};
 				}
 				data.commons = app.opts.commons;
-				app.send(res, data);
+				res.return(data);
 			}
 		});
 		server.get('/.api/pages', async (req, res) => {
 			const { query, site } = req;
-			const isWebmaster = !app.auth.locked(req, ['webmaster']);
+			const isWebmaster = !req.locked(['webmaster']);
 			if (isWebmaster) {
 				// webmaster want to see those anyway
 				// this must not be confused with page.lock
@@ -53,30 +53,31 @@ module.exports = class PageService {
 			}
 
 			const action = query.text != null ? 'page.search' : 'page.all';
-			const obj = await app.run(action, req, query);
-			app.send(res, obj);
+			const obj = await req.run(action, query);
+			res.return(obj);
 		});
 		server.post('/.api/page', app.auth.lock('webmaster'), async (req, res) => {
-			const page = await app.run('page.add', req, req.body);
+			const page = await req.run('page.add', req.body);
+			// FIXME use res.return ?
 			res.send(page);
 		});
 		server.put('/.api/page', app.auth.lock('webmaster'), async (req, res) => {
-			const page = await app.run('page.save', req, req.body);
+			const page = await req.run('page.save', req.body);
 			res.send(page);
 		});
 		server.delete('/.api/page', app.auth.lock('webmaster'), async (req, res) => {
-			const page = await app.run('page.del', req, req.query);
+			const page = await req.run('page.del', req.query);
 			res.send(page);
 		});
 
 		server.get('/robots.txt', app.cache.tag('data-:site'), async (req, res) => {
-			const txt = await app.run('page.robots', req);
+			const txt = await req.run('page.robots');
 			res.type('text/plain');
 			res.send(txt);
 		});
 
 		server.get('/sitemap.txt', app.cache.tag('data-:site'), async (req, res) => {
-			const obj = await app.run('page.all', req, {
+			const obj = await req.run('page.all', {
 				robot: true,
 				type: ['page', 'blog'] // TODO do not return pages that require a query
 				// TODO do not return pages that do not have a properties.nositemap (nor sitemap)
@@ -109,7 +110,7 @@ module.exports = class PageService {
 	}
 
 	async get(req, data) {
-		const { site, app } = req;
+		const { site } = req;
 		const obj = {
 			status: 200,
 			site: site.data
@@ -122,14 +123,14 @@ module.exports = class PageService {
 		let page = await this.#QueryPage(req).whereIn('page.type', site.$pages)
 			.whereJsonText("page.data:url", data.url)
 			.select(
-				app.href.collect(req, {
+				req.call('href.collect', {
 					url: data.url,
 					content: true
 				}).as('hrefs')
 			);
 		if (!page) {
 			obj.status = 404;
-		} else if (app.auth.locked(req, (page.lock || {}).read)) {
+		} else if (req.locked((page.lock || {}).read)) {
 			obj.status = 401;
 		}
 		if (obj.status != 200) {
@@ -138,7 +139,7 @@ module.exports = class PageService {
 				.where('page.type', 'page')
 				.whereJsonText("page.data:url", statusUrl)
 				.select(
-					app.href.collect(req, {
+					req.call('href.collect', {
 						url: statusUrl,
 						content: true
 					}).as('hrefs')
@@ -393,7 +394,7 @@ module.exports = class PageService {
 	};
 
 	async save(req, changes) {
-		const { app, site, trx } = req;
+		const { site, trx } = req;
 		changes = Object.assign({
 			// blocks removed from their standalone parent (grouped by parent)
 			unrelate: {},
@@ -466,13 +467,13 @@ module.exports = class PageService {
 		await Promise.all(pages.update.map(async child => {
 			if (!child.data.url || child.data.url.startsWith('/.')) return;
 			try {
-				app.href.save(req, {
+				await req.run('href.save', {
 					url: child.data.url,
 					title: child.data.title
 				});
 			} catch (err) {
 				if (err.statusCode == 404) try {
-					await app.href.add(req, {
+					await req.run('href.add', {
 						url: child.data.url
 					});
 				} catch (err) {
@@ -486,7 +487,7 @@ module.exports = class PageService {
 			if (!child.data.url || child.data.url.startsWith('/.')) return;
 			// problem: added pages are not saved here
 			try {
-				await app.href.add(req, {
+				await req.run('href.add', {
 					url: child.data.url
 				});
 			} catch (err) {
@@ -547,8 +548,8 @@ module.exports = class PageService {
 
 
 	async del(req, data) {
-		const { app, site, trx, Href } = req;
-		const page = await app.run('block.get', req, data);
+		const { site, trx, Href } = req;
+		const page = await req.run('block.get', data);
 		const links = site.$relatedQuery('children', trx)
 			.select(
 				'block.id',
@@ -568,7 +569,7 @@ module.exports = class PageService {
 			`);
 		}
 		await Href.query(trx).where('url', page.data.url).del();
-		return app.run('block.del', req, {
+		return req.run('block.del', {
 			id: page.id,
 			type: page.type
 		});

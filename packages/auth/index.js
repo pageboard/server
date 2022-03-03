@@ -22,7 +22,7 @@ module.exports = class AuthModule {
 
 	async apiRoutes(app, server) {
 		const keys = await this.#keygen(
-			Path.join(this.app.dirs.data, 'keys.json')
+			Path.join(app.dirs.data, 'keys.json')
 		);
 		Object.assign(this.opts, keys);
 		this.#lock = Upcache.lock(this.opts);

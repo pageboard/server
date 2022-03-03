@@ -5,6 +5,7 @@ module.exports = class LoginModule {
 	name = 'login';
 
 	constructor(app, opts) {
+		this.app = app;
 	}
 	apiRoutes(app, server) {
 		otp.authenticator.options = {
@@ -12,13 +13,13 @@ module.exports = class LoginModule {
 			window: [40, 1] // ten minutes-old tokens are still valid
 		};
 		server.get("/.api/login", async (req, res) => {
-			const data = await app.run('login.grant', req, req.query);
-			app.send(res, data);
+			const data = await req.run('login.grant', req.query);
+			res.return(data);
 		});
 
 		server.get("/.api/logout", async (req, res) => {
-			const data = await app.run('login.clear', req, req.query);
-			app.send(res, data);
+			const data = await req.run('login.clear', req.query);
+			res.return(data);
 		});
 	}
 
@@ -42,10 +43,10 @@ module.exports = class LoginModule {
 
 	async #generate(req, data) {
 		const { app } = req;
-		if (data.register) await app.run('user.add', req, {
+		if (data.register) await req.run('user.add', {
 			email: data.email
 		});
-		const user = await app.run('user.get', req, {
+		const user = await req.run('user.get', {
 			email: data.email
 		});
 		const priv = await this.#userPriv(req, user);
@@ -60,7 +61,7 @@ module.exports = class LoginModule {
 		const token = await this.#generate(req, data);
 		const settings = data.settings || {};
 		delete settings.grants;
-		await app.run('settings.save', req, {
+		await req.run('settings.save', {
 			email: data.email,
 			data: settings
 		});
@@ -90,7 +91,7 @@ module.exports = class LoginModule {
 				${site.url.href}
 				and can be ignored.`;
 		}
-		await app.run('mail.to', req, mail);
+		await req.run('mail.to', mail);
 		return {};
 	}
 	static send = {
@@ -119,7 +120,7 @@ module.exports = class LoginModule {
 	};
 	async #verifyToken(req, { email, token }) {
 		const { app, trx } = req;
-		const user = await app.run('user.get', req, { email });
+		const user = await req.run('user.get', { email });
 		const priv = await this.#userPriv(req, user);
 		const tries = (priv.data.otp.tries || 0) + 1;
 		if (tries >= 5) {
@@ -138,10 +139,10 @@ module.exports = class LoginModule {
 	}
 
 	async grant(req, data) {
-		const { app, user = {} } = req;
+		const { user = {} } = req;
 		const verified = await this.#verifyToken(req, data);
 		if (!verified) throw new HttpError.BadRequest("Bad token");
-		const settings = await app.run('settings.find', req, {
+		const settings = await req.run('settings.find', {
 			email: data.email
 		});
 		const grants = user && user.grants || [];
@@ -151,7 +152,7 @@ module.exports = class LoginModule {
 		});
 		if (user.grants.length == 0) user.grants.push('user');
 		const locks = data.grant ? [data.grant] : [];
-		if (app.auth.locked(req, locks)) {
+		if (req.locked(locks)) {
 			throw new HttpError.Forbidden("User has insufficient grants");
 		}
 		user.grants = locks;
@@ -159,7 +160,7 @@ module.exports = class LoginModule {
 		return {
 			item: settings,
 			cookies: {
-				bearer: app.auth.cookie(req)
+				bearer: req.call('auth.cookie')
 			}
 		};
 	}
@@ -241,13 +242,12 @@ module.exports = class LoginModule {
 	};
 
 	async key(req, data) {
-		const { app } = req;
-		const user = await app.run('user.get', req, {
+		const user = await req.run('user.get', {
 			email: data.email
 		});
 		const priv = await this.#userPriv(req, user);
 		const uri = otp.authenticator.keyuri(
-			user.data.email, app.name, priv.data.otp.secret
+			user.data.email, this.app.name, priv.data.otp.secret
 		);
 		if (data.qr) {
 			return qrcode.toString(uri, {

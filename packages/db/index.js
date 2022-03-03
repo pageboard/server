@@ -11,6 +11,7 @@ module.exports = class DatabaseModule {
 	static priority = -100;
 
 	constructor(app, opts) {
+		this.app = app;
 		this.opts = opts;
 		if (!opts.dumps) opts.dumps = Path.join(app.dirs.cache, 'dumps');
 		app.dirs.dumps = opts.dumps;
@@ -61,7 +62,7 @@ module.exports = class DatabaseModule {
 		console.info("Scheduling tenant db copies:", slots.join(', '));
 		schedule.scheduleJob('0 0 * * *', (date) => {
 			const tenant = slots[(date.getDay() - 1) % slots.length];
-			return app.run('database.copy', {}, { tenant });
+			return app.run(null, 'database.copy', { tenant });
 		});
 	}
 
@@ -95,10 +96,10 @@ module.exports = class DatabaseModule {
 		}
 	};
 
-	async copy({ app }, { tenant }) {
-		const file = Path.join(this.opts.dumps, `${app.name}-${tenant}.dump`);
-		await app.run('database.dump', {}, { file });
-		await app.run('database.restore', {}, { file, tenant });
+	async copy(req, { tenant }) {
+		const file = Path.join(this.opts.dumps, `${this.app.name}-${tenant}.dump`);
+		await req.run('database.dump', { file });
+		await req.run('database.restore', { file, tenant });
 	}
 	static copy = {
 		title: 'Copy current db to tenant db',

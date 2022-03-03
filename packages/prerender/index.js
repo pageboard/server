@@ -12,6 +12,7 @@ module.exports = class PrerenderModule {
 	static priority = 0;
 
 	constructor(app, opts) {
+		this.app = app;
 		if (opts.workers) opts.workers = parseInt(opts.workers);
 		this.opts = Object.assign({
 			cacheDir: Path.join(app.dirs.cache, "prerender"),
@@ -98,15 +99,14 @@ module.exports = class PrerenderModule {
 	}
 
 	#run(config, req, res, next) {
-		const { app } = req;
 		pool.acquire().promise.then((worker) => {
 			worker.on("message", (msg) => {
 				if (msg.err) {
 					release(worker);
 					return next(objToError(msg.err));
 				}
-				if (msg.locks) app.auth.headers(res, msg.locks);
-				if (msg.tags) app.cache.tag(...msg.tags)(req, res);
+				if (msg.locks) this.app.auth.headers(res, msg.locks);
+				if (msg.tags) req.tag(...msg.tags);
 				if (msg.headers != null) {
 					for (const k in msg.headers) res.set(k, msg.headers[k]);
 				}
@@ -158,7 +158,7 @@ module.exports = class PrerenderModule {
 		}).catch(next);
 	}
 
-	#requestedSchema({ app, site }, { pathname }) {
+	#requestedSchema({ site }, { pathname }) {
 		const ext = Path.extname(pathname);
 		// backward compat for rss
 		let type = ext.substring(1) || "page";
@@ -169,7 +169,10 @@ module.exports = class PrerenderModule {
 		} else if (ext.length) {
 			pathname = pathname.slice(0, -ext.length);
 		}
-		if (app.api.validate({ type: 'string', format: 'page' }, pathname) === false) {
+		if (this.app.api.validate({
+			type: 'string',
+			format: 'page'
+		}, pathname) === false) {
 			pathname = null;
 		}
 		return {
@@ -179,7 +182,7 @@ module.exports = class PrerenderModule {
 	}
 
 	prerender(req, res, next) {
-		const { app, site } = req;
+		const { site } = req;
 		res.vary('Accept');
 
 		const {
@@ -255,7 +258,7 @@ module.exports = class PrerenderModule {
 				} else {
 					mapTo = "/.well-known/200";
 				}
-				app.cache.map(res, mapTo);
+				this.app.cache.map(res, mapTo);
 
 			} else {
 				if (outputOpts.pdf) {
@@ -273,7 +276,7 @@ module.exports = class PrerenderModule {
 			}
 			if (mime == "text/html") {
 				plugins.push('redirect');
-				if (app.env != "development") {
+				if (this.app.env != "development") {
 					plugins.unshift('httplinkpreload');
 				}
 			}

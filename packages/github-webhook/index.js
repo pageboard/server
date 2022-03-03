@@ -80,8 +80,8 @@ module.exports = class GitModule {
 			res.status(200).send(msg);
 
 			if (version != null) try {
-				await app.run('site.save', req, site);
-				if (pusher) app.run('mail.to', req, {
+				await req.run('site.save', site);
+				if (pusher) req.run('mail.to', {
 					purpose: 'transactional',
 					to: [{
 						name: pusher.name,
@@ -95,7 +95,7 @@ module.exports = class GitModule {
 				});
 
 			} catch (err) {
-				if (pusher) app.run('mail.to', req, {
+				if (pusher) req.run('mail.to', {
 					purpose: 'transactional',
 					to: [{
 						name: pusher.name,

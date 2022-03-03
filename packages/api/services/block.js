@@ -6,18 +6,18 @@ module.exports = class BlockService {
 
 	apiRoutes(app, server) {
 		server.get("/.api/block", async (req, res) => {
-			const data = await app.run('block.get', req, req.query);
-			app.send(res, data);
+			const data = await req.run('block.get', req.query);
+			res.return(data);
 		});
 
 		server.get("/.api/blocks", async (req, res) => {
-			const data = await app.run('block.search', req, app.utils.unflatten(req.query));
-			app.send(res, data);
+			const data = await req.run('block.search', app.utils.unflatten(req.query));
+			res.return(data);
 		});
 
 		server.post('/.api/blocks', app.auth.lock('writer'), async (req, res) => {
-			const data = await app.run('block.write', req, req.body);
-			app.send(res, data);
+			const data = await req.run('block.write', req.body);
+			res.return(data);
 		});
 	}
 
@@ -59,7 +59,7 @@ module.exports = class BlockService {
 	async search(req, data) {
 		// TODO data.id or data.parent.id or data.child.id must be set
 		// currently the check filterSub -> boolean is only partially applied
-		const { app, site, trx, Block } = req;
+		const { site, trx, Block } = req;
 		let parents = data.parents;
 		if (parents) {
 			if (parents.type || parents.id) {
@@ -177,7 +177,7 @@ module.exports = class BlockService {
 			}
 		}
 		if (ids.length) {
-			const hrow = await app.href.collect(req, {
+			const hrow = await req.call('href.collect', {
 				id: ids,
 				content: data.content
 			}).first();
@@ -587,7 +587,7 @@ module.exports = class BlockService {
 	async write(req, data) {
 		const list = data.operations;
 		return Promise.all(list.map((op) => {
-			return req.app.run(`block.${op.method}`, req, op.item);
+			return req.run(`block.${op.method}`, op.item);
 		}));
 	}
 

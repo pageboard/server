@@ -6,18 +6,18 @@ module.exports = class FormService {
 			throw new HttpError.MethodNotAllowed("Only post allowed");
 		});
 		server.post("/.api/form/:id", async (req, res) => {
-			const data = await app.run('form.submit', req, {
+			const data = await req.run('form.submit', {
 				id: req.params.id,
 				query: req.query,
 				body: app.utils.unflatten(req.body)
 			});
-			app.send(res, data);
+			res.return(data);
 		});
 	}
 
 	async submit(req, data) {
-		const { app, site } = req;
-		const form = await app.run('block.get', req, {
+		const { site } = req;
+		const form = await req.run('block.get', {
 			id: data.id
 		});
 
@@ -26,18 +26,18 @@ module.exports = class FormService {
 		if (!method) {
 			throw new HttpError.BadRequest("Missing method");
 		}
-		if (app.auth.locked(req, (form.lock || {}).write)) {
+		if (req.locked((form.lock || {}).write)) {
 			throw new HttpError.Unauthorized("Check user permissions");
 		}
 		let body = data.body;
 		// build parameters
 		const expr = ((form.expr || {}).action || {}).parameters || {};
-		let params = app.utils.mergeParameters(expr, {
+		let params = this.app.utils.mergeParameters(expr, {
 			$request: body,
 			$query: data.query || {},
 			$user: req.user
 		});
-		params = app.utils.mergeExpressions(params, fd.action.parameters);
+		params = this.app.utils.mergeExpressions(params, fd.action.parameters);
 
 		Log.api("form params", params, req.user, data.query);
 
@@ -70,9 +70,9 @@ module.exports = class FormService {
 			}
 			body = newBody;
 		}
-		body = app.utils.mergeExpressions(body, params);
+		body = this.app.utils.mergeExpressions(body, params);
 
-		return app.run(method, req, body).catch((err) => {
+		return req.run(method, body).catch((err) => {
 			return {
 				status: err.statusCode || err.status || err.code || 400,
 				item: {

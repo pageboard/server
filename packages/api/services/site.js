@@ -1,10 +1,14 @@
 module.exports = class SiteService {
 	static name = 'site';
 
+	cosntructor(app) {
+		this.app = app;
+	}
+
 	apiRoutes(app, server) {
 		server.put('/.api/site', app.auth.lock('webmaster'), async (req, res) => {
 			const data = Object.assign(req.body, { id: req.site.id });
-			const site = await app.run('site.save', req, data);
+			const site = await req.run('site.save', data);
 			res.send(site);
 		});
 	}
@@ -138,13 +142,13 @@ module.exports = class SiteService {
 	};
 
 	async save(req, data) {
-		const { app, site } = req;
+		const { site } = req;
 		const dbSite = await this.get(req, data);
-		app.utils.mergeRecursive(dbSite.data, data.data);
+		this.app.utils.mergeRecursive(dbSite.data, data.data);
 		if (site && site.url) {
 			dbSite.url = site.url;
 		}
-		const runSite = await app.install(dbSite);
+		const runSite = await this.app.install(dbSite);
 		const copy = Object.assign({}, data.data);
 		await runSite.$query(req.trx).patchObject({
 			type: runSite.type,

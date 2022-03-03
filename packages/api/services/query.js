@@ -1,13 +1,17 @@
 module.exports = class SearchService {
 	static name = 'search';
 
+	constructor(app) {
+		this.app = app;
+	}
+
 	apiRoutes(app, server) {
 		server.get("/.api/query/:id", async (req, res) => {
-			const data = await app.run('search.query', req, {
+			const data = await req.run('search.query', {
 				id: req.params.id,
 				query: req.query
 			});
-			app.send(res, data);
+			res.return(data);
 		});
 		server.post("/.api/query", (req, res, next) => {
 			next(new HttpError.NotImplemented());
@@ -15,8 +19,8 @@ module.exports = class SearchService {
 	}
 
 	async query(req, data) {
-		const { app, site } = req;
-		const form = await app.run('block.get', req, {
+		const { site } = req;
+		const form = await req.run('block.get', {
 			id: data.id
 		});
 		const fd = form.data || {};
@@ -24,18 +28,18 @@ module.exports = class SearchService {
 		if (!method) {
 			throw new HttpError.BadRequest("Missing method");
 		}
-		if (app.auth.locked(req, (form.lock || {}).read)) {
+		if (req.locked((form.lock || {}).read)) {
 			throw new HttpError.Unauthorized("Check user permissions");
 		}
 		// build parameters
 		const expr = ((form.expr || {}).action || {}).parameters || {};
-		let params = app.utils.mergeParameters(expr, {
+		let params = this.app.utils.mergeParameters(expr, {
 			$query: data.query || {},
 			$user: req.user
 		});
-		params = app.utils.mergeExpressions(params, fd.action.parameters);
+		params = this.app.utils.mergeExpressions(params, fd.action.parameters);
 		try {
-			const obj = await app.run(method, req, params);
+			const obj = await req.run(method, params);
 			// check if a non-page bundle is needed
 			const bundles = {};
 			Object.keys(site.$bundles).forEach(key => {

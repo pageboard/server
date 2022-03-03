@@ -9,13 +9,16 @@ module.exports = class ArchiveService {
 	static name = 'archive';
 
 	apiRoutes(app, server) {
-		server.get('/.api/archive', app.cache.disable, app.auth.lock('webmaster'), (req) => {
-			return app.run('archive.export', req, req.query);
-		});
-		server.put('/.api/archive', app.auth.lock('webmaster'), (req) => {
-			// TODO process req.files with multer
-			return app.run('archive.import', req, req.query);
-		});
+		server.get('/.api/archive',
+			app.cache.disable,
+			app.auth.lock('webmaster'),
+			req => req.run('archive.export', req.query)
+		);
+		// TODO process req.files with multer
+		server.put('/.api/archive',
+			app.auth.lock('webmaster'),
+			req => 	req.run('archive.import', req.query)
+		);
 	}
 
 	async export({ app, site, trx, res, Href }, data) {

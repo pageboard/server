@@ -14,6 +14,9 @@ module.exports = class CacheModule {
 		if (!opts.file) {
 			opts.file = Path.join(app.dirs.data, 'cache.json');
 		}
+		if (!opts.wkp) {
+			opts.wkp = "/.well-known/upcache";
+		}
 		this.opts = opts;
 	}
 	map(...args) {
@@ -37,37 +40,42 @@ module.exports = class CacheModule {
 			console.error("Cannot read", this.opts.file);
 		}
 		server.get('*', Upcache.tag('app'));
-		server.post('/.well-known/upcache', (req, res, next) => {
+		server.post(this.opts.wkp, (req, res, next) => {
 			this.mw(req, res, next);
 		}, (req, res) => {
 			res.sendStatus(204);
 		});
 	}
-	async #saveNow() {
-		this.#to = null;
-		return fs.writeFile(this.path, JSON.stringify(this.data)).catch((err) => {
-			console.error("Error writing", this.path);
-		});
-	}
 
 	#save() {
 		if (this.#to) clearTimeout(this.#to);
-		this.#to = setTimeout(() => this.#saveNow(), 5000);
+		this.#to = setTimeout(async () => {
+			this.#to = null;
+			try {
+				await fs.writeFile(this.opts.file, JSON.stringify(this.data));
+			} catch (err) {
+				console.error("Error writing", err.message, this.opts.file);
+			}
+		}, 5000);
 	}
 
 	install(site) {
-		if (!site) {
-			// because it's not possible to post without an actual url
+		if (!site || !site.url) {
 			// app tag invalidation is postponed until an actual site is installed
 			return;
 		}
 		setTimeout(() => {
-			if (site.url) got.post(new URL("/.well-known/upcache", site.url), {
+			const url = new URL(this.opts.wkp, site.url);
+			got.post(url, {
 				timeout: 5000,
 				retry: false,
 				https: { rejectUnauthorized: false }
 			}).catch((err) => {
-				console.error(err);
+				if (err.code == 'ETIMEDOUT') {
+					console.warn("cache: post timeout", url.href);
+				} else {
+					console.error("cache:", err.message, url.href);
+				}
 			});
 		});
 	}

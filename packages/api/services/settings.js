@@ -5,15 +5,15 @@ module.exports = class SettingsService {
 
 	apiRoutes(app, server) {
 		server.get("/.api/settings", async (req, res) => {
-			const data = await app.run('settings.get', req, {
+			const data = await req.run('settings.get', {
 				id: req.user.id
 			});
-			app.send(res, data);
+			res.return(data);
 		});
 
 		server.put('/.api/settings', app.auth.lock('webmaster'), async (req, res) => {
-			const data = await app.run('settings.save', req, req.body);
-			app.send(res, data);
+			const data = await req.run('settings.save', req.body);
+			res.return(data);
 		});
 	}
 	async get({ site, trx }, data) {
@@ -115,9 +115,9 @@ module.exports = class SettingsService {
 	};
 
 	async save(req, data) {
-		const { app, trx, site } = req;
+		const { trx, site } = req;
 		try {
-			const settings = await app.settings.find(req, data);
+			const settings = await req.run('settings.find', data);
 			if (!data.data) return settings;
 			if (data.data.grants) {
 				// delete data.data.grants;
@@ -128,7 +128,7 @@ module.exports = class SettingsService {
 		} catch (err) {
 			if (err.statusCode != 404) throw err;
 		}
-		const user = await app.user.add(req, {
+		const user = await req.run('user.add', {
 			email: data.email
 		});
 		const block = {

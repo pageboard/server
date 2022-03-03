@@ -12,8 +12,8 @@ module.exports = class ReservationService {
 			);
 		}
 		const [settings, { item: eventDate }] = await Promise.all([
-			app.run('settings.save', req, { email }),
-			app.run('block.find', req, {
+			req.run('settings.save', { email }),
+			req.run('block.find', {
 				type: 'event_date',
 				id: data.event_date,
 				parents: {
@@ -30,7 +30,7 @@ module.exports = class ReservationService {
 			{ type: 'event_date', id: eventDate.id }
 		];
 		// because search data.parents is for eager join, not relation
-		const obj = await app.run('block.search', req, {
+		const obj = await req.run('block.search', {
 			type: 'event_reservation',
 			parent: { parents }
 		});
@@ -62,7 +62,7 @@ module.exports = class ReservationService {
 		} else {
 			reservation.payment.paid = 0;
 		}
-		const resa = await app.run('block.add', req, {
+		const resa = await req.run('block.add', {
 			type: 'event_reservation',
 			data: reservation,
 			parents: parents,
@@ -153,7 +153,7 @@ module.exports = class ReservationService {
 				"reservation.attendees must not be empty"
 			);
 		}
-		const { item: eventDate } = await app.run('block.find', req, {
+		const { item: eventDate } = await req.run('block.find', {
 			child: {
 				type: 'event_reservation',
 				id: data.id
@@ -200,7 +200,7 @@ module.exports = class ReservationService {
 
 		Object.assign(resa.data, reservation);
 
-		const sresa = await app.run('block.save', req, resa);
+		const sresa = await req.run('block.save', resa);
 		await eventDate.$query(req.trx).patch({
 			'data:reservations': total
 		});
@@ -222,8 +222,8 @@ module.exports = class ReservationService {
 	};
 
 	async del(req, data) {
-		const { app, user } = req;
-		const resa = await app.block.get(req, {
+		const { user } = req;
+		const resa = await req.call('block.get', {
 			type: 'event_reservation',
 			id: data.reservation
 		}).withGraphFetched('[parents(parentsFilter)]').modifiers({
@@ -265,8 +265,7 @@ module.exports = class ReservationService {
 	};
 
 	async pay(req, data) {
-		const { app } = req;
-		const resa = await app.block.get(req, {
+		const resa = await req.run('block.get', {
 			type: 'event_reservation',
 			id: data.reservation
 		});
@@ -276,7 +275,7 @@ module.exports = class ReservationService {
 		if (!resa.data.payment.due) resa.data.payment.due = 0;
 		if (!resa.data.payment.paid) resa.data.payment.paid = 0;
 		resa.data.payment.paid += data.amount;
-		return app.run('block.save', req, resa);
+		return req.run('block.save', resa);
 	}
 	static pay = {
 		title: 'Pay reservation',

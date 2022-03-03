@@ -31,7 +31,7 @@ module.exports = class UploadModule {
 		server.post('/.api/upload/:id?', async (req) => {
 			const limits = Object.assign({}, this.opts.limits);
 			if (req.params.id) {
-				const input = await this.app.run('block.get', req, { id: req.params.id });
+				const input = await this.req.run('block.get', { id: req.params.id });
 				Object.assign(limits, input.data.limits);
 			}
 			const files = await this.parse(req, limits);
@@ -128,7 +128,7 @@ module.exports = class UploadModule {
 	};
 
 	async file(req, data) {
-		const image = await this.app.run('image.upload', req, {
+		const image = await this.req.run('image.upload', {
 			path: data.path,
 			mime: mime.lookup(Path.extname(data.path))
 		});
@@ -137,7 +137,7 @@ module.exports = class UploadModule {
 			"/.uploads",
 			Path.relative(root, image.path)
 		);
-		await this.app.run('href.add', req, { url: pathname });
+		await this.req.run('href.add', { url: pathname });
 		return pathname;
 	}
 	static file = {

@@ -33,25 +33,36 @@ module.exports = class StaticsModule {
 			fallthrough: true
 		};
 
-		server.get("/.files/*", (req, res, next) => {
-			const { url, site } = req;
-			req.url = site.id + url.substring(7);
-			app.cache.tag('app-:site').for(opts.nocache ? null : '1 year')(req, res, next);
-		}, serveStatic(opts.files, serveOpts), staticNotFound);
+		server.get("/.files/*",
+			req => {
+				const { url, site } = req;
+				req.url = site.id + url.substring(7);
+			},
+			app.cache.tag('app-:site').for(opts.nocache ? null : '1 year'),
+			serveStatic(opts.files, serveOpts),
+			staticNotFound
+		);
 
-		server.get("/.uploads/*", (req, res, next) => {
-			const { url, site } = req;
-			req.url = site.id + url.substring(9);
-			app.cache.for(opts.nocache ? null : '1 year')(req, res, next);
-		}, serveStatic(app.upload.opts.dir, serveOpts), staticNotFound);
+		server.get("/.uploads/*",
+			req => {
+				const { url, site } = req;
+				req.url = site.id + url.substring(9);
+			},
+			app.cache.for(opts.nocache ? null : '1 year'),
+			serveStatic(app.upload.opts.dir, serveOpts),
+			staticNotFound
+		);
 
-		server.get('/favicon.ico', app.cache.tag('data-:site').for('1 month'), ({ site }, res, next) => {
-			if (!site || !site.data.favicon) {
-				res.sendStatus(204);
-			} else {
-				res.redirect(site.data.favicon + "?format=ico");
+		server.get('/favicon.ico',
+			app.cache.tag('data-:site').for(opts.nocache ? null : '1 month'),
+			({ site }, res, next) => {
+				if (!site || !site.data.favicon) {
+					res.sendStatus(204);
+				} else {
+					res.redirect(site.data.favicon + "?format=ico");
+				}
 			}
-		});
+		);
 	}
 
 	async bundle(site, pkg, list, filename) {
@@ -134,7 +145,6 @@ module.exports = class StaticsModule {
 				await mountPath(this.opts.files, mount.from, mount.to);
 			} catch (err) {
 				console.error("Cannot mount", mount.from, mount.to, err);
-				console.error("directories", directories);
 			}
 		}
 	}

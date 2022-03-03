@@ -47,14 +47,14 @@ module.exports = class MailModule {
 			}
 		});
 		server.post('/.api/mail/receive', multipart, (req, res, next) => {
-			app.run('mail.receive', req, req.body).then((ok) => {
+			req.run('mail.receive', req.body).then((ok) => {
 				// https://documentation.mailgun.com/en/latest/user_manual.html#receiving-messages-via-http-through-a-forward-action
 				if (!ok) res.sendStatus(406);
 				else res.sendStatus(200);
 			}).catch(next);
 		});
 		server.post('/.api/mail/report', (req, res, next) => {
-			app.run('mail.report', req, req.body).then((ok) => {
+			req.run('mail.report', req.body).then((ok) => {
 				// https://documentation.mailgun.com/en/latest/user_manual.html#webhooks
 				if (!ok) res.sendStatus(406);
 				else res.sendStatus(200);
@@ -69,7 +69,7 @@ module.exports = class MailModule {
 			return false;
 		}
 		const event = data['event-data'];
-		return req.app.run('mail.to', req, {
+		return req.run('mail.to', {
 			to: [mailer.sender],
 			subject: 'Pageboard mail delivery failure to ' + event.message.headers.to,
 			text: JSON.stringify(event, null, ' ')
@@ -97,15 +97,15 @@ module.exports = class MailModule {
 			if (parts.pop() != mailer.domain) return false;
 			parts = parts[0].split('.');
 			if (parts.length != 2) return false;
-			const site = await req.app.run('site.get', req, { id: parts[0] });
+			const site = await req.run('site.get', { id: parts[0] });
 			req.site = site;
 			try {
 				const [fromSettings, toSettings] = await Promise.all([
-					req.app.run('settings.find', req, { email: senders }),
-					req.app.run('settings.get', req, { id: parts[1] })
+					req.run('settings.find', { email: senders }),
+					req.run('settings.get', { id: parts[1] })
 				]);
 
-				await req.app.run('mail.to', req, {
+				await req.run('mail.to', {
 					from: {
 						name: site.data.title,
 						address: `${site.id}.${fromSettings.id}@${mailer.domain}`
@@ -268,7 +268,7 @@ module.exports = class MailModule {
 			throw new Error("Unknown mailer purpose " + purpose);
 		}
 
-		const list = [app.run('block.find', req, {
+		const list = [req.run('block.find', {
 			type: 'mail',
 			data: { url: data.url }
 		})];
@@ -277,16 +277,16 @@ module.exports = class MailModule {
 		};
 		if (data.from) {
 			if (data.from.indexOf('@') > 0) {
-				list.push(app.run('settings.find', req, { email: data.from }));
+				list.push(req.run('settings.find', { email: data.from }));
 			} else {
-				list.push(app.run('settings.get', req, { id: data.from }));
+				list.push(req.run('settings.get', { id: data.from }));
 			}
 		}
 		if (data.replyTo) {
 			if (data.replyTo.indexOf('@') > 0) {
 				mailOpts.replyTo = AddressParser(data.replyTo);
 			} else {
-				list.push(app.run('settings.get', req, {
+				list.push(req.run('settings.get', {
 					id: data.replyTo
 				}).then((settings) => {
 					mailOpts.replyTo = {
@@ -298,9 +298,9 @@ module.exports = class MailModule {
 
 		list.push(Promise.all(data.to.map((to) => {
 			if (to.indexOf('@') > 0) {
-				return app.run('settings.save', req, { email: to });
+				return req.run('settings.save', { email: to });
 			} else {
-				return app.run('settings.get', req, { id: to });
+				return req.run('settings.get', { id: to });
 			}
 		})));
 
@@ -354,7 +354,7 @@ module.exports = class MailModule {
 				throw err;
 			}
 		}
-		return app.run('mail.to', req, mailOpts);
+		return req.run('mail.to', mailOpts);
 	}
 	static send = {
 		title: 'Send email',

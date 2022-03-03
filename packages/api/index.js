@@ -31,12 +31,15 @@ module.exports = class ApiModule {
 	}
 
 	apiRoutes(app, server) {
-		const tenantsLen = Object.keys(this.app.opts.database.url).length - 1;
+		const tenantsLen = Object.keys(app.opts.database.url).length - 1;
 		// api depends on site files, that tag is invalidated in cache install
-		server.get('/.api/*', this.app.cache.tag('app-:site'), this.app.cache.tag('db-:tenant').for(`${tenantsLen}day`));
+		server.get('/.api/*',
+			app.cache.tag('app-:site'),
+			app.cache.tag('db-:tenant').for(`${tenantsLen}day`)
+		);
 		server.use('/.api/*',
 			// invalid site by site
-			this.app.cache.tag('data-:site'),
+			app.cache.tag('data-:site'),
 			// parse json bodies
 			bodyParser.json({ limit: '1000kb' })
 		);
@@ -86,17 +89,17 @@ module.exports = class ApiModule {
 
 	help(apiStr) {
 		const [schema] = this.#getService(apiStr);
-		return jsonDoc(schema, this.app.cli);
+		return jsonDoc(schema, this.app.opts.cli);
 	}
 
-	async run(apiStr, req, data = {}) {
+	async run(req = {}, apiStr, data = {}) {
 		const { app } = this;
 		const [schema, mod, fun] = this.#getService(apiStr);
 		Log.api("run %s:\n%O", apiStr, data);
 		try {
 			data = this.validate(schema, data, fun);
 		} catch (err) {
-			err.message += '\n ' + apiStr + '\n' + jsonDoc(schema, app.cli);
+			err.message += '\n ' + apiStr + '\n' + jsonDoc(schema, app.opts.cli);
 			throw err;
 		}
 		// start a transaction on set trx object on site
@@ -108,7 +111,7 @@ module.exports = class ApiModule {
 		} else {
 			req.trx = await transaction.start(app.database.tenant(locals.tenant));
 		}
-		Object.assign(req, { Block, Href, app });
+		Object.assign(req, { Block, Href });
 
 		const args = [req, data];
 
