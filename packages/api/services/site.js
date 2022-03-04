@@ -3,7 +3,7 @@ const { mergeRecursive } = require('../../../lib/utils');
 module.exports = class SiteService {
 	static name = 'site';
 
-	cosntructor(app) {
+	constructor(app) {
 		this.app = app;
 	}
 
