@@ -87,10 +87,10 @@ if (process.argv.length > 2) {
 	req.run = (command, data) => {
 		return app.run(req, command, data);
 	};
-	if (opts.site) {
+	if (args.site) {
 		req.site = await app.install(
 			await req.run('site.get', {
-				id: opts.site
+				id: args.site
 			})
 		);
 	}
