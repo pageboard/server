@@ -1,3 +1,8 @@
+const {
+	mergeParameters,
+	mergeExpressions
+} = require('../../../lib/utils');
+
 module.exports = class SearchService {
 	static name = 'search';
 
@@ -33,11 +38,11 @@ module.exports = class SearchService {
 		}
 		// build parameters
 		const expr = ((form.expr || {}).action || {}).parameters || {};
-		let params = this.app.utils.mergeParameters(expr, {
+		let params = mergeParameters(expr, {
 			$query: data.query || {},
 			$user: req.user
 		});
-		params = this.app.utils.mergeExpressions(params, fd.action.parameters);
+		params = mergeExpressions(params, fd.action.parameters);
 		try {
 			const obj = await req.run(method, params);
 			// check if a non-page bundle is needed

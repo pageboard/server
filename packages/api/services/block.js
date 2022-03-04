@@ -1,5 +1,6 @@
 const { ref, raw } = require('objection');
 const Block = require('../models/block');
+const {	unflatten } = require('../../../lib/utils');
 
 module.exports = class BlockService {
 	static name = 'block';
@@ -11,7 +12,7 @@ module.exports = class BlockService {
 		});
 
 		server.get("/.api/blocks", async (req, res) => {
-			const data = await req.run('block.search', app.utils.unflatten(req.query));
+			const data = await req.run('block.search', unflatten(req.query));
 			res.return(data);
 		});
 

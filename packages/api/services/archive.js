@@ -5,6 +5,8 @@ const util = require('util');
 const ndjson = require.lazy('ndjson');
 const Upgrader = require.lazy('../upgrades');
 
+const Deferred = require('../../../lib/deferred');
+
 module.exports = class ArchiveService {
 	static name = 'archive';
 
@@ -44,7 +46,7 @@ module.exports = class ArchiveService {
 			out = createWriteStream(counts.file);
 		}
 
-		const finished = new app.utils.Deferred();
+		const finished = new Deferred();
 		out.once('finish', finished.resolve);
 		out.once('error', finished.reject);
 		const jstream = ndjson.stringify();

@@ -1,3 +1,5 @@
+const { mergeRecursive } = require('../../../lib/utils');
+
 module.exports = class SiteService {
 	static name = 'site';
 
@@ -144,7 +146,7 @@ module.exports = class SiteService {
 	async save(req, data) {
 		const { site } = req;
 		const dbSite = await this.get(req, data);
-		this.app.utils.mergeRecursive(dbSite.data, data.data);
+		mergeRecursive(dbSite.data, data.data);
 		if (site && site.url) {
 			dbSite.url = site.url;
 		}

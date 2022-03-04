@@ -1,3 +1,9 @@
+const {
+	mergeParameters,
+	mergeExpressions,
+	unflatten
+} = require('../../../lib/utils');
+
 module.exports = class FormService {
 	static name = 'form';
 
@@ -9,7 +15,7 @@ module.exports = class FormService {
 			const data = await req.run('form.submit', {
 				id: req.params.id,
 				query: req.query,
-				body: app.utils.unflatten(req.body)
+				body: unflatten(req.body)
 			});
 			res.return(data);
 		});
@@ -32,12 +38,12 @@ module.exports = class FormService {
 		let body = data.body;
 		// build parameters
 		const expr = ((form.expr || {}).action || {}).parameters || {};
-		let params = this.app.utils.mergeParameters(expr, {
+		let params = mergeParameters(expr, {
 			$request: body,
 			$query: data.query || {},
 			$user: req.user
 		});
-		params = this.app.utils.mergeExpressions(params, fd.action.parameters);
+		params = mergeExpressions(params, fd.action.parameters);
 
 		Log.api("form params", params, req.user, data.query);
 
@@ -70,7 +76,7 @@ module.exports = class FormService {
 			}
 			body = newBody;
 		}
-		body = this.app.utils.mergeExpressions(body, params);
+		body = mergeExpressions(body, params);
 
 		return req.run(method, body).catch((err) => {
 			return {
