@@ -178,7 +178,7 @@ module.exports = class Packager {
 		const elts = pkg.eltsMap;
 		list.push(el);
 		eDone[el.name] = true;
-		const contents = this.app.Block.normalizeContents(el.contents);
+		const contents = this.Block.normalizeContents(el.contents);
 		if (contents) for (const content of contents) {
 			if (!content.nodes) continue;
 			content.nodes.split(/\W+/).filter(Boolean).forEach((word) => {

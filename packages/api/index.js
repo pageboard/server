@@ -142,7 +142,7 @@ module.exports = class ApiModule {
 		const req = res.req;
 		if (obj == null || typeof obj != "object") {
 			// eslint-disable-next-line no-console
-			console.trace("All.send expects an object, got", obj);
+			console.trace("app.send expects an object, got", obj);
 			obj = {};
 		}
 		if (obj.cookies) {
@@ -187,9 +187,6 @@ module.exports = class ApiModule {
 };
 
 function itemFn(schema, block) {
-	if (block._id) {
-		console.trace("removing _id", block._id);
-	}
 	if (!schema.upgrade) return;
 	for (const [src, dst] of Object.entries(schema.upgrade)) {
 		const val = jsonPath.get(block, src);

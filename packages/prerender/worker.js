@@ -100,7 +100,6 @@ function init(opt) {
 		delete opt.clear;
 		dom.clear();
 	}
-	global.All = {opt: opt};
 	const conf = opt.prerender;
 
 	conf.helpers.forEach((path) => {

@@ -277,7 +277,7 @@ module.exports = class HrefService {
 		}
 	};
 
-	async collect(req, data) {
+	collect(req, data) {
 		const { Block, Href, site, trx } = req;
 		const hrefs = site.$model.hrefs;
 		const qList = q => {
@@ -311,11 +311,11 @@ module.exports = class HrefService {
 
 		const qBlocks = (q) => {
 			const qList = [
-				collectBlockUrls({ site, trx }, data, 0)
+				collectBlockUrls(req, data, 0)
 			];
 			if (data.content) {
-				qList.push(collectBlockUrls({ site, trx }, data, 1));
-				qList.push(collectBlockUrls({ site, trx }, data, 2));
+				qList.push(collectBlockUrls(req, data, 1));
+				qList.push(collectBlockUrls(req, data, 2));
 			}
 			q.unionAll(qList, true);
 		};
@@ -331,7 +331,7 @@ module.exports = class HrefService {
 	}
 
 	async reinspect(req, data) {
-		const { app, site, trx, Block } = req;
+		const { site, trx, Block } = req;
 		const hrefs = site.$model.hrefs;
 		const fhrefs = {};
 		for (const [type, list] of Object.entries(hrefs)) {

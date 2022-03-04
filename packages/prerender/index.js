@@ -13,18 +13,6 @@ module.exports = class PrerenderModule {
 
 	constructor(app, opts) {
 		this.app = app;
-		if (opts.workers) opts.workers = parseInt(opts.workers);
-		this.opts = Object.assign({
-			cacheDir: Path.join(app.dirs.cache, "prerender"),
-			stall: 20000,
-			allow: "same-origin",
-			console: true,
-			workers: 2
-		}, opts);
-
-		if (opts.develop) {
-			opts.cacheModel = "none";
-		}
 		opts.helpers = [
 			'./plugins/extensions'
 		];
@@ -34,6 +22,16 @@ module.exports = class PrerenderModule {
 			'./plugins/bearer',
 			'./plugins/serialize'
 		];
+		if (opts.workers) opts.workers = parseInt(opts.workers);
+
+		this.opts = Object.assign({
+			cacheDir: Path.join(app.dirs.cache, "prerender"),
+			stall: 20000,
+			allow: "same-origin",
+			console: true,
+			workers: 2,
+			cacheModel: app.env == "development" ? "none" : undefined
+		}, opts);
 	}
 
 	viewRoutes(app, server) {
@@ -224,7 +222,8 @@ module.exports = class PrerenderModule {
 				return res.redirect(urlFormat({ pathname, query }));
 			}
 
-			const plugins = this.opts.read.plugins.slice();
+			const { plugins: readPlugins, helpers } = this.opts.read;
+			const plugins = readPlugins.slice();
 			const settings = {
 				extensions: {
 					allow: false,
@@ -301,10 +300,10 @@ module.exports = class PrerenderModule {
 					<body></body>
 				</html>`;
 			this.#run({
-				view: view,
-				helpers: this.opts.read.helpers,
-				plugins: plugins,
-				settings: settings
+				view,
+				helpers,
+				plugins,
+				settings
 			}, req, res, next);
 		}
 	}

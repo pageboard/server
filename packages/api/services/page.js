@@ -90,7 +90,7 @@ module.exports = class PageService {
 		});
 	}
 
-	async #QueryPage({ site, trx }) {
+	#QueryPage({ site, trx }) {
 		return site.$relatedQuery('children', trx).alias('page')
 			.select()
 			.first()
