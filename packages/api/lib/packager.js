@@ -145,7 +145,7 @@ module.exports = class Packager {
 		metaEl.scripts = rootEl.group != "page" ? rootEl.scripts : [];
 		metaEl.stylesheets = rootEl.group != "page" ? rootEl.stylesheets : [];
 		metaEl.resources = rootEl.resources;
-		if (rootEl.type == "page") console.log(metaEl);
+
 		for (const el of cobundles) {
 			if (el.group == "page") {
 				site.$bundles[el.name] = {
