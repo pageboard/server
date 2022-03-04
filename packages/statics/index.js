@@ -154,11 +154,9 @@ module.exports = class StaticsModule {
 	}
 };
 
-function staticNotFound(req, res, next) {
+function staticNotFound(req) {
 	if (req.method == "GET" || req.method == "HEAD") {
-		next(new HttpError.NotFound("Static file not found"));
-	} else {
-		next();
+		throw new HttpError.NotFound("Static file not found");
 	}
 }
 
