@@ -92,10 +92,9 @@ module.exports = class Packager {
 
 	async finishInstall(site, pkg, bundles) {
 		const { eltsMap } = pkg;
-		await Promise.all(Object.entries(bundles).map(([name, { list }]) => {
-			const el = eltsMap[name];
-			return this.#bundle(site, pkg, el, list);
-		}));
+		await Promise.all(Object.entries(bundles).map(
+			([name, { list }]) => this.#bundle(site, pkg, eltsMap[name], list)
+		));
 		site.$services = await this.#bundleSource(site, pkg, null, 'services', this.app.services);
 		site.$scripts = eltsMap.site.scripts.slice();
 		site.$resources = Object.assign({}, eltsMap.site.resources);
@@ -114,7 +113,7 @@ module.exports = class Packager {
 		const prefix = rootEl.name;
 
 		const eltsMap = {};
-		list.forEach((el) => {
+		list.forEach(el => {
 			if (!el.standalone) {
 				el = Object.assign({}, el);
 				delete el.scripts;
@@ -140,23 +139,24 @@ module.exports = class Packager {
 				pkg.eltsMap[el.name].scripts = scripts;
 				pkg.eltsMap[el.name].stylesheets = styles;
 			}
-			const path = await this.#bundleSource(site, pkg, prefix, 'elements', eltsMap);
-			if (path) metaEl.bundle = path;
-			metaEl.scripts = rootEl.group != "page" ? rootEl.scripts : [];
-			metaEl.stylesheets = rootEl.group != "page" ? rootEl.stylesheets : [];
-			metaEl.resources = rootEl.resources;
-			for (const el of cobundles) {
-				if (el.group == "page") {
-					site.$bundles[el.name] = {
-						meta: Object.assign({}, el, {
-							scripts: metaEl.scripts,
-							stylesheets: metaEl.stylesheets,
-							resources: metaEl.resources,
-							bundle: metaEl.bundle
-						}),
-						elements: metaKeys
-					};
-				}
+		}
+		const path = await this.#bundleSource(site, pkg, prefix, 'elements', eltsMap);
+		if (path) metaEl.bundle = path;
+		metaEl.scripts = rootEl.group != "page" ? rootEl.scripts : [];
+		metaEl.stylesheets = rootEl.group != "page" ? rootEl.stylesheets : [];
+		metaEl.resources = rootEl.resources;
+		if (rootEl.type == "page") console.log(metaEl);
+		for (const el of cobundles) {
+			if (el.group == "page") {
+				site.$bundles[el.name] = {
+					meta: Object.assign({}, el, {
+						scripts: metaEl.scripts,
+						stylesheets: metaEl.stylesheets,
+						resources: metaEl.resources,
+						bundle: metaEl.bundle
+					}),
+					elements: metaKeys
+				};
 			}
 		}
 	}
