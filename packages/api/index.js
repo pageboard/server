@@ -66,20 +66,20 @@ module.exports = class ApiModule {
 	}
 
 	#getService(apiStr) {
-		const [modName, funName] = apiStr.split('.');
+		const [modName, funName] = (apiStr || "").split('.');
 		const mod = this.app.services[modName];
-		if (!mod) {
+		if (!modName || !mod) {
 			throw new HttpError.BadRequest(Text`
-				Unknown api module ${modName}
-					${Object.keys(this.app.services).sort().join(', ')}
+				Available modules:
+				${Object.keys(this.app.services).sort().join(', ')}
 			`);
 		}
 		const schema = mod[funName];
 		const inst = this.app[modName];
 		const fun = inst[funName];
-		if (!fun) throw new HttpError.BadRequest(Text`
-			Unknown api method ${apiStr}
-				${Object.keys(mod).sort().join(', ')}
+		if (!funName || !fun) throw new HttpError.BadRequest(Text`
+			Available methods:
+			${Object.getOwnPropertyNames(mod).sort().join(', ')}
 		`);
 		if (!schema) {
 			throw new HttpError.BadRequest(`Internal api method ${apiStr}`);
