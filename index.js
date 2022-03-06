@@ -1,9 +1,9 @@
-const minimist = require('minimist');
 const toml = require('toml');
 const xdg = require('xdg-basedir');
 const Path = require('path');
 const { readFile } = require('fs').promises;
 const Pageboard = require("./lib/pageboard");
+const { unflatten } = require('./lib/utils')
 
 if (!process.env.HOME) {
 	throw new Error("Missing HOME environment variable");
@@ -15,70 +15,56 @@ const {
 	version
 } = require(Path.join(dir, 'package.json'));
 
-if (process.argv.length > 2) {
-	let thenData = false;
-	for (let i = 2; i < process.argv.length; i++) {
-		if (process.argv[i].startsWith('--') == false) {
-			// skip the first one, which is supposed to be the api command
-			if (thenData) process.argv[i] = '--data.' + process.argv[i];
-			thenData = true;
-		}
-	}
-}
+// command - <site> - param1=val1 param2=val2...
+
 
 (async () => {
-	const args = minimist(process.argv.slice(2));
-	args.name = name;
-	args.version = version.split('.').slice(0, 2).join('.');
-	args.dirs = Object.assign({}, args.dirs, {
+	const {
+		command,
+		opts = {},
+		data = {}
+	} = parseArgs(process.argv.slice(2));
+	opts.name = name;
+	opts.version = version.split('.').slice(0, 2).join('.');
+	opts.dirs = Object.assign({}, opts.dirs, {
 		config: Path.join(xdg.config, name),
 		cache: Path.join(xdg.cache, name),
 		data: Path.join(xdg.data, name),
 		tmp: Path.join(xdg.data, '../tmp', name)
 	});
 
-	if (!args.config) {
-		args.config = Path.join(args.dirs.config, 'config');
+	if (!opts.config) {
+		opts.config = Path.join(opts.dirs.config, 'config');
 	}
-	const data = coercions(args.data);
-	if (data) delete args.data;
 
 	Object.assign(
-		args,
-		toml.parse(await readFile(args.config)),
-		args
+		opts,
+		toml.parse(await readFile(opts.config)),
+		opts
 	);
-	args.dir = dir;
-
-	const [command, unknown] = args._;
-	delete args._;
-
-	if (unknown !== undefined) {
-		console.error("Cannot process arguments", args._);
-		process.exit(1);
-	}
-	if (command) {
-		args.cli = true;
+	opts.dir = dir;
+	const info = console.info;
+	if (command || opts.help) {
+		opts.cli = true;
 		console.info = () => { };
 	}
 
-	const app = new Pageboard(args);
-	const { opts } = app;
+	const app = new Pageboard(opts);
 	await app.init();
 
+	if (opts.help) {
+		if (command) info.call(console, "\n", command);
+		info.call(console, app.api.help(command));
+		process.exit(0);
+	}
 	if (!command) {
 		console.info(`server:\t${app.version}`);
 		return app.start();
 	}
-	if (args.help) {
-		console.info("\n", command);
-		console.info(app.help(command));
-		process.exit(0);
-	}
 
-	if (data !== undefined && typeof data.data == "string") {
+	if (typeof opts.data == "string") {
 		try {
-			data.data = JSON.parse(data.data);
+			Object.assign(data, JSON.parse(opts.data));
 		} catch(ex) {
 			console.error(ex);
 		}
@@ -87,10 +73,10 @@ if (process.argv.length > 2) {
 	req.run = (command, data) => {
 		return app.run(req, command, data);
 	};
-	if (args.site) {
+	if (opts.site) {
 		req.site = await app.install(
 			await req.run('site.get', {
-				id: args.site
+				id: opts.site
 			})
 		);
 	}
@@ -107,21 +93,49 @@ if (process.argv.length > 2) {
 	process.exit(1);
 });
 
-function coercions(data) {
-	if (data == null) return data;
-	let obj = {};
-	let keyString;
-	Object.entries(data).forEach(([key, val]) => {
-		if (parseInt(key) != key) keyString = true;
-		else if (!keyString) keyString = false;
-		if (val === "") {
-			obj[key] = null;
-		} else if (val != null && typeof val == "object") {
-			obj[key] = coercions(val);
-		} else {
-			obj[key] = val;
+function parseArgs(args) {
+	if (args.length == 0) {
+		return { cli: false };
+	}
+	const opts = {};
+	const data = {};
+	const ret = {};
+	for (const arg of args) {
+		const { key, val } = parseArg(arg);
+		if (ret.site === undefined) {
+			if (key == "--site") {
+				ret.site = val;
+				continue;
+			} else {
+				ret.site = null;
+			}
 		}
-	});
-	if (keyString === false) obj = Object.values(obj);
-	return obj;
+		if (key.startsWith('--')) {
+			opts[key.substring(2)] = val === undefined ? true : val;
+		} else if (val !== undefined) {
+			if (!ret.command) {
+				console.error("Expected <options> <command> <data>");
+				return { help: true };
+			} else {
+				data[key] = val;
+			}
+		} else if (ret.command) {
+			console.error("Expected <options> <command> <data>");
+			return { help: true };
+		} else {
+			ret.command = key;
+		}
+	}
+	ret.opts = unflatten(opts);
+	ret.data = unflatten(data);
+	return ret;
+}
+
+function parseArg(str) {
+	const { key, val } = (
+		/^(?<key>(?:--)?[a-z.]+)(?:=(?<val>.*))?$/.exec(str) || {
+			groups: {}
+		}
+	).groups;
+	return { key, val: val === "" ? null : val };
 }
