@@ -36,7 +36,7 @@ module.exports = class UploadModule {
 			}
 			const files = await this.parse(req, limits);
 			const list = await Promise.all(files.map((file) => {
-				return this.file(req, file);
+				return this.store(req, file);
 			}));
 			// backward compatibility with elements-write's input href
 			const obj = req.params.id ? { items: list } : list;
@@ -127,7 +127,7 @@ module.exports = class UploadModule {
 		}
 	};
 
-	async file(req, data) {
+	async store(req, data) {
 		const image = await this.req.run('image.upload', {
 			path: data.path,
 			mime: mime.lookup(Path.extname(data.path))
@@ -140,8 +140,8 @@ module.exports = class UploadModule {
 		await this.req.run('href.add', { url: pathname });
 		return pathname;
 	}
-	static file = {
-		title: 'Upload file',
+	static store = {
+		title: 'Store uploaded file',
 		required: ['path'],
 		properties: {
 			path: {
