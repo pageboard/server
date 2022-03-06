@@ -1,6 +1,6 @@
 const { ref, raw } = require('objection');
 const Block = require('../models/block');
-const {	unflatten } = require('../../../lib/utils');
+const { unflatten } = require('../../../lib/utils');
 
 module.exports = class BlockService {
 	static name = 'block';
