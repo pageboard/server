@@ -10,6 +10,7 @@ const got = require.lazy('got');
 const multipart = require.lazy('./lib/multipart.js');
 
 module.exports = class MailModule {
+	static name = 'mail';
 	constructor(app, opts) {
 		this.opts = opts;
 
