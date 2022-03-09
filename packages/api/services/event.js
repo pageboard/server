@@ -237,10 +237,17 @@ exports.reservations = function({site}, data) {
 		eventDate.parent = eventDate.parent[0];
 		eventDate.children.forEach(function(item) {
 			// bad test data could ruin everything
-			if (item.settings.length) item.settings = item.settings[0];
-			else console.warn("no settings event date item", data.id, item.id);
-			if (item.settings.user.length) item.settings.data.email = item.settings.user[0].email;
-			else console.warn("no settings user for event date item", data.id, item.id);
+			if (!item.settings) return;
+			if (item.settings.length) {
+				item.settings = item.settings[0];
+			} else {
+				console.warn("no settings event date item", data.id, item.id);
+			}
+			if (item.settings.user && item.settings.user.length) {
+				item.settings.data.email = item.settings.user[0].email;
+			} else {
+				console.warn("no settings user for event date item", data.id, item.id);
+			}
 			delete item.settings.user;
 		});
 		return {item: eventDate};
