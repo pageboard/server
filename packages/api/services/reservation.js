@@ -333,12 +333,12 @@ module.exports = class ReservationService {
 		eventDate.parent = eventDate.parent[0];
 		for (const item of eventDate.children) {
 			// bad test data could ruin everything
-			if (item.settings.length) {
-				item.settings = item.settings[0];
-			} else {
+			if (!item.settings || !item.settings.length) {
 				console.warn("no settings event date item", data.id, item.id);
+				continue;
 			}
-			if (item.settings.user.length) {
+			item.settings = item.settings[0];
+			if (item.settings.user && item.settings.user.length) {
 				item.settings.data.email = item.settings.user[0].email;
 			} else {
 				console.warn("no settings user for event date item", data.id, item.id);
