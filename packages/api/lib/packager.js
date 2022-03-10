@@ -1,10 +1,10 @@
 const Path = require('path');
-const toSource = require('tosource');
+const toSource = require.lazy('tosource');
 const { AbsoluteProxy, EltProxy, MapProxy } = require('./proxies');
 
-const fs = require('fs').promises;
-const vm = require('vm');
-const translateJSON = require('./translate');
+const { promises: fs } = require('fs');
+const vm = require.lazy('vm');
+const translateJSON = require.lazy('./translate');
 
 module.exports = class Packager {
 	constructor(app, Block) {

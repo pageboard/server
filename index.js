@@ -1,7 +1,7 @@
 const toml = require('toml');
 const xdg = require('xdg-basedir');
 const Path = require('path');
-const { readFile } = require('fs').promises;
+const { promises: { readFile } } = require('fs');
 const Pageboard = require("./lib/pageboard");
 const { unflatten } = require('./lib/utils')
 

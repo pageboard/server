@@ -1,6 +1,6 @@
 const Upcache = require.lazy('upcache');
 const Path = require('path');
-const fs = require('fs').promises;
+const { promises: fs } = require('fs');
 const { promisify } = require('util');
 const generateKeyPair = promisify(require('crypto').generateKeyPair);
 

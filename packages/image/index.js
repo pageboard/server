@@ -1,5 +1,5 @@
 const sharpie = require.lazy('sharpie');
-const fs = require('fs').promises;
+const { promises: fs } = require('fs');
 const Path = require('path');
 
 const DataUri = require.lazy('datauri');
