@@ -8,15 +8,11 @@ const { unflatten } = require('./lib/utils')
 if (!process.env.HOME) {
 	throw new Error("Missing HOME environment variable");
 }
-const dir = __dirname;
 
 const {
 	name,
 	version
-} = require(Path.join(dir, 'package.json'));
-
-// command - <site> - param1=val1 param2=val2...
-
+} = require(Path.join(__dirname, 'package.json'));
 
 (async () => {
 	const {
@@ -42,7 +38,6 @@ const {
 		toml.parse(await readFile(opts.config)),
 		opts
 	);
-	opts.dir = dir;
 	const info = console.info;
 	if (command || opts.help) {
 		opts.cli = true;
