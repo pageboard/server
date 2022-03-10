@@ -14,7 +14,7 @@ const allowedParameters = {
 
 module.exports = class ImageModule {
 	static name = 'image';
-	static priority = 10;
+	static priority = -1;
 
 	constructor(app, opts) {
 		this.app = app;
