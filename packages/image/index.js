@@ -58,7 +58,7 @@ module.exports = class ImageModule {
 		}, sharpie(this.opts));
 	}
 
-	service(server) {
+	serviceRoutes(server) {
 		console.info(`image:\tproxy at /.api/image`);
 		server.get('/.api/image', (req, res, next) => {
 			console.warn("/.api/image is used", req.url);
