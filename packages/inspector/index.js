@@ -4,6 +4,7 @@ module.exports = class InspectorModule {
 	static name = 'inspector';
 
 	constructor(app, opts) {
+		this.app = app;
 		this.opts = opts;
 	}
 

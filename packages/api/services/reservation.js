@@ -4,7 +4,7 @@ module.exports = class ReservationService {
 	static name = 'reservation';
 
 	async add(req, data) {
-		const { app, user } = req;
+		const { user } = req;
 		const { reservation, email } = data;
 		if (!reservation.attendees || reservation.attendees.length == 0) {
 			throw new HttpError.BadRequest(
@@ -146,7 +146,6 @@ module.exports = class ReservationService {
 	};
 
 	async save(req, data) {
-		const { app } = req;
 		const { reservation } = data;
 		if (!reservation.attendees || reservation.attendees.length == 0) {
 			throw new HttpError.BadRequest(
