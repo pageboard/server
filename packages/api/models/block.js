@@ -198,7 +198,11 @@ Block.extendSchema = function extendSchema(name, schemas) {
 		};
 	});
 
-	const DomainBlock = class extends Block { };
+	const DomainBlock = class extends Block {
+		get installed() {
+			return true;
+		}
+	};
 	Object.assign(DomainBlock, Block);
 	const relmaps = Block.relationMappings;
 	DomainBlock.relationMappings = Object.assign({}, relmaps);
