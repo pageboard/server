@@ -67,18 +67,27 @@ module.exports = class StaticsModule {
 
 	async bundle(site, pkg, list, filename) {
 		if (list.length == 0) return [];
-		let suffix = site.data.env;
-		if (suffix == "production") suffix = ".min";
-		else if (suffix == "staging") suffix = ".max";
-		else suffix = "";
+		const suffix = {
+			production: ".min",
+			staging: ".max",
+			dev: ""
+		}[site.data.env] || "";
 		if (!suffix || !pkg.dir || !site.url) {
 			return list;
 		}
 
+		const fileObj = Path.parse(filename);
+		const ext = fileObj.ext.substring(1);
+		if (ext != "js" && ext != "css") {
+			throw new Error("Bundles only .js or .css extensions");
+		}
+		delete fileObj.base;
+		fileObj.name += suffix;
+		const buildFile = Path.format(fileObj);
 		const buildDir = Path.join(pkg.dir, "builds");
-		const buildPath = Path.join(buildDir, filename);
-		let version = site.data.version;
-		if (version == null) version = site.branch;
+		const buildPath = Path.join(buildDir, buildFile);
+
+		const version = site.data.version ?? site.branch;
 		const outList = [];
 		const inputs = [];
 		list.forEach((url) => {
@@ -86,28 +95,24 @@ module.exports = class StaticsModule {
 			else inputs.push(urlToPath(this.opts.files, site.id, url));
 		});
 
-		const fileObj = Path.parse(filename);
-		delete fileObj.base;
-		fileObj.name += suffix;
-
-		const outUrl = `/.files/${version}/${Path.format(fileObj)}`;
+		const outUrl = `/.files/${version}/${buildFile}`;
 		outList.push(outUrl);
 		const output = urlToPath(this.opts.files, site.id, outUrl);
 
 		await fs.mkdir(buildDir, { recursive: true });
 
-		let copyFromCache = false;
 		if (version != site.branch) try {
+			// not in branch mode, files are already built, use them
 			await fs.stat(buildPath);
-			copyFromCache = true;
+			await Promise.all([
+				fs.copyFile(buildPath, output),
+				fs.copyFile(buildPath + '.map', output + '.map').catch(() => {})
+			]);
+			return outList;
 		} catch (err) {
 			// pass
 		}
 
-		const ext = fileObj.ext.substring(1);
-		if (ext != "js" && ext != "css") {
-			throw new Error("Bundles only .js or .css extensions");
-		}
 		try {
 			await bundlers[ext](inputs, output, {
 				minify: site.data.env == "production",
@@ -121,17 +126,10 @@ module.exports = class StaticsModule {
 			if (err.reason) delete err.message;
 			throw err;
 		}
-		if (copyFromCache) {
-			await Promise.all([
-				fs.copyFile(output, buildPath),
-				fs.copyFile(output + '.map', buildPath + '.map').catch(() => {})
-			]);
-		} else {
-			await Promise.all([
-				fs.copyFile(buildPath, output),
-				fs.copyFile(buildPath + '.map', output + '.map').catch(() => {})
-			]);
-		}
+		await Promise.all([
+			fs.copyFile(output, buildPath),
+			fs.copyFile(output + '.map', buildPath + '.map').catch(() => {})
+		]);
 		return outList;
 	}
 
