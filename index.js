@@ -16,6 +16,9 @@ const {
 
 (async () => {
 	const {
+		help,
+		site,
+		cli,
 		command,
 		opts = {},
 		data = {}
@@ -39,7 +42,7 @@ const {
 		opts
 	);
 	const info = console.info;
-	if (command || opts.help) {
+	if (cli) {
 		opts.cli = true;
 		console.info = () => { };
 	}
@@ -47,7 +50,7 @@ const {
 	const app = new Pageboard(opts);
 	await app.init();
 
-	if (opts.help) {
+	if (help) {
 		if (command) info.call(console, "\n", command);
 		info.call(console, app.api.help(command));
 		process.exit(0);
@@ -68,10 +71,10 @@ const {
 	req.run = (command, data) => {
 		return app.run(req, command, data);
 	};
-	if (opts.site) {
+	if (site) {
 		req.site = await app.install(
 			await req.run('site.get', {
-				id: opts.site
+				id: site
 			})
 		);
 	}
@@ -89,12 +92,9 @@ const {
 });
 
 function parseArgs(args) {
-	if (args.length == 0) {
-		return { cli: false };
-	}
 	const opts = {};
 	const data = {};
-	const ret = {};
+	const ret = { cli: true };
 	for (const arg of args) {
 		const { key, val } = parseArg(arg);
 		if (ret.site === undefined) {
@@ -110,19 +110,22 @@ function parseArgs(args) {
 		} else if (val !== undefined) {
 			if (!ret.command) {
 				console.error("Expected <options> <command> <data>");
-				return { help: true };
+				ret.help = true;
+				return ret;
 			} else {
 				data[key] = val;
 			}
 		} else if (ret.command) {
 			console.error("Expected <options> <command> <data>");
-			return { help: true };
+			ret.help = true;
+			return ret;
 		} else {
 			ret.command = key;
 		}
 	}
 	ret.opts = unflatten(opts);
 	ret.data = unflatten(data);
+	if (!ret.command) ret.cli = false;
 	return ret;
 }
 
