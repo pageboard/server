@@ -10,6 +10,10 @@ const Deferred = require('../../../lib/deferred');
 module.exports = class ArchiveService {
 	static name = 'archive';
 
+	constructor(app) {
+		this.app = app;
+	}
+
 	apiRoutes(app, server) {
 		server.get('/.api/archive',
 			app.cache.disable,
@@ -23,7 +27,7 @@ module.exports = class ArchiveService {
 		);
 	}
 
-	async export({ app, site, trx, res, Href }, data) {
+	async export({ site, trx, res, Href }, data) {
 		// TODO allow export of a selection of pages and/or standalones
 		// (by types, by url, by id...)
 		const id = site.id;
@@ -42,7 +46,7 @@ module.exports = class ArchiveService {
 			res.attachment(counts.file);
 			out = res;
 		} else {
-			counts.file = Path.resolve(app.cwd, filepath);
+			counts.file = Path.resolve(this.app.cwd, filepath);
 			out = createWriteStream(counts.file);
 		}
 
