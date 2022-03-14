@@ -176,12 +176,24 @@ module.exports = class SiteService {
 		}
 	};
 
-	all({ trx, Block }) {
-		return Block.query(trx).where('type', 'site').select();
+	all({ trx, Block }, { text }) {
+		const q = Block.query(trx).where('type', 'site').select();
+		if (text !== undefined) {
+			q.from(Block.raw("websearch_to_tsquery('unaccent', ?) AS query, block", [text]));
+			q.whereRaw(`query @@ block.tsv`);
+			q.orderByRaw(`ts_rank(block.tsv, query) DESC`);
+		}
+		return q;
 	}
 	static all = {
 		title: 'List all sites',
-		$action: 'read'
+		$action: 'read',
+		properties: {
+			text: {
+				title: 'Search text',
+				type: 'string'
+			}
+		}
 	};
 
 	async del({ trx, Block }, data) {
