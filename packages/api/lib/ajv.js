@@ -84,6 +84,10 @@ function setupAjv(ajv) {
 
 function AjvCustomKeywords(ajv) {
 	ajv.addKeyword({
+		keyword: '$filter',
+		schemaType: "object"
+	});
+	ajv.addKeyword({
 		keyword: '$action',
 		schemaType: "string"
 	});
