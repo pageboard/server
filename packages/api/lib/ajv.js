@@ -1,6 +1,7 @@
 const { AjvValidator } = require('objection');
-const ajv = require('ajv');
+const Ajv = require('ajv');
 const AjvKeywords = require('ajv-keywords');
+const AjvFormats = require("ajv-formats");
 
 
 const ajvApiSettings = {
@@ -10,7 +11,6 @@ const ajvApiSettings = {
 	ownProperties: true,
 	coerceTypes: 'array',
 	removeAdditional: false,
-	nullable: true,
 	formats: {
 		singleline: /^[^\n\r]*$/,
 		pathname: /^(\/[\w-.]*)+$/,
@@ -21,50 +21,19 @@ const ajvApiSettings = {
 	},
 	invalidDefaults: 'log'
 };
-const validatorWithDefaults = AjvKeywords(ajv(Object.assign({}, ajvApiSettings, {
+
+const validatorWithDefaults = setupAjv(new Ajv(Object.assign({}, ajvApiSettings, {
 	useDefaults: 'empty'
 })));
 
-const validatorNoDefaults = AjvKeywords(ajv(Object.assign({}, ajvApiSettings, {
+const validatorNoDefaults = setupAjv(new Ajv(Object.assign({}, ajvApiSettings, {
 	useDefaults: false
 })));
 
 exports.createValidator = function () {
 	return new AjvValidator({
 		onCreateAjv: function (ajv) {
-			AjvKeywords(ajv);
-			ajv.addKeyword('coerce', {
-				modifying: true,
-				type: 'string',
-				errors: false,
-				validate: function (schema, data, parentSchema, path, parent, name) {
-					if (data == null) return true;
-					const format = parentSchema.format;
-					if (parentSchema.type == "string" && data === "") {
-						if (parentSchema.default !== undefined) {
-							parent[name] = parentSchema.default;
-						} else if (parentSchema.nullable) {
-							delete parent[name];
-						}
-						return true;
-					}
-					if (format != "date" && format != "time" && format != "date-time") return true;
-					const d = new Date(data);
-					if (Number.isNaN(d.getTime())) {
-						parent[name] = null;
-					} else {
-						data = d.toISOString();
-						if (format == "date") parent[name] = data.split('T').shift();
-						else if (format == "time") parent[name] = data.split('T').pop();
-						else if (format == "date-time") parent[name] = data;
-					}
-					return true;
-				}
-			});
-			// otherwise the `format` keyword would validate before `coerce`
-			// https://github.com/epoberezkin/ajv/issues/986
-			const rules = ajv.RULES.types.string.rules;
-			rules.unshift(rules.pop());
+			setupAjv(ajv);
 		},
 		options: {
 			$data: true,
@@ -82,6 +51,9 @@ exports.createValidator = function () {
 exports.validate = function (schema, data, inst) {
 	if (!schema) return data;
 	if (!inst.validate) {
+		if (!schema.type && schema.properties) {
+			schema.type = 'object';
+		}
 		if (schema.defaults === false) {
 			inst.validate = validatorNoDefaults.compile(schema);
 		} else {
@@ -99,3 +71,53 @@ exports.validate = function (schema, data, inst) {
 		throw new HttpError.BadRequest(messages);
 	}
 };
+
+function setupAjv(ajv) {
+	AjvFormats(ajv);
+	AjvKeywords(ajv);
+	AjvCustomKeywords(ajv);
+	// otherwise the `format` keyword would validate before `coerce`
+	// https://github.com/epoberezkin/ajv/issues/986
+	const rules = ajv.RULES.types.string.rules;
+	rules.unshift(rules.pop());
+	return ajv;
+}
+
+function AjvCustomKeywords(ajv) {
+	ajv.addKeyword({
+		keyword: '$action',
+		schemaType: "string"
+	});
+	ajv.addKeyword({
+		keyword: 'coerce',
+		modifying: true,
+		type: 'string',
+		errors: false,
+		validate: function (schema, data, parentSchema, dataCxt) {
+			if (data == null) return true;
+			const parent = dataCxt.parentData;
+			const name = dataCxt.parentDataProperty;
+			const format = parentSchema.format;
+			if (parentSchema.type == "string" && data === "") {
+				if (parentSchema.default !== undefined) {
+					parent[name] = parentSchema.default;
+				} else if (parentSchema.nullable) {
+					delete parent[name];
+				}
+				return true;
+			}
+			if (format != "date" && format != "time" && format != "date-time") return true;
+			const d = new Date(data);
+			if (Number.isNaN(d.getTime())) {
+				parent[name] = null;
+			} else {
+				data = d.toISOString();
+				if (format == "date") parent[name] = data.split('T').shift();
+				else if (format == "time") parent[name] = data.split('T').pop();
+				else if (format == "date-time") parent[name] = data;
+			}
+			return true;
+		}
+	});
+	return ajv;
+}
