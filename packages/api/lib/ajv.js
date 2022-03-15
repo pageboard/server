@@ -42,7 +42,6 @@ exports.createValidator = function () {
 			ownProperties: true,
 			coerceTypes: 'array',
 			removeAdditional: "all",
-			nullable: true,
 			formats: ajvApiSettings.formats
 		}
 	});
