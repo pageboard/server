@@ -41,7 +41,7 @@ module.exports = class ArchiveService {
 		};
 
 		let out;
-		if (res) {
+		if (res.attachment) {
 			counts.file = Path.basename(filepath);
 			res.attachment(counts.file);
 			out = res;
