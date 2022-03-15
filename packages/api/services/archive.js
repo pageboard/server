@@ -31,7 +31,7 @@ module.exports = class ArchiveService {
 		// TODO allow export of a selection of pages and/or standalones
 		// (by types, by url, by id...)
 		const id = site.id;
-		const filepath = data.file || (id + '-' + (new Date()).toISOString().split('.')[0].replace(/[-:]/g, '').replace('T', '-').slice(0, -2) + '.json');
+		const filepath = file ?? `${id}-${fileStamp()}.json`;
 		const counts = {
 			users: 0,
 			blocks: 0,
@@ -306,3 +306,11 @@ module.exports = class ArchiveService {
 		}
 	};
 };
+
+function fileStamp(d = new Date()) {
+	const [str] = d.toISOString().split('.');
+	return str
+		.replace(/[-:]/g, '')
+		.replace('T', '-')
+		.slice(0, -2);
+}
