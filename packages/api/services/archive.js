@@ -103,8 +103,14 @@ module.exports = class ArchiveService {
 		for (const user of users) jstream.write(user);
 		for (const block of blocks) jstream.write(block);
 
-		const hrefs = await Href.query(trx).whereSite(site.id)
-			.selectWithout('tsv', '_id', '_parent_id');
+		const hrefs = ids.length == 0
+			? await Href.query(trx)
+				.whereSite(site.id)
+				.select()
+			: await req.call('href.collect', {
+				id: ids,
+				content: true
+			});
 		counts.hrefs = hrefs.length;
 		for (const href of hrefs) {
 			jstream.write(href);

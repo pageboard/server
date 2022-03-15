@@ -125,7 +125,8 @@ module.exports = class PageService {
 			.select(
 				req.call('href.collect', {
 					url: data.url,
-					content: true
+					content: true,
+					map: true
 				}).as('hrefs')
 			);
 		if (!page) {
@@ -141,7 +142,8 @@ module.exports = class PageService {
 				.select(
 					req.call('href.collect', {
 						url: statusUrl,
-						content: true
+						content: true,
+						map: true
 					}).as('hrefs')
 				);
 			if (!page) throw new HttpError[obj.status]();

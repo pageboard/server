@@ -319,15 +319,20 @@ module.exports = class HrefService {
 			}
 			q.unionAll(qList, true);
 		};
-		return Href.query(trx)
+		const q = Href.query(trx)
 			.with('blocks', qBlocks)
 			.with('list', qList)
-			.select(raw(`jsonb_object_agg(
-					href.url,
-					jsonb_set(href.meta, '{mime}', to_jsonb(href.mime))
-				) AS hrefs`))
 			.where('href._parent_id', site._id)
 			.join('list', 'href.url', 'list.url');
+		if (data.map) {
+			q.select(raw(`jsonb_object_agg(
+				href.url,
+				jsonb_set(href.meta, '{mime}', to_jsonb(href.mime))
+			) AS hrefs`));
+		} else {
+			q.select();
+		}
+		return q;
 	}
 
 	async reinspect(req, data) {

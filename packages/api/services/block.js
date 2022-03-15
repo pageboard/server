@@ -180,8 +180,9 @@ module.exports = class BlockService {
 		if (ids.length) {
 			const hrow = await req.call('href.collect', {
 				id: ids,
-				content: data.content
 			}).first();
+				content: data.content,
+				map: true
 			obj.hrefs = hrow.hrefs;
 		}
 		return obj;
