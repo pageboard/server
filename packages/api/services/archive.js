@@ -163,7 +163,7 @@ module.exports = class ArchiveService {
 		}
 	};
 
-	async import({ app, site, trx, Block }, data) {
+	async import({ site, trx, Block }, data) {
 		const counts = {
 			users: 0,
 			blocks: 0,
@@ -171,7 +171,7 @@ module.exports = class ArchiveService {
 			hrefs: 0,
 			standalones: 0
 		};
-		const fstream = createReadStream(Path.resolve(app.cwd, data.file))
+		const fstream = createReadStream(Path.resolve(this.app.cwd, data.file))
 			.pipe(ndjson.parse());
 
 		let upgrader;
