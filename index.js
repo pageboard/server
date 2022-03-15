@@ -67,10 +67,8 @@ const {
 			console.error(ex);
 		}
 	}
-	const req = {};
-	req.run = (command, data) => {
-		return app.run(req, command, data);
-	};
+	const req = { res: {} };
+	app.domains.extendRequest(req, app);
 	if (site) {
 		req.site = await app.install(
 			await req.run('site.get', {
