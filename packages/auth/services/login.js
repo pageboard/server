@@ -42,7 +42,6 @@ module.exports = class LoginModule {
 	}
 
 	async #generate(req, data) {
-		const { app } = req;
 		if (data.register) await req.run('user.add', {
 			email: data.email
 		});
@@ -54,7 +53,7 @@ module.exports = class LoginModule {
 	}
 
 	async send(req, data) {
-		const { app, site } = req;
+		const { site } = req;
 		if (!site.url) {
 			return "login.send requires a hostname. Use login.link";
 		}
@@ -119,7 +118,7 @@ module.exports = class LoginModule {
 		}
 	};
 	async #verifyToken(req, { email, token }) {
-		const { app, trx } = req;
+		const { trx } = req;
 		const user = await req.run('user.get', { email });
 		const priv = await this.#userPriv(req, user);
 		const tries = (priv.data.otp.tries || 0) + 1;
