@@ -196,7 +196,6 @@ exports.QueryBuilder = class CommonQueryBuilder extends QueryBuilder {
 				throw new Error("Cannot patch block without type");
 			}
 		}
-		this.skipUndefined();
 		this.addOperation(patchObjectOperation, [obj]);
 		return this;
 	}

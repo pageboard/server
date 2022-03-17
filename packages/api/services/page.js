@@ -792,7 +792,6 @@ async function updatePage({ site, trx, Block, Href }, page, sideEffects) {
 							newUrl
 						)
 					})
-					.skipUndefined()
 					.returning('block.id', 'block.updated_at');
 				for (const row of rows) {
 					const date = row.updated_at.toISOString();
