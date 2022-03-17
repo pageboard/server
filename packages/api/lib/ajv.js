@@ -13,7 +13,7 @@ const ajvApiSettings = {
 	removeAdditional: false,
 	formats: {
 		singleline: /^[^\n\r]*$/,
-		pathname: /^(\/[\w-.]*)+$/,
+		pathname: /^(\/[\w.-]*)+$/,
 		page: /^((\/[a-zA-Z0-9-]*)+)$|^(\/\.well-known\/\d{3})$/,
 		id: /^[A-Za-z0-9]+$/,
 		name: /^\w+$/, // this should be the "type" format
