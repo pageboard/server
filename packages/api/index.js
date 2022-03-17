@@ -5,11 +5,13 @@ const bodyParser = require.lazy('body-parser');
 const jsonPath = require.lazy('@kapouer/path');
 
 const Packager = require.lazy('./lib/packager');
-const { validate } = require('./lib/ajv');
+const { validate, createValidator } = require('./lib/ajv');
 const jsonDoc = require.lazy('./lib/json-doc');
 
 const Href = require('./models/href');
 const Block = require('./models/block');
+
+Block.createValidator = createValidator;
 
 
 module.exports = class ApiModule {

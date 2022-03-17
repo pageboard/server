@@ -100,8 +100,6 @@ InstancePatchObjectOperation.prototype.convertFieldExpressionsToRaw = PatchObjec
 
 
 exports.Model = class CommonModel extends Model {
-	static createValidator = require('../lib/ajv').createValidator;
-
 	$query(trx) {
 		if (this.trx && !trx) {
 			// eslint-disable-next-line no-console
