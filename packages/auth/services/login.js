@@ -178,7 +178,7 @@ module.exports = class LoginModule {
 			token: {
 				title: 'Token',
 				type: 'string',
-				pattern: '^[\\s\\d]{1,10}$'
+				pattern: /^[\s\d]{1,10}$/.source
 			},
 			grant: {
 				title: 'Grant',
