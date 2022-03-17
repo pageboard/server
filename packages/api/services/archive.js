@@ -126,7 +126,7 @@ module.exports = class ArchiveService {
 			file: {
 				title: 'File name',
 				type: 'string',
-				pattern: '^[\\w-]+\\.json$',
+				pattern: /^[\w-]+\.json$/.source,
 				nullable: true
 			}
 		}
