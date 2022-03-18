@@ -5,7 +5,7 @@ const bodyParser = require.lazy('body-parser');
 const jsonPath = require.lazy('@kapouer/path');
 
 const Packager = require.lazy('./lib/packager');
-const Validation = require('./lib/ajv');
+const Validation = require('./lib/validation');
 const jsonDoc = require.lazy('./lib/json-doc');
 
 const Href = require('./models/href');
