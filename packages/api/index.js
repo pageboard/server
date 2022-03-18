@@ -5,14 +5,11 @@ const bodyParser = require.lazy('body-parser');
 const jsonPath = require.lazy('@kapouer/path');
 
 const Packager = require.lazy('./lib/packager');
-const { validate, createValidator } = require('./lib/ajv');
+const Validation = require('./lib/ajv');
 const jsonDoc = require.lazy('./lib/json-doc');
 
 const Href = require('./models/href');
 const Block = require('./models/block');
-
-Block.createValidator = createValidator;
-
 
 module.exports = class ApiModule {
 	static name = 'api';
@@ -25,6 +22,8 @@ module.exports = class ApiModule {
 	#packager;
 
 	constructor(app, opts) {
+		this.validation = new Validation(app, opts);
+		Block.createValidator = (ajv) => this.validation.createValidator(ajv);
 		this.app = app;
 
 		this.opts = Object.assign(opts, {
@@ -58,7 +57,7 @@ module.exports = class ApiModule {
 
 	validate(schema, data, inst) {
 		try {
-			data = validate(schema, data, inst || {});
+			data = this.validation.validate(schema, data, inst || {});
 		} catch (err) {
 			if (!inst) return false;
 			else throw err;
