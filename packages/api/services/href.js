@@ -311,11 +311,11 @@ module.exports = class HrefService {
 
 		const qBlocks = (q) => {
 			const qList = [
-				collectBlockUrls(req, data, 0)
+				this.#collectBlockUrls(req, data, 0)
 			];
 			if (data.content) {
-				qList.push(collectBlockUrls(req, data, 1));
-				qList.push(collectBlockUrls(req, data, 2));
+				qList.push(this.#collectBlockUrls(req, data, 1));
+				qList.push(this.#collectBlockUrls(req, data, 2));
 			}
 			q.unionAll(qList, true);
 		};
@@ -333,6 +333,54 @@ module.exports = class HrefService {
 			q.select();
 		}
 		return q;
+	}
+
+	#collectBlockUrls({ Block, site, trx }, data, level) {
+		const hrefs = site.$model.hrefs;
+		const types = Object.keys(hrefs);
+		const table = ['root', 'root:block', 'root:shared:block'][level];
+
+		const qRoot = Block.query(trx)
+			.select(table + '.*')
+			.where('block._id', site._id);
+		const blockRelation = {
+			$relation: 'children',
+			$modify: [(q) => {
+				q.whereIn('type', types);
+			}]
+		};
+		const rel = {
+			root: {
+				$relation: 'children',
+				$modify: [(q) => {
+					q.where('standalone', true);
+				}]
+			}
+		};
+		if (level == 1) {
+			rel.root.block = blockRelation;
+		}
+		if (level == 2) {
+			rel.root.shared = {
+				$relation: 'children',
+				block: blockRelation,
+				$modify: [(q) => {
+					q.where('standalone', true);
+				}]
+			};
+			delete rel.root.block;
+		}
+		qRoot.joinRelated(rel);
+		if (data.url) {
+			qRoot.whereIn('root.type', site.$pages)
+				.where(ref('root.data:url').castText(), data.url);
+		} else if (data.id != null) {
+			let list = data.id;
+			if (!Array.isArray(list)) list = [data.id];
+			list = list.filter(item => item != site.id);
+			if (list.length) qRoot.whereIn('root.id', list);
+		}
+		return qRoot;
 	}
 
 	async reinspect(req, data) {
@@ -445,53 +493,6 @@ module.exports = class HrefService {
 	}
 };
 
-
-function collectBlockUrls({ Block, site, trx }, data, level) {
-	const hrefs = site.$model.hrefs;
-	const types = Object.keys(hrefs);
-	const table = ['root', 'root:block', 'root:shared:block'][level];
-
-	const qRoot = Block.query(trx)
-		.select(table + '.*')
-		.where('block._id', site._id);
-	const blockRelation = {
-		$relation: 'children',
-		$modify: [(q) => {
-			q.whereIn('type', types);
-		}]
-	};
-	const rel = {
-		root: {
-			$relation: 'children',
-			$modify: [(q) => {
-				q.where('standalone', true);
-			}]
-		}
-	};
-	if (level == 1) {
-		rel.root.block = blockRelation;
-	}
-	if (level == 2) {
-		rel.root.shared = {
-			$relation: 'children',
-			block: blockRelation,
-			$modify: [(q) => {
-				q.where('standalone', true);
-			}]
-		};
-		delete rel.root.block;
-	}
-	qRoot.joinRelated(rel);
-	if (data.url) {
-		qRoot.whereIn('root.type', site.$pages)
-			.where(ref('root.data:url').castText(), data.url);
-	} else if (data.id != null) {
-		let list = data.id;
-		if (!Array.isArray(list)) list = [data.id];
-		qRoot.whereIn('root.id', list);
-	}
-	return qRoot;
-}
 
 
 exports.gc = function ({ trx }, days) {

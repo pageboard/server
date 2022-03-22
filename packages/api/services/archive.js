@@ -27,17 +27,15 @@ module.exports = class ArchiveService {
 		);
 	}
 
-	async export({ site, trx, res, Href }, data) {
-		// TODO allow export of a selection of pages and/or standalones
-		// (by types, by url, by id...)
-		const id = site.id;
+	async export(req, { file, ids = [] }) {
+		const { site, trx, res, Block } = req;
+		const { id } = site;
+		if (!ids.length) ids.push(id);
 		const filepath = file ?? `${id}-${fileStamp()}.json`;
 		const counts = {
 			users: 0,
 			blocks: 0,
-			relations: 0,
-			hrefs: 0,
-			standalones: 0
+			hrefs: 0
 		};
 
 		let out;
@@ -55,62 +53,72 @@ module.exports = class ArchiveService {
 		out.once('error', finished.reject);
 		const jstream = ndjson.stringify();
 		jstream.pipe(out);
-		jstream.write(site);
 
-		const blocks = await site.$relatedQuery('children', trx)
-			.selectWithout('tsv', '_id')
-			.withGraphFetched('[children.^(children),parents(users)]')
-			.modifiers({
-				children(q) {
-					return q.select('id');
-				},
-				users(q) {
-					return q.selectWithout('_id', 'tsv').where('type', 'user');
+		const users = new Set();
+		const singles = new Set();
+		const fetchBlocks = async (ids) => {
+			const blocks = await Block.query(trx).whereIn('id', ids)
+				.withGraphFetched(`[
+					children(children),
+					children(shared) as shared,
+					parents(users)
+				]`)
+				.modifiers({
+					children(q) {
+						return q.where('standalone', false);
+					},
+					shared(q) {
+						return q.where('standalone', true).select('block.id');
+					},
+					users(q) {
+						return q.where('type', 'user');
+					}
+				});
+			for (const block of blocks) {
+				if (block.standalone) counts.blocks += 1;
+				const {
+					parents,
+					children,
+					shared
+				} = block;
+				block.parents = parents.map(parent => {
+					const { id } = parent;
+					if (!users.has(id)) {
+						jstream.write(parent);
+						users.add(id);
+					}
+					return id;
+				});
+				const cPare = parents.length;
+				if (cPare == 0) delete block.parents;
+				else counts.users += cPare;
+
+				block.children = children.map(child => {
+					jstream.write(child);
+					return child.id;
+				});
+				delete block.shared;
+				const uniques = [];
+				for (const { id } of shared) {
+					block.children.push(id);
+					if (!singles.has(id)) {
+						uniques.push(id);
+						singles.add(id);
+					}
 				}
-			});
-		const depthIds = {};
-		function trav(b, d) {
-			const id = b.id;
-			if (id) depthIds[id] = Math.max(depthIds[id] || 0, d);
-			for (const c of b.children) trav(c, d + 1);
-		}
-		trav({ children: blocks }, 0);
+				await fetchBlocks(uniques);
 
-		blocks.sort((a, b) => {
-			return depthIds[b.id] - depthIds[a.id];
-		});
-		const users = [];
-		for (const block of blocks) {
-			if (block.standalone) counts.standalones += 1;
-			block.parents = block.parents.map(parent => {
-				if (!users.some(item => item.id == parent.id)) {
-					users.push(parent);
-				}
-				return parent.id;
-			});
-			if (block.parents.length == 0) delete block.parents;
-
-			block.children = (block.children || []).map(item => item.id);
-			const cLen = block.children.length;
-			if (cLen == 0) {
-				delete block.children;
-			} else {
-				counts.relations += cLen;
+				const cChil = block.children.length;
+				if (cChil == 0) delete block.children;
+				jstream.write(block);
 			}
-		}
-		counts.users = users.length;
-		counts.blocks = blocks.length - counts.standalones;
-		for (const user of users) jstream.write(user);
-		for (const block of blocks) jstream.write(block);
+		};
+		await fetchBlocks(ids);
 
-		const hrefs = ids.length == 0
-			? await Href.query(trx)
-				.whereSite(site.id)
-				.select()
-			: await req.call('href.collect', {
-				id: ids,
-				content: true
-			});
+		const hrefs = await req.call('href.collect', {
+			id: ids,
+			content: true
+		});
 		counts.hrefs = hrefs.length;
 		for (const href of hrefs) {
 			jstream.write(href);
@@ -128,6 +136,14 @@ module.exports = class ArchiveService {
 				type: 'string',
 				pattern: /^[\w-]+\.json$/.source,
 				nullable: true
+			},
+			ids: {
+				title: 'List of id',
+				type: 'array',
+				items: {
+					type: "string",
+					format: 'id'
+				}
 			}
 		}
 	};
