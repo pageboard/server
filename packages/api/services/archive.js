@@ -81,26 +81,34 @@ module.exports = class ArchiveService {
 					children,
 					shared
 				} = block;
-				block.parents = parents.map(parent => {
-					const { id } = parent;
+				delete block.children;
+				delete block.parents;
+				delete block.shared;
+				if (block.type == "site") {
+					jstream.write(block);
+				}
+				for (let i = 0; i < parents.length; i++) {
+					const item = parents[i];
+					const { id } = item;
 					if (!users.has(id)) {
-						jstream.write(parent);
+						jstream.write(item);
 						users.add(id);
 					}
-					return id;
-				});
-				const cPare = parents.length;
-				if (cPare == 0) delete block.parents;
-				else counts.users += cPare;
-
-				block.children = children.map(child => {
-					jstream.write(child);
-					return child.id;
-				});
-				delete block.shared;
+					parents[i] = id;
+				}
+				counts.users += parents.length;
+				if (parents.length > 0) {
+					block.parents = parents;
+				}
+				for (let i = 0; i < children.length; i++) {
+					const item = children[i];
+					const { id } = item;
+					jstream.write(item);
+					children[i] = id;
+				}
 				const uniques = [];
 				for (const { id } of shared) {
-					block.children.push(id);
+					children.push(id);
 					if (!singles.has(id)) {
 						uniques.push(id);
 						singles.add(id);
@@ -108,9 +116,12 @@ module.exports = class ArchiveService {
 				}
 				await fetchBlocks(uniques);
 
-				const cChil = block.children.length;
-				if (cChil == 0) delete block.children;
-				jstream.write(block);
+				if (children.length > 0) {
+					block.children = children;
+				}
+				if (block.type != "site") {
+					jstream.write(block);
+				}
 			}
 		};
 		await fetchBlocks(ids);
