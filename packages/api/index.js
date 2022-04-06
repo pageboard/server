@@ -51,8 +51,8 @@ module.exports = class ApiModule {
 		return this.#packager.run(...args);
 	}
 
-	async finishInstall(site, pkg, bundles) {
-		return this.#packager.finishInstall(site, pkg, bundles);
+	async finishInstall(site, pkg) {
+		return this.#packager.finishInstall(site, pkg);
 	}
 
 	validate(schema, data, inst) {

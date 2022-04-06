@@ -16,17 +16,19 @@ module.exports = class PageService {
 						type: 'write',
 						data: {}
 					},
-					meta: Object.assign({ services: site.$services }, site.$bundles.write.meta),
+					meta: Object.assign({
+						services: site.$pkg.services
+					}, site.$pkg.bundles.write.meta),
 					site: site.data,
 					commons: app.opts.commons
 				});
 			} else {
 				const data = await req.run('page.get', query);
-				const resources = site.$bundles.write.meta.resources;
+				const resources = site.$pkg.bundles.write.meta.resources;
 				if (dev && resources.develop) {
 					if (!data.meta) data.meta = { scripts: [] };
-					if (site.$bundles.user) {
-						data.meta.scripts.unshift(site.$bundles.user.meta.bundle);
+					if (site.$pkg.bundles.user) {
+						data.meta.scripts.unshift(site.$pkg.bundles.user.meta.bundle);
 					}
 					data.meta.scripts.unshift(resources.develop);
 					data.meta.writes = {
@@ -46,7 +48,7 @@ module.exports = class PageService {
 				// this must not be confused with page.lock
 				query.drafts = true;
 				if (!query.type) {
-					query.type = site.$pages;
+					query.type = site.$pkg.pages;
 				}
 			} else if (!query.type) {
 				query.type = ['page', 'blog'];
@@ -120,7 +122,7 @@ module.exports = class PageService {
 		if (wkp) {
 			obj.status = parseInt(wkp[1]);
 		}
-		let page = await this.#QueryPage(req).whereIn('page.type', site.$pages)
+		let page = await this.#QueryPage(req).whereIn('page.type', site.$pkg.pages)
 			.whereJsonText("page.data:url", data.url)
 			.select(
 				req.call('href.collect', {
@@ -152,7 +154,7 @@ module.exports = class PageService {
 		Object.assign(obj, {
 			item: page,
 			items: (page.children || []).concat(page.standalones || []),
-			meta: site.$bundles[page.type].meta,
+			meta: site.$pkg.bundles[page.type].meta,
 			links: links,
 			hrefs: page.hrefs
 		});
@@ -213,7 +215,7 @@ module.exports = class PageService {
 			? ''
 			: `AND (page.data->'nositemap' IS NULL OR (page.data->'nositemap')::BOOLEAN IS NOT TRUE)`;
 
-		const types = data.type || site.$pages;
+		const types = data.type || site.$pkg.pages;
 
 		const results = await trx.raw(`SELECT json_build_object(
 			'count', count,
@@ -252,7 +254,7 @@ module.exports = class PageService {
 				WHERE
 					site.type = 'site' AND site.id = ?
 					AND rs.parent_id = site._id AND block._id = rs.child_id
-					AND block.type NOT IN ('site', 'user', 'fetch', 'template', 'api_form', 'query_form', 'priv', 'settings', ${site.$pages.map(_ => '?').join(',')})
+					AND block.type NOT IN ('site', 'user', 'fetch', 'template', 'api_form', 'query_form', 'priv', 'settings', ${site.$pkg.pages.map(_ => '?').join(',')})
 					AND rp.child_id = block._id AND page._id = rp.parent_id
 					${drafts}
 					AND page.type IN (${types.map(_ => '?').join(',')})
@@ -262,7 +264,7 @@ module.exports = class PageService {
 		) AS foo GROUP BY count`, [
 			data.text,
 			site.id,
-			...site.$pages,
+			...site.$pkg.pages,
 			...types,
 			data.offset,
 			data.limit
@@ -333,7 +335,7 @@ module.exports = class PageService {
 				delete obj.item;
 			}
 		} else {
-			for (const type of req.site.$pages) {
+			for (const type of req.site.$pkg.pages) {
 				const schema = req.site.$schema(type);
 				els[type] = schema;
 			}
@@ -428,7 +430,7 @@ module.exports = class PageService {
 		const returning = {};
 		const dbPages = await site.$relatedQuery('children', trx)
 			.select('block.id', ref('block.data:url').as('url'))
-			.whereIn('block.type', site.$pages)
+			.whereIn('block.type', site.$pkg.pages)
 			.whereNotNull(ref('block.data:url'));
 		for (const page of pages.all) {
 			if (!page.data.url) {
@@ -634,7 +636,7 @@ function getParents({ site, trx }, url) {
 			ref('block.data:redirect').as('redirect'),
 			ref('block.data:title').as('title')
 		])
-		.whereIn('block.type', site.$pages)
+		.whereIn('block.type', site.$pkg.pages)
 		.whereJsonText('block.data:url', 'IN', urlParents)
 		.orderByRaw("length(block.data->>'url') DESC");
 }
@@ -642,7 +644,7 @@ function getParents({ site, trx }, url) {
 function listPages({ site, trx }, data) {
 	const q = site.$relatedQuery('children', trx)
 		.selectWithout('content')
-		.whereIn('block.type', data.type || site.$pages)
+		.whereIn('block.type', data.type || site.$pkg.pages)
 		.where('block.standalone', true);
 
 	if (!data.drafts) {
@@ -731,7 +733,7 @@ function applyUpdate(req, list) {
 	return list.reduce((p, block) => {
 		return p.then(() => {
 			if (block.id in blocksMap) block.updated_at = blocksMap[block.id];
-			if (req.site.$pages.includes(block.type)) {
+			if (req.site.$pkg.pages.includes(block.type)) {
 				return updatePage(req, block, blocksMap);
 			} else if (!block.updated_at) {
 				throw new HttpError.BadRequest(`Block is missing 'updated_at' ${block.id}`);
@@ -763,7 +765,7 @@ async function updatePage({ site, trx, Block, Href }, page, sideEffects) {
 	if (!sideEffects) sideEffects = {};
 	const dbPage = await site.$relatedQuery('children', trx)
 		.where('block.id', page.id)
-		.whereIn('block.type', page.type ? [page.type] : site.$pages)
+		.whereIn('block.type', page.type ? [page.type] : site.$pkg.pages)
 		.select(ref('block.data:url').as('url'))
 		.first().throwIfNotFound();
 

@@ -87,7 +87,6 @@ module.exports = class StaticsModule {
 		const buildDir = Path.join(pkg.dir, "builds");
 		const buildPath = Path.join(buildDir, buildFile);
 
-		const version = site.data.version ?? site.branch;
 		const outList = [];
 		const inputs = [];
 		list.forEach((url) => {
@@ -95,13 +94,13 @@ module.exports = class StaticsModule {
 			else inputs.push(urlToPath(this.opts.files, site.id, url));
 		});
 
-		const outUrl = `/.files/${version}/${buildFile}`;
+		const outUrl = `/.files/${site.data.version ?? site.$pkg.tag}/${buildFile}`;
 		outList.push(outUrl);
 		const output = urlToPath(this.opts.files, site.id, outUrl);
 
 		await fs.mkdir(buildDir, { recursive: true });
 
-		if (version != site.branch) try {
+		if (site.data.version) try {
 			// not in branch mode, files are already built, use them
 			await fs.stat(buildPath);
 			await Promise.all([

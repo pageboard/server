@@ -4,10 +4,101 @@ const Traverse = require('json-schema-traverse');
 const crypto = require('crypto');
 
 class Block extends Model {
-	$beforeInsert() {
-		if (!this.id) return Block.genId().then((id) => {
-			this.id = id;
+	static useLimitInFirst = true;
+
+	static tableName = 'block';
+
+	static idColumn = '_id';
+
+	static jsonSchema = {
+		type: 'object',
+		required: ['type'],
+		$id: '/api/blocks',
+		properties: {
+			id: {
+				type: 'string',
+				format: 'id'
+			},
+			type: {
+				type: 'string',
+				format: 'name'
+			},
+			data: {
+				type: 'object'
+			},
+			expr: {
+				type: 'object',
+				nullable: true
+			},
+			content: {
+				type: 'object'
+			},
+			standalone: { // a standalone block can have 0 or multiple parents
+				type: 'boolean',
+				default: false
+			},
+			updated_at: {
+				format: 'date-time',
+				type: 'string'
+			},
+			lock: {
+				type: 'object',
+				nullable: true,
+				properties: {
+					read: {
+						type: 'array',
+						nullable: true,
+						items: {
+							type: 'string',
+							format: 'grant'
+						},
+						uniqueItems: true
+					},
+					write: {
+						type: 'array',
+						nullable: true,
+						items: {
+							type: 'string',
+							format: 'grant'
+						},
+						uniqueItems: true
+					}
+				}
+			}
+		}
+	};
+
+	// _id is removed in $formatJson
+	static columns = Object.keys(this.jsonSchema.properties).concat(['_id']);
+
+	static genId(length) {
+		// similar function defined in pageboard-write#store.js
+		if (!length) length = 8;
+		return new Promise((resolve, reject) => {
+			crypto.randomBytes(length, (err, buffer) => {
+				if (err) reject(err);
+				else resolve(buffer.toString('hex'));
+			});
 		});
+	}
+
+	static genIdSync(length) {
+		if (!length) length = 8;
+		return crypto.randomBytes(length).toString('hex');
+	}
+
+	static QueryBuilder = class BlockQueryBuilder extends common.QueryBuilder {
+		whereSite(siteId) {
+			return this.joinRelated('parents')
+				.where('parents.type', 'site')
+				.where('parents.id', siteId);
+		}
+	};
+
+	async $beforeInsert() {
+		if (!this.id) {
+			this.id = await Block.genId();
+		}
 	}
 
 	$beforeUpdate() {
@@ -29,232 +120,175 @@ class Block extends Model {
 		return this.constructor.schema(type || this.type);
 	}
 
-	get $source() {
-		return this.$$source;
+	static normalizeContents(contents) {
+		if (!contents) return;
+		if (typeof contents == "string") contents = {
+			nodes: contents
+		};
+		if (!Array.isArray(contents)) {
+			if (contents.spec) {
+				contents = Object.assign({}, contents);
+				contents.nodes = contents.spec;
+				delete contents.spec;
+			}
+			if (!contents.nodes) {
+				// support old version
+				contents = Object.keys(contents).map((key) => {
+					let val = contents[key];
+					if (typeof val == "string") {
+						val = {nodes: val};
+					} else {
+						val = Object.assign({}, val);
+						if (val.spec) {
+							val.nodes = val.spec;
+							delete val.spec;
+						}
+					}
+					val.id = key;
+					return val;
+				});
+			} else {
+				contents = [contents];
+			}
+		}
+		return contents;
 	}
 
-	set $source(source) {
-		this.$$source = source;
+	static createNotFoundError = function(data) {
+		return new HttpError.NotFound("Block not found");
+	};
+
+	static relationMappings = {
+		children: {
+			relation: Model.ManyToManyRelation,
+			modelClass: this,
+			join: {
+				from: 'block._id',
+				through: {
+					from: "relation.parent_id",
+					to: "relation.child_id"
+				},
+				to: 'block._id'
+			}
+		},
+		parents: {
+			relation: Model.ManyToManyRelation,
+			modelClass: this,
+			join: {
+				from: 'block._id',
+				through: {
+					from: "relation.child_id",
+					to: "relation.parent_id"
+				},
+				to: 'block._id'
+			}
+		},
+		hrefs: {
+			relation: Model.HasManyRelation,
+			modelClass: __dirname + '/href',
+			join: {
+				from: 'block._id',
+				to: 'href._parent_id'
+			}
+		}
+	};
+
+	static initSite(block, pkg) {
+		const { eltsMap, groups, tag } = pkg;
+		const types = Object.keys(eltsMap);
+		const schema = Object.assign({}, Block.jsonSchema);
+		if (block.id != null) schema.$id += `/${block.id}`;
+		const blockProps = schema.properties;
+		delete schema.properties;
+
+		schema.select = {
+			"$data": '0/type'
+		};
+		schema.selectCases = {};
+
+		const hrefs = {};
+
+		types.forEach((type) => {
+			const element = Object.assign({
+				properties: {},
+				contents: {}
+			}, eltsMap[type]);
+			const hrefsList = [];
+			findHrefs(element, hrefsList);
+			if (hrefsList.length) hrefs[type] = hrefsList;
+
+			Traverse(element, {
+				cb: (schema, pointer, root, parentPointer, keyword, parent, name) => {
+					if (schema.type == "string" && schema.format) schema.coerce = true;
+				}
+			});
+
+			const standProp = element.standalone
+				? { standalone: Object.assign({}, blockProps.standalone, { default: true }) }
+				: {};
+
+			schema.selectCases[type] = {
+				$lock: element.$lock,
+				parents: element.parents,
+				upgrade: element.upgrade,
+				output: element.output,
+				standalone: element.standalone,
+				properties: Object.assign({}, blockProps, standProp, {
+					data: Object.assign({}, blockProps.data, {
+						properties: element.properties,
+						required: element.required || []
+					}),
+					content: Object.assign({}, blockProps.content, {
+						properties: contentsNames(Block.normalizeContents(element.contents))
+					})
+				})
+			};
+		});
+
+		const DomainBlock = class extends Block {
+			static relationMappings = cloneRelationMappings(this, Block);
+			static uniqueTag() {
+				return this.jsonSchema.$id;
+			}
+			static hrefs = hrefs;
+			static jsonSchema = schema;
+
+			#pkg = {
+				bundles: {},
+				pages: groups.page ?? [],
+				tag
+			};
+			get $pkg() {
+				return this.#pkg;
+			}
+			$clone(opts) {
+				const copy = super.$clone(opts);
+				Object.assign(copy.$pkg, this.$pkg);
+				return copy;
+			}
+		};
+		Object.assign(DomainBlock, Block);
+
+		const site = new DomainBlock();
+		Object.assign(site, block);
+		return site;
 	}
 }
 
 module.exports = Block;
 
-Block.useLimitInFirst = true;
-
-Block.tableName = 'block';
-
-Block.idColumn = '_id';
-
-Block.jsonSchema = {
-	type: 'object',
-	required: ['type'],
-	$id: '/api/blocks',
-	properties: {
-		id: {
-			type: 'string',
-			format: 'id'
-		},
-		type: {
-			type: 'string',
-			format: 'name'
-		},
-		data: {
-			type: 'object'
-		},
-		expr: {
-			type: 'object',
-			nullable: true
-		},
-		content: {
-			type: 'object'
-		},
-		standalone: { // a standalone block can have 0 or multiple parents
-			type: 'boolean',
-			default: false
-		},
-		updated_at: {
-			format: 'date-time',
-			type: 'string'
-		},
-		lock: {
-			type: 'object',
-			nullable: true,
-			properties: {
-				read: {
-					type: 'array',
-					nullable: true,
-					items: {
-						type: 'string',
-						format: 'grant'
-					},
-					uniqueItems: true
-				},
-				write: {
-					type: 'array',
-					nullable: true,
-					items: {
-						type: 'string',
-						format: 'grant'
-					},
-					uniqueItems: true
-				}
-			}
-		}
-	}
-};
-
-// _id is removed in $formatJson
-Block.columns = Object.keys(Block.jsonSchema.properties).concat(['_id']);
-
-Block.createNotFoundError = function(data) {
-	return new HttpError.NotFound("Block not found");
-};
-
-Block.relationMappings = {
-	children: {
-		relation: Model.ManyToManyRelation,
-		modelClass: Block,
-		join: {
-			from: 'block._id',
-			through: {
-				from: "relation.parent_id",
-				to: "relation.child_id"
-			},
-			to: 'block._id'
-		}
-	},
-	parents: {
-		relation: Model.ManyToManyRelation,
-		modelClass: Block,
-		join: {
-			from: 'block._id',
-			through: {
-				from: "relation.child_id",
-				to: "relation.parent_id"
-			},
-			to: 'block._id'
-		}
-	},
-	hrefs: {
-		relation: Model.HasManyRelation,
-		modelClass: __dirname + '/href',
-		join: {
-			from: 'block._id',
-			to: 'href._parent_id'
-		}
-	}
-};
-
-Block.extendSchema = function extendSchema(name, schemas) {
-	const types = Object.keys(schemas);
-	if (types.length === 0) return Block;
-	const schema = Object.assign({}, Block.jsonSchema);
-	if (name != null) schema.$id += `/${name}`;
-	const blockProps = schema.properties;
-	delete schema.properties;
-
-	schema.select = {
-		"$data": '0/type'
-	};
-	schema.selectCases = {};
-
-	const hrefs = {};
-
-	types.forEach((type) => {
-		const element = Object.assign({
-			properties: {},
-			contents: {}
-		}, schemas[type]);
-		const hrefsList = [];
-		findHrefs(element, hrefsList);
-		if (hrefsList.length) hrefs[type] = hrefsList;
-
-		Traverse(element, {
-			cb: (schema, pointer, root, parentPointer, keyword, parent, name) => {
-				if (schema.type == "string" && schema.format) schema.coerce = true;
-			}
-		});
-
-		const standProp = element.standalone
-			? { standalone: Object.assign({}, blockProps.standalone, { default: true }) }
-			: {};
-
-		schema.selectCases[type] = {
-			$lock: element.$lock,
-			parents: element.parents,
-			upgrade: element.upgrade,
-			output: element.output,
-			standalone: element.standalone,
-			properties: Object.assign({}, blockProps, standProp, {
-				data: Object.assign({}, blockProps.data, {
-					properties: element.properties,
-					required: element.required || []
-				}),
-				content: Object.assign({}, blockProps.content, {
-					properties: contentsNames(Block.normalizeContents(element.contents))
-				})
-			})
-		};
+function cloneRelationMappings(Target, Source) {
+	const smaps = Source.relationMappings;
+	const tmaps = Object.assign({}, smaps);
+	tmaps.children = Object.assign({}, smaps.children, {
+		modelClass: Target
 	});
-
-	const DomainBlock = class extends Block {
-		get installed() {
-			return true;
-		}
-	};
-	Object.assign(DomainBlock, Block);
-	const relmaps = Block.relationMappings;
-	DomainBlock.relationMappings = Object.assign({}, relmaps);
-	DomainBlock.relationMappings.children = Object.assign({}, relmaps.children, {
-		modelClass: DomainBlock
+	tmaps.parents = Object.assign({}, smaps.parents, {
+		modelClass: Target
 	});
-	DomainBlock.relationMappings.parents = Object.assign({}, relmaps.parents, {
-		modelClass: DomainBlock
-	});
-	DomainBlock.jsonSchema = schema;
-	DomainBlock.hrefs = hrefs;
+	return tmaps;
+}
 
-	delete DomainBlock.$$validator;
-	DomainBlock.uniqueTag = function() {
-		return schema.$id;
-	};
-	return DomainBlock;
-};
-
-Block.normalizeContents = function(contents) {
-	if (!contents) return;
-	if (typeof contents == "string") contents = {
-		nodes: contents
-	};
-	if (!Array.isArray(contents)) {
-		if (contents.spec) {
-			contents = Object.assign({}, contents);
-			contents.nodes = contents.spec;
-			delete contents.spec;
-		}
-		if (!contents.nodes) {
-			// support old version
-			contents = Object.keys(contents).map((key) => {
-				let val = contents[key];
-				if (typeof val == "string") {
-					val = {nodes: val};
-				} else {
-					val = Object.assign({}, val);
-					if (val.spec) {
-						val.nodes = val.spec;
-						delete val.spec;
-					}
-				}
-				val.id = key;
-				return val;
-			});
-		} else {
-			contents = [contents];
-		}
-	}
-	return contents;
-};
 function contentsNames(list) {
 	const props = {};
 	if (!list) return props;
@@ -288,31 +322,3 @@ function findHrefs(schema, list, root, array) {
 		}
 	}
 }
-
-/**
- * this is the only function in pageboard that is defined both for client and for server !!!
- * similar function is defined in pageboard-write#store.js
-*/
-Block.genId = function(length) {
-	if (!length) length = 8;
-	return new Promise((resolve, reject) => {
-		crypto.randomBytes(length, (err, buffer) => {
-			if (err) reject(err);
-			else resolve(buffer.toString('hex'));
-		});
-	});
-};
-
-Block.genIdSync = function(length) {
-	if (!length) length = 8;
-	return crypto.randomBytes(length).toString('hex');
-};
-
-Block.QueryBuilder = class BlockQueryBuilder extends common.QueryBuilder {
-	whereSite(siteId) {
-		return this.joinRelated('parents')
-			.where('parents.type', 'site')
-			.where('parents.id', siteId);
-	}
-};
-

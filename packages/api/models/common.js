@@ -17,21 +17,21 @@ const { isObject } = require(
 	)
 );
 
-const UpdateOperation = require(
+const { UpdateOperation } = require(
 	require('path').join(
 		require.resolve('objection'),
 		'..',
 		'queryBuilder/operations/UpdateOperation'
 	)
-).UpdateOperation;
+);
 
-const InstanceUpdateOperation = require(
+const { InstanceUpdateOperation } = require(
 	require('path').join(
 		require.resolve('objection'),
 		'..',
 		'queryBuilder/operations/InstanceUpdateOperation'
 	)
-).InstanceUpdateOperation;
+);
 
 class InstancePatchObjectOperation extends InstanceUpdateOperation {
 	async onAfter2(builder, result) {
@@ -48,54 +48,17 @@ class InstancePatchObjectOperation extends InstanceUpdateOperation {
 
 class PatchObjectOperation extends UpdateOperation {
 	onBuildKnex(knexBuilder, builder) {
+		// this works only if $formatDatabaseJson does not stringify objects
 		const json = this.model.$toDatabaseJson(builder);
 		const jsonPaths = asPaths(json, {}, "", true);
-		const convertedJson = this.convertFieldExpressionsToRaw(builder, jsonPaths);
-
-		knexBuilder.update(convertedJson);
-	}
-	convertFieldExpressionsToRaw(builder, json) {
-		const knex = builder.knex();
-		const convertedJson = {};
-
-		for (const key of Object.keys(json)) {
-			let val = json[key];
-
-			if (key.indexOf(':') > -1) {
-				// 'col:attr' : ref('other:lol') is transformed to
-				// "col" : raw(`jsonb_set("col", '{attr}', to_jsonb("other"#>'{lol}'), true)`)
-
-				const parsed = ref(key);
-				const jsonRefs = '{'
-					+ parsed.parsedExpr.access.map(it => it.ref).join(',')
-					+ '}';
-				let valuePlaceholder = '?';
-
-				if (isKnexQueryBuilder(val) || isKnexRaw(val)) {
-					valuePlaceholder = 'to_jsonb(?)';
-				} else {
-					val = JSON.stringify(val);
-				}
-
-				convertedJson[
-					parsed.column
-				] = knex.raw(`jsonb_set_recursive(??, '${jsonRefs}', ${valuePlaceholder})`, [
-					convertedJson[parsed.column] || parsed.column,
-					val
-				]);
-
-				delete this.model[key];
-			} else {
-				convertedJson[key] = val;
-			}
-		}
-
-		return convertedJson;
+		const convertedJson = convertFieldExpressionsToRaw(
+			builder, this.model, jsonPaths
+		);
+		return knexBuilder.update(convertedJson);
 	}
 }
 
 InstancePatchObjectOperation.prototype.onBuildKnex = PatchObjectOperation.prototype.onBuildKnex;
-InstancePatchObjectOperation.prototype.convertFieldExpressionsToRaw = PatchObjectOperation.prototype.convertFieldExpressionsToRaw;
 
 
 
@@ -144,6 +107,12 @@ exports.Model = class CommonModel extends Model {
 		delete superJson._id;
 		return superJson;
 	}
+
+	$formatDatabaseJson(json) {
+		// patchObject can only work on unstringified json
+		// and pg takes care of it anyway ?
+		return json;
+	}
 };
 
 exports.QueryBuilder = class CommonQueryBuilder extends QueryBuilder {
@@ -180,6 +149,8 @@ exports.QueryBuilder = class CommonQueryBuilder extends QueryBuilder {
 		args.unshift(ref(a).castText());
 		return this.where(...args);
 	}
+
+
 	patchObject(obj) {
 		const patchObjectOperation = this._patchObjectOperationFactory();
 		obj = Object.assign({}, obj);
@@ -351,4 +322,41 @@ function deepAssign(model, obj) {
 	});
 }
 
+function convertFieldExpressionsToRaw(builder, model, json) {
+	const knex = builder.knex();
+	const convertedJson = {};
 
+	for (const key of Object.keys(json)) {
+		let val = json[key];
+
+		if (key.indexOf(':') > -1) {
+			// 'col:attr' : ref('other:lol') is transformed to
+			// "col" : raw(`jsonb_set("col", '{attr}', to_jsonb("other"#>'{lol}'), true)`)
+
+			const parsed = ref(key);
+			const jsonRefs = '{'
+				+ parsed.parsedExpr.access.map(it => it.ref).join(',')
+				+ '}';
+			let valuePlaceholder = '?';
+
+			if (isKnexQueryBuilder(val) || isKnexRaw(val)) {
+				valuePlaceholder = 'to_jsonb(?)';
+			} else {
+				val = JSON.stringify(val);
+			}
+
+			convertedJson[
+				parsed.column
+			] = knex.raw(`jsonb_set_recursive(??, '${jsonRefs}', ${valuePlaceholder})`, [
+				convertedJson[parsed.column] || parsed.column,
+				val
+			]);
+
+			delete model[key];
+		} else {
+			convertedJson[key] = val;
+		}
+	}
+
+	return convertedJson;
+}

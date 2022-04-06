@@ -76,7 +76,7 @@ module.exports = class AuthModule {
 	}
 
 	install(site) {
-		site.$grants = this.#grantsLevels(site.constructor);
+		site.$pkg.grants = this.#grantsLevels(site.constructor);
 	}
 
 	headers(res, list) {
@@ -111,12 +111,12 @@ module.exports = class AuthModule {
 		let minLevel = Infinity;
 		const grants = user.grants || [];
 		grants.forEach((grant) => {
-			minLevel = Math.min(site.$grants[grant] || Infinity, minLevel);
+			minLevel = Math.min(site.$pkg.grants[grant] || Infinity, minLevel);
 		});
 
 		let granted = false;
 		list.forEach((lock) => {
-			const lockIndex = site.$grants[lock] || -1;
+			const lockIndex = site.$pkg.grants[lock] || -1;
 			if (lock.startsWith('id-')) {
 				if (`id-${user.id}` == lock) granted = true;
 				lock = 'id-:id';
@@ -126,8 +126,8 @@ module.exports = class AuthModule {
 			if (!locks.includes(lock)) locks.push(lock);
 		});
 		locks.sort((a, b) => {
-			const al = site.$grants[a] || -1;
-			const bl = site.$grants[b] || -1;
+			const al = site.$pkg.grants[a] || -1;
+			const bl = site.$pkg.grants[b] || -1;
 			if (al == bl) return 0;
 			else if (al < bl) return 1;
 			else if (al > bl) return -1;

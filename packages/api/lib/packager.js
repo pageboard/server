@@ -21,7 +21,7 @@ module.exports = class Packager {
 		sortPriority(allDirs);
 		sortPriority(allElts);
 
-		const bufs = await Promise.all(allElts.map((eltObj) => {
+		const bufs = await Promise.all(allElts.map(eltObj => {
 			return fs.readFile(eltObj.path);
 		}));
 		const elts = {};
@@ -79,28 +79,24 @@ module.exports = class Packager {
 			}
 		}
 
-		const DomainBlock = this.Block.extendSchema(id, eltsMap);
-		if (id) {
-			pkg.eltsMap = eltsMap;
-			pkg.groups = groups;
-			site.$pages = groups.page;
-			site.$bundles = {};
-			site.constructor = DomainBlock;
-		}
-		return bundles;
+
+		pkg.eltsMap = eltsMap;
+		pkg.groups = groups;
+		pkg.bundles = bundles;
+		return this.Block.initSite(site, pkg);
 	}
 
-	async finishInstall(site, pkg, bundles) {
-		const { eltsMap } = pkg;
+	async finishInstall(site, pkg) {
+		const { eltsMap, bundles } = pkg;
 		await Promise.all(Object.entries(bundles).map(
 			([name, { list }]) => this.#bundle(site, pkg, eltsMap[name], list)
 		));
-		site.$services = await this.#bundleSource(site, pkg, null, 'services', this.app.services);
-		site.$scripts = eltsMap.site.scripts.slice();
-		site.$resources = Object.assign({}, eltsMap.site.resources);
-		site.$stylesheets = eltsMap.site.stylesheets.slice();
+		site.$pkg.services = await this.#bundleSource(
+			site, pkg, null, 'services', this.app.services
+		);
 		// clear up some space
 		delete pkg.eltsMap;
+		delete pkg.bundles;
 	}
 
 	async #bundle(site, pkg, rootEl, cobundles = []) {
@@ -123,7 +119,7 @@ module.exports = class Packager {
 		});
 		const metaEl = Object.assign({}, rootEl);
 		const metaKeys = Object.keys(eltsMap);
-		site.$bundles[rootEl.name] = {
+		site.$pkg.bundles[rootEl.name] = {
 			meta: metaEl,
 			elements: metaKeys
 		};
@@ -148,7 +144,7 @@ module.exports = class Packager {
 
 		for (const el of cobundles) {
 			if (el.group == "page") {
-				site.$bundles[el.name] = {
+				site.$pkg.bundles[el.name] = {
 					meta: Object.assign({}, el, {
 						scripts: metaEl.scripts,
 						stylesheets: metaEl.stylesheets,
@@ -164,13 +160,15 @@ module.exports = class Packager {
 	async #bundleSource(site, pkg, prefix, name, obj) {
 		if (prefix && prefix.startsWith('ext-')) return;
 		const filename = [prefix, name].filter(Boolean).join('-') + '.js';
-		const version = site.data.version ?? site.branch;
-		const sourceUrl = `/.files/${version}/${filename}`;
-		const sourcePath = this.app.statics.resolve(site.id, sourceUrl);
-		const str = `Pageboard.${name} = Object.assign(Pageboard.${name} || {}, ${toSource(obj)});`;
-		await fs.writeFile(sourcePath, str);
-		const paths = await this.app.statics.bundle(site, pkg, [sourceUrl], filename);
-		return paths[0];
+		const tag = site.data.version ?? site.$pkg.tag;
+		if (tag != null) {
+			const sourceUrl = `/.files/${tag}/${filename}`;
+			const sourcePath = this.app.statics.resolve(site.id, sourceUrl);
+			const str = `Pageboard.${name} = Object.assign(Pageboard.${name} || {}, ${toSource(obj)});`;
+			await fs.writeFile(sourcePath, str);
+			const paths = await this.app.statics.bundle(site, pkg, [sourceUrl], filename);
+			return paths[0];
+		}
 	}
 
 	#listDependencies(pkg, rootGroup, el, list = [], gDone = {}, eDone = {}) {

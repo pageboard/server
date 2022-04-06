@@ -65,7 +65,7 @@ module.exports = class HrefService {
 				if (href) {
 					const obj = await req.run('block.search', {
 						parent: {
-							type: site.$pages,
+							type: site.$pkg.pages,
 							data: {
 								url: url
 							}
@@ -177,7 +177,7 @@ module.exports = class HrefService {
 			// consider it's a page
 			try {
 				const { item } = await req.run('block.find', {
-					type: site.$pages,
+					type: site.$pkg.pages,
 					data: {
 						url: url.pathname
 					}
@@ -372,7 +372,7 @@ module.exports = class HrefService {
 		}
 		qRoot.joinRelated(rel);
 		if (data.url) {
-			qRoot.whereIn('root.type', site.$pages)
+			qRoot.whereIn('root.type', site.$pkg.pages)
 				.where(ref('root.data:url').castText(), data.url);
 		} else if (data.id != null) {
 			let list = data.id;
@@ -394,7 +394,7 @@ module.exports = class HrefService {
 					return data.types.includes(type);
 				});
 			});
-			if (site.$pages.includes(type)) flist.push({
+			if (site.$pkg.pages.includes(type)) flist.push({
 				path: 'url',
 				types: ['link']
 			});

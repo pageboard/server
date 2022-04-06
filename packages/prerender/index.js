@@ -162,7 +162,7 @@ module.exports = class PrerenderModule {
 		let type = ext.substring(1) || "page";
 		const fake = type == "rss" ? "page" : type;
 
-		if (!site.$pages.includes(fake)) {
+		if (!site.$pkg.pages.includes(fake)) {
 			type = 'page';
 		} else if (ext.length) {
 			pathname = pathname.slice(0, -ext.length);
@@ -284,9 +284,9 @@ module.exports = class PrerenderModule {
 			}
 			plugins.push('serialize');
 
-			const siteBundle = site.$bundles.site.meta;
+			const siteScripts = site.$pkg.bundles.site?.meta?.scripts ?? [];
 
-			const scripts = (siteBundle.scripts || []).map((src) => {
+			const scripts = siteScripts.map(src => {
 				return `<script defer src="${src}"></script>`;
 			});
 
