@@ -1,10 +1,16 @@
 module.exports = function(page, settings, request, response) {
 	page.when('idle', () => {
-		if (settings.output == null) return page.run((done) => {
-			/* global Page */
-			Page.finish().then((state) => {
-				if (Page.serialize) return Page.serialize(state);
-				else return {
+		if (settings.output == null) return page.run(done => {
+			const { Page } = window;
+			if (!Page) {
+				const err = new Error("blank site");
+				err.statusCode = 501;
+				return done(err);
+			}
+			Page.finish().then(state => {
+				if (Page.serialize) {
+					return Page.serialize(state);
+				} else return {
 					mime: "text/html",
 					body: '<!DOCTYPE html>\n' + document.documentElement.outerHTML
 				};
