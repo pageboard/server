@@ -267,7 +267,6 @@ class Block extends Model {
 				return copy;
 			}
 		};
-		Object.assign(DomainBlock, Block);
 
 		const site = new DomainBlock();
 		Object.assign(site, block);
