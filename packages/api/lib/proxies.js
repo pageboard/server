@@ -35,7 +35,7 @@ class AbsoluteProxy {
 	}
 	get(arr, key) {
 		if (['push', 'unshift'].includes(key)) {
-			const context = this.context;
+			const { context } = this;
 			return function () {
 				const args = absolutePaths(Array.from(arguments), context);
 				return Array.prototype[key].apply(arr, args);
@@ -77,22 +77,22 @@ class EltProxy {
 	}
 }
 
-function absolutePaths(list, file) {
+function absolutePaths(list, context) {
 	if (!list) return;
 	if (typeof list == "string") list = [list];
 	const obj = Array.isArray(list) ? null : {};
 	const arr = Object.entries(list).map(([key, path]) => {
 		if (path == null) {
-			console.warn("null path in", file);
+			console.warn("null path in", context);
 			return;
 		}
 		if (path.startsWith('/') || /^(http|https|data):/.test(path)) {
 			// do nothing
-		} else if (!file.mount) {
-			console.error("Cannot mount", path, "from element defined in", file.path);
+		} else if (!context.mount) {
+			console.error("Cannot mount", path, "from element defined in", context.path);
 			return;
 		} else {
-			path = join(file.mount, path);
+			path = join(context.mount, path);
 		}
 		if (obj) obj[key] = path;
 		else return path;
