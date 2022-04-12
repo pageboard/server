@@ -21,18 +21,14 @@ module.exports = class Packager {
 		sortPriority(allDirs);
 		sortPriority(allElts);
 
-		const bufs = await Promise.all(allElts.map(eltObj => {
-			return fs.readFile(eltObj.path);
-		}));
 		const elts = {};
 		const names = [];
-		const context = {};
-		bufs.forEach((buf, i) => {
-			const path = allElts[i].path;
-			context.mount = getMountPath(path, id, allDirs);
-			context.path = path;
-			loadFromFile(buf, elts, names, context);
-		});
+		for (const eltObj of allElts) {
+			const { path } = eltObj;
+			const buf = await fs.readFile(path);
+			const mount = getMountPath(path, id, allDirs);
+			loadFromFile(buf, elts, names, { mount, path });
+		}
 		const eltsMap = {};
 		const groups = {};
 		const bundles = {};
