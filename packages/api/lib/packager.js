@@ -23,11 +23,13 @@ module.exports = class Packager {
 
 		const elts = {};
 		const names = [];
+		const context = {};
 		for (const eltObj of allElts) {
 			const { path } = eltObj;
 			const buf = await fs.readFile(path);
 			const mount = getMountPath(path, id, allDirs);
-			loadFromFile(buf, elts, names, { mount, path });
+			Object.assign(context, { mount, path });
+			loadFromFile(buf, elts, names, context);
 		}
 		const eltsMap = {};
 		const groups = {};
