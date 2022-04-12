@@ -129,7 +129,7 @@ module.exports = class SiteService {
 	static add = {
 		title: 'Add site',
 		$action: 'add',
-		required: ['id', 'data'],
+		required: ['id'],
 		properties: {
 			id: {
 				title: 'ID',
@@ -138,7 +138,8 @@ module.exports = class SiteService {
 			},
 			data: {
 				title: 'Data',
-				type: 'object'
+				type: 'object',
+				default: {}
 			}
 		}
 	};
