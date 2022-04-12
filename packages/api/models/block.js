@@ -108,9 +108,9 @@ class Block extends Model {
 	static schema(path) {
 		const list = path.split('.');
 		const type = list.shift();
-		let sch = this.jsonSchema.selectCases && this.jsonSchema.selectCases[type] || {};
+		let sch = this.jsonSchema.selectCases?.[type] ?? {};
 		for (let i = 0; i < list.length; i++) {
-			sch = sch.properties && sch.properties[list[i]];
+			sch = sch.properties?.[list[i]];
 			if (!sch) throw new Error("Schema not found: " + path);
 		}
 		return sch;
