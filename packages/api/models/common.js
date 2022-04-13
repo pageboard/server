@@ -109,8 +109,9 @@ exports.Model = class CommonModel extends Model {
 	}
 
 	$formatDatabaseJson(json) {
+		// objection 3 stringifies json columns, but
 		// patchObject can only work on unstringified json
-		// and pg takes care of it anyway ?
+		// and pg driver serializes them anyway.
 		return json;
 	}
 };
