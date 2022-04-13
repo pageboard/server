@@ -3,19 +3,26 @@ const Ajv = require('ajv');
 const AjvKeywords = require('ajv-keywords');
 const AjvFormats = require("ajv-formats");
 
-const AjvCustomFormats = {
-	singleline: /^[^\n\r]*$/,
-	pathname: /^(\/[\w.-]*)+$/,
-	page: /^((\/[a-zA-Z0-9-]*)+)$|^(\/\.well-known\/\d{3})$/,
-	id: /^[A-Za-z0-9]+$/,
-	name: /^\w+$/, // this should be the "type" format
-	grant: /^[a-z0-9-]+$/ // this should be the name format !
-};
 
 
 module.exports = class Validation {
 	#validatorWithDefaults;
 	#validatorNoDefaults;
+
+	static AjvOptions = {
+		$data: true,
+		allErrors: true,
+		ownProperties: true,
+		coerceTypes: 'array',
+		formats: {
+			singleline: /^[^\n\r]*$/,
+			pathname: /^(\/[\w.-]*)+$/,
+			page: /^((\/[a-zA-Z0-9-]*)+)$|^(\/\.well-known\/\d{3})$/,
+			id: /^[A-Za-z0-9]+$/,
+			name: /^\w+$/, // this should be the "type" format
+			grant: /^[a-z0-9-]+$/ // this should be the name format !
+		}
+	};
 
 	constructor(app, opts) {
 		this.app = app;
@@ -39,30 +46,20 @@ module.exports = class Validation {
 	createValidator() {
 		return new AjvValidator({
 			onCreateAjv: (ajv) => this.#setupAjv(ajv),
-			options: {
-				$data: true,
-				allErrors: true,
-				strictSchema: "log",
+			options: Object.assign({
+				strictSchema: this.app.env == "dev" ? "log" : false,
 				validateSchema: false,
-				ownProperties: true,
-				coerceTypes: 'array',
-				removeAdditional: "all",
-				formats: AjvCustomFormats
-			}
+				removeAdditional: "all"
+			}, Validation.AjvOptions),
 		});
 	}
 	#createSettings(opts) {
 		return Object.assign({
-			$data: true,
-			allErrors: true,
 			strictSchema: this.app.env == "dev" ? "log" : false,
 			validateSchema: true,
-			ownProperties: true,
-			coerceTypes: 'array',
-			removeAdditional: false,
-			formats: AjvCustomFormats,
+			removeAdditional: "all",
 			invalidDefaults: 'log'
-		}, opts);
+		}, Validation.AjvOptions, opts);
 	}
 	#customKeywords(ajv) {
 		ajv.addKeyword({
