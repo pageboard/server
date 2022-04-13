@@ -150,9 +150,6 @@ module.exports = class Validation {
 	validate(schema, data, inst) {
 		if (!schema) return data;
 		if (!inst.validate) {
-			if (!schema.type && schema.properties) {
-				schema.type = 'object';
-			}
 			if (schema.defaults === false) {
 				inst.validate = this.#validatorNoDefaults.compile(schema);
 			} else {

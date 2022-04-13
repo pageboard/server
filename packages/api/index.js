@@ -56,6 +56,9 @@ module.exports = class ApiModule {
 	}
 
 	validate(schema, data, inst) {
+		if (schema.properties && !schema.type) {
+			schema.type = 'object';
+		}
 		try {
 			data = this.validation.validate(schema, data, inst || {});
 		} catch (err) {
