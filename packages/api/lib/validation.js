@@ -1,8 +1,8 @@
 const { AjvValidator } = require('objection');
 const Ajv = require('ajv');
 const AjvKeywords = require('ajv-keywords');
-const AjvFormats = require("ajv-formats");
-
+const AjvFormats = require('ajv-formats');
+const { default: betterAjvErrors } = require('better-ajv-errors');
 
 
 module.exports = class Validation {
@@ -157,10 +157,7 @@ module.exports = class Validation {
 		if (inst.validate(data)) {
 			return data;
 		} else {
-			const messages = inst.validate.errors.map((err) => {
-				if (err.dataPath) return `${err.dataPath} ${err.message}`;
-				else return err.message;
-			}).join(',\n');
+			const messages = betterAjvErrors(schema, data, inst.validate.errors);
 			throw new HttpError.BadRequest(messages);
 		}
 	}
