@@ -108,7 +108,7 @@ class Block extends Model {
 	static schema(path) {
 		const list = path.split('.');
 		const type = list.shift();
-		let sch = this.jsonSchema.selectCases?.[type] ?? {};
+		let sch = this.jsonSchema.oneOf.find(it => it.properties.type.const == type);
 		for (let i = 0; i < list.length; i++) {
 			sch = sch.properties?.[list[i]];
 			if (!sch) throw new Error("Schema not found: " + path);
@@ -195,24 +195,21 @@ class Block extends Model {
 
 	static initSite(block, pkg) {
 		const { eltsMap, groups, tag } = pkg;
-		const types = Object.keys(eltsMap);
-		const schema = Object.assign({}, Block.jsonSchema);
-		if (block.id != null) schema.$id += `/${block.id}`;
-		const blockProps = schema.properties;
-		delete schema.properties;
-
-		schema.select = {
-			"$data": '0/type'
+		const schema = {
+			$id: `${Block.jsonSchema.$id}/${block.id}`,
+			type: 'object',
+			discriminator: { propertyName: "type" },
+			required: ['type'],
+			oneOf: []
 		};
-		schema.selectCases = {};
+		const blockProps = Block.jsonSchema.properties;
 
 		const hrefs = {};
+		const ElementKeywords = [
+			'$lock', 'parents', 'upgrade', 'output'
+		];
 
-		types.forEach((type) => {
-			const element = Object.assign({
-				properties: {},
-				contents: {}
-			}, eltsMap[type]);
+		for (const [type, element] of Object.entries(eltsMap)) {
 			const hrefsList = [];
 			findHrefs(element, hrefsList);
 			if (hrefsList.length) hrefs[type] = hrefsList;
@@ -223,27 +220,41 @@ class Block extends Model {
 				}
 			});
 
-			const standProp = element.standalone
+			const { standalone, properties, required = [], contents } = element;
+
+			const sub = {
+				properties: {}
+			};
+
+			const standProp = standalone
 				? { standalone: Object.assign({}, blockProps.standalone, { default: true }) }
 				: {};
 
-			schema.selectCases[type] = {
-				$lock: element.$lock,
-				parents: element.parents,
-				upgrade: element.upgrade,
-				output: element.output,
-				standalone: element.standalone,
-				properties: Object.assign({}, blockProps, standProp, {
-					data: Object.assign({}, blockProps.data, {
-						properties: element.properties,
-						required: element.required || []
-					}),
-					content: Object.assign({}, blockProps.content, {
-						properties: contentsNames(Block.normalizeContents(element.contents))
-					})
-				})
+			const dataSchema = properties ? {
+				type: 'object',
+				properties,
+				required
+			} : {
+				type: 'null'
 			};
-		});
+
+			const contentSchema = contents ? {
+				type: 'object',
+				properties: contentsNames(Block.normalizeContents(contents))
+			} : {
+				type: 'null'
+			};
+
+			for (const p of ElementKeywords) {
+				if (element[p] != null) sub[p] = element[p];
+			}
+			Object.assign(sub.properties, blockProps, standProp, {
+				type: { const: type },
+				data: dataSchema,
+				content: contentSchema
+			});
+			schema.oneOf.push(sub);
+		}
 
 		const DomainBlock = class extends Block {
 			static relationMappings = cloneRelationMappings(this, Block);

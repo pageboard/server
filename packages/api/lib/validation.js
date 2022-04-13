@@ -12,6 +12,7 @@ module.exports = class Validation {
 	static AjvOptions = {
 		$data: true,
 		allErrors: true,
+		discriminator: true,
 		ownProperties: true,
 		coerceTypes: 'array',
 		formats: {
