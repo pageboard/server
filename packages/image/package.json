@@ -17,7 +17,7 @@
   },
   "homepage": "https://github.com/pageboard/server#readme",
   "dependencies": {
-    "datauri": "^2.0.0",
+    "datauri": "^4.1.0",
     "sharp": "^0.28.3",
     "sharpie": "^4.8.0"
   },
