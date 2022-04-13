@@ -377,7 +377,6 @@ module.exports = class HrefService {
 		} else if (data.id != null) {
 			let list = data.id;
 			if (!Array.isArray(list)) list = [data.id];
-			list = list.filter(item => item != site.id);
 			if (list.length) qRoot.whereIn('root.id', list);
 		}
 		return qRoot;
