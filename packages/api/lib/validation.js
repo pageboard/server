@@ -4,7 +4,13 @@ const AjvKeywords = require('ajv-keywords');
 const AjvFormats = require('ajv-formats');
 const { default: betterAjvErrors } = require('better-ajv-errors');
 
-
+class AjvValidatorExt extends AjvValidator {
+	compilePatchValidator(jsonSchema) {
+		jsonSchema = jsonSchemaWithoutRequired(jsonSchema);
+		// We need to use the ajv instance that doesn't set the default values.
+		return this.ajvNoDefaults.compile(jsonSchema);
+	}
+}
 module.exports = class Validation {
 	#validatorWithDefaults;
 	#validatorNoDefaults;
@@ -45,7 +51,7 @@ module.exports = class Validation {
 		return ajv;
 	}
 	createValidator() {
-		return new AjvValidator({
+		return new AjvValidatorExt({
 			onCreateAjv: (ajv) => this.#setupAjv(ajv),
 			options: Object.assign({
 				strictSchema: this.app.env == "dev" ? "log" : false,
@@ -163,3 +169,58 @@ module.exports = class Validation {
 		}
 	}
 };
+
+
+function jsonSchemaWithoutRequired(jsonSchema) {
+	const subSchemaProps = ['anyOf', 'oneOf', 'allOf', 'not', 'then', 'else'];
+	const discriminatorRequired = {};
+	if (jsonSchema.discriminator && jsonSchema.discriminator.propertyName) {
+		discriminatorRequired.required = [jsonSchema.discriminator.propertyName];
+	}
+	return Object.assign(
+		omit(jsonSchema, ['required', ...subSchemaProps]),
+		discriminatorRequired,
+		...subSchemaProps.map((prop) => subSchemaWithoutRequired(jsonSchema, prop)),
+		jsonSchema && jsonSchema.definitions
+			? {
+				definitions: Object.assign(
+					...Object.keys(jsonSchema.definitions).map((prop) => ({
+						[prop]: jsonSchemaWithoutRequired(jsonSchema.definitions[prop]),
+					}))
+				),
+			}
+			: {}
+	);
+}
+
+function subSchemaWithoutRequired(jsonSchema, prop) {
+	if (jsonSchema[prop]) {
+		if (Array.isArray(jsonSchema[prop])) {
+			const schemaArray = jsonSchemaArrayWithoutRequired(jsonSchema[prop]);
+
+			if (schemaArray.length !== 0) {
+				return {
+					[prop]: schemaArray,
+				};
+			} else {
+				return {};
+			}
+		} else {
+			return {
+				[prop]: jsonSchemaWithoutRequired(jsonSchema[prop]),
+			};
+		}
+	} else {
+		return {};
+	}
+}
+
+function jsonSchemaArrayWithoutRequired(jsonSchemaArray) {
+	return jsonSchemaArray.map(jsonSchemaWithoutRequired).filter(obj => !Object.isEmpty(obj));
+}
+
+function omit(obj, keys) {
+	return Object.fromEntries(
+		Object.entries(obj).filter(([key]) => !keys.includes(key))
+	);
+}
