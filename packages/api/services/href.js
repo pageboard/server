@@ -279,7 +279,7 @@ module.exports = class HrefService {
 
 	collect(req, data) {
 		const { Block, Href, site, trx } = req;
-		const hrefs = site.$model.hrefs;
+		const hrefs = site.$hrefs;
 		const qList = q => {
 			const urlQueries = [];
 			for (const [type, list] of Object.entries(hrefs)) {
@@ -336,7 +336,7 @@ module.exports = class HrefService {
 	}
 
 	#collectBlockUrls({ Block, site, trx }, data, level) {
-		const hrefs = site.$model.hrefs;
+		const hrefs = site.$hrefs;
 		const types = Object.keys(hrefs);
 		const table = ['root', 'root:block', 'root:shared:block'][level];
 
@@ -384,7 +384,7 @@ module.exports = class HrefService {
 
 	async reinspect(req, data) {
 		const { site, trx, Block } = req;
-		const hrefs = site.$model.hrefs;
+		const hrefs = site.$hrefs;
 		const fhrefs = {};
 		for (const [type, list] of Object.entries(hrefs)) {
 			if (data.type && type != data.type) continue;

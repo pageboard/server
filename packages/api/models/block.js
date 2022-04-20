@@ -261,8 +261,12 @@ class Block extends Model {
 			static uniqueTag() {
 				return this.jsonSchema.$id;
 			}
-			static hrefs = hrefs;
 			static jsonSchema = schema;
+
+			static #hrefs = hrefs;
+			get $hrefs() {
+				return DomainBlock.#hrefs;
+			}
 
 			#pkg = {
 				bundles: {},

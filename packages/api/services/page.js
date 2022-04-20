@@ -458,7 +458,7 @@ module.exports = class PageService {
 			}
 		}
 
-		// FIXME use site.$model.hrefs to track the blocks with href when saving,
+		// FIXME use site.$hrefs to track the blocks with href when saving,
 		// and check all new/changed href have matching row in href table
 		await applyUnrelate(req, changes.unrelate);
 		await applyRemove(req, changes.remove, changes.recursive);
@@ -680,7 +680,7 @@ function listPages({ site, trx }, data) {
 }
 
 function stripHostname(site, block) {
-	const list = site.$model.hrefs[block.type];
+	const list = site.$hrefs[block.type];
 	if (!list) return;
 	for (const desc of list) {
 		const url = jsonPath.get(block.data, desc.path);
@@ -769,7 +769,7 @@ async function updatePage({ site, trx, Block, Href }, page, sideEffects) {
 		.select(ref('block.data:url').as('url'))
 		.first().throwIfNotFound();
 
-	const hrefs = site.$model.hrefs;
+	const hrefs = site.$hrefs;
 	const oldUrl = dbPage.url;
 	const oldUrlStr = oldUrl == null ? '' : oldUrl;
 	const newUrl = page.data.url;
