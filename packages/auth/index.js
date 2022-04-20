@@ -76,7 +76,7 @@ module.exports = class AuthModule {
 	}
 
 	install(site) {
-		site.$pkg.grants = this.#grantsLevels(site.constructor);
+		site.$pkg.grants = this.#grantsLevels(site);
 	}
 
 	headers(res, list) {
@@ -152,10 +152,10 @@ module.exports = class AuthModule {
 		return obj;
 	}
 
-	#grantsLevels(DomainBlock) {
+	#grantsLevels(site) {
 		const grants = {};
 		try {
-			const list = DomainBlock.schema('settings.data.grants').items.anyOf || [];
+			const list = site.$schema('settings.data.grants').items.anyOf || [];
 			list.forEach((grant, i) => {
 				const n = grant.$level;
 				if (typeof n != 'number' || Number.isNaN(n)) {
