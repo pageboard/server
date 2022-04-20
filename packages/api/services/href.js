@@ -20,7 +20,7 @@ module.exports = class HrefService {
 		});
 	}
 
-	async get({ Href, site, trx }, data) {
+	get({ Href, site, trx }, data) {
 		return Href.query(trx).select('href._id')
 			.whereSite(site.id)
 			.where('href.url', data.url).first();
