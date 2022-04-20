@@ -86,10 +86,6 @@ exports.Model = class CommonModel extends Model {
 		return super.$relatedQuery(what, trx);
 	}
 
-	get $model() {
-		return this.constructor;
-	}
-
 	$ref(str) {
 		return ref(str);
 	}
@@ -361,3 +357,4 @@ function convertFieldExpressionsToRaw(builder, model, json) {
 
 	return convertedJson;
 }
+

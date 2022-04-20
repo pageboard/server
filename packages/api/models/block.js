@@ -105,21 +105,6 @@ class Block extends Model {
 		this.updated_at = new Date().toISOString();
 	}
 
-	static schema(path) {
-		const list = path.split('.');
-		const type = list.shift();
-		let sch = this.jsonSchema.oneOf.find(it => it.properties.type.const == type);
-		for (let i = 0; i < list.length; i++) {
-			sch = sch.properties?.[list[i]];
-			if (!sch) throw new Error("Schema not found: " + path);
-		}
-		return sch;
-	}
-
-	$schema(type) {
-		return this.constructor.schema(type || this.type);
-	}
-
 	static normalizeContents(contents) {
 		if (!contents) return;
 		if (typeof contents == "string") contents = {
@@ -208,6 +193,7 @@ class Block extends Model {
 		const ElementKeywords = [
 			'$lock', 'parents', 'upgrade', 'output'
 		];
+		const types = new Map();
 
 		for (const [type, element] of Object.entries(eltsMap)) {
 			const hrefsList = [];
@@ -253,15 +239,32 @@ class Block extends Model {
 				data: dataSchema,
 				content: contentSchema
 			});
+			types.set(type, sub);
 			schema.oneOf.push(sub);
 		}
 
-		const DomainBlock = class extends Block {
+		class DomainBlock extends Block {
 			static relationMappings = cloneRelationMappings(this, Block);
 			static uniqueTag() {
 				return this.jsonSchema.$id;
 			}
 			static jsonSchema = schema;
+
+			static #types = types;
+			static schema(path) {
+				const list = path.split('.');
+				const type = list.shift();
+				let sch = this.#types.get(type);
+				for (let i = 0; i < list.length; i++) {
+					sch = sch.properties?.[list[i]];
+					if (!sch) throw new Error("Schema not found: " + path);
+				}
+				return sch;
+			}
+
+			$schema(type = this.type) {
+				return DomainBlock.schema(type);
+			}
 
 			static #hrefs = hrefs;
 			get $hrefs() {

@@ -278,7 +278,7 @@ module.exports = class HrefService {
 	};
 
 	collect(req, data) {
-		const { Block, Href, site, trx } = req;
+		const { site, trx } = req;
 		const hrefs = site.$hrefs;
 		const qList = q => {
 			const urlQueries = [];
@@ -289,7 +289,7 @@ module.exports = class HrefService {
 					});
 				})) continue;
 				for (const desc of list) {
-					const bq = Block.query(trx).from('blocks')
+					const bq = site.$modelClass.query(trx).from('blocks')
 						.where('type', type)
 						.whereNotNull(ref(`data:${desc.path}`));
 					if (desc.array) {
@@ -319,10 +319,9 @@ module.exports = class HrefService {
 			}
 			q.unionAll(qList, true);
 		};
-		const q = Href.query(trx)
+		const q = site.$relatedQuery('hrefs', trx)
 			.with('blocks', qBlocks)
 			.with('list', qList)
-			.where('href._parent_id', site._id)
 			.join('list', 'href.url', 'list.url');
 		if (data.map) {
 			q.select(raw(`jsonb_object_agg(
@@ -335,14 +334,12 @@ module.exports = class HrefService {
 		return q;
 	}
 
-	#collectBlockUrls({ Block, site, trx }, data, level) {
+	#collectBlockUrls({ site, trx }, data, level) {
 		const hrefs = site.$hrefs;
 		const types = Object.keys(hrefs);
 		const table = ['root', 'root:block', 'root:shared:block'][level];
 
-		const qRoot = Block.query(trx)
-			.select(table + '.*')
-			.where('block._id', site._id);
+		const qRoot = site.$query(trx).select(table + '.*');
 		const blockRelation = {
 			$relation: 'children',
 			$modify: [(q) => {
@@ -383,7 +380,7 @@ module.exports = class HrefService {
 	}
 
 	async reinspect(req, data) {
-		const { site, trx, Block } = req;
+		const { site, trx } = req;
 		const hrefs = site.$hrefs;
 		const fhrefs = {};
 		for (const [type, list] of Object.entries(hrefs)) {
@@ -403,7 +400,7 @@ module.exports = class HrefService {
 			throw new Error(`No types selected: ${data.types.join(',')}`);
 		}
 
-		const rows = Block.query(trx).select().from(
+		const rows = site.$modelClass.query(trx).select().from(
 			site.$relatedQuery('children', trx).select('block._id')
 				.whereIn('block.type', Object.keys(fhrefs))
 				.leftOuterJoin('href', function () {
