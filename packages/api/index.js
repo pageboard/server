@@ -23,7 +23,9 @@ module.exports = class ApiModule {
 
 	constructor(app, opts) {
 		this.validation = new Validation(app, opts);
-		Block.createValidator = (ajv) => this.validation.createValidator(ajv);
+		Href.createValidator = Block.createValidator = () => {
+			return this.validation.createValidator();
+		};
 		this.app = app;
 
 		this.opts = Object.assign(opts, {
