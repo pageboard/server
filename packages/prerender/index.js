@@ -245,9 +245,14 @@ module.exports = class PrerenderModule {
 
 			const { mime = "text/html" } = outputOpts;
 
-			if (site.data.env == "dev" && mime == "text/html" && query.develop === undefined) {
-				query.develop = null;
+			if (mime == "text/html" && site.data.env == "dev") {
+				if (query.develop == "prerender") {
+					delete query.develop;
+				} else if (query.develop === undefined) {
+					query.develop = null;
+				}
 			}
+
 			if (query.develop !== undefined) {
 				res.set('Content-Security-Policy', "");
 				let mapTo;
