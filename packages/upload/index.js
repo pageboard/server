@@ -31,7 +31,7 @@ module.exports = class UploadModule {
 		server.post('/.api/upload/:id?', async (req) => {
 			const limits = { ...this.opts.limits };
 			if (req.params.id) {
-				const input = await this.req.run('block.get', { id: req.params.id });
+				const input = await req.run('block.get', { id: req.params.id });
 				Object.assign(limits, input.data.limits);
 			}
 			const files = await this.parse(req, limits);
