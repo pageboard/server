@@ -22,7 +22,7 @@ module.exports = class BlockService {
 		});
 	}
 
-	async get(req, data) {
+	get(req, data) {
 		const { site } = req;
 		const q = site.$relatedQuery('children', req.trx).select()
 			.where('block.id', data.id);
