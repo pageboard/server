@@ -25,6 +25,7 @@ module.exports = class UploadModule {
 			size: 50000000,
 			...opts.limits
 		};
+		this.destination = this.destination.bind(this);
 		this.store = multer.diskStorage(this);
 	}
 	async apiRoutes(app, server) {
