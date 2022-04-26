@@ -104,19 +104,22 @@ module.exports = class BlockService {
 			q.joinRelated('children', { alias: 'child' });
 			q.whereObject(data.child, data.child.type, 'child');
 		}
-		const eagers = [];
+		const eagers = {};
 
 		valid = filterSub(q, data) || valid;
 		if (!valid) {
 			throw new HttpError.BadRequest("Insufficient search parameters");
 		}
 		if (parents) {
-			eagers.push('parents(parentsFilter) as parents');
+			eagers.parents = {
+				$relation: 'parents',
+				$modify: ['parentsFilter']
+			};
 		}
 
 		if (children) {
 			if (children.count) {
-				const qchildren = Object.assign({}, children);
+				const qchildren = { ...children };
 				delete qchildren.count;
 				delete qchildren.limit;
 				delete qchildren.offset;
@@ -126,16 +129,22 @@ module.exports = class BlockService {
 					.where('parents._id', ref('block._id'));
 				q.select(Block.query(trx).count().from(qc.as('sub')).as('itemsCount'));
 			} else {
-				eagers.push('children(itemsFilter) as items');
+				eagers.items = {
+					$relation: 'children',
+					$modify: ['itemsFilter']
+				};
 			}
 		}
 		if (data.count) {
 			// TODO
 		}
 		if (data.content) {
-			eagers.push('children(childrenFilter) as children');
+			eagers.items = {
+				$relation: 'children',
+				$modify: ['childrenFilter']
+			};
 		}
-		if (eagers.length) q.withGraphFetched(`[${eagers.join(',')}]`).modifiers({
+		if (!Object.isEmpty(eagers)) q.withGraphFetched(eagers).modifiers({
 			parentsFilter(query) {
 				filterSub(query, parents);
 			},
