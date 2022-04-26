@@ -176,7 +176,8 @@ ALTER TABLE ONLY relation
 CREATE UNIQUE INDEX block_expr_domain_idx ON block USING btree (((data #>> '{domain}'::text[]))) WHERE ((type)::text = 'site'::text);
 CREATE UNIQUE INDEX block_expr_email_idx ON block USING btree (((data #>> '{email}'::text[]))) WHERE ((type)::text = 'user'::text);
 CREATE UNIQUE INDEX block_expr_lang_idx ON block USING btree (((data #>> '{url}'::text[])), lang) WHERE ((data -> 'url'::text) IS NOT NULL);
-CREATE UNIQUE INDEX block_id_index ON block USING btree (id);
+CREATE UNIQUE INDEX block_user_site_index ON block USING btree (id) WHERE type::text = ANY (ARRAY['site'::text, 'user'::text]);
+CREATE INDEX block_id_index ON block USING btree (id);
 CREATE INDEX block_type_index ON block USING btree (type);
 CREATE INDEX block_updated_at_idx ON block USING btree (updated_at DESC);
 CREATE UNIQUE INDEX href__parent_id_url_lang_idx ON href USING btree (_parent_id, url, lang);
