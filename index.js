@@ -37,11 +37,10 @@ const {
 		opts.config = Path.join(opts.dirs.config, 'config');
 	}
 
-	opts = {
-		...opts,
+	Object.assign(opts, {
 		...toml.parse(await readFile(opts.config)),
 		...opts
-	};
+	});
 	const info = console.info;
 	if (cli) {
 		opts.cli = true;
