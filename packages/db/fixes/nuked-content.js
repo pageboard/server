@@ -7,20 +7,28 @@ exports.up = async (knex) => {
 			main: [],
 			footer: []
 		};
-		results.rows.forEach((section) => {
+		results.rows.forEach(section => {
 			parts[section.type].push(section.id);
 		});
-		let content = parts.header.map((id) => {
-			return `<element-sticky block-id="${id}"></element-sticky>`;
+
+		const content = [
+			...parts.header.map(
+				id => `<element-sticky block-id="${id}"></element-sticky>`
+			),
+			...parts.main.map(
+				id => `<main block-id="${id}"></main>`
+			),
+			...parts.footer.map(
+				id => `<footer block-id="${id}"></footer>`
+			)
+		];
+		const contStr = JSON.stringify({
+			body: content.join('')
 		});
-		content = content.concat(parts.main.map((id) => {
-			return `<main block-id="${id}"></main>`;
-		}));
-		content = content.concat(parts.footer.map((id) => {
-			return `<footer block-id="${id}"></footer>`;
-		}));
-		content = JSON.stringify({body: content.join('')});
-		await knex.schema.raw(`UPDATE block SET content='${content}'::jsonb WHERE id='${row.id}'`);
+		await knex.schema.raw(
+			"UPDATE block SET content=?::jsonb WHERE id=?",
+			[contStr, row.id]
+		);
 	});
 };
 

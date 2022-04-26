@@ -25,22 +25,23 @@ const {
 	} = parseArgs(process.argv.slice(2));
 	opts.name = name;
 	opts.version = version.split('.').slice(0, 2).join('.');
-	opts.dirs = Object.assign({}, opts.dirs, {
+	opts.dirs = {
+		...opts.dirs,
 		config: Path.join(xdg.config, name),
 		cache: Path.join(xdg.cache, name),
 		data: Path.join(xdg.data, name),
 		tmp: Path.join(xdg.data, '../tmp', name)
-	});
+	};
 
 	if (!opts.config) {
 		opts.config = Path.join(opts.dirs.config, 'config');
 	}
 
-	Object.assign(
-		opts,
-		toml.parse(await readFile(opts.config)),
-		opts
-	);
+	opts = {
+		...opts,
+		...toml.parse(await readFile(opts.config)),
+		...opts
+	};
 	const info = console.info;
 	if (cli) {
 		opts.cli = true;

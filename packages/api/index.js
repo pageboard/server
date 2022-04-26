@@ -28,9 +28,10 @@ module.exports = class ApiModule {
 		};
 		this.app = app;
 
-		this.opts = Object.assign(opts, {
+		this.opts = {
+			...opts,
 			migrations: [Path.join(__dirname, 'migrations')]
-		});
+		};
 	}
 
 	apiRoutes(app, server) {
@@ -158,23 +159,23 @@ module.exports = class ApiModule {
 				secure: req.site.url.protocol == "https:",
 				path: '/'
 			};
-			Object.keys(obj.cookies).forEach((key) => {
-				const cookie = obj.cookies[key];
+			for (const [key, cookie] of Object.entries(obj.cookies)) {
 				const val = cookie.value;
 				const maxAge = cookie.maxAge;
 
-				if (val == null || maxAge == 0) res.clearCookie(key, cookieParams);
-				else res.cookie(key, val, Object.assign({}, cookieParams, {
+				if (val == null || maxAge == 0) {
+					res.clearCookie(key, cookieParams);
+				} else res.cookie(key, val, {
+					...cookieParams,
 					maxAge: maxAge
-				}));
-			});
+				});
+			}
 			delete obj.cookies;
 		}
 		// client needs to know what keys are supposed to be available
-		obj.grants = {};
-		(req.user.grants || []).forEach((grant) => {
-			obj.grants[grant] = true;
-		});
+		obj.grants = Object.fromEntries(
+			(req.user.grants ?? []).map(grant => [grant, true])
+		);
 		if (obj.status) {
 			res.status(obj.status);
 			delete obj.status;

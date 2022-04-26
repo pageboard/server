@@ -20,16 +20,16 @@ module.exports = class UploadModule {
 		console.info(`uploads:\t${opts.dir}`);
 		console.info(`tmp dir:\t${opts.tmp}`);
 
-		opts.limits = Object.assign({
+		opts.limits = {
 			files: 100,
-			size: 50000000
-		}, opts.limits);
-
+			size: 50000000,
+			...opts.limits
+		};
 		this.store = multer.diskStorage(this);
 	}
 	async apiRoutes(app, server) {
 		server.post('/.api/upload/:id?', async (req) => {
-			const limits = Object.assign({}, this.opts.limits);
+			const limits = { ...this.opts.limits };
 			if (req.params.id) {
 				const input = await this.req.run('block.get', { id: req.params.id });
 				Object.assign(limits, input.data.limits);
@@ -67,12 +67,12 @@ module.exports = class UploadModule {
 		return randomBytes(4).then(raw => `${basename}-${raw.toString('hex')}.${ext}`);
 	}
 	parse(req, limits) {
-		limits = Object.assign({}, this.limits, limits);
+		limits = { ...this.limits, ...limits };
 		return new Promise((resolve, reject) => {
 			multer({
 				storage: this.store,
 				fileFilter: function(req, file, cb) {
-					const types = limits.types.length ? limits.types : ['*/*'];
+					const types = limits.types?.length ? limits.types : ['*/*'];
 					cb(null, Boolean(typeis.is(file.mimetype, types)));
 				},
 				limits: {

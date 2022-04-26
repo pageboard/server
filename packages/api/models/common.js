@@ -150,7 +150,7 @@ exports.QueryBuilder = class CommonQueryBuilder extends QueryBuilder {
 
 	patchObject(obj) {
 		const patchObjectOperation = this._patchObjectOperationFactory();
-		obj = Object.assign({}, obj);
+		obj = { ...obj };
 		const table = this.tableRefFor(this.modelClass());
 		if (table == "block") {
 			const type = patchObjectOperation.instance && patchObjectOperation.instance.type;

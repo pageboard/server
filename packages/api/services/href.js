@@ -78,10 +78,11 @@ module.exports = class HrefService {
 						}
 					});
 					for (const item of obj.items) {
-						items.push(Object.assign({}, href, {
-							title: href.title + ' #' + item.data.id,
-							url: href.url + '#' + item.data.id
-						}));
+						items.push({
+							...href,
+							title: `${href.title} #${item.data.id}`,
+							url: `${href.url}#${item.data.id}`
+						});
 					}
 				}
 			}

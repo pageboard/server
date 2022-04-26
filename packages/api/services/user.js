@@ -69,9 +69,10 @@ module.exports = class UserService {
 	async del(req, data) {
 		return this.#QueryUser(req, data).del();
 	}
-	static del = Object.assign({}, this.add, {
+	static del = {
+		...this.add,
 		$action: 'del'
-	});
+	};
 };
 
 

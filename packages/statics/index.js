@@ -11,11 +11,12 @@ module.exports = class StaticsModule {
 	static name = 'statics';
 
 	constructor(app, opts) {
-		this.opts = Object.assign({
+		this.opts = {
 			cache: Path.join(app.dirs.cache, "statics"),
 			files: Path.join(app.dirs.cache, "files"),
-			nocache: app.env == "development"
-		}, opts);
+			nocache: app.env == "development",
+			...opts
+		};
 		app.dirs.staticsCache = this.opts.cache;
 		app.dirs.staticsFiles = this.opts.files;
 

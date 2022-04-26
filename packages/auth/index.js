@@ -13,11 +13,12 @@ module.exports = class AuthModule {
 
 	constructor(app, opts) {
 		this.app = app;
-		this.opts = Object.assign({
+		this.opts = {
 			maxAge: 60 * 60 * 24 * 31,
 			userProperty: 'user',
-			keysize: 2048
-		}, opts);
+			keysize: 2048,
+			...opts
+		};
 	}
 
 	async apiRoutes(app, server) {
@@ -35,9 +36,10 @@ module.exports = class AuthModule {
 
 	cookie({ site, user }) {
 		return {
-			value: this.#lock.sign(user, Object.assign({
-				hostname: site.url.hostname
-			}, this.opts)),
+			value: this.#lock.sign(user, {
+				hostname: site.url.hostname,
+				...this.opts
+			}),
 			maxAge: this.opts.maxAge * 1000
 		};
 	}
@@ -210,7 +212,7 @@ module.exports = class AuthModule {
 		let locks = {
 			'*': lock
 		};
-		locks = Object.assign({}, $lock, locks);
+		locks = { ...$lock, ...locks };
 		if (this.locked(req, locks['*'])) {
 			if (item.content != null) item.content = {};
 			if (item.data != null) item.data = {};
@@ -219,18 +221,15 @@ module.exports = class AuthModule {
 			return item;
 		}
 		delete locks['*'];
-
-		Object.keys(locks).forEach((path) => {
-			const list = locks[path];
-			path = path.split('.');
-			path.reduce((obj, val, index) => {
+		for (const [path, list] of Object.entries(locks)) {
+			path.split('.').reduce((obj, val, index, arr) => {
 				if (obj == null) return;
-				if (index == path.length - 1) {
+				if (index == arr.length - 1) {
 					if (this.locked(req, list)) delete obj[val];
 				}
 				return obj[val];
 			}, item);
-		});
+		}
 		return item;
 	}
 };

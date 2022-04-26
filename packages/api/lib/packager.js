@@ -15,8 +15,8 @@ module.exports = class Packager {
 		const { elements = [], directories = [] } = pkg || {};
 		const id = site ? site.id : null;
 		Log.imports("installing", id, elements, directories);
-		const allDirs = id ? this.app.directories.concat(directories) : directories;
-		const allElts = id ? this.app.elements.concat(elements) : elements;
+		const allDirs = id ? [ ...this.app.directories, ...directories ] : directories;
+		const allElts = id ? [ ...this.app.elements, ...elements ] : elements;
 
 		sortPriority(allDirs);
 		sortPriority(allElts);
@@ -35,7 +35,7 @@ module.exports = class Packager {
 		const groups = {};
 		const bundles = {};
 		for (const name of names) {
-			const el = Object.assign({}, elts[name]); // drop proxy
+			const el = { ...elts[name] }; // drop proxy
 			el.name = name;
 			// backward compatibility with 0.7 extensions names, dropped in favor of output
 			if (updateExtension(el, eltsMap)) continue;
@@ -109,13 +109,13 @@ module.exports = class Packager {
 		const eltsMap = {};
 		list.forEach(el => {
 			if (!el.standalone) {
-				el = Object.assign({}, el);
+				el = { ...el };
 				delete el.scripts;
 				delete el.stylesheets;
 			}
 			eltsMap[el.name] = el;
 		});
-		const metaEl = Object.assign({}, rootEl);
+		const metaEl = { ...rootEl };
 		const metaKeys = Object.keys(eltsMap);
 		site.$pkg.bundles[rootEl.name] = {
 			meta: metaEl,
@@ -143,12 +143,13 @@ module.exports = class Packager {
 		for (const el of cobundles) {
 			if (el.group == "page") {
 				site.$pkg.bundles[el.name] = {
-					meta: Object.assign({}, el, {
+					meta: {
+						...el,
 						scripts: metaEl.scripts,
 						stylesheets: metaEl.stylesheets,
 						resources: metaEl.resources,
 						bundle: metaEl.bundle
-					}),
+					},
 					elements: metaKeys
 				};
 			}
@@ -214,9 +215,9 @@ function updateExtension(el, eltsMap) {
 	}[el.name];
 	if (!extPage) return;
 	const page = eltsMap[extPage];
-	page.scripts = (page.scripts || []).concat(el.scripts);
+	page.scripts = [ ...page.scripts, ...el.scripts];
 	if (el.prerender) page.output = el.prerender;
-	if (el.print) page.output = Object.assign({}, page.output, {pdf: true});
+	if (el.print) page.output = { ...page.output, pdf: true };
 	return true;
 }
 

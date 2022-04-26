@@ -24,14 +24,15 @@ module.exports = class PrerenderModule {
 		];
 		if (opts.workers) opts.workers = parseInt(opts.workers);
 
-		this.opts = Object.assign({
+		this.opts = {
 			cacheDir: Path.join(app.dirs.cache, "prerender"),
 			stall: 20000,
 			allow: "same-origin",
 			console: true,
 			workers: 2,
-			cacheModel: app.env == "development" ? "none" : undefined
-		}, opts);
+			cacheModel: app.env == "development" ? "none" : undefined,
+			...opts
+		};
 	}
 
 	viewRoutes(app, server) {

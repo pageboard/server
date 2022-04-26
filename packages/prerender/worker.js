@@ -47,10 +47,11 @@ class FakeResponse extends PassThrough {
 				return;
 			}
 			this.priv.sent = true;
-			msg = Object.assign({}, this.priv, {
+			msg = {
+				...this.priv,
 				headers: this.headers,
 				statusCode: this.statusCode
-			});
+			};
 		}
 		process.send(msg);
 	}

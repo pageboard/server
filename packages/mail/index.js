@@ -37,12 +37,13 @@ module.exports = class MailModule {
 		Object.entries(this.opts).forEach(([purpose, conf]) => {
 			Log.mail(purpose, conf);
 			try {
-				Mailers[purpose] = Object.assign({}, conf, {
+				Mailers[purpose] = {
+					...conf,
 					transport: NodeMailer.createTransport(Transports[conf.transport]({
 						auth: conf.auth
 					})),
 					sender: AddressParser(conf.sender)[0]
-				});
+				};
 			} catch (ex) {
 				console.error(ex);
 			}
@@ -133,7 +134,7 @@ module.exports = class MailModule {
 
 	async to(req, data) {
 		const purpose = data.purpose;
-		data = Object.assign({}, data);
+		data = { ...data };
 		delete data.purpose;
 		const mailer = Mailers[purpose];
 		if (!mailer) throw new Error("Unknown mailer purpose " + purpose);
@@ -141,7 +142,7 @@ module.exports = class MailModule {
 			data.bcc = data.to;
 			data.to = data.replyTo || data.from || mailer.sender;
 		}
-		const sender = Object.assign({}, data.from || mailer.sender);
+		const sender = { ...(data.from ?? mailer.sender) };
 		if (!sender.address) {
 			sender.address = mailer.sender.address;
 		}
@@ -150,7 +151,7 @@ module.exports = class MailModule {
 			if (!data.replyTo.address) delete data.replyTo;
 		}
 		data.from = sender;
-		data.headers = Object.assign({}, mailer.headers);
+		data.headers = { ...mailer.headers };
 		if (req.site.id) {
 			data.headers["X-PM-Tag"] = req.site.id;
 		}
@@ -260,9 +261,9 @@ module.exports = class MailModule {
 		if (!data.from && !data.replyTo) {
 			throw new HttpError.NotFound("Missing parameters");
 		}
-		const { site, app } = req;
+		const { site } = req;
 		const purpose = data.purpose;
-		data = Object.assign({}, data);
+		data = { ...data };
 		delete data.purpose;
 		const mailer = Mailers[purpose];
 		if (!mailer) {

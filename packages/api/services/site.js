@@ -9,7 +9,10 @@ module.exports = class SiteService {
 
 	apiRoutes(app, server) {
 		server.put('/.api/site', app.auth.lock('webmaster'), async (req, res) => {
-			const data = Object.assign(req.body, { id: req.site.id });
+			const data = {
+				...req.body,
+				id: req.site.id
+			};
 			const site = await req.run('site.save', data);
 			res.send(site);
 		});
@@ -119,10 +122,11 @@ module.exports = class SiteService {
 		if (site) {
 			throw new HttpError.Conflict("Site id already exists");
 		} else {
-			Object.assign(data, {
+			data = {
+				...data,
 				type: 'site',
 				standalone: true
-			});
+			};
 			return Block.query(trx).insert(data);
 		}
 	}
@@ -152,7 +156,7 @@ module.exports = class SiteService {
 			dbSite.url = site.url;
 		}
 		const runSite = await this.app.install(dbSite);
-		const copy = Object.assign({}, data.data);
+		const copy = { ...data.data };
 		await runSite.$query(req.trx).patchObject({
 			type: runSite.type,
 			data: copy

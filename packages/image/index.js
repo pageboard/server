@@ -18,13 +18,14 @@ module.exports = class ImageModule {
 
 	constructor(app, opts) {
 		this.app = app;
-		this.opts = Object.assign({
+		this.opts = {
 			dir: '.image',
 			signs: {
 				assignment: '-',
 				separator: '_'
-			}
-		}, opts);
+			},
+			...opts
+		};
 	}
 
 	fileRoutes(app, server) {

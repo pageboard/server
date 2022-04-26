@@ -52,7 +52,7 @@ module.exports = class DatabaseModule {
 	};
 
 	#scheduleTenantCopy(app) {
-		const tenants = Object.assign({}, this.opts.url);
+		const tenants = { ...this.opts.url };
 		delete tenants.current;
 		const slots = Object.keys(tenants);
 		if (slots.length == 0) {

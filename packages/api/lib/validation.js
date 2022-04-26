@@ -53,20 +53,23 @@ module.exports = class Validation {
 	createValidator() {
 		return new AjvValidatorExt({
 			onCreateAjv: (ajv) => this.#setupAjv(ajv),
-			options: Object.assign({
+			options: {
 				strictSchema: this.app.env == "dev" ? "log" : false,
 				validateSchema: false,
-				removeAdditional: "all"
-			}, Validation.AjvOptions),
+				removeAdditional: "all",
+				...Validation.AjvOptions
+			}
 		});
 	}
 	#createSettings(opts) {
-		return Object.assign({
+		return {
 			strictSchema: this.app.env == "dev" ? "log" : false,
 			validateSchema: true,
 			removeAdditional: "all",
-			invalidDefaults: 'log'
-		}, Validation.AjvOptions, opts);
+			invalidDefaults: 'log',
+			...Validation.AjvOptions,
+			...opts
+		};
 	}
 	#customKeywords(ajv) {
 		ajv.addKeyword({
@@ -170,7 +173,7 @@ module.exports = class Validation {
 	}
 };
 
-
+// NB: this is mostly objection code, do not refactor
 function jsonSchemaWithoutRequired(jsonSchema) {
 	const subSchemaProps = ['anyOf', 'oneOf', 'allOf', 'not', 'then', 'else'];
 	const discriminatorRequired = {};

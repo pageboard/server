@@ -144,10 +144,10 @@ module.exports = class LoginModule {
 		const settings = await req.run('settings.find', {
 			email: data.email
 		});
-		const grants = user && user.grants || [];
+		const grants = user?.grants ?? [];
 		req.user = Object.assign(user, {
 			id: settings.id,
-			grants: settings.data && settings.data.grants || []
+			grants: settings.data?.grants ?? []
 		});
 		if (user.grants.length == 0) user.grants.push('user');
 		const locks = data.grant ? [data.grant] : [];

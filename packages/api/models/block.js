@@ -69,7 +69,10 @@ class Block extends Model {
 	};
 
 	// _id is removed in $formatJson
-	static columns = Object.keys(this.jsonSchema.properties).concat(['_id']);
+	static columns = [
+		...Object.keys(this.jsonSchema.properties),
+		'_id'
+	];
 
 	static genId(length) {
 		// similar function defined in pageboard-write#store.js
@@ -112,7 +115,7 @@ class Block extends Model {
 		};
 		if (!Array.isArray(contents)) {
 			if (contents.spec) {
-				contents = Object.assign({}, contents);
+				contents = { ...contents };
 				contents.nodes = contents.spec;
 				delete contents.spec;
 			}
@@ -123,7 +126,7 @@ class Block extends Model {
 					if (typeof val == "string") {
 						val = {nodes: val};
 					} else {
-						val = Object.assign({}, val);
+						val = { ...val };
 						if (val.spec) {
 							val.nodes = val.spec;
 							delete val.spec;
@@ -213,7 +216,7 @@ class Block extends Model {
 			};
 
 			const standProp = standalone
-				? { standalone: Object.assign({}, blockProps.standalone, { default: true }) }
+				? { standalone: { ...blockProps.standalone, default: true } }
 				: {};
 
 			const dataSchema = properties ? {
@@ -296,25 +299,25 @@ module.exports = Block;
 
 function cloneRelationMappings(Target, Source) {
 	const smaps = Source.relationMappings;
-	const tmaps = Object.assign({}, smaps);
-	tmaps.children = Object.assign({}, smaps.children, {
+	const tmaps = { ...smaps };
+	tmaps.children = {
+		...smaps.children,
 		modelClass: Target
-	});
-	tmaps.parents = Object.assign({}, smaps.parents, {
+	};
+	tmaps.parents = {
+		...smaps.parents,
 		modelClass: Target
-	});
+	};
 	return tmaps;
 }
 
 function contentsNames(list) {
-	const props = {};
-	if (!list) return props;
-	list.forEach((def) => {
-		props[def.id || ""] = {
-			type: 'string'
-		};
-	});
-	return props;
+	return Object.fromEntries(
+		(list ?? []).map(def => [
+			def.id ?? "",
+			{ type: 'string' }
+		])
+	);
 }
 
 function findHrefs(schema, list, root, array) {

@@ -440,7 +440,7 @@ module.exports = class BlockService {
 		external: true,
 		required: ['type'],
 		get properties() {
-			const obj = Object.assign({}, BlockService.search.properties);
+			const obj = { ...BlockService.search.properties };
 			delete obj.limit;
 			delete obj.offset;
 			return obj;

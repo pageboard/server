@@ -16,9 +16,10 @@ module.exports = class PageService {
 						type: 'write',
 						data: {}
 					},
-					meta: Object.assign({
-						services: site.$pkg.services
-					}, site.$pkg.bundles.write.meta),
+					meta: {
+						services: site.$pkg.services,
+						...site.$pkg.bundles.write.meta
+					},
 					site: site.data,
 					commons: app.opts.commons
 				});
@@ -153,7 +154,7 @@ module.exports = class PageService {
 		const links = {};
 		Object.assign(obj, {
 			item: page,
-			items: (page.children || []).concat(page.standalones || []),
+			items: [ ...page.children, ...page.standalones ],
 			meta: site.$pkg.bundles[page.type].meta,
 			links: links,
 			hrefs: page.hrefs
@@ -399,7 +400,7 @@ module.exports = class PageService {
 
 	async save(req, changes) {
 		const { site, trx } = req;
-		changes = Object.assign({
+		changes = {
 			// blocks removed from their standalone parent (grouped by parent)
 			unrelate: {},
 			// non-standalone blocks unrelated from site and deleted
@@ -409,14 +410,15 @@ module.exports = class PageService {
 			// block does not change parent
 			update: [],
 			// block add to a new standalone parent (grouped by parent)
-			relate: {}
-		}, changes);
+			relate: {},
+			...changes
+		};
 
 		const pages = {
 			add: changes.add.filter(b => b.type == "page"),
 			update: changes.update.filter(b => b.type == "page")
 		};
-		pages.all = pages.add.concat(pages.update);
+		pages.all = [ ...pages.add, ...pages.update ];
 
 		for (const b of changes.add) {
 			stripHostname(site, b);
@@ -462,11 +464,10 @@ module.exports = class PageService {
 		// and check all new/changed href have matching row in href table
 		await applyUnrelate(req, changes.unrelate);
 		await applyRemove(req, changes.remove, changes.recursive);
-		returning.update = (
-			await applyAdd(req, changes.add) || []
-		).concat(
-			await applyUpdate(req, changes.update) || []
-		);
+		returning.update = [
+			...await applyAdd(req, changes.add),
+			...await applyUpdate(req, changes.update)
+		];
 		await applyRelate(req, changes.relate);
 		await Promise.all(pages.update.map(async child => {
 			if (!child.data.url || child.data.url.startsWith('/.')) return;

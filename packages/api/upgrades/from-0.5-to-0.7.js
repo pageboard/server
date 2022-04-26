@@ -19,7 +19,8 @@ exports.site = function(site) {
 
 exports.notfound = function(block) {
 	block.type = "page";
-	block.data = Object.assign(block.data || {}, {
+	block.data = {
+		...block.data,
 		url: '/.well-known/404',
 		noindex: true,
 		nositemap: true
@@ -27,7 +28,7 @@ exports.notfound = function(block) {
 };
 
 exports.page = function(block) {
-	const tr = block.data.transition || {};
+	const tr = block.data.transition ?? {};
 	const from = tr.from;
 	const to = tr.to;
 	if (from || to) {

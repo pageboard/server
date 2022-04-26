@@ -13,10 +13,11 @@ module.exports = class InspectorModule {
 	}
 
 	async get({ url, local }) {
-		const opts = Object.assign({}, this.opts, {
+		const opts = {
+			...this.opts,
 			nofavicon: local,
 			file: local
-		});
+		};
 		try {
 			const result = this.#filterResult(await inspector(url, opts));
 			return this.#preview(result);
