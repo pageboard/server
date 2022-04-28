@@ -716,16 +716,17 @@ function applyRemove({ site, trx }, list, recursive) {
 }
 
 function applyAdd({ site, trx }, list) {
-	if (!list.length) return;
+	if (!list.length) return [];
 	// this relates site to inserted children
-	return site.$relatedQuery('children', trx).insert(list).returning('*').then((rows) => {
-		return rows.map((row) => {
-			return {
-				id: row.id,
-				updated_at: row.updated_at
-			};
+	return site.$relatedQuery('children', trx)
+		.insert(list).returning('*').then(rows => {
+			return rows.map(row => {
+				return {
+					id: row.id,
+					updated_at: row.updated_at
+				};
+			});
 		});
-	});
 }
 
 function applyUpdate(req, list) {
