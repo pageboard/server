@@ -29,7 +29,6 @@
     "ndjson": "2.0.0",
     "node-schedule": "^2.1.0",
     "objection": "^3.0.1",
-    "pg": "^8.7.3",
     "table": "^6.8.0",
     "tosource": "2.0.0-alpha.3"
   },
