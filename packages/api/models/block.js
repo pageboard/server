@@ -287,7 +287,17 @@ class Block extends Model {
 				Object.assign(copy.$pkg, this.$pkg);
 				return copy;
 			}
-		};
+			$beforeValidate(jsonSchema, json) {
+				const props = this.$schema(json.type)?.properties ?? {};
+				if (props.content?.type == 'null' && json.content) {
+					delete json.content;
+				}
+				if (props.data?.type == 'null' && json.data) {
+					delete json.data;
+				}
+				return jsonSchema;
+			}
+		}
 
 		const site = new DomainBlock();
 		Object.assign(site, block);
