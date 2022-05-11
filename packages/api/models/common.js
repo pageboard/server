@@ -222,30 +222,42 @@ exports.QueryBuilder = class CommonQueryBuilder extends QueryBuilder {
 				this.whereNull(refk);
 			} else if (Array.isArray(cond)) {
 				this.where(refk.castText(), 'IN', cond);
-			} else if (typeof cond == "object" && cond.op in comps) {
-				if (cond.val instanceof Date) {
-					this.where(refk.castTo('date'), comps[cond.op], cond.val);
-				} else if (typeof cond.val == "number") {
-					this.where(refk.castFloat(), comps[cond.op], cond.val);
+			} else if (typeof cond == "object") {
+				if (cond.op in comps) {
+					if (cond.val instanceof Date) {
+						this.where(refk.castTo('date'), comps[cond.op], cond.val);
+					} else if (typeof cond.val == "number") {
+						this.where(refk.castFloat(), comps[cond.op], cond.val);
+					} else {
+						this.where(refk.castText(), comps[cond.op], cond.val);
+					}
+				} else if (cond.range == "date") {
+					this.whereRaw(`'[${cond.start}, ${cond.end})'::daterange @> ??`, [
+						refk.castTo('date')
+					]);
+				} else if (cond.op == "not") {
+					this.whereNot(refk.castText(), cond.val);
+				} else if (cond.op == "end") {
+					this.where(refk.castText(), "like", '%' + cond.val);
+				} else if (cond.op == "start") {
+					this.where(refk.castText(), "like", cond.val + '%');
+				} else if (cond.op == "has") {
+					// ref is a json text or array, and it intersects any of the values
+					const val = typeof cond.val == "string" ? [cond.val] : cond.val;
+					this.whereRaw('?? \\?| ?', [refk, val]);
+				} else if (cond.op == "in") {
+					// ref is a json string, and it is in the values
+					const val = typeof cond.val == "string" ? [cond.val] : cond.val;
+					this.whereIn(refk, val);
+				} else if (cond.range == "numeric") {
+					this.whereRaw('?? BETWEEN ? AND ?', [
+						refk, cond.start, cond.end
+					]);
 				} else {
-					this.where(refk.castText(), comps[cond.op], cond.val);
+					throw new HttpError.BadRequest(
+						`Bad condition operator ${JSON.stringify(cond)}`
+					);
 				}
-			} else if (typeof cond == "object" && cond.range == "date") {
-				this.whereRaw(`'[${cond.start}, ${cond.end})'::daterange @> ??`, [
-					refk.castTo('date')
-				]);
-			} else if (typeof cond == "object" && cond.op == "not") {
-				this.whereNot(refk.castText(), cond.val);
-			} else if (typeof cond == "object" && cond.op == "end") {
-				this.where(refk.castText(), "like", '%' + cond.val);
-			} else if (typeof cond == "object" && cond.op == "start") {
-				this.where(refk.castText(), "like", cond.val + '%');
-			} else if (typeof cond == "object" && cond.op == "in") {
-				this.whereRaw('?? @> ?::jsonb', [refk, JSON.stringify(cond.val)]);
-			} else if (typeof cond == "object" && cond.range == "numeric") {
-				this.whereRaw('?? BETWEEN ? AND ?', [
-					refk, cond.start, cond.end
-				]);
 			} else {
 				this.where(refk.castText(), cond);
 			}
