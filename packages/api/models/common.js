@@ -258,11 +258,20 @@ function asPaths(obj, ret, pre, first, schema) {
 			cur = key;
 		}
 		if (Array.isArray(val) || val == null || typeof val != "object") {
-			if (val && typeof val == "string" && schem.type == "string" && (schem.format == "date-time" || schem.format == "date")) {
+			if (val && schem.type == "string" && (schem.format == "date-time" || schem.format == "date")) {
 				if (op) {
 					val = new Date(val);
 				} else {
-					val = dateRange(val);
+					if (typeof val == "string") {
+						val = dateRange(val);
+					}
+					if (Array.isArray(val)) {
+						val = {
+							range: "date",
+							start: val[0],
+							end: val[1]
+						};
+					}
 				}
 			} else if (schem.type == "boolean" && typeof val != "boolean") {
 				if (val == "false" || val == 0 || !val) val = false;
@@ -301,11 +310,9 @@ function dateRange(val) {
 	}
 	if (Number.isNaN(start.getTime()) || Number.isNaN(end.getTime())) {
 		return new Date(val);
-	} else return {
-		range: "date",
-		start: start.toISOString(),
-		end: end.toISOString()
-	};
+	} else {
+		return [start, end];
+	}
 }
 
 function numericRange(val, type) {
