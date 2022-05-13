@@ -192,6 +192,7 @@ exports.QueryBuilder = class CommonQueryBuilder extends QueryBuilder {
 			} else if (typeof cond == "object") {
 				if (cond.op in comps) {
 					if (cond.val instanceof Date) {
+						// DEAD CODE because asPaths doesn't return such a cond
 						this.where(refk.castTo('date'), comps[cond.op], cond.val);
 					} else if (typeof cond.val == "number") {
 						this.where(refk.castFloat(), comps[cond.op], cond.val);
@@ -199,9 +200,41 @@ exports.QueryBuilder = class CommonQueryBuilder extends QueryBuilder {
 						this.where(refk.castText(), comps[cond.op], cond.val);
 					}
 				} else if (cond.range == "date") {
-					this.whereRaw(`'[${cond.start}, ${cond.end})'::daterange @> ??`, [
-						refk.castTo('date')
-					]);
+					if (cond.names) {
+						// slot intersection
+						const start = `${k}.${cond.names[0]}`;
+						const end = `${k}.${cond.names[1]}`;
+						this.whereNotNull(ref(start));
+						this.whereNotNull(ref(end));
+						if (cond.start == cond.end) {
+							this.whereRaw(`(daterange(:start:, :end:) @> :at OR (:start: = :at AND :end: = :at))`, {
+								start: ref(start).castTo('date'),
+								end: ref(end).castTo('date'),
+								at: val(cond.start).castTo('date')
+							});
+						} else {
+							this.whereRaw(`daterange(:from, :to) && daterange(:start:, :end:)`, {
+								start: ref(start).castTo('date'),
+								end: ref(end).castTo('date'),
+								from: val(cond.start).castTo('date'),
+								to: val(cond.end).castTo('date')
+							});
+						}
+					} else {
+						this.whereNotNull(refk);
+						if (cond.start == cond.end) {
+							this.whereIn(refk.castTo('date'), [
+								val(cond.start).castTo('date'),
+								val(cond.end).castTo('date')
+							]);
+						} else {
+							this.whereRaw(`(daterange(:from, :to) @> :at: OR (:at: = :from AND :at: = :to))`, {
+								from: val(cond.start).castTo('date'),
+								to: val(cond.end).castTo('date'),
+								at: refk.castTo('date')
+							});
+						}
+					}
 				} else if (cond.op == "not") {
 					this.whereNot(refk.castText(), cond.val);
 				} else if (cond.op == "end") {
@@ -217,9 +250,11 @@ exports.QueryBuilder = class CommonQueryBuilder extends QueryBuilder {
 					const val = typeof cond.val == "string" ? [cond.val] : cond.val;
 					this.whereRaw('?? \\?& ?', [refk, val]);
 				} else if (cond.range == "numeric") {
-					this.whereRaw('?? BETWEEN ? AND ?', [
-						refk, cond.start, cond.end
-					]);
+					this.whereRaw(':col: <@ numrange(:from, :to)', {
+						col: refk,
+						from: val(cond.start).castTo('numeric'),
+						to: val(cond.end).castTo('numeric')
+					});
 				} else {
 					throw new HttpError.BadRequest(
 						`Bad condition operator ${JSON.stringify(cond)}`
@@ -241,7 +276,8 @@ exports.QueryBuilder = class CommonQueryBuilder extends QueryBuilder {
 function asPaths(obj, ret, pre, first, schema) {
 	if (!schema) schema = {};
 	const props = schema.properties || {};
-	Object.keys(obj).forEach((str) => {
+	const dateTimes = ["date-time", "date"];
+	Object.keys(obj).forEach(str => {
 		let val = obj[str];
 		const [key, op] = str.split(':');
 		const schem = props[key] || {};
@@ -257,19 +293,32 @@ function asPaths(obj, ret, pre, first, schema) {
 		} else {
 			cur = key;
 		}
-		if (Array.isArray(val) || val == null || typeof val != "object") {
-			if (val && schem.type == "string" && (schem.format == "date-time" || schem.format == "date")) {
+		if (val && schem.type == "object" && Object.keys(schem.properties).join(' ') == "start end" && dateTimes.includes(schem.properties.start.format) && dateTimes.includes(schem.properties.end.format)) {
+			// we have a date slot
+			const range = dateRange(val);
+			if (range) {
+				ret[cur] = {
+					range: "date",
+					names: ["start", "end"],
+					start: range[0],
+					end: range[1]
+				};
+			} else if (op) ret[cur] = {
+				op: op,
+				val: val
+			};
+			else ret[cur] = val;
+		} else if (Array.isArray(val) || val == null || typeof val != "object") {
+			if (val && schem.type == "string" && dateTimes.includes(schem.format)) {
 				if (op) {
 					val = new Date(val);
 				} else {
-					if (typeof val == "string") {
-						val = dateRange(val);
-					}
-					if (Array.isArray(val)) {
+					const range = dateRange(val);
+					if (range) {
 						val = {
 							range: "date",
-							start: val[0],
-							end: val[1]
+							start: range[0],
+							end: range[1]
 						};
 					}
 				}
@@ -292,8 +341,31 @@ function asPaths(obj, ret, pre, first, schema) {
 }
 
 function dateRange(val) {
+	if (typeof val == "string") {
+		return partialDateRange(val);
+	} else if (Array.isArray(val) && val.length == 2) {
+		let start = new Date(val[0]);
+		let end = new Date(val[1]);
+		let startTime = start.getTime();
+		let endTime = end.getTime();
+		if (Number.isNaN(startTime) && Number.isNaN(endTime)) return;
+		if (Number.isNaN(endTime)) {
+			end = start;
+			endTime = startTime;
+		} else if (Number.isNaN(startTime)) {
+			start = end;
+			startTime = endTime;
+		}
+		if (startTime == endTime) end = start;
+		else if (startTime > endTime) [start, end] = [end, start];
+		return [start, end];
+	}
+}
+
+function partialDateRange(val) {
 	const parts = val.split('P');
 	const start = new Date(parts[0]);
+	if (Number.isNaN(start.getTime())) return;
 	let end;
 	if (parts.length == 1) {
 		end = new Date(start);
@@ -308,11 +380,8 @@ function dateRange(val) {
 	} else if (parts.length == 2) {
 		end = Duration.end(Duration.parse('P' + parts[1]), start);
 	}
-	if (Number.isNaN(start.getTime()) || Number.isNaN(end.getTime())) {
-		return new Date(val);
-	} else {
-		return [start, end];
-	}
+	if (Number.isNaN(end.getTime())) end = start;
+	return [start, end];
 }
 
 function numericRange(val, type) {
