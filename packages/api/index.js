@@ -19,6 +19,7 @@ const ajvApiSettings = {
 	coerceTypes: 'array',
 	removeAdditional: false,
 	nullable: true,
+	multipleOfPrecision: 7,
 	formats: {
 		singleline: /^[^\n\r]*$/,
 		pathname: /^(\/[\w-.]*)+$/,
