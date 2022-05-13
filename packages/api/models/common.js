@@ -293,7 +293,7 @@ function asPaths(obj, ret, pre, first, schema) {
 		} else {
 			cur = key;
 		}
-		if (val && schem.type == "object" && Object.keys(schem.properties).join(' ') == "start end" && dateTimes.includes(schem.properties.start.format) && dateTimes.includes(schem.properties.end.format)) {
+		if (val && schem.type == "object" && Object.keys(schem.properties).sort().join(' ') == "end start" && dateTimes.includes(schem.properties.start.format) && dateTimes.includes(schem.properties.end.format)) {
 			// we have a date slot
 			const range = dateRange(val);
 			if (range) {
