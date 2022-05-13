@@ -21,6 +21,7 @@ module.exports = class Validation {
 		discriminator: true,
 		ownProperties: true,
 		coerceTypes: 'array',
+		multipleOfPrecision: 7,
 		formats: {
 			singleline: /^[^\n\r]*$/,
 			pathname: /^(\/[\w.-]*)+$/,
