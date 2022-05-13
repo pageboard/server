@@ -111,6 +111,7 @@ function init(All) {
 				ownProperties: true,
 				coerceTypes: 'array',
 				removeAdditional: "all",
+				multipleOfPrecision: 7,
 				nullable: true,
 				formats: ajvApiSettings.formats
 			}
