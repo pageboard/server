@@ -215,7 +215,7 @@ exports.QueryBuilder = class CommonQueryBuilder extends QueryBuilder {
 				} else if (cond.op == "in") {
 					// ref is a json string, and it is in the values
 					const val = typeof cond.val == "string" ? [cond.val] : cond.val;
-					this.whereIn(refk.castText(), val);
+					this.whereRaw('?? \\?& ?', [refk, val]);
 				} else if (cond.range == "numeric") {
 					this.whereRaw('?? BETWEEN ? AND ?', [
 						refk, cond.start, cond.end
