@@ -19,8 +19,8 @@ module.exports = class CacheModule {
 		}
 		this.opts = opts;
 	}
-	map(...args) {
-		return Upcache.map(...args);
+	map({ res }, to) {
+		return Upcache.map(res, to);
 	}
 	tag(...args) {
 		return Upcache.tag(...args);

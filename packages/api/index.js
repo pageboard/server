@@ -188,7 +188,7 @@ module.exports = class ApiModule {
 			res.status(req.user.id ? 403 : 401);
 		}
 		if (req.granted) res.set('X-Granted', 1);
-		this.app.auth.headers(res, req.locks);
+		req.call('auth.headers', req.locks);
 		res.json(obj);
 	}
 };

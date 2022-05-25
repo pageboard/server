@@ -81,7 +81,7 @@ module.exports = class AuthModule {
 		site.$pkg.grants = this.#grantsLevels(site);
 	}
 
-	headers(res, list) {
+	headers({ res }, list) {
 		return this.#lock.headers(res, list);
 	}
 
