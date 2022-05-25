@@ -1,11 +1,8 @@
-const Path = require('path');
-const got = require.lazy('got');
-const { pipeline } = require('stream');
-const { Pool } = require('tarn');
-const { fork } = require('child_process');
-const urlFormat = require('url').format;
-
-let pool;
+const Path = require('node:path');
+const { pipeline } = require('node:stream');
+const { format: urlFormat } = require('node:url');
+const got = require.lazy('got'); // TODO switch to undici
+const dom = require.lazy('express-dom');
 
 module.exports = class PrerenderModule {
 	static name = 'prerender';
@@ -13,148 +10,40 @@ module.exports = class PrerenderModule {
 
 	constructor(app, opts) {
 		this.app = app;
-		opts.helpers = [
-			'./plugins/extensions'
-		];
-		opts.plugins = [
-			'./plugins/form',
-			'./plugins/upcache',
-			'./plugins/bearer',
-			'./plugins/serialize'
-		];
-		if (opts.workers) opts.workers = parseInt(opts.workers);
-
-		this.opts = {
-			cacheDir: Path.join(app.dirs.cache, "prerender"),
-			stall: 20000,
-			allow: "same-origin",
-			console: true,
-			workers: 2,
-			cacheModel: app.env == "development" ? "none" : undefined,
-			...opts
-		};
+		this.opts = opts;
 	}
 
 	viewRoutes(app, server) {
-		const { opts } = this;
-		opts.read = {};
-		opts.read.helpers = [
-			'develop',
-			'extensions'
-		];
+		this.dom = dom;
 
-		opts.read.plugins = [
+		Object.assign(dom.settings, {
+			timeout: 20000,
+			console: true
+		}, this.opts);
+
+		dom.settings.load.plugins = [
 			'form',
 			'upcache',
-			'httpequivs',
-			'bearer'
+			'equivs',
+			'cookies'
 		];
+
+		dom.helpers.prerender = (...args) => this.prerender(...args);
+
+		Object.assign(dom.plugins, {
+			serialize: require('./plugins/serialize'),
+			form: require('./plugins/form'),
+			upcache: require('./plugins/upcache'),
+			render: require('./plugins/render')
+		});
+		dom.settings.allowedCookies = new Set(["bearer"]);
 
 		server.get(
 			'*',
 			app.cache.tag('app-:site'),
-			(req, res, next) => this.prerender(req, res, next)
+			(req, res) => this.check(req, res),
+			dom('prerender', 'develop').load()
 		);
-
-		const workerPath = Path.join(__dirname, 'worker.js');
-
-		const childOpts = {
-			prerender: opts,
-			clear: true
-		};
-
-		pool = new Pool({
-			validate: function(child) {
-				return !child.killed;
-			},
-			create: function(cb) {
-				let child;
-				try {
-					child = fork(workerPath, {
-						detached: true,
-						env: process.env,
-						stdio: ['ignore', 'pipe', 'inherit', 'ipc']
-					});
-					child.send(childOpts);
-					if (childOpts.clear) delete childOpts.clear;
-				} catch(ex) {
-					cb(ex);
-					return;
-				}
-				cb(null, child);
-			},
-			destroy: function(child) {
-				if (!child.killed) child.kill();
-			},
-			acquireTimeoutMillis: 5000,
-			idleTimeoutMillis: 10000,
-			min: opts.workers,
-			max: 2 * opts.workers
-		});
-
-		process.on('exit', () => {
-			return pool.destroy();
-		});
-	}
-
-	#run(config, req, res, next) {
-		pool.acquire().promise.then((worker) => {
-			worker.on("message", (msg) => {
-				if (msg.err) {
-					release(worker);
-					return next(objToError(msg.err));
-				}
-				if (msg.locks) this.app.auth.headers(res, msg.locks);
-				if (msg.tags) req.tag(...msg.tags);
-				if (msg.headers != null) {
-					for (const k in msg.headers) res.set(k, msg.headers[k]);
-				}
-				if (msg.attachment != null) {
-					res.attachment(msg.attachment);
-				}
-				if (msg.statusCode) res.status(msg.statusCode);
-
-				if (!msg.piped) {
-					release(worker);
-					if (msg.body !== undefined) {
-						res.send(msg.body);
-					} else {
-						res.sendStatus(msg.statusCode || 200);
-					}
-				} else if (msg.finished) {
-					release(worker);
-					res.end();
-				} else {
-					worker.stdout.on('data', (data) => {
-						res.write(data);
-					});
-				}
-			});
-			worker.once("error", (err) => {
-				release(worker, true);
-				next(err);
-			});
-			worker.send({
-				view: config.view,
-				helpers: config.helpers || [],
-				plugins: config.plugins || [],
-				settings: config.settings || {},
-				mime: config.mime,
-				path: req.path,
-				protocol: req.protocol,
-				query: req.query,
-				headers: req.headers,
-				cookies: req.cookies,
-				xhr: req.xhr
-			});
-			function release(worker, kill) {
-				worker.stdout.removeAllListeners('data');
-				worker.removeAllListeners("message");
-				worker.removeAllListeners("error");
-				if (kill) worker.kill();
-				pool.release(worker);
-			}
-		}).catch(next);
 	}
 
 	#requestedSchema({ site }, { pathname }) {
@@ -180,7 +69,7 @@ module.exports = class PrerenderModule {
 		};
 	}
 
-	prerender(req, res, next) {
+	check(req, res, next) {
 		const { site } = req;
 		res.vary('Accept');
 
@@ -189,6 +78,7 @@ module.exports = class PrerenderModule {
 			schema,
 			type
 		} = this.#requestedSchema(req, { pathname: req.path });
+		req.$fake = { schema, type };
 
 		if (pathname == null) {
 			if (req.accepts(['image/*', 'json', 'html']) != 'html') {
@@ -222,106 +112,83 @@ module.exports = class PrerenderModule {
 			if (invalid) {
 				return res.redirect(urlFormat({ pathname, query }));
 			}
-
-			const { plugins: readPlugins, helpers } = this.opts.read;
-			const plugins = readPlugins.slice();
-			const settings = {
-				extensions: {
-					allow: false,
-					list: []
-				}
-			};
-
-			const outputOpts = schema.output || {};
-
-			// begin compat (0.7 clients using ext names)
-			if (type == "mail" && outputOpts.mime == null) {
-				outputOpts.mime = "application/json";
-			}
-			if (type == "rss" && outputOpts.mime == null) {
-				outputOpts.mime = "application/xml";
-			}
-			/* end compat */
-
-			const { mime = "text/html" } = outputOpts;
-
-			if (mime == "text/html" && site.data.env == "dev") {
-				if (query.develop == "prerender") {
-					delete query.develop;
-				} else if (query.develop === undefined) {
-					query.develop = null;
-				}
-			}
-
-			if (query.develop !== undefined) {
-				res.set('Content-Security-Policy', "");
-				let mapTo;
-				if (req.path.startsWith("/.well-known/")) {
-					// ends with a status code, not set in develop mode
-					mapTo = req.path;
-					res.status(req.path.split('/').pop());
-				} else {
-					mapTo = "/.well-known/200";
-				}
-				this.app.cache.map(res, mapTo);
-
-			} else {
-				if (outputOpts.pdf) {
-					// pdf plugin bypasses serialize
-					plugins.push('pdf');
-				}
-				settings.mime = mime;
-				if (!outputOpts.medias) {
-					settings['auto-load-images'] = false;
-					settings.extensions.list.push('js', 'json', 'html', 'xml');
-					settings.extensions.allow = true; // whitelist
-				} else if (!outputOpts.fonts) {
-					settings.extensions.list.push('woff', 'woff2', 'ttf', 'eot', 'otf');
-				}
-			}
-			if (mime == "text/html") {
-				plugins.push('redirect');
-				if (this.app.env != "development") {
-					plugins.unshift('httplinkpreload');
-				}
-			}
-			if (!outputOpts.display) {
-				plugins.push('hide', 'prerender');
-			}
-			plugins.push('serialize');
-
-			const siteScripts = site.$pkg.bundles.site?.meta?.scripts ?? [];
-
-			const scripts = siteScripts.map(src => {
-				return `<script defer src="${src}"></script>`;
-			});
-
-			const view = Text`
-				<!DOCTYPE html>
-				<html>
-					<head>
-						<title></title>
-						${scripts.join('\n')}
-					</head>
-					<body></body>
-				</html>`;
-			this.#run({
-				view,
-				helpers,
-				plugins,
-				settings
-			}, req, res, next);
 		}
 	}
+
+	prerender(mw, settings, req, res) {
+		const { site, query, $fake: { schema, type } } = req;
+
+		const { plugins } = settings.load;
+
+		const outputOpts = schema.output || {};
+		// begin compat (0.7 clients using ext names)
+		if (type == "mail" && outputOpts.mime == null) {
+			outputOpts.mime = "application/json";
+		}
+		if (type == "rss" && outputOpts.mime == null) {
+			outputOpts.mime = "application/xml";
+		}
+		/* end compat */
+
+		const { mime = "text/html", pdf, display, medias, fonts } = outputOpts;
+
+		if (mime == "text/html" && site.data.env == "dev" && !pdf) {
+			if (query.develop == "prerender") {
+				delete query.develop;
+			} else if (!query.develop) {
+				query.develop = null;
+			}
+		}
+
+		if (query.develop !== undefined && ![null, "write"].includes(query.develop)) {
+			delete query.develop;
+		}
+
+		if (query.develop === null) {
+			if (req.path.startsWith("/.well-known/")) {
+				// ends with a status code, not set in develop mode
+				req.call('cache.map', req.path);
+				res.status(req.path.split('/').pop());
+			} else {
+				req.call('cache.map', "/.well-known/200");
+			}
+		} else {
+			settings.mime = mime;
+			if (pdf) {
+				settings.helpers.push('pdf');
+			} else if (medias) {
+				settings.policies.img = "'self' https: data:";
+				settings.policies.font = "'self' https: data:";
+				settings.policies.style = "'self' 'unsafe-inline' https:";
+			} else if (fonts) {
+				settings.policies.font = "'self' https: data:";
+			}
+		}
+		if (mime == "text/html") {
+			plugins.push('redirect');
+			if (this.app.env != "development") {
+				plugins.unshift('preloads');
+			}
+		}
+		if (!display) {
+			plugins.push('hide', 'prerender');
+		}
+		plugins.push('serialize');
+
+		const siteScripts = site.$pkg.bundles.site?.meta?.scripts ?? [];
+
+		const scripts = siteScripts.map(src => {
+			return `<script defer src="${src}"></script>`;
+		});
+
+		settings.input = Text`
+			<!DOCTYPE html>
+			<html>
+				<head>
+					<title></title>
+					${scripts.join('\n')}
+				</head>
+				<body></body>
+			</html>`;
+	}
 };
-
-
-
-function objToError(obj) {
-	const err = new Error(obj.message);
-	err.name = obj.name;
-	err.stack = obj.stack;
-	err.statusCode = obj.statusCode || 500;
-	return err;
-}
-

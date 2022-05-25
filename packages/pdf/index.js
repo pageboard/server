@@ -3,6 +3,7 @@ module.exports = class PdfModule {
 	static priority = 1;
 
 	viewRoutes(app) {
-		app.opts.prerender.plugins.push(require.resolve('./lib/pdf'));
+		const pdf = require('express-dom-pdf');
+		pdf.plugins = ['upcache', 'render'];
 	}
 };

@@ -1,40 +1,35 @@
-module.exports = function(page, settings, request, response) {
-	page.when('idle', () => {
-		if (settings.output == null) return page.run(done => {
+module.exports = function(page, settings, req, res) {
+	page.on('idle', async () => {
+		if (settings.output != null) return;
+		const obj = await page.evaluate(async () => {
 			const { Page } = window;
 			if (!Page) {
 				const err = new Error("blank site");
 				err.statusCode = 501;
-				return done(err);
+				throw err;
 			}
-			Page.finish().then(state => {
-				if (Page.serialize) {
-					return Page.serialize(state);
-				} else return {
-					mime: "text/html",
-					body: '<!DOCTYPE html>\n' + document.documentElement.outerHTML
+			const state = await Page.finish();
+			if (Page.serialize) {
+				let obj = await Page.serialize(state);
+				// backward compatibility with old clients
+				if (typeof obj == "string") obj = {
+					mime: settings.mime || "text/html",
+					body: obj
 				};
-			}).then((doc) => {
-				done(null, doc);
-			}).catch((err) => {
-				console.error(err); // FIXME else nobody can actually see the error
-				done(err);
-			});
-		}).then((obj) => {
-			if (!obj) throw new HttpError.BadRequest("Empty response");
-			// backward compatibility with old clients
-			if (typeof obj == "string") obj = {
-				mime: settings.mime || "text/html",
-				body: obj
+				return obj;
+			} else return {
+				mime: "text/html",
+				body: '<!DOCTYPE html>\n' + document.documentElement.outerHTML
 			};
-			settings.output = false;
-			if (obj.mime && obj.mime != "text/html") {
-				// browsers revalidate only html by default
-				response.set("Cache-Control", "must-revalidate");
-			}
-			if (obj.mime) response.type(obj.mime);
-			response.send(obj.body);
 		});
+		if (!obj) throw new HttpError.BadRequest("Empty response");
+		settings.output = false;
+		if (obj.mime && obj.mime != "text/html") {
+			// browsers revalidate only html by default
+			res.set("Cache-Control", "must-revalidate");
+		}
+		if (obj.mime) res.type(obj.mime);
+		res.send(obj.body);
 	});
 };
 

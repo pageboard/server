@@ -1,6 +1,6 @@
 module.exports = function formPlugin(page) {
-	page.when('idle', () => {
-		return page.run(() => {
+	page.on('idle', () => {
+		return page.evaluate(() => {
 			function setAttr(el, name, val) {
 				if (val === undefined) {
 					el.removeAttribute(name);
@@ -10,16 +10,21 @@ module.exports = function formPlugin(page) {
 					el.attributes.setNamedItem(attr);
 				}
 			}
-			Array.from(document.forms).forEach((form) => {
-				Array.from(form.elements).forEach((el) => {
-					if (el.checked) setAttr(el, 'checked', null);
-					else if (el.matches('select') && el.options) Array.from(el.options).forEach((opt) => {
-						if (opt.selected) setAttr(el, 'selected', null);
-					});
-					else if (el.matches('textarea')) el.innerHTML = el.value;
-					else setAttr(el, 'value', el.value);
-				});
-			});
+			for (const form of document.forms) {
+				for (const el of form.elements) {
+					if (el.checked) {
+						setAttr(el, 'checked', null);
+					} else if (el.matches('select') && el.options) {
+						for (const opt of el.options) {
+							if (opt.selected) setAttr(el, 'selected', null);
+						}
+					} else if (el.matches('textarea')) {
+						el.innerHTML = el.value;
+					} else {
+						setAttr(el, 'value', el.value);
+					}
+				}
+			}
 		});
 	});
 };

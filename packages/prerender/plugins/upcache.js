@@ -1,20 +1,14 @@
-module.exports = function upcachePlugin(page, settings, request, response) {
-	const locksMap = {};
-	const tagsMap = {};
-	page.on('response', (res) => {
-		let list = res.headers['X-Upcache-Lock'];
-		if (list) list.split(',').forEach((str) => {
-			locksMap[str.trim()] = true;
-		});
-		list = res.headers['X-Upcache-Tag'];
-		if (list) list.split(',').forEach((str) => {
-			tagsMap[str.trim()] = true;
-		});
+module.exports = function upcachePlugin(page, settings, req, res) {
+	const lockSet = new Set();
+	const tagSet = new Set();
+	page.on('response', async response => {
+		const locks = await response.headerValues('X-Upcache-Lock');
+		for (const str of locks) lockSet.add(str);
+		const tags = await response.headerValues('X-Upcache-Tag');
+		for (const str of tags) tagSet.add(str);
 	});
-	page.when('idle', () => {
-		const locks = Object.keys(locksMap);
-		if (locks.length) response.priv.locks = locks;
-		const tags = Object.keys(tagsMap);
-		if (tags.length) response.priv.tags = tags;
+	page.on('idle', () => {
+		if (lockSet.size) req.call("auth.headers", [...lockSet]);
+		if (tagSet.size) req.tag(...tagSet);
 	});
 };
