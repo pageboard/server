@@ -28,6 +28,8 @@ module.exports = class PageService {
 				const resources = site.$pkg.bundles.write.meta.resources;
 				if (dev && resources.develop) {
 					if (!data.meta) data.meta = { scripts: [] };
+					data.meta = { ...data.meta };
+					data.meta.scripts = [...data.meta.scripts];
 					if (site.$pkg.bundles.user) {
 						data.meta.scripts.unshift(site.$pkg.bundles.user.meta.bundle);
 					}
