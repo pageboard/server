@@ -153,6 +153,7 @@ module.exports = class PrerenderModule {
 				req.call('cache.map', "/.well-known/200");
 			}
 		} else {
+			settings.location.searchParams.delete('develop');
 			settings.mime = mime;
 			if (pdf) {
 				settings.helpers.push('pdf');
