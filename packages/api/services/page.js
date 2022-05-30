@@ -95,8 +95,8 @@ module.exports = class PageService {
 		});
 	}
 
-	#QueryPage({ site, trx }) {
-		return site.$relatedQuery('children', trx).alias('page')
+	#QueryPage(req, url) {
+		return req.site.$relatedQuery('children', req.trx).alias('page')
 			.select()
 			.first()
 			// eager load children (in which there are standalones)
@@ -111,7 +111,15 @@ module.exports = class PageService {
 				standalonesFilter(query) {
 					return query.select().where('page.standalone', true);
 				}
-			});
+			})
+			.whereJsonText("page.data:url", url)
+			.select(
+				req.call('href.collect', {
+					url: url,
+					content: true,
+					map: true
+				}).as('hrefs')
+			);
 	}
 
 	async get(req, data) {
@@ -125,32 +133,16 @@ module.exports = class PageService {
 		if (wkp) {
 			obj.status = parseInt(wkp[1]);
 		}
-		let page = await this.#QueryPage(req).whereIn('page.type', site.$pkg.pages)
-			.whereJsonText("page.data:url", data.url)
-			.select(
-				req.call('href.collect', {
-					url: data.url,
-					content: true,
-					map: true
-				}).as('hrefs')
-			);
+		let page = await this.#QueryPage(req, data.url)
+			.whereIn('page.type', site.$pkg.pages);
 		if (!page) {
 			obj.status = 404;
 		} else if (req.locked((page.lock || {}).read)) {
 			obj.status = 401;
 		}
 		if (obj.status != 200) {
-			const statusUrl = `/.well-known/${obj.status}`;
-			page = await this.#QueryPage(req)
-				.where('page.type', 'page')
-				.whereJsonText("page.data:url", statusUrl)
-				.select(
-					req.call('href.collect', {
-						url: statusUrl,
-						content: true,
-						map: true
-					}).as('hrefs')
-				);
+			page = await this.#QueryPage(req, `/.well-known/${obj.status}`)
+				.where('page.type', 'page');
 			if (!page) throw new HttpError[obj.status]();
 		}
 		const links = {};
