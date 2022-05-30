@@ -340,7 +340,9 @@ module.exports = class HrefService {
 		const types = Object.keys(hrefs);
 		const table = ['root', 'root:block', 'root:shared:block'][level];
 
-		const qRoot = site.$query(trx).select(table + '.*');
+		const qRoot = site.$modelClass.query(trx)
+			.select(table + '.*')
+			.from('block').where('block._id', site._id);
 		const blockRelation = {
 			$relation: 'children',
 			$modify: [(q) => {
