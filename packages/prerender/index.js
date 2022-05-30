@@ -17,11 +17,11 @@ module.exports = class PrerenderModule {
 		this.dom = dom;
 
 		Object.assign(dom.settings, {
-			timeout: 20000,
-			console: true
+			timeout: 20000
 		}, this.opts);
 
 		dom.settings.load.plugins = [
+			'console',
 			'form',
 			'upcache',
 			'equivs',
