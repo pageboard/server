@@ -1,56 +1,62 @@
 module.exports = class Upgrader {
-	constructor(Block, opts = {}) {
-		this.copy = Boolean(opts.copy);
-		this.Block = Block;
-		this.idMap = {};
+	constructor(DomainBlock, { from, to, idMap }) {
+		this.idMap = idMap;
+		this.DomainBlock = DomainBlock;
 		this.reverseMap = {};
-		if (opts.from != opts.to && opts.from && opts.to) {
+		if (from && to) {
 			try {
-				this.module = require(`./from-${opts.from}-to-${opts.to}`);
+				this.module = require(`./from-${from}-to-${to}`);
+				console.warn("found import", from, "to", to);
 			} catch (ex) {
 				if (ex.code != "MODULE_NOT_FOUND") {
 					throw ex;
 				}
 			}
-			if (this.module) {
-				console.warn("found import", opts.from, "to", opts.to);
-			}
 		}
 	}
-	get(id) {
-		if (this.copy) return this.idMap[id];
-		else return id;
-	}
 	beforeEach(block) {
-		if (this.copy && block.type != "user") {
-			const old = block.id;
-			block.id = this.idMap[old] = this.Block.genIdSync();
-			this.reverseMap[block.id] = old;
+		const id = this.idMap?.[block.id];
+		if (id) {
+			if (block.type == "user") {
+				new HttpError.BadRequest(`Cannot change id of user ${block.id}`);
+			}
+			this.reverseMap[id] = block.id;
+			block.id = id;
 		}
 		return block;
 	}
-	process(block) {
-		if (this.copy) {
-			block.children = (block.children || []).map(id => {
-				const nid = this.idMap[id];
-				if (nid == null) throw new Error("Cannot remap child: " + id);
-				return nid;
+	process(block, parent) {
+		if (this.idMap && block.standalones) {
+			block.standalones.forEach((id, i, arr) => {
+				const mid = this.idMap[id];
+				if (mid != null) arr[i] = mid;
 			});
 		}
+		block = this.upgrade(block, parent);
+		if (this.DomainBlock.schema(block.type) == null) {
+			console.warn("Unknown type", block.type, block.id);
+			block.type = '_';
+			delete block.data;
+			delete block.content;
+		}
+		if (block.children) for (const child of block.children) {
+			this.process(child, block);
+		}
+		return block;
+	}
+	upgrade(block, parent) {
 		const mod = this.module;
 		if (!mod) return block;
-		try {
-			if (mod.any) mod.any.call(this, block);
-			if (mod[block.type]) block = mod[block.type].call(this, block) || block;
-		} catch (ex) {
-			console.error(ex.message);
-			console.error(block);
-			throw new Error("Upgrader error");
+		if (mod.any) {
+			block = mod.any.call(this, block) ?? block;
+		}
+		if (mod[block.type]) {
+			block = mod[block.type].call(this, block, parent) ?? block;
 		}
 		return block;
 	}
 	afterEach(block) {
-		if (this.copy) {
+		if (this.idMap) {
 			this.copyContent(block);
 			this.copyLock(block);
 		}
@@ -61,23 +67,12 @@ module.exports = class Upgrader {
 			console.error(block);
 			throw new Error("content not object");
 		}
-		Object.entries(block.content).forEach(([key, str]) => {
-			if (!str) return;
-			let bad = false;
-			block.content[key] = str.replaceAll(/block-id="(\w+)"/g, (match, id, pos, str) => {
-				const cid = this.idMap[id];
-				if (cid) {
-					return `block-id="${cid}"`;
-				}
-				console.warn(`Cannot replace id: '${id}' in content
-					${str.substring(pos - 5, pos + 35)}`);
-				bad = true;
-				return "block-strip";
+		for (const [key, str] of Object.entries(block.content)) {
+			if (!str) continue;
+			block.content[key] = str.replaceAll(/block-id="(\w+)"/g, (match, id) => {
+				return `block-id="${this.idMap[id] ?? id}"`;
 			});
-			if (bad) {
-				block.content[key] = block.content[key].replaceAll(/<\w+ block-strip><\/\w+>/g, '');
-			}
-		});
+		}
 	}
 	copyLock(block) {
 		const locks = block.lock && block.lock.read;
@@ -86,8 +81,10 @@ module.exports = class Upgrader {
 			item = item.split('-');
 			if (item.length != 2) return;
 			const id = this.idMap[item[1]];
-			if (id) item[1] = id;
-			locks[i] = item.join('-');
+			if (id != null) {
+				item[1] = id;
+				locks[i] = item.join('-');
+			}
 		});
 	}
 };
