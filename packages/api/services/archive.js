@@ -1,6 +1,5 @@
 const { createReadStream, createWriteStream } = require('fs');
 const Path = require('path');
-const util = require('util');
 
 const ndjson = require.lazy('ndjson');
 const Upgrader = require.lazy('../upgrades');
@@ -23,14 +22,13 @@ module.exports = class ArchiveService {
 		// TODO process req.files with multer
 		server.put('/.api/archive',
 			app.auth.lock('webmaster'),
-			req => 	req.run('archive.import', req.query)
+			req => req.run('archive.import', req.query)
 		);
 	}
 
 	async export(req, { file, ids = [] }) {
-		const { site, trx, res, Block } = req;
+		const { site, trx, res } = req;
 		const { id } = site;
-		if (!ids.length) ids.push(id);
 		const filepath = file ?? `${id}-${fileStamp()}.json`;
 		const counts = {
 			users: 0,
@@ -54,77 +52,50 @@ module.exports = class ArchiveService {
 		const jstream = ndjson.stringify();
 		jstream.pipe(out);
 
-		const users = new Set();
-		const singles = new Set();
-		const fetchBlocks = async (ids) => {
-			const blocks = await Block.query(trx).whereIn('id', ids)
-				.withGraphFetched(`[
-					children(children),
-					children(shared) as shared,
-					parents(users)
-				]`)
-				.modifiers({
-					children(q) {
-						return q.where('standalone', false);
-					},
-					shared(q) {
-						return q.where('standalone', true).select('block.id');
-					},
-					users(q) {
-						return q.where('type', 'user');
-					}
-				});
-			for (const block of blocks) {
-				if (block.standalone) counts.blocks += 1;
-				const {
-					parents,
-					children,
-					shared
-				} = block;
-				delete block.children;
-				delete block.parents;
-				delete block.shared;
-				if (block.type == "site") {
-					jstream.write(block);
-				}
-				for (let i = 0; i < parents.length; i++) {
-					const item = parents[i];
-					const { id } = item;
-					if (!users.has(id)) {
-						jstream.write(item);
-						users.add(id);
-					}
-					parents[i] = id;
-				}
-				counts.users += parents.length;
-				if (parents.length > 0) {
-					block.parents = parents;
-				}
-				for (let i = 0; i < children.length; i++) {
-					const item = children[i];
-					const { id } = item;
-					jstream.write(item);
-					children[i] = id;
-				}
-				const uniques = [];
-				for (const { id } of shared) {
-					children.push(id);
-					if (!singles.has(id)) {
-						uniques.push(id);
-						singles.add(id);
-					}
-				}
-				await fetchBlocks(uniques);
+		const nsite = site.toJSON();
+		delete nsite.data.domains;
+		jstream.write(nsite);
 
-				if (children.length > 0) {
-					block.children = children;
-				}
-				if (block.type != "site") {
-					jstream.write(block);
-				}
+		const modifiers = {
+			blocks(q) {
+				q.where('standalone', false).select();
+			},
+			standalones(q) {
+				q.where('standalone', true).select();
+			},
+			users(q) {
+				q.where('type', 'user').select();
 			}
 		};
-		await fetchBlocks(ids);
+
+		const countParents = site.$modelClass.relatedQuery('parents', trx)
+			.whereNot('parents.id', site.id);
+
+		const blocks = await site.$relatedQuery('children', trx)
+			.modify(q => {
+				if (ids.length > 0) q.whereIn('block.id', ids);
+			})
+			.where('standalone', true)
+			.whereNotExists(countParents)
+			.select()
+			.withGraphFetched(`[
+				parents(users),
+				children(standalones) as standalones . children(blocks),
+				children(blocks)
+			]`)
+			.modifiers(modifiers);
+		const blocksId = new Set();
+		counts.blocks += blocks.length;
+		for (const block of blocks) {
+			counts.users += writeBlocks(jstream, block, 'parents', blocksId);
+			counts.blocks += writeBlocks(jstream, block, 'standalones', blocksId);
+			if (block.children.length == 0) delete block.children;
+			if (blocksId.has(block.id)) {
+				console.error("Skip already inserted block", block.id, block.type);
+			} else {
+				jstream.write(block);
+			}
+		}
 
 		const hrefs = await req.call('href.collect', {
 			id: ids,
@@ -159,50 +130,28 @@ module.exports = class ArchiveService {
 		}
 	};
 
-	async empty({ site, trx, Block }, data) {
-		const q = site.$relatedQuery('children', trx)
-			.select('_id')
-			.where('standalone', true).as('children');
-		if (data.types.length) q.whereIn('type', data.types);
-		return Block.query(trx)
-			.select(trx.raw('recursive_delete(children._id, TRUE)')).from(q);
-		// TODO gc href ?
+	async empty({ site, trx }) {
+		await site.$relatedQuery('children', trx)
+			.select(trx.raw('recursive_delete(block._id, TRUE)'));
+		await site.$relatedQuery('hrefs', trx).delete();
 	}
 	static empty = {
 		title: 'Empty site',
-		$action: 'write',
-		properties: {
-			types: {
-				title: 'Types',
-				description: 'Empty those types and their descendants',
-				type: 'array',
-				default: [],
-				items: {
-					type: 'string',
-					format: 'name',
-					$filter: {
-						name: 'element',
-						standalone: true,
-						contentless: true
-					}
-				}
-			}
-		}
+		$action: 'write'
 	};
 
-	async import({ site, trx, Block }, data) {
+	async import(req, { file, idMap }) {
+		const { site, trx } = req;
 		const counts = {
 			users: 0,
 			blocks: 0,
-			relations: 0,
-			hrefs: 0,
-			standalones: 0
+			hrefs: 0
 		};
-		const fstream = createReadStream(Path.resolve(this.app.cwd, data.file))
+		const fstream = createReadStream(Path.resolve(this.app.cwd, file))
 			.pipe(ndjson.parse());
 
 		let upgrader;
-		const refs = {};
+		const refs = new Map();
 		const beforeEach = async obj => {
 			if (!obj.id) {
 				if (obj.pathname) {
@@ -214,12 +163,17 @@ module.exports = class ArchiveService {
 				return obj;
 			} else if (obj.type == "site") {
 				if (!obj.data) obj.data = {};
-				const fromVersion = obj.data.server;
-				Object.assign(obj.data, { domains: null }, data.data || {});
-				upgrader = new Upgrader(Block, {
-					copy: data.copy,
+				const toVersion = site.data.server;
+				const fromVersion = obj.data.server ?? toVersion;
+				// these imported values must not overwrite current ones
+				delete obj.data.domains;
+				if (site.data.module) delete obj.data.module;
+				if (site.data.version) delete obj.data.version;
+
+				upgrader = new Upgrader(site.$modelClass, {
+					idMap,
 					from: fromVersion,
-					to: obj.data.server
+					to: toVersion
 				});
 			}
 			return upgrader.beforeEach(obj);
@@ -230,56 +184,53 @@ module.exports = class ArchiveService {
 				return site.$relatedQuery('hrefs', trx).insert(obj);
 			} else if (obj.type == "site") {
 				await upgrader.afterEach(obj);
-				// need to remove all blocks during import
-				// FIXME use archive.empty
-				await site.$relatedQuery('children', trx).select(trx.raw('recursive_delete(block._id, TRUE)'));
-				await site.$relatedQuery('hrefs', trx).delete();
-				await site.$query(trx).patch({ data: obj.data });
+				await req.run('archive.empty');
+				await site.$query(trx).patchObject({ data: obj.data });
 			} else if (obj.type == "user") {
 				await upgrader.afterEach(obj);
 				try {
-					const user = await Block.query(trx).where('type', 'user')
+					const user = await site.$modelClass.query(trx).where('type', 'user')
 						.whereJsonText('data:email', obj.data.email).select('_id', 'id')
 						.first().throwIfNotFound();
-					refs[obj.id] = user._id;
+					refs.set(obj.id, user._id);
 				} catch(err) {
 					if (err.status != 404) throw err;
-					const user = Block.query(trx).insert(obj).returning('_id', 'id');
-					refs[obj.id] = user._id;
+					const user = site.$modelClass.query(trx).insert(obj).returning('_id', 'id');
+					refs.set(obj.id, user._id);
 				}
-				counts.users++;
+				counts.users += 1;
 			} else {
 				await upgrader.afterEach(obj);
 				if (obj.parents) {
 					obj.parents = obj.parents.map(id => {
-						const kid = refs[id];
+						const kid = refs.get(id);
 						if (!kid) {
 							throw new HttpError.BadRequest(
-								`Missing parent id: ${upgrader.reverseMap[id] || id}`
+								`Missing parent id: ${upgrader.reverseMap[id] ?? id}`
 							);
 						}
 						return { "#dbRef": kid };
 					});
 				}
-				if (obj.children) {
-					obj.children = obj.children.map(id => {
-						const kid = refs[id];
+				if (obj.standalones) {
+					if (!obj.children) obj.children = [];
+					for (const id of obj.standalones) {
+						const kid = refs.get(id);
 						if (!kid) {
 							throw new HttpError.BadRequest(
-								`Missing child id: ${upgrader.reverseMap[id] || id}`
+								`Missing child id: ${upgrader.reverseMap[id] ?? id}`
 							);
 						}
-						return { "#dbRef": kid };
-					});
+						obj.children.push({ "#dbRef": kid });
+					}
+					delete obj.standalones;
 				}
 				const row = await site.$relatedQuery('children', trx)
 					.insertGraph(obj, {
 						allowRefs: true
 					}).returning('_id');
-				if (obj.standalone) counts.standalones += 1;
-				else counts.blocks += 1;
-				if (obj.children) counts.relations += obj.children.length;
-				refs[obj.id] = row._id;
+				counts.blocks += 1;
+				refs.set(obj.id, row._id);
 			}
 		};
 
@@ -299,12 +250,12 @@ module.exports = class ArchiveService {
 		});
 
 		for (let obj of list) {
-			obj = await upgrader.process(obj);
 			try {
+				obj = await upgrader.process(obj);
 				await afterEach(obj);
 			} catch (err) {
-				err.message = (err.message || "") +
-					`\nwhile processing ${util.inspect(obj, false, Infinity)}`;
+				err.message = (err.message ?? "") +
+					`\nwhile processing ${obj.type} ${obj.id}`;
 				throw err;
 			}
 		}
@@ -320,13 +271,8 @@ module.exports = class ArchiveService {
 				title: 'File path',
 				type: 'string'
 			},
-			copy: {
-				title: 'Generate new ids',
-				type: 'boolean',
-				default: true
-			},
-			data: {
-				title: 'Data',
+			idMap: {
+				title: 'Map ids',
 				type: 'object',
 				default: {}
 			}
@@ -340,4 +286,26 @@ function fileStamp(d = new Date()) {
 		.replace(/[-:]/g, '')
 		.replace('T', '-')
 		.slice(0, -2);
+}
+
+function writeBlocks(jstream, parent, key, ids) {
+	const list = parent[key];
+	const idList = new Array(list.length);
+	let count = 0;
+	for (let i = 0; i < list.length; i++) {
+		const item = list[i];
+		const { id } = item;
+		if (!ids.has(id)) {
+			ids.add(id);
+			count += 1;
+			jstream.write(item);
+		}
+		idList[i] = id;
+	}
+	if (idList.length > 0) {
+		parent[key] = idList;
+	} else {
+		delete parent[key];
+	}
+	return count;
 }
