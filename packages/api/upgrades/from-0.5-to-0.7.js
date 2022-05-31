@@ -24,7 +24,7 @@ exports.notfound = function(block) {
 		url: '/.well-known/404',
 		noindex: true,
 		nositemap: true
-	});
+	};
 };
 
 exports.page = function(block) {
@@ -183,24 +183,4 @@ exports.layout = function(block) {
 exports.grid = function(block) {
 	// that was the default in 0.5
 	block.data.responsive = 'stackable';
-};
-
-exports.piercan_produit = function(block) {
-	const content = block.content || {};
-	block.content = {};
-	if (content.content) block.content.extra = content.content;
-	if (block.data.image) {
-		const imgBlock = {
-			id: this.Block.genIdSync(),
-			type: 'image',
-			data: {
-				url: block.data.image
-			}
-		};
-		delete block.data.image;
-		this.idMap[imgBlock.id] = imgBlock.id;
-		block.content.preview = `<div block-id="${imgBlock.id}"></div>`;
-		if (!block.children) block.children = [];
-		block.children.push(imgBlock);
-	}
 };
