@@ -29,7 +29,7 @@ module.exports = class ArchiveService {
 	async export(req, { file, ids = [] }) {
 		const { site, trx, res } = req;
 		const { id } = site;
-		const filepath = file ?? `${id}-${fileStamp()}.json`;
+		const filepath = file ?? `${id}-${fileStamp()}.jsonl`;
 		const counts = {
 			users: 0,
 			blocks: 0,
@@ -116,7 +116,7 @@ module.exports = class ArchiveService {
 			file: {
 				title: 'File name',
 				type: 'string',
-				pattern: /^[\w-]+\.json$/.source,
+				pattern: /^[\w-]+\.jsonl$/.source,
 				nullable: true
 			},
 			ids: {
