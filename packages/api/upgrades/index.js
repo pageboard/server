@@ -33,11 +33,17 @@ module.exports = class Upgrader {
 			});
 		}
 		block = this.upgrade(block, parent);
-		if (this.DomainBlock.schema(block.type) == null) {
+		const schema = this.DomainBlock.schema(block.type);
+		if (schema == null) {
 			console.warn("Unknown type", block.type, block.id);
 			block.type = '_';
 			delete block.data;
 			delete block.content;
+		} else {
+			fixContentProperties(
+				schema.properties.content?.properties,
+				block.content
+			);
 		}
 		if (block.children) for (const child of block.children) {
 			this.process(child, block);
@@ -89,3 +95,14 @@ module.exports = class Upgrader {
 	}
 };
 
+function fixContentProperties(props, content) {
+	// some blocks have been saved with a named key when they
+	// actually had no named key
+	if (props == null || content == null) return;
+	const keys = Object.keys(props);
+	if (keys.length != 1 || keys[0] !== "") return;
+	const ckeys = Object.keys(content);
+	if (ckeys.length != 1 || ckeys[0] === keys[0]) return;
+	content[""] = content[ckeys[0]];
+	delete content[ckeys[0]];
+}
