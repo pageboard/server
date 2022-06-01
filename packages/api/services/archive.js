@@ -70,13 +70,17 @@ module.exports = class ArchiveService {
 		};
 
 		const countParents = site.$modelClass.relatedQuery('parents', trx)
-			.whereNot('parents.id', site.id);
+			.whereNot('parents.id', site.id)
+			.whereNot('parents.type', 'user');
 
 		const blocks = await site.$relatedQuery('children', trx)
 			.modify(q => {
 				if (ids.length > 0) q.whereIn('block.id', ids);
 			})
-			.where('standalone', true)
+			.where(q => {
+				// workaround settings not being standalone on previous versions
+				q.where('standalone', true).orWhere('type', 'settings');
+			})
 			.whereNotExists(countParents)
 			.select()
 			.withGraphFetched(`[
