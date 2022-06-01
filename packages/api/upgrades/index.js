@@ -1,6 +1,6 @@
 module.exports = class Upgrader {
 	constructor(DomainBlock, { from, to, idMap }) {
-		this.idMap = idMap;
+		this.idMap = Object.isEmpty(idMap) ? null : idMap;
 		this.DomainBlock = DomainBlock;
 		this.reverseMap = {};
 		if (from && to) {
