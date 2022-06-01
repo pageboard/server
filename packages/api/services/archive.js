@@ -207,6 +207,7 @@ module.exports = class ArchiveService {
 			} else {
 				await upgrader.afterEach(obj);
 				if (obj.parents) {
+					// e.g. settings < user
 					obj.parents = obj.parents.map(id => {
 						const kid = refs.get(id);
 						if (!kid) {
@@ -216,6 +217,13 @@ module.exports = class ArchiveService {
 						}
 						return { "#dbRef": kid };
 					});
+				}
+				if (obj.children) {
+					// ensure non-standalone children are related to site
+					for (const child of obj.children) {
+						if (!child.parents) child.parents = [];
+						child.parents.push({ "#dbRef": site._id });
+					}
 				}
 				if (obj.standalones) {
 					if (!obj.children) obj.children = [];
