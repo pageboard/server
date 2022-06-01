@@ -29,7 +29,7 @@ module.exports = class ArchiveService {
 	async export(req, { file, ids = [] }) {
 		const { site, trx, res } = req;
 		const { id } = site;
-		const filepath = file ?? `${id}-${fileStamp()}.jsonl`;
+		const filepath = file ?? `${id}-${fileStamp()}.ndjson`;
 		const counts = {
 			users: 0,
 			blocks: 0,
@@ -39,6 +39,7 @@ module.exports = class ArchiveService {
 		let out;
 		if (res.attachment) {
 			counts.file = Path.basename(filepath);
+			res.type('application/x-ndjson');
 			res.attachment(counts.file);
 			out = res;
 		} else {
@@ -116,7 +117,7 @@ module.exports = class ArchiveService {
 			file: {
 				title: 'File name',
 				type: 'string',
-				pattern: /^[\w-]+\.jsonl$/.source,
+				pattern: /^[\w-]+\.ndjson$/.source,
 				nullable: true
 			},
 			ids: {
