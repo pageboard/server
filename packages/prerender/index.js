@@ -145,10 +145,15 @@ module.exports = class PrerenderModule {
 		}
 
 		if (query.develop === null) {
-			if (req.path.startsWith("/.well-known/")) {
+			const { groups: {
+				code
+			}} = /^\.well-known\/(?<code>\d{3})$/.exec(req.path) ?? {
+				groups: {}
+			};
+			if (code) {
 				// ends with a status code, not set in develop mode
 				req.call('cache.map', req.path);
-				res.status(req.path.split('/').pop());
+				res.status(Number.parseInt(code));
 			} else {
 				req.call('cache.map', "/.well-known/200");
 			}
