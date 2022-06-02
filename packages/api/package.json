@@ -28,6 +28,7 @@
     "json-schema-traverse": "^1.0.0",
     "ndjson": "2.0.0",
     "node-schedule": "^2.1.0",
+    "number-precision": "^1.5.2",
     "objection": "^3.0.1",
     "table": "^6.8.0",
     "tosource": "2.0.0-alpha.3"

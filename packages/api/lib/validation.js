@@ -3,6 +3,7 @@ const Ajv = require('ajv');
 const AjvKeywords = require('ajv-keywords');
 const AjvFormats = require('ajv-formats');
 const { default: betterAjvErrors } = require('better-ajv-errors');
+const NP = require('number-precision');
 
 class AjvValidatorExt extends AjvValidator {
 	compilePatchValidator(jsonSchema) {
@@ -43,6 +44,18 @@ module.exports = class Validation {
 	#setupAjv(ajv) {
 		AjvFormats(ajv);
 		AjvKeywords(ajv);
+		ajv.removeKeyword("multipleOf");
+		ajv.addKeyword({
+			keyword: "multipleOf",
+			type: "number",
+			compile(schema) {
+				return (data) => Number.isInteger(NP.divide(data, schema));
+			},
+			errors: false,
+			metaSchema: {
+				type: "number",
+			},
+		});
 		this.#customKeywords(ajv);
 		// otherwise the `format` keyword would validate before `coerce`
 		// https://github.com/epoberezkin/ajv/issues/986
