@@ -44,6 +44,8 @@ module.exports = class Validation {
 	#setupAjv(ajv) {
 		AjvFormats(ajv);
 		AjvKeywords(ajv);
+
+		this.#customKeywords(ajv);
 		ajv.removeKeyword("multipleOf");
 		ajv.addKeyword({
 			keyword: "multipleOf",
@@ -56,7 +58,6 @@ module.exports = class Validation {
 				type: "number",
 			},
 		});
-		this.#customKeywords(ajv);
 		// otherwise the `format` keyword would validate before `coerce`
 		// https://github.com/epoberezkin/ajv/issues/986
 		const rules = ajv.RULES.types.string.rules;
