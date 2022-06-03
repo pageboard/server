@@ -26,19 +26,17 @@ module.exports = class UploadModule {
 			...opts.limits
 		};
 		this.destination = this.destination.bind(this);
-		this.store = multer.diskStorage(this);
+		this.storage = multer.diskStorage(this);
 	}
 	async apiRoutes(app, server) {
-		server.post('/.api/upload/:id?', async (req) => {
+		server.post('/.api/upload/:id?', async req => {
 			const limits = { ...this.opts.limits };
 			if (req.params.id) {
 				const input = await req.run('block.get', { id: req.params.id });
 				Object.assign(limits, input.data.limits);
 			}
 			const files = await this.parse(req, limits);
-			const list = await Promise.all(files.map((file) => {
-				return this.store(req, file);
-			}));
+			const list = await Promise.all(files.map(file => this.store(req, file)));
 			// backward compatibility with elements-write's input href
 			const obj = req.params.id ? { items: list } : list;
 			return obj;
@@ -55,7 +53,7 @@ module.exports = class UploadModule {
 			cb(null, this.opts.tmp);
 		}
 	}
-	filename(req, file, cb) {
+	async filename(req, file, cb) {
 		const parts = file.originalname.split('.');
 		const ext = speaking(parts.pop(), {
 			truncate: 8,
@@ -65,13 +63,14 @@ module.exports = class UploadModule {
 			truncate: 128,
 			symbols: false
 		});
-		return randomBytes(4).then(raw => `${basename}-${raw.toString('hex')}.${ext}`);
+		const raw = await randomBytes(4);
+		cb(null, `${basename}-${raw.toString('hex')}.${ext}`);
 	}
 	parse(req, limits) {
 		limits = { ...this.limits, ...limits };
 		return new Promise((resolve, reject) => {
 			multer({
-				storage: this.store,
+				storage: this.storage,
 				fileFilter: function(req, file, cb) {
 					const types = limits.types?.length ? limits.types : ['*/*'];
 					cb(null, Boolean(typeis.is(file.mimetype, types)));
@@ -80,10 +79,8 @@ module.exports = class UploadModule {
 					files: limits.files,
 					fileSize: limits.size
 				}
-			}).array('files')(req, null, (err, req, res, next) => {
-				if (err) {
-					reject(err);
-				}
+			}).array('files')(req, req.res, err => {
+				if (err) return reject(err);
 				if (req.files == null) {
 					reject(new HttpError.BadRequest("Missing files"));
 				} else {
@@ -129,7 +126,7 @@ module.exports = class UploadModule {
 	};
 
 	async store(req, data) {
-		const image = await this.req.run('image.upload', {
+		const image = await req.run('image.upload', {
 			path: data.path,
 			mime: mime.lookup(Path.extname(data.path))
 		});
@@ -138,7 +135,7 @@ module.exports = class UploadModule {
 			"/.uploads",
 			Path.relative(root, image.path)
 		);
-		await this.req.run('href.add', { url: pathname });
+		await req.run('href.add', { url: pathname });
 		return pathname;
 	}
 	static store = {

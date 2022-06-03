@@ -18,7 +18,7 @@
   "homepage": "https://github.com/pageboard/server#readme",
   "dependencies": {
     "mime-types": "^2.1.35",
-    "multer": "^1.4.4",
+    "multer": "^1.4.5-lts.1",
     "speakingurl": "^14.0.1",
     "type-is": "^1.6.18"
   },

@@ -2,7 +2,7 @@ const sharpie = require.lazy('sharpie');
 const { promises: fs } = require('fs');
 const Path = require('path');
 
-const DataUri = require.lazy('datauri');
+const DatauriParser = require.lazy('datauri/parser');
 const allowedParameters = {
 	rs: true,
 	ex: true,
@@ -88,15 +88,13 @@ module.exports = class ImageModule {
 				quality: 50
 			})
 			.toBuffer().then((buf) => {
-				const dtu = new DataUri();
-				dtu.format('.webp', buf);
-				return dtu.content;
+				const dtu = new DatauriParser();
+				return dtu.format('.webp', buf);
 			});
 	}
-	async upload(file) {
-		const { mime, path } = file;
+	async upload(req, { mime, path }) {
 		if (!mime) {
-			console.warn("image.upload cannot inspect file without mime type", file);
+			console.warn("image.upload cannot inspect file without mime type", mime, path);
 			return;
 		}
 		if (!mime.startsWith('image/')) return;
@@ -136,4 +134,18 @@ module.exports = class ImageModule {
 			path: npath
 		};
 	}
+	static upload = {
+		title: 'Process uploaded image',
+		required: ['path', 'mime'],
+		properties: {
+			path: {
+				title: 'Path',
+				type: 'string'
+			},
+			mime: {
+				title: 'Mime',
+				type: 'string'
+			}
+		}
+	};
 };
