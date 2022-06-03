@@ -51,11 +51,11 @@ module.exports = class Validation {
 			keyword: "multipleOf",
 			type: "number",
 			compile(schema) {
-				return (data) => Number.isInteger(NP.divide(data, schema));
+				return data => Number.isInteger(NP.divide(data, schema));
 			},
 			errors: false,
 			metaSchema: {
-				type: "number",
+				type: "number"
 			},
 		});
 		// otherwise the `format` keyword would validate before `coerce`
