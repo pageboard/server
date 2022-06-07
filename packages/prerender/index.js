@@ -36,7 +36,7 @@ module.exports = class PrerenderModule {
 			upcache: require('./plugins/upcache'),
 			render: require('./plugins/render')
 		});
-		dom.settings.allowedCookies = new Set(["bearer"]);
+		dom.settings.load.cookies.add("bearer");
 
 		server.get(
 			'*',
