@@ -1,10 +1,8 @@
 const { createReadStream, createWriteStream } = require('fs');
 const Path = require('path');
-
+const { Deferred } = require.lazy('class-deferred');
 const ndjson = require.lazy('ndjson');
 const Upgrader = require.lazy('../upgrades');
-
-const Deferred = require('../../../lib/deferred');
 
 module.exports = class ArchiveService {
 	static name = 'archive';

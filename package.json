@@ -36,6 +36,7 @@
     "@pageboard/prerender": "workspace:*",
     "@pageboard/statics": "workspace:*",
     "@pageboard/upload": "workspace:*",
+    "class-deferred": "^1.0.1",
     "debug": "^4.3.4",
     "express": "^4.18.1",
     "http-errors": "^2.0.0",
