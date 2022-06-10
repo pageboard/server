@@ -128,6 +128,8 @@ module.exports = class PrerenderModule {
 		/* end compat */
 
 		const { mime = "text/html", pdf, display, medias, fonts } = outputOpts;
+		// client code awaits completion anyway
+		settings.online.track = false;
 		const { plugins, policies } = settings.online;
 
 		if (mime == "text/html" && site.data.env == "dev" && !pdf) {
