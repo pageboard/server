@@ -16,19 +16,17 @@ module.exports = class PrerenderModule {
 	viewRoutes(app, server) {
 		this.dom = dom;
 
-		Object.assign(dom.settings, {
+		Object.assign(dom.defaults, {
 			timeout: 20000
 		}, this.opts);
 
-		dom.settings.load.plugins = [
+		dom.online.plugins = new Set([
 			'console',
 			'form',
 			'upcache',
 			'equivs',
 			'cookies'
-		];
-
-		dom.helpers.prerender = (...args) => this.prerender(...args);
+		]);
 
 		Object.assign(dom.plugins, {
 			serialize: require('./plugins/serialize'),
@@ -36,13 +34,14 @@ module.exports = class PrerenderModule {
 			upcache: require('./plugins/upcache'),
 			render: require('./plugins/render')
 		});
-		dom.settings.load.cookies.add("bearer");
+		dom.defaults.cookies.add("bearer");
 
 		server.get(
 			'*',
 			app.cache.tag('app-:site'),
 			(req, res) => this.check(req, res),
-			dom('prerender', 'develop').load()
+			dom((...args) => this.prerender(...args)),
+			(req, res, next) => this.source(req, res, next)
 		);
 	}
 
@@ -115,10 +114,8 @@ module.exports = class PrerenderModule {
 		}
 	}
 
-	prerender(mw, settings, req, res) {
+	prerender(settings, req, res) {
 		const { site, query, $fake: { schema, type } } = req;
-
-		const { plugins } = settings.load;
 
 		const outputOpts = schema.output || {};
 		// begin compat (0.7 clients using ext names)
@@ -131,20 +128,23 @@ module.exports = class PrerenderModule {
 		/* end compat */
 
 		const { mime = "text/html", pdf, display, medias, fonts } = outputOpts;
+		const { plugins, policies } = settings.online;
 
 		if (mime == "text/html" && site.data.env == "dev" && !pdf) {
-			if (query.develop == "prerender") {
+			if (query.develop === "prerender") {
 				delete query.develop;
-			} else if (!query.develop) {
-				query.develop = null;
+				settings.location.searchParams.delete('develop');
+			} else if (query.develop == null) {
+				settings.location.searchParams.set('develop', '');
 			}
 		}
 
-		if (query.develop !== undefined && ![null, "write"].includes(query.develop)) {
+		if (query.develop !== undefined && !["", "write", "on", "off"].includes(query.develop)) {
 			delete query.develop;
+			settings.location.searchParams.delete('develop');
 		}
 
-		if (query.develop === null) {
+		if (query.develop === "") {
 			const { groups: {
 				code
 			}} = /^\.well-known\/(?<code>\d{3})$/.exec(req.path) ?? {
@@ -157,37 +157,35 @@ module.exports = class PrerenderModule {
 			} else {
 				req.call('cache.map', "/.well-known/200");
 			}
-		} else {
-			settings.location.searchParams.delete('develop');
-			settings.mime = mime;
-			if (pdf) {
-				settings.helpers.push('pdf');
-			} else if (medias) {
-				settings.policies.img = "'self' https: data:";
-				settings.policies.font = "'self' https: data:";
-				settings.policies.style = "'self' 'unsafe-inline' https:";
-			} else if (fonts) {
-				settings.policies.font = "'self' https: data:";
-			}
+		} else if (pdf) {
+			this.app.pdf.helper(settings, req, res);
+			return;
+		} else if (medias) {
+			policies.img = "'self' https: data:";
+			policies.font = "'self' https: data:";
+			policies.style = "'self' 'unsafe-inline' https:";
+		} else if (fonts) {
+			policies.font = "'self' https: data:";
 		}
+
+		res.type(mime);
 		if (mime == "text/html") {
-			plugins.push('redirect');
-			if (this.app.env != "development") {
-				plugins.unshift('preloads');
-			}
+			plugins.add('redirect');
+			plugins.add('preloads');
 		}
 		if (!display) {
-			plugins.push('hide', 'prerender');
+			plugins.add('hidden');
 		}
-		plugins.push('serialize');
+		plugins.add('serialize');
+	}
 
+	source({ site }, res) {
 		const siteScripts = site.$pkg.bundles.site?.meta?.scripts ?? [];
-
 		const scripts = siteScripts.map(src => {
 			return `<script defer src="${src}"></script>`;
 		});
-
-		settings.input = Text`
+		res.type('text/html');
+		res.send(Text`
 			<!DOCTYPE html>
 			<html>
 				<head>
@@ -195,6 +193,6 @@ module.exports = class PrerenderModule {
 					${scripts.join('\n')}
 				</head>
 				<body></body>
-			</html>`;
+			</html>`);
 	}
 };

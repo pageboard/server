@@ -1,6 +1,5 @@
 module.exports = function(page, settings, req, res) {
 	page.on('idle', async () => {
-		if (settings.output != null) return;
 		const obj = await page.evaluate(async () => {
 			const { Page } = window;
 			if (!Page) {
@@ -23,7 +22,6 @@ module.exports = function(page, settings, req, res) {
 			};
 		});
 		if (!obj) throw new HttpError.BadRequest("Empty response");
-		settings.output = false;
 		if (obj.mime && obj.mime != "text/html") {
 			// browsers revalidate only html by default
 			res.set("Cache-Control", "must-revalidate");
