@@ -7,19 +7,23 @@ module.exports = function(page, settings, req, res) {
 				err.statusCode = 501;
 				throw err;
 			}
-			const state = await Page.finish();
-			if (Page.serialize) {
-				let obj = await Page.serialize(state);
-				// backward compatibility with old clients
-				if (typeof obj == "string") obj = {
-					mime: settings.mime || "text/html",
-					body: obj
+			try {
+				const state = await Page.finish();
+				if (Page.serialize) {
+					let obj = await Page.serialize(state);
+					// backward compatibility with old clients
+					if (typeof obj == "string") obj = {
+						mime: settings.mime || "text/html",
+						body: obj
+					};
+					return obj;
+				} else return {
+					mime: "text/html",
+					body: '<!DOCTYPE html>\n' + document.documentElement.outerHTML
 				};
-				return obj;
-			} else return {
-				mime: "text/html",
-				body: '<!DOCTYPE html>\n' + document.documentElement.outerHTML
-			};
+			} catch (err) {
+				console.error(err.toString(), err.stack);
+			}
 		});
 		if (!obj) throw new HttpError.BadRequest("Empty response");
 		if (obj.mime && obj.mime != "text/html") {
