@@ -158,8 +158,7 @@ module.exports = class PrerenderModule {
 				req.call('cache.map', "/.well-known/200");
 			}
 		} else if (pdf) {
-			this.app.pdf.helper(settings, req, res);
-			return;
+			return this.app.pdf.helper(settings, req, res);
 		} else if (medias) {
 			policies.img = "'self' https: data:";
 			policies.font = "'self' https: data:";
