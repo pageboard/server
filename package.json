@@ -84,9 +84,9 @@
     ]
   },
   "devDependencies": {
-    "@kapouer/eslint-config": "^1.6.2",
-    "eslint": ">= 7",
-    "eslint-plugin-jest": "^26.1.1",
-    "jest": "^27.5.1"
+    "@kapouer/eslint-config": "^1.7.5",
+    "eslint": "8.17.0",
+    "eslint-plugin-jest": "^26.5.3",
+    "jest": "^28.1.0"
   }
 }
