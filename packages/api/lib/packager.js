@@ -5,6 +5,7 @@ const { AbsoluteProxy, EltProxy, MapProxy } = require('./proxies');
 const { promises: fs } = require('fs');
 const vm = require.lazy('vm');
 const translateJSON = require.lazy('./translate');
+const schemas = require.lazy('./schemas');
 
 module.exports = class Packager {
 	constructor(app, Block) {
@@ -79,6 +80,7 @@ module.exports = class Packager {
 
 
 		pkg.eltsMap = eltsMap;
+		if (!pkg.eltsMap.site) pkg.eltsMap.site = schemas.site;
 		pkg.groups = groups;
 		pkg.bundles = bundles;
 		return this.Block.initSite(site, pkg);
