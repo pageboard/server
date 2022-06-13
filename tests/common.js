@@ -6,18 +6,29 @@ const merge = require('lodash.merge');
 
 const bin = Path.join(__dirname, '..', 'bin', 'pageboard');
 
-exports.cli = async (...args) => {
+async function cli(...args) {
 	try {
-		const { stdout } = await execFile(bin, args);
+		const { stdout, stderr } = await execFile(bin, args);
+		if (stderr) console.error(stderr);
 		return JSON.parse(stdout);
 	} catch (err) {
 		if (err.stderr) throw new Error(err.stderr);
 		else throw err;
 	}
-};
+}
 
-exports.genId = () => {
+function genId() {
 	return randomBytes(12).toString('hex');
-};
+}
 
-exports.merge = merge;
+async function createSite(id) {
+	if (!id) id = genId();
+	await cli('site.add', `id=${id}`, `data.env=dev`);
+	return id;
+}
+
+async function destroySite(id) {
+	await cli('site.del', `id=${id}`);
+}
+
+Object.assign(exports, { cli, genId, merge, createSite, destroySite });
