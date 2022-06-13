@@ -197,7 +197,7 @@ function jsonSchemaWithoutRequired(jsonSchema) {
 	return Object.assign(
 		omit(jsonSchema, ['required', ...subSchemaProps]),
 		discriminatorRequired,
-		...subSchemaProps.map((prop) => subSchemaWithoutRequired(jsonSchema, prop)),
+		...subSchemaProps.map(prop => subSchemaWithoutRequired(jsonSchema, prop)),
 		jsonSchema && jsonSchema.definitions
 			? {
 				definitions: Object.assign(
