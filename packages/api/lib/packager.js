@@ -166,6 +166,7 @@ module.exports = class Packager {
 			const sourceUrl = `/.files/${tag}/${filename}`;
 			const sourcePath = this.app.statics.resolve(site.id, sourceUrl);
 			const str = `Pageboard.${name} = Object.assign(Pageboard.${name} || {}, ${toSource(obj)});`;
+			await fs.mkdir(Path.dirname(sourcePath), { recursive: true });
 			await fs.writeFile(sourcePath, str);
 			const paths = await this.app.statics.bundle(site, pkg, [sourceUrl], filename);
 			return paths[0];
