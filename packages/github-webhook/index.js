@@ -1,5 +1,5 @@
 const semver = require('semver');
-const crypto = require('crypto');
+const crypto = require('node:crypto');
 
 module.exports = class GitModule {
 	static name = 'git';

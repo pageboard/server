@@ -1,4 +1,4 @@
-const crypto = require('crypto');
+const crypto = require('node:crypto');
 
 const mailgunTokens = {};
 const mailgunExpirey = 15 * 60 * 1000;

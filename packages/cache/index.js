@@ -1,8 +1,8 @@
 const Upcache = require.lazy('upcache');
-const { promises: fs } = require('fs');
-const Path = require('path');
+const { promises: fs } = require('node:fs');
+const Path = require('node:path');
 const Stringify = require.lazy('fast-json-stable-stringify');
-const crypto = require.lazy('crypto');
+const crypto = require.lazy('node:crypto');
 const got = require.lazy('got');
 
 module.exports = class CacheModule {

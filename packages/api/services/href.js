@@ -1,4 +1,4 @@
-const Path = require('path');
+const Path = require('node:path');
 const { ref, raw, val } = require('objection');
 const jsonPath = require.lazy('@kapouer/path');
 

@@ -1,7 +1,7 @@
-const { promisify } = require('util');
-const execFile = promisify(require('child_process').execFile);
-const { randomBytes } = require('crypto');
-const Path = require('path');
+const { promisify } = require('node:util');
+const execFile = promisify(require('node:child_process').execFile);
+const { randomBytes } = require('node:crypto');
+const Path = require('node:path');
 const merge = require('lodash.merge');
 
 const bin = Path.join(__dirname, '..', 'bin', 'pageboard');

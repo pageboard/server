@@ -1,4 +1,4 @@
-const ref = require('objection').ref;
+const { ref } = require('objection');
 
 module.exports = class SettingsService {
 	static name = 'settings';

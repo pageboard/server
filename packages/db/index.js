@@ -1,6 +1,6 @@
-const Path = require('path');
-const { promisify } = require('util');
-const exec = promisify(require('child_process').execFile);
+const Path = require('node:path');
+const { promisify } = require('node:util');
+const exec = promisify(require('node:child_process').execFile);
 const schedule = require.lazy("node-schedule");
 const knex = require('knex');
 

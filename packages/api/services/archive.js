@@ -1,5 +1,5 @@
-const { createReadStream, createWriteStream } = require('fs');
-const Path = require('path');
+const { createReadStream, createWriteStream } = require('node:fs');
+const Path = require('node:path');
 const { Deferred } = require.lazy('class-deferred');
 const ndjson = require.lazy('ndjson');
 const Upgrader = require.lazy('../upgrades');

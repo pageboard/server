@@ -1,7 +1,7 @@
 const common = require('./common');
 const { Model } = common;
 const Traverse = require('json-schema-traverse');
-const crypto = require('crypto');
+const crypto = require('node:crypto');
 
 class Block extends Model {
 	static useLimitInFirst = true;

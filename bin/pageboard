@@ -1,6 +1,6 @@
 #!/usr/bin/node
 
-const Path = require('path');
+const Path = require('node:path');
 
 require(
 	Path.join(__dirname, '..', 'index.js')

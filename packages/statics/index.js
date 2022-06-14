@@ -1,6 +1,6 @@
 const serveStatic = require.lazy('serve-static');
-const Path = require('path');
-const { promises: fs } = require('fs');
+const Path = require('node:path');
+const { promises: fs } = require('node:fs');
 
 const bundlers = {
 	js: require.lazy('postinstall-js'),

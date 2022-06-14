@@ -1,6 +1,6 @@
 const sharpie = require.lazy('sharpie');
-const { promises: fs } = require('fs');
-const Path = require('path');
+const { promises: fs } = require('node:fs');
+const Path = require('node:path');
 
 const DatauriParser = require.lazy('datauri/parser');
 const allowedParameters = {

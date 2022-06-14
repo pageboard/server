@@ -1,8 +1,9 @@
 const { ref, val, raw, Model, QueryBuilder } = require('objection');
 const Duration = require('iso8601-duration');
+const Path = require('node:path');
 
 const { isKnexRaw, isKnexQueryBuilder } = require(
-	require('path').join(
+	Path.join(
 		require.resolve('objection'),
 		'..',
 		'utils/knexUtils'
@@ -10,7 +11,7 @@ const { isKnexRaw, isKnexQueryBuilder } = require(
 );
 
 const { isObject } = require(
-	require('path').join(
+	Path.join(
 		require.resolve('objection'),
 		'..',
 		'utils/objectUtils'
@@ -18,7 +19,7 @@ const { isObject } = require(
 );
 
 const { UpdateOperation } = require(
-	require('path').join(
+	Path.join(
 		require.resolve('objection'),
 		'..',
 		'queryBuilder/operations/UpdateOperation'
@@ -26,7 +27,7 @@ const { UpdateOperation } = require(
 );
 
 const { InstanceUpdateOperation } = require(
-	require('path').join(
+	Path.join(
 		require.resolve('objection'),
 		'..',
 		'queryBuilder/operations/InstanceUpdateOperation'

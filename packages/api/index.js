@@ -1,5 +1,5 @@
 const { transaction } = require('objection');
-const Path = require('path');
+const Path = require('node:path');
 
 const bodyParser = require.lazy('body-parser');
 const jsonPath = require.lazy('@kapouer/path');

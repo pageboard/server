@@ -1,10 +1,11 @@
 const multer = require.lazy('multer');
-const Path = require('path');
-const randomBytes = require('util').promisify(require('crypto').pseudoRandomBytes);
+const Path = require('node:path');
+const randomBytes = require('node:util')
+	.promisify(require('node:crypto').pseudoRandomBytes);
 const typeis = require.lazy('type-is');
 const mime = require.lazy('mime-types');
 const speaking = require.lazy('speakingurl');
-const { promises: fs } = require('fs');
+const { promises: fs } = require('node:fs');
 
 module.exports = class UploadModule {
 	static name = 'upload';
