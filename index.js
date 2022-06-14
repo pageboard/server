@@ -1,18 +1,9 @@
-const toml = require('toml');
-const xdg = require('xdg-basedir');
-const Path = require('path');
-const { promises: { readFile } } = require('fs');
 const Pageboard = require("./lib/pageboard");
-const { unflatten } = require('./lib/utils')
+const { unflatten } = require('./lib/utils');
 
 if (!process.env.HOME) {
 	throw new Error("Missing HOME environment variable");
 }
-
-const {
-	name,
-	version
-} = require(Path.join(__dirname, 'package.json'));
 
 (async () => {
 	const {
@@ -23,31 +14,14 @@ const {
 		opts = {},
 		data = {}
 	} = parseArgs(process.argv.slice(2));
-	opts.name = name;
-	opts.version = version.split('.').slice(0, 2).join('.');
-	opts.dirs = {
-		...opts.dirs,
-		config: Path.join(xdg.config, name),
-		cache: Path.join(xdg.cache, name),
-		data: Path.join(xdg.data, name),
-		tmp: Path.join(xdg.data, '../tmp', name)
-	};
 
-	if (!opts.config) {
-		opts.config = Path.join(opts.dirs.config, 'config');
-	}
-
-	Object.assign(opts, {
-		...toml.parse(await readFile(opts.config)),
-		...opts
-	});
 	const info = console.info;
 	if (cli) {
 		opts.cli = true;
 		console.info = () => { };
 	}
 
-	const app = new Pageboard(opts);
+	const app = new Pageboard(await Pageboard.getOpts(opts));
 	await app.init();
 
 	if (help) {
@@ -60,13 +34,6 @@ const {
 		return app.start();
 	}
 
-	if (typeof opts.data == "string") {
-		try {
-			Object.assign(data, JSON.parse(opts.data));
-		} catch(ex) {
-			console.error(ex);
-		}
-	}
 	const req = { res: {} };
 	app.domains.extendRequest(req, app);
 	if (site) {
@@ -78,6 +45,7 @@ const {
 	}
 
 	const results = await req.run(command, data);
+	// eslint-disable-next-line no-console
 	console.log(
 		typeof results == "string"
 			? results
@@ -119,6 +87,13 @@ function parseArgs(args) {
 			return ret;
 		} else {
 			ret.command = key;
+		}
+	}
+	if (typeof opts.data == "string") {
+		try {
+			Object.assign(data, JSON.parse(opts.data));
+		} catch (ex) {
+			console.error(ex);
 		}
 	}
 	ret.opts = unflatten(opts);
