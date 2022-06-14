@@ -143,7 +143,10 @@ module.exports = class PageService {
 		if (obj.status != 200) {
 			page = await this.#QueryPage(req, `/.well-known/${obj.status}`)
 				.where('page.type', 'page');
-			if (!page) throw new HttpError[obj.status]();
+			if (!page) return Object.assign(obj, {
+				item: { type: 'page' },
+				meta: site.$pkg.bundles.page.meta
+			});
 		}
 		const links = {};
 		Object.assign(obj, {
