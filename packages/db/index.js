@@ -62,7 +62,7 @@ module.exports = class DatabaseModule {
 		console.info("Scheduling tenant db copies:", slots.join(', '));
 		schedule.scheduleJob('0 0 * * *', (date) => {
 			const tenant = slots[(date.getDay() - 1) % slots.length];
-			return app.run(null, 'database.copy', { tenant });
+			return app.run('database.copy', { tenant });
 		});
 	}
 
