@@ -2,7 +2,7 @@
   "name": "pageboard",
   "version": "0.10.0",
   "description": "Website hosting and editing",
-  "main": "index.js",
+  "main": "lib/pageboard.js",
   "scripts": {
     "test": "jest",
     "start": "node index.js"

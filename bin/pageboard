@@ -1,7 +1,3 @@
 #!/usr/bin/node
 
-const Path = require('node:path');
-
-require(
-	Path.join(__dirname, '..', 'index.js')
-);
+require("../lib/cli.js");
