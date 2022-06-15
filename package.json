@@ -4,7 +4,7 @@
   "description": "Website hosting and editing",
   "main": "lib/pageboard.js",
   "scripts": {
-    "test": "jest"
+    "test": "mocha"
   },
   "bin": {
     "pageboard": "./bin/pageboard.js"
@@ -76,21 +76,27 @@
           "tests/**/*.test.js"
         ],
         "env": {
-          "jest": true
+          "mocha": true
         },
         "plugins": [
-          "jest"
+          "mocha"
         ],
-        "extends": [
-          "plugin:jest/recommended"
-        ]
+        "extends": ["plugin:mocha/recommended"],
+        "rules": {
+          "prefer-arrow-callback": "off",
+          "mocha/prefer-arrow-callback": "warn"
+        }
       }
     ]
+  },
+  "mocha": {
+    "spec": "tests/**/*.test.js",
+    "ui": "tdd"
   },
   "devDependencies": {
     "@kapouer/eslint-config": "^1.7.5",
     "eslint": "8.17.0",
-    "eslint-plugin-jest": "^26.5.3",
-    "jest": "^28.1.1"
+    "eslint-plugin-mocha": "^10.0.5",
+    "mocha": "^10.0.0"
   }
 }
