@@ -1,6 +1,6 @@
 #!/usr/bin/node
 
-const Pageboard = require("..");
+const Pageboard = require("../lib/pageboard");
 
 if (!process.env.HOME) {
 	throw new Error("Missing HOME environment variable");
@@ -9,7 +9,6 @@ if (!process.env.HOME) {
 (async () => {
 	const {
 		help,
-		site,
 		command,
 		opts = {},
 		data = {}
@@ -19,6 +18,9 @@ if (!process.env.HOME) {
 	opts.server.start = !command;
 	if (opts.verbose === undefined) opts.verbose = !command;
 	opts.cli = true;
+
+	const { site } = opts;
+	delete opts.site;
 
 	const app = new Pageboard(opts);
 	await app.init();

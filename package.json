@@ -4,8 +4,10 @@
   "description": "Website hosting and editing",
   "main": "lib/pageboard.js",
   "scripts": {
-    "test": "jest",
-    "start": "node index.js"
+    "test": "jest"
+  },
+  "bin": {
+    "pageboard": "./bin/pageboard.js"
   },
   "repository": {
     "type": "git",
@@ -62,9 +64,10 @@
     },
     "ignorePatterns": [
       "/*",
-      "!/tests",
+      "!/bin",
       "!/packages",
       "!/lib",
+      "!/tests",
       "node_modules/"
     ],
     "overrides": [
