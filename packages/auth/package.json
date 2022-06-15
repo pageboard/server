@@ -20,6 +20,5 @@
     "otplib": "^12.0.1",
     "qrcode": "^1.5.0",
     "upcache": "^2.4.1"
-  },
-  "pageboard": true
+  }
 }

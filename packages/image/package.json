@@ -20,6 +20,5 @@
     "datauri": "^4.1.0",
     "sharp": "^0.30.6",
     "sharpie": "^4.9.0"
-  },
-  "pageboard": true
+  }
 }

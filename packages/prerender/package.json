@@ -24,6 +24,5 @@
   "dependencies": {
     "express-dom": "^7.0.0",
     "got": "^11.8.3"
-  },
-  "pageboard": true
+  }
 }

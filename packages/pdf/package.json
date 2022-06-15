@@ -18,6 +18,5 @@
   "homepage": "https://github.com/pageboard/server#readme",
   "dependencies": {
     "express-dom-pdf": "^3.0.0"
-  },
-  "pageboard": true
+  }
 }

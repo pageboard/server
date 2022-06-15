@@ -22,6 +22,5 @@
     "got": "^11.8.3",
     "nodemailer": "^6.7.3",
     "nodemailer-postmark-transport": "^5.2.1"
-  },
-  "pageboard": true
+  }
 }

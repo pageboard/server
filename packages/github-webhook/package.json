@@ -18,6 +18,5 @@
   "dependencies": {
     "semver": "5"
   },
-  "homepage": "https://github.com/pageboard/server#readme",
-  "pageboard": true
+  "homepage": "https://github.com/pageboard/server#readme"
 }
