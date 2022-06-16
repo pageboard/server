@@ -21,14 +21,15 @@ function genId() {
 	return randomBytes(12).toString('hex');
 }
 
-async function createSite(id) {
-	if (!id) id = genId();
-	await cli('site.add', `id=${id}`, `data.env=dev`);
-	return id;
-}
+const site = {
+	id: 'test',
+	type: 'site',
+	data: {
+		env: 'dev',
+		module: 'pageboard/client#master',
+		version: null
+	},
+	standalone: true
+};
 
-async function destroySite(id) {
-	await cli('site.del', `id=${id}`);
-}
-
-Object.assign(exports, { cli, genId, merge, createSite, destroySite });
+Object.assign(exports, { cli, genId, merge, site });
