@@ -11,6 +11,8 @@ const jsonDoc = require.lazy('./lib/json-doc');
 const Href = require('./models/href');
 const Block = require('./models/block');
 
+const { mergeRecursive } = require('../../lib/utils');
+
 module.exports = class ApiModule {
 	static name = 'api';
 	static priority = -1;
@@ -63,7 +65,7 @@ module.exports = class ApiModule {
 			schema.type = 'object';
 		}
 		try {
-			data = this.validation.validate(schema, data, inst || {});
+			this.validation.validate(schema, data, inst || {});
 		} catch (err) {
 			if (!inst) return false;
 			else throw err;
@@ -102,9 +104,10 @@ module.exports = class ApiModule {
 	async run(req = {}, apiStr, data = {}) {
 		const { app } = this;
 		const [schema, mod, fun] = this.#getService(apiStr);
+		data = mergeRecursive({}, data);
 		Log.api("run %s:\n%O", apiStr, data);
 		try {
-			data = this.validate(schema, data, fun);
+			this.validate(schema, data, fun);
 		} catch (err) {
 			err.message += '\n ' + apiStr + '\n' + jsonDoc(schema, app.opts.cli);
 			throw err;
