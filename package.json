@@ -72,7 +72,7 @@
     "overrides": [
       {
         "files": [
-          "tests/**/*.test.js"
+          "tests/*.test.js"
         ],
         "env": {
           "mocha": true
@@ -89,7 +89,7 @@
     ]
   },
   "mocha": {
-    "spec": "tests/**/*.test.js",
+    "spec": "tests/*.test.js",
     "ui": "tdd"
   },
   "devDependencies": {
