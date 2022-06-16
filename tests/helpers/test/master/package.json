@@ -1,0 +1,9 @@
+{
+ "private": true,
+ "dependencies": {
+  "@pageboard/client": "github:pageboard/client#master"
+ },
+ "pageboard": {
+  "server": null
+ }
+}
