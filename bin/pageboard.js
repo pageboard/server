@@ -17,7 +17,6 @@ if (!process.env.HOME) {
 	if (!opts.server) opts.server = {};
 	opts.server.start = !command;
 	if (opts.verbose === undefined) opts.verbose = !command;
-	opts.cli = true;
 
 	const { site } = opts;
 	delete opts.site;
