@@ -3,6 +3,8 @@ const Pageboard = require('..');
 
 suite('run', function () {
 
+	this.timeout(require('node:inspector').url() === undefined ? 10000 : 0);
+
 	test('validate data', async function() {
 		const { command, data } = Pageboard.parse([
 			"--site=test",

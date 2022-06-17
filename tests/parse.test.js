@@ -3,6 +3,8 @@ const Pageboard = require('..');
 
 suite('parse', function () {
 
+	this.timeout(require('node:inspector').url() === undefined ? 10000 : 0);
+
 	test('parse arguments', async function() {
 		const { command, opts, data } = Pageboard.parse([
 			"--database=postgres:test@localhost/test",

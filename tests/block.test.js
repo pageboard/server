@@ -4,9 +4,8 @@ const { site } = require('./helpers/common');
 
 const app = new Pageboard();
 
-
 suite('block', function () {
-	this.timeout(10000);
+	this.timeout(require('node:inspector').url() === undefined ? 10000 : 0);
 
 	before(async function () {
 		await app.init();
