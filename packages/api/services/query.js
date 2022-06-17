@@ -51,16 +51,18 @@ module.exports = class SearchService {
 				const bundle = site.$pkg.bundles[key];
 				if (bundle.meta.group != "page") bundles[key] = bundle;
 			});
-			const metas = {};
-			Object.keys(fillTypes(obj.item || obj.items, {})).forEach((type) => {
-				const bundleType = Object.keys(bundles).find((key) => {
-					return bundles[key].elements.includes(type);
+			if (obj.item || obj.items) {
+				const metas = {};
+				Object.keys(fillTypes(obj.item || obj.items, {})).forEach((type) => {
+					const bundleType = Object.keys(bundles).find((key) => {
+						return bundles[key].elements.includes(type);
+					});
+					if (bundleType) {
+						metas[bundleType] = bundles[bundleType].meta;
+					}
 				});
-				if (bundleType) {
-					metas[bundleType] = bundles[bundleType].meta;
-				}
-			});
-			obj.metas = Object.values(metas);
+				obj.metas = Object.values(metas);
+			}
 			return obj;
 		} catch(err) {
 			return {
