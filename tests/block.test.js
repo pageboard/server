@@ -24,8 +24,13 @@ suite('block', function () {
 		const b = await app.run('block.add', {
 			type: 'page', data: { url: '/test' }
 		}, 'test');
+		const c = await app.run('block.get', {
+			id: b.id
+		}, 'test');
+		assert.ok('_id' in b, 'has _id');
 		assert.ok('id' in b, 'has id');
 		assert.equal('_id' in JSON.parse(JSON.stringify(b)), false);
+		assert.deepEqual(b, c);
 	});
 
 	test('add block: validation for missing property', async function () {
