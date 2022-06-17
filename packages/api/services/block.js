@@ -519,6 +519,11 @@ module.exports = class BlockService {
 				title: 'data',
 				type: 'object',
 				nullable: true
+			},
+			expr: {
+				title: 'expr',
+				type: 'object',
+				nullable: true
 			}
 		}
 	};
@@ -559,6 +564,11 @@ module.exports = class BlockService {
 			},
 			data: {
 				title: 'data',
+				type: 'object',
+				nullable: true
+			},
+			expr: {
+				title: 'expr',
 				type: 'object',
 				nullable: true
 			},
