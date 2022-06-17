@@ -456,13 +456,14 @@ module.exports = class BlockService {
 		}
 	};
 
-	async add({ site, trx }, data) {
+	async add({ site, trx, Block }, data) {
 		const parents = (data.parents || []).filter((item) => {
 			return item.id != null;
 		});
 		delete data.parents;
 
-		const child = await site.$relatedQuery('children', trx).insert(data);
+		const child = await site.$relatedQuery('children', trx)
+			.insert(data).returning(Block.columns);
 		if (parents.length == 0) return child;
 		const ids = await site.$relatedQuery('children', trx)
 			.whereIn(['block.id', 'block.type'], parents.map((item) => {
