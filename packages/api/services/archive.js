@@ -172,6 +172,8 @@ module.exports = class ArchiveService {
 				delete obj.data.domains;
 				if (site.data.module) delete obj.data.module;
 				if (site.data.version) delete obj.data.version;
+				// keep existing site.data values
+				Object.assign(obj.data, site.data);
 
 				upgrader = new Upgrader(site.$modelClass, {
 					idMap,
