@@ -143,7 +143,7 @@ module.exports = class ArchiveService {
 		$action: 'write'
 	};
 
-	async import(req, { file, idMap }) {
+	async import(req, { file, idMap, types = [] }) {
 		const { site, trx } = req;
 		const counts = {
 			users: 0,
@@ -184,6 +184,7 @@ module.exports = class ArchiveService {
 			return upgrader.beforeEach(obj);
 		};
 		const afterEach = async obj => {
+			if (types.includes(obj.type)) return;
 			if (!obj.id) {
 				counts.hrefs++;
 				return site.$relatedQuery('hrefs', trx).insert(obj);
@@ -288,6 +289,14 @@ module.exports = class ArchiveService {
 				title: 'Map ids',
 				type: 'object',
 				default: {}
+			},
+			excludes: {
+				title: 'Excluded types',
+				type: 'array',
+				items: {
+					type: "string",
+					format: "name"
+				}
 			}
 		}
 	};
