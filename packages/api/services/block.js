@@ -533,8 +533,8 @@ module.exports = class BlockService {
 		const obj = {
 			type: block.type
 		};
-		if (data.data && Object.keys(data.data).length) obj.data = data.data;
-		if (data.lock && Object.keys(data.lock).length) obj.lock = data.lock;
+		if (!Object.isEmpty(data.data)) obj.data = data.data;
+		if (!Object.isEmpty(data.lock)) obj.lock = data.lock;
 		await block.$query(req.trx).patchObject(obj);
 		if (!block) {
 			throw new Error(`Block not found for update ${data.id}`);
