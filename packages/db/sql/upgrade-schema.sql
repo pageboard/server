@@ -1,3 +1,4 @@
+-- this is meant to be used with databases that didn't have "extensions" schema
 CREATE SCHEMA extensions;
 ALTER DATABASE pageboard SET search_path = "$user", public, extensions;
 ALTER EXTENSION "pg_trgm" SET SCHEMA extensions;
