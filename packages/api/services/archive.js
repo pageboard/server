@@ -201,7 +201,8 @@ module.exports = class ArchiveService {
 					refs.set(obj.id, user._id);
 				} catch(err) {
 					if (err.status != 404) throw err;
-					const user = site.$modelClass.query(trx).insert(obj).returning('_id', 'id');
+					const user = await site.$modelClass.query(trx)
+						.insert(obj).returning('_id', 'id');
 					refs.set(obj.id, user._id);
 				}
 				counts.users += 1;
