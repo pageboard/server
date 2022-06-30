@@ -105,10 +105,6 @@ class Href extends common.Model {
 				.where('parent.id', id);
 		}
 	};
-
-	$beforeUpdate() {
-		this.updated_at = new Date().toISOString();
-	}
 }
 
 module.exports = Href;

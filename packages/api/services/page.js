@@ -794,7 +794,7 @@ async function updatePage({ site, trx, Block, Href }, page, sideEffects) {
 					})
 					.returning('block.id', 'block.updated_at');
 				for (const row of rows) {
-					const date = row.updated_at.toISOString();
+					const date = row.updated_at;
 					sideEffects[row.id] = date;
 					if (page.id == row.id) page.updated_at = date;
 				}

@@ -98,14 +98,11 @@ class Block extends Model {
 		}
 	};
 
-	async $beforeInsert() {
+	async $beforeInsert(q) {
+		await super.$beforeInsert(q);
 		if (!this.id) {
 			this.id = await Block.genId();
 		}
-	}
-
-	$beforeUpdate() {
-		this.updated_at = new Date().toISOString();
 	}
 
 	static normalizeContents(contents) {
