@@ -20,3 +20,8 @@ exports.image = function (block, { type } = {}) {
 		}
 	}
 };
+
+exports.input_date_slot = exports.input_date_time = function ({ data }) {
+	if (data.step === 60) data.step = 60 * 60;
+};
+
