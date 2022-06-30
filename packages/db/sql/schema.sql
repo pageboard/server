@@ -197,3 +197,7 @@ ALTER TABLE ONLY relation
     ADD CONSTRAINT relation_child_id_foreign FOREIGN KEY (child_id) REFERENCES block(_id) ON DELETE CASCADE;
 ALTER TABLE ONLY relation
     ADD CONSTRAINT relation_parent_id_foreign FOREIGN KEY (parent_id) REFERENCES block(_id) ON DELETE CASCADE;
+
+CREATE MATERIALIZED VIEW relations_id AS
+    SELECT child.id AS child_id, parent.id AS parent_id FROM block AS child LEFT OUTER JOIN relation AS r ON r.child_id = child._id LEFT OUTER JOIN block AS parent ON parent._id = r.parent_id AND parent.type = 'site';
+CREATE UNIQUE INDEX ON relations_id (child_id, parent_id);
