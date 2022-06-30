@@ -83,7 +83,9 @@
         "plugins": [
           "mocha"
         ],
-        "extends": ["plugin:mocha/recommended"],
+        "extends": [
+          "plugin:mocha/recommended"
+        ],
         "rules": {
           "prefer-arrow-callback": "off",
           "mocha/prefer-arrow-callback": "warn"
