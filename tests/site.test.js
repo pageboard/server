@@ -42,7 +42,7 @@ suite('site', function () {
 			// pass
 		}
 		const get = await app.run('site.get', { id: site.id });
-		assert.ok(get.updated_at instanceof Date);
+		assert.equal(typeof get.updated_at, "string");
 		delete get.updated_at;
 		const nsite = merge({}, site, {
 			content: {},
@@ -64,7 +64,7 @@ suite('site', function () {
 		});
 		assert.ok(save.data.server);
 		delete save.data.server;
-		assert.ok(save.updated_at);
+		assert.equal(typeof save.updated_at, "string");
 		delete save.updated_at;
 		const nsite = merge({}, site, {
 			content: {},
