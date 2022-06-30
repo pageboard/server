@@ -549,9 +549,8 @@ module.exports = class PageService {
 	};
 
 
-	async del(req, data) {
-		const { site, trx, Href } = req;
-		const page = await req.run('block.get', data);
+	async del({ site, trx, Href, run }, data) {
+		const page = await run('block.get', data);
 		const links = site.$relatedQuery('children', trx)
 			.select(
 				'block.id',
@@ -571,7 +570,7 @@ module.exports = class PageService {
 			`);
 		}
 		await Href.query(trx).where('url', page.data.url).del();
-		return req.run('block.del', {
+		return run('block.del', {
 			id: page.id,
 			type: page.type
 		});

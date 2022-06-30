@@ -21,9 +21,8 @@ module.exports = class FormService {
 		});
 	}
 
-	async submit(req, data) {
-		const { site } = req;
-		const form = await req.run('block.get', {
+	async submit({ site, run, user, locked }, data) {
+		const form = await run('block.get', {
 			id: data.id
 		});
 
@@ -32,7 +31,7 @@ module.exports = class FormService {
 		if (!method) {
 			throw new HttpError.BadRequest("Missing method");
 		}
-		if (req.locked((form.lock || {}).write)) {
+		if (locked((form.lock || {}).write)) {
 			throw new HttpError.Unauthorized("Check user permissions");
 		}
 		let body = data.body;
@@ -41,11 +40,11 @@ module.exports = class FormService {
 		let params = mergeParameters(expr, {
 			$request: body,
 			$query: data.query || {},
-			$user: req.user
+			$user: user
 		});
 		params = mergeExpressions(params, fd.action.parameters);
 
-		Log.api("form params", params, req.user, data.query);
+		Log.api("form params", params, user, data.query);
 
 		// build body
 		if (params.type && Object.keys(body).length > 0) {
@@ -78,7 +77,7 @@ module.exports = class FormService {
 		}
 		body = mergeExpressions(body, params);
 
-		return req.run(method, body).catch((err) => {
+		return run(method, body).catch((err) => {
 			return {
 				status: err.statusCode || err.status || err.code || 400,
 				item: {

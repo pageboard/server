@@ -220,9 +220,8 @@ module.exports = class ReservationService {
 		}
 	};
 
-	async del(req, data) {
-		const { user } = req;
-		const resa = await req.call('block.get', {
+	async del({ user, call, trx }, data) {
+		const resa = await call('block.get', {
 			type: 'event_reservation',
 			id: data.reservation
 		}).withGraphFetched('[parents(parentsFilter)]').modifiers({
@@ -244,8 +243,8 @@ module.exports = class ReservationService {
 		if (resa.data.seats == 0) return resa;
 		const total = (eventDate.data.reservations || 0) - resa.data.seats;
 		await Promise.allSettled([
-			eventDate.$query(req.trx).patch({ 'data:reservations': total }),
-			resa.$query(req.trx).delete()
+			eventDate.$query(trx).patch({ 'data:reservations': total }),
+			resa.$query(trx).delete()
 		]);
 		return {};
 	}
@@ -263,8 +262,8 @@ module.exports = class ReservationService {
 		}
 	};
 
-	async pay(req, data) {
-		const resa = await req.run('block.get', {
+	async pay({ run }, data) {
+		const resa = await run('block.get', {
 			type: 'event_reservation',
 			id: data.reservation
 		});
@@ -274,7 +273,7 @@ module.exports = class ReservationService {
 		if (!resa.data.payment.due) resa.data.payment.due = 0;
 		if (!resa.data.payment.paid) resa.data.payment.paid = 0;
 		resa.data.payment.paid += data.amount;
-		return req.run('block.save', resa);
+		return run('block.save', resa);
 	}
 	static pay = {
 		title: 'Pay reservation',

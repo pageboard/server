@@ -23,9 +23,8 @@ module.exports = class SearchService {
 		});
 	}
 
-	async query(req, data) {
-		const { site } = req;
-		const form = await req.run('block.get', {
+	async query({ site, run, locked, user }, data) {
+		const form = await run('block.get', {
 			id: data.id
 		});
 		const fd = form.data || {};
@@ -33,18 +32,18 @@ module.exports = class SearchService {
 		if (!method) {
 			throw new HttpError.BadRequest("Missing method");
 		}
-		if (req.locked((form.lock || {}).read)) {
+		if (locked((form.lock || {}).read)) {
 			throw new HttpError.Unauthorized("Check user permissions");
 		}
 		// build parameters
 		const expr = ((form.expr || {}).action || {}).parameters || {};
 		let params = mergeParameters(expr, {
 			$query: data.query || {},
-			$user: req.user
+			$user: user
 		});
 		params = mergeExpressions(params, fd.action.parameters);
 		try {
-			const obj = await req.run(method, params);
+			const obj = await run(method, params);
 			// check if a non-page bundle is needed
 			const bundles = {};
 			Object.keys(site.$pkg.bundles).forEach(key => {
