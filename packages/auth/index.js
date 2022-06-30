@@ -36,7 +36,10 @@ module.exports = class AuthModule {
 
 	cookie({ site, user }) {
 		return {
-			value: this.#lock.sign(user, {
+			value: this.#lock.sign({
+				id: user.id,
+				grants: user.grants
+			}, {
 				hostname: site.url.hostname,
 				...this.opts
 			}),
