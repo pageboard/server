@@ -4,6 +4,7 @@
   "description": "Website hosting and editing",
   "main": "lib/pageboard.js",
   "scripts": {
+    "start": "pageboard",
     "test": "mocha"
   },
   "bin": {
