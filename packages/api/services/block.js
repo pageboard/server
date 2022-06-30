@@ -1,6 +1,6 @@
 const { ref, raw } = require('objection');
 const Block = require('../models/block');
-const { unflatten } = require('../../../lib/utils');
+const { unflatten, mergeRecursive } = require('../../../lib/utils');
 
 module.exports = class BlockService {
 	static name = 'block';
@@ -22,17 +22,25 @@ module.exports = class BlockService {
 		});
 	}
 
-	get(req, data) {
-		const { site } = req;
-		const q = site.$relatedQuery('children', req.trx).select()
+	get({ site, trx }, data) {
+		const q = site.$relatedQuery('children', trx).select()
 			.where('block.id', data.id);
 		if (data.type) {
 			q.where('block.type', data.type);
 		}
-		if (data.standalone) {
-			q.withGraphFetched('[children(childrenFilter)]').modifiers({
-				childrenFilter(query) {
-					return query.select().where('block.standalone', false);
+		const eagers = {};
+		if (data.parents) {
+			eagers.parents = {
+				$modify: ['withoutSite']
+			};
+		}
+		if (data.children) {
+			eagers.children = true;
+		}
+		if (!Object.isEmpty(eagers)) {
+			q.withGraphFetched(eagers).modifiers({
+				withoutSite(q) {
+					q.whereNot('block.type', 'site');
 				}
 			});
 		}
@@ -43,14 +51,22 @@ module.exports = class BlockService {
 		required: ['id'],
 		properties: {
 			id: {
+				title: 'id',
 				type: 'string',
 				format: 'id'
 			},
 			type: {
+				title: 'type',
 				type: 'string',
 				format: 'name'
 			},
-			standalone: {
+			parents: {
+				title: 'with parents',
+				type: 'boolean',
+				default: false
+			},
+			children: {
+				title: 'with children',
 				type: 'boolean',
 				default: false
 			}
@@ -63,7 +79,7 @@ module.exports = class BlockService {
 		const { site, trx, Block } = req;
 		let parents = data.parents;
 		if (parents) {
-			if (parents.type || parents.id) {
+			if (parents.type || parents.id || parents.standalone) {
 				// ok
 			} else {
 				parents = null;
@@ -112,7 +128,6 @@ module.exports = class BlockService {
 		}
 		if (parents) {
 			eagers.parents = {
-				$relation: 'parents',
 				$modify: ['parentsFilter']
 			};
 		}
@@ -456,6 +471,94 @@ module.exports = class BlockService {
 		}
 	};
 
+	async clone({ site, run, trx, Block }, data) {
+		const src = await run('block.get', {
+			id: data.id,
+			children: true,
+			parents: true
+		});
+		const copy = {
+			type: src.type,
+			data: mergeRecursive({}, src.data, data.data),
+			expr: mergeRecursive({}, src.expr, data.expr),
+			content: mergeRecursive({}, src.content),
+			locks: mergeRecursive({}, src.locks)
+		};
+
+
+		copy.parents = src.parents.map(({ _id }) => {
+			return { "#dbRef": _id };
+		});
+
+		copy.children = await Promise.all(src.children.map(async child => {
+			if (child.standalone) {
+				return { "#dbRef": child._id };
+			} else {
+				delete child._id;
+				delete child.id;
+				await site.$beforeInsert.call(child);
+				return child;
+			}
+		}));
+		return site.$relatedQuery('children', trx)
+			.insertGraph(copy, {
+				allowRefs: true
+			}).returning(Block.columns);
+	}
+	static clone = {
+		title: 'Clone a block',
+		$action: 'add',
+		external: true,
+		required: ['id'],
+		properties: {
+			id: {
+				title: 'source',
+				type: 'string',
+				format: 'id',
+				$helper: {
+					name: 'block',
+					filter: {
+						standalone: true
+					}
+				}
+			},
+			parents: {
+				title: 'parents',
+				type: 'array',
+				items: {
+					type: 'object',
+					properties: {
+						type: {
+							title: 'type',
+							type: 'string',
+							format: 'name',
+							// semafor#convert only coerces empty strings to null if nullable
+							// however it should just "undefine" empty strings
+							nullable: true
+						},
+						id: {
+							title: 'id',
+							type: 'string',
+							format: 'id',
+							nullable: true
+						}
+					}
+				},
+				$filter: 'relation'
+			},
+			data: { // updated by element filter
+				title: 'data',
+				type: 'object',
+				nullable: true
+			},
+			expr: {
+				title: 'expr',
+				type: 'object',
+				nullable: true
+			}
+		}
+	};
+
 	async add({ site, trx, Block }, data) {
 		const parents = (data.parents || []).filter((item) => {
 			return item.id != null;
@@ -534,6 +637,7 @@ module.exports = class BlockService {
 			type: block.type
 		};
 		if (!Object.isEmpty(data.data)) obj.data = data.data;
+		if (!Object.isEmpty(data.content)) obj.content = data.content;
 		if (!Object.isEmpty(data.lock)) obj.lock = data.lock;
 		await block.$query(req.trx).patchObject(obj);
 		if (!block) {
@@ -558,12 +662,16 @@ module.exports = class BlockService {
 				format: 'name',
 				$filter: {
 					name: 'element',
-					standalone: true,
-					contentless: true
+					standalone: true
 				}
 			},
 			data: {
 				title: 'data',
+				type: 'object',
+				nullable: true
+			},
+			content: {
+				title: 'content',
 				type: 'object',
 				nullable: true
 			},
@@ -649,7 +757,62 @@ module.exports = class BlockService {
 		}
 	};
 
+	async fill({ run, trx }, { id, contents = {} }) {
+		const block = await run('block.get', { id });
+		// delete non-standalone children
+		await block.$relatedQuery('children', trx).delete().where('standalone', false);
+		// unrelated standalone children
+		await block.$relatedQuery('children', trx).unrelate().where('standalone', true);
+		// insert children and build content
+		const content = {};
+		block.children = [];
+		for (const { name, children } of contents) {
+			for (const child of children) {
+				if (typeof child.content == "string") child.content = { "": child.content };
+			}
+			const list = await block.$relatedQuery('children', trx).insert(children);
+			content[name] = list.map(child => {
+				block.children.push(child);
+				return `<div block-id="${child.id}"></div>`;
+			}).join('');
+		}
+		await block.$query(trx).patchObject({ type: block.type, content });
+		return block;
+	}
+	static fill = {
+		title: 'Fill block with children',
+		$action: 'write',
+		external: true,
+		required: ['id'],
+		properties: {
+			id: {
+				title: 'id',
+				type: 'string',
+				format: 'id'
+			},
+			contents: {
+				title: 'List of [{ name, children }]',
+				type: 'array',
+				items: {
+					type: 'object',
+					properties: {
+						name: {
+							type: 'string',
+							format: 'name'
+						},
+						children: {
+							type: 'array',
+							items: {
+								type: 'object'
+							}
+						}
+					}
+				}
+			}
+		}
+	};
 };
+
 
 
 function whereSub(q, data, alias = 'block') {
@@ -658,6 +821,8 @@ function whereSub(q, data, alias = 'block') {
 	if (types.length) {
 		valid = true;
 		q.whereIn(`${alias}.type`, types);
+	} else {
+		q.whereNotIn(`${alias}.type`, ['user', 'site']);
 	}
 	if (data.standalone != null) {
 		q.where(`${alias}.standalone`, data.standalone);
