@@ -39,8 +39,9 @@ module.exports = class GitModule {
 				return next(new HttpError.BadRequest('Ignoring payload without ref'));
 			}
 
-			// site.data.module keeps the repository, branch|commit|tag|semver:range that should be installed
-			// site.data.version tracks the *actual* successfully installed commit|tag|version
+			// site.data.module#version|commit|tag|branch
+			// until it is installed, at which point
+			// site.data.version tracks the installed version|commit|tag|branch
 			let msg = 'Nothing to do';
 			let stop = false;
 			if (mod.branch && refs.branch) {
