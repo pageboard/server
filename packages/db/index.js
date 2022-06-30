@@ -2,7 +2,8 @@ const Path = require('node:path');
 const { promisify } = require('node:util');
 const exec = promisify(require('node:child_process').execFile);
 const schedule = require.lazy("node-schedule");
-const knex = require('knex');
+const knex = require.lazy('knex');
+const pg = require.lazy('pg');
 
 const tenants = new Map();
 
@@ -16,6 +17,10 @@ module.exports = class DatabaseModule {
 		if (!opts.dumps) opts.dumps = Path.join(app.dirs.cache, 'dumps');
 		app.dirs.dumps = opts.dumps;
 		if (app.env == "development") opts.asyncStackTraces = true;
+		pg.types.setTypeParser(
+			pg.types.builtins.TIMESTAMPTZ,
+			str => str.split(' ').join('T') + ":00"
+		);
 	}
 	apiRoutes(app) {
 		if (app.version == app.upstream) {
