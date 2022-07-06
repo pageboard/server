@@ -46,8 +46,7 @@ module.exports = class SearchService {
 			const obj = await run(method, params);
 			// check if a non-page bundle is needed
 			const bundles = {};
-			Object.keys(site.$pkg.bundles).forEach(key => {
-				const bundle = site.$pkg.bundles[key];
+			Object.entries(site.$pkg.bundles).forEach(([key, bundle]) => {
 				if (bundle.meta.group != "page") bundles[key] = bundle;
 			});
 			if (obj.item || obj.items) {
