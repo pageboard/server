@@ -170,22 +170,22 @@ module.exports = class HrefService {
 
 	async #blindAdd(req, data) {
 		const { site, trx, Href } = req;
-		const url = new URL(data.url, site.url);
 		let local = false;
-		if (site.url.hostname == url.hostname) {
-			data.url = url.pathname + url.search;
+		const siteUrl = site.url ?? new URL(`https://${site.id}.localhost.localdomain`);
+		const pageUrl = new URL(data.url, siteUrl);
+		if (siteUrl.hostname == pageUrl.hostname) {
+			data.url = pageUrl.pathname + pageUrl.search;
 			local = true;
 		}
 
 		let result;
-
-		if (local && !data.url.startsWith('/.')) {
+		if (local && !pageUrl.pathname.startsWith('/.')) {
 			// consider it's a page
 			try {
 				const { item } = await req.run('block.find', {
 					type: site.$pkg.pages,
 					data: {
-						url: url.pathname
+						url: pageUrl.pathname
 					}
 				});
 				result = {
@@ -193,8 +193,8 @@ module.exports = class HrefService {
 					type: 'link',
 					title: item.data && item.data.title || "",
 					site: null,
-					pathname: url.pathname,
-					url: url.pathname + url.search
+					pathname: pageUrl.pathname,
+					url: pageUrl.pathname + pageUrl.search
 				};
 			} catch (err) {
 				if (err.statusCode == 404) {
@@ -208,7 +208,7 @@ module.exports = class HrefService {
 		if (!local && result.url != data.url) {
 			result.canonical = result.url;
 			result.url = data.url;
-			result.pathname = url.pathname;
+			result.pathname = pageUrl.pathname;
 		}
 		const href = await this.get(req, data).forUpdate();
 		if (!href) {
