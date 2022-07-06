@@ -29,6 +29,7 @@ suite('block', function () {
 		}, 'test');
 		assert.ok('_id' in b, 'has _id');
 		assert.ok('id' in b, 'has id');
+		assert.equal(typeof b.updated_at, "string");
 		assert.equal('_id' in JSON.parse(JSON.stringify(b)), false);
 		assert.deepEqual(b, c);
 	});
