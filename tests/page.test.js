@@ -45,9 +45,10 @@ suite('page', function () {
 		assert.ok(item);
 		assert.ok(site);
 		assert.ok(meta);
+		assert.ok(links);
 		assert.equal(meta.name, 'page');
 		assert.equal(status, 200);
-		assert.deepEqual(links, { up: [] });
+		assert.deepEqual(links.up, []);
 		assert.equal(item.id, b.id);
 		assert.equal(item.updated_at, b.updated_at);
 		assert.equal(item.type, 'page');
