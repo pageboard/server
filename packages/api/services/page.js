@@ -95,8 +95,8 @@ module.exports = class PageService {
 		});
 	}
 
-	#QueryPage(req, url) {
-		return req.site.$relatedQuery('children', req.trx).alias('page')
+	#QueryPage({ trx, call, site }, url) {
+		return site.$relatedQuery('children', trx).alias('page')
 			.select()
 			.first()
 			// eager load children (in which there are standalones)
@@ -113,8 +113,9 @@ module.exports = class PageService {
 				}
 			})
 			.whereJsonText("page.data:url", url)
+			.whereIn('page.type', site.$pkg.pages)
 			.select(
-				req.call('href.collect', {
+				call('href.collect', {
 					url: url,
 					content: true,
 					map: true
@@ -133,16 +134,14 @@ module.exports = class PageService {
 		if (wkp) {
 			obj.status = parseInt(wkp[1]);
 		}
-		let page = await this.#QueryPage(req, data.url)
-			.whereIn('page.type', site.$pkg.pages);
+		let page = await this.#QueryPage(req, data.url);
 		if (!page) {
 			obj.status = 404;
 		} else if (req.locked((page.lock || {}).read)) {
 			obj.status = 401;
 		}
 		if (obj.status != 200) {
-			page = await this.#QueryPage(req, `/.well-known/${obj.status}`)
-				.where('page.type', 'page');
+			page = await this.#QueryPage(req, `/.well-known/${obj.status}`);
 			if (!page) return Object.assign(obj, {
 				item: { type: 'page' },
 				meta: site.$pkg.bundles.page.meta
@@ -412,8 +411,8 @@ module.exports = class PageService {
 		};
 
 		const pages = {
-			add: changes.add.filter(b => b.type == "page"),
-			update: changes.update.filter(b => b.type == "page")
+			add: changes.add.filter(b => site.$pkg.pages.includes(b.type)),
+			update: changes.update.filter(b => site.$pkg.pages.includes(b.type))
 		};
 		pages.all = [ ...pages.add, ...pages.update ];
 
@@ -537,10 +536,10 @@ module.exports = class PageService {
 	}
 	static add = {
 		$action: 'add',
+		required: ['type', 'data'],
 		properties: {
 			type: {
-				'enum': ["page", "mail"],
-				default: "page"
+				type: 'string'
 			},
 			data: {
 				type: 'object'
@@ -740,7 +739,10 @@ function applyUpdate(req, list) {
 				return req.site.$relatedQuery('children', req.trx)
 					.where('block.id', block.id)
 					.where('block.type', block.type)
-					.where(raw("date_trunc('milliseconds', block.updated_at)"), block.updated_at)
+					.where(
+						raw("date_trunc('milliseconds', block.updated_at)"),
+						raw("date_trunc('milliseconds', ?::timestamptz)", [block.updated_at]),
+					)
 					.patch(block)
 					.returning('id', 'updated_at')
 					.first()
@@ -816,7 +818,7 @@ async function updatePage({ site, trx, Block, Href }, page, sideEffects) {
 		.where('block.id', page.id)
 		.where(
 			raw("date_trunc('milliseconds', block.updated_at)"),
-			page.updated_at
+			raw("date_trunc('milliseconds', ?::timestamptz)", [page.updated_at]),
 		)
 		.patch(page)
 		.returning('block.id', 'block.updated_at')
