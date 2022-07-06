@@ -12,11 +12,8 @@ suite('page', function () {
 		try {
 			await app.run('site.add', site);
 		} catch (err) {
-			// pass
+			await app.run('archive.empty', null, site.id);
 		}
-	});
-	after(async function () {
-		await app.run('archive.empty', null, site.id);
 	});
 
 	test('add page', async function () {
@@ -36,13 +33,13 @@ suite('page', function () {
 
 	test('get page', async function () {
 		const b = await app.run('page.add', {
-			type: 'page', data: { url: '/test/a' }
+			type: 'page', data: { url: '/test/c' }
 		}, 'test');
 		assert.ok('id' in b, 'has id');
 		assert.equal(typeof b.updated_at, "string");
 		assert.deepEqual(Object.keys(b), ["id", "updated_at"]);
 		const result = await app.run('page.get', {
-			url: '/test/a'
+			url: '/test/c'
 		}, 'test');
 		const { item, links, status, site, meta } = result;
 		assert.ok(item);
@@ -54,7 +51,7 @@ suite('page', function () {
 		assert.equal(item.id, b.id);
 		assert.equal(item.updated_at, b.updated_at);
 		assert.equal(item.type, 'page');
-		assert.equal(item.data.url, '/test/a');
+		assert.equal(item.data.url, '/test/c');
 	});
 
 	test('page match', async function () {
@@ -77,8 +74,8 @@ suite('page', function () {
 			url: '/test/special'
 		}, 'test');
 		assert.equal(spe.status, 200);
-		assert.equal(spe.item.data.match, false);
 		assert.equal(spe.item.data.url, '/test/special');
+		assert.equal(spe.item.data.match, null);
 
 	});
 

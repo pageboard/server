@@ -1,4 +1,4 @@
-const { ref, raw } = require('objection');
+const { ref, raw, fn, val } = require('objection');
 const jsonPath = require.lazy('@kapouer/path');
 
 module.exports = class PageService {
@@ -112,7 +112,18 @@ module.exports = class PageService {
 					return query.select().where('page.standalone', true);
 				}
 			})
-			.whereJsonText("page.data:url", url)
+			.where(q => {
+				q.whereJsonText("page.data:url", url);
+				q.where(fn.coalesce(ref("page.data:match").castBool(), false), false);
+			})
+			.orWhere(q => {
+				q.where(val(url), 'LIKE', fn.concat(
+					ref('page.data:url').castText(),
+					val('/%').castText()
+				));
+				q.where(ref("page.data:match").castBool(), true);
+			})
+			.orderBy(fn.coalesce(ref("page.data:match").castBool(), false))
 			.whereIn('page.type', site.$pkg.pages)
 			.select(
 				call('href.collect', {
