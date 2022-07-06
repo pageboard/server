@@ -13,9 +13,8 @@ suite('query', function () {
 		try {
 			await app.run('site.add', site);
 		} catch (err) {
-			// pass
+			await app.run('archive.empty', null, site.id);
 		}
-		await app.run('archive.empty', null, site.id);
 	});
 
 

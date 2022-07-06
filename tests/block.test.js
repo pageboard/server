@@ -12,13 +12,9 @@ suite('block', function () {
 		try {
 			await app.run('site.add', site);
 		} catch (err) {
-			// pass
+			await app.run('archive.empty', null, site.id);
 		}
 	});
-	after(async function () {
-		await app.run('archive.empty', null, site.id);
-	});
-
 
 	test('add block', async function () {
 		const b = await app.run('block.add', {
