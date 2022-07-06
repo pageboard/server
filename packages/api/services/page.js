@@ -530,9 +530,10 @@ module.exports = class PageService {
 
 	async add(req, data) {
 		await req.site.$beforeInsert.call(data);
-		return this.save(req, {
+		const obj = await this.save(req, {
 			add: [data]
 		});
+		return obj.update[0];
 	}
 	static add = {
 		$action: 'add',
