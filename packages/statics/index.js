@@ -134,10 +134,9 @@ module.exports = class StaticsModule {
 	}
 
 	async install(site, { directories } = {}) {
-		if (site) {
-			const runSiteDir = Path.join(this.opts.files, site.id);
-			await fs.mkdir(runSiteDir, { recursive: true });
-		}
+		if (!site.url) return;
+		const runSiteDir = Path.join(this.opts.files, site.id);
+		await fs.mkdir(runSiteDir, { recursive: true });
 		if (directories) for (const mount of directories) {
 			try {
 				await mountPath(this.opts.files, mount.from, mount.to);

@@ -86,7 +86,7 @@ module.exports = class Packager {
 		return this.Block.initSite(site, pkg);
 	}
 
-	async finishInstall(site, pkg) {
+	async makeBundles(site, pkg) {
 		const { eltsMap, bundles } = pkg;
 		await Promise.all(Object.entries(bundles).map(
 			([name, { list }]) => this.#bundle(site, pkg, eltsMap[name], list)
@@ -159,18 +159,17 @@ module.exports = class Packager {
 	}
 
 	async #bundleSource(site, pkg, prefix, name, obj) {
-		if (prefix && prefix.startsWith('ext-')) return;
-		const filename = [prefix, name].filter(Boolean).join('-') + '.js';
+		if (!site.url || prefix?.startsWith('ext-')) return;
 		const tag = site.data.version ?? site.$pkg.tag;
-		if (tag != null) {
-			const sourceUrl = `/.files/${tag}/${filename}`;
-			const sourcePath = this.app.statics.resolve(site.id, sourceUrl);
-			const str = `Pageboard.${name} = Object.assign(Pageboard.${name} || {}, ${toSource(obj)});`;
-			await fs.mkdir(Path.dirname(sourcePath), { recursive: true });
-			await fs.writeFile(sourcePath, str);
-			const paths = await this.app.statics.bundle(site, pkg, [sourceUrl], filename);
-			return paths[0];
-		}
+		if (tag == null) return;
+		const filename = [prefix, name].filter(Boolean).join('-') + '.js';
+		const sourceUrl = `/.files/${tag}/${filename}`;
+		const sourcePath = this.app.statics.resolve(site.id, sourceUrl);
+		const str = `Pageboard.${name} = Object.assign(Pageboard.${name} || {}, ${toSource(obj)});`;
+		await fs.mkdir(Path.dirname(sourcePath), { recursive: true });
+		await fs.writeFile(sourcePath, str);
+		const paths = await this.app.statics.bundle(site, pkg, [sourceUrl], filename);
+		return paths[0];
 	}
 
 	#listDependencies(pkg, rootGroup, el, list = [], gDone = {}, eDone = {}) {

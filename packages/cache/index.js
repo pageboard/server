@@ -60,10 +60,7 @@ module.exports = class CacheModule {
 	}
 
 	install(site) {
-		if (!site || !site.url) {
-			// app tag invalidation is postponed until an actual site is installed
-			return;
-		}
+		if (!site?.url) return;
 		setTimeout(() => {
 			const url = new URL(this.opts.wkp, site.url);
 			got.post(url, {
