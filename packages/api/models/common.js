@@ -104,6 +104,11 @@ exports.Model = class CommonModel extends Model {
 		this.updated_at = new Date().toISOString();
 	}
 
+	async $beforeInsert(q) {
+		await super.$beforeInsert(q);
+		if (!this.updated_at) this.updated_at = new Date().toISOString();
+	}
+
 	$formatJson(json) {
 		const superJson = super.$formatJson(json);
 		delete superJson._id;
