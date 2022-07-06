@@ -32,7 +32,10 @@ suite('site', function () {
 			// pass
 		}
 		const add = await app.run('site.add', site);
-		assert.deepEqual(add.toJSON(), site);
+		assert.ok(add.updated_at);
+		const obj = add.toJSON();
+		delete obj.updated_at;
+		assert.deepEqual(obj, site);
 	});
 
 	test('site does exist', async function () {

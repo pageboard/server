@@ -48,7 +48,6 @@ suite('page', function () {
 		assert.ok(links);
 		assert.equal(meta.name, 'page');
 		assert.equal(status, 200);
-		assert.deepEqual(links.up, []);
 		assert.equal(item.id, b.id);
 		assert.equal(item.updated_at, b.updated_at);
 		assert.equal(item.type, 'page');
@@ -57,25 +56,25 @@ suite('page', function () {
 
 	test('page match', async function () {
 		await app.run('page.add', {
-			type: 'page', data: { url: '/test/special' }
+			type: 'page', data: { url: '/root/special' }
 		}, 'test');
 
 		await app.run('page.add', {
-			type: 'page', data: { url: '/test', match: true }
+			type: 'page', data: { url: '/root', match: true }
 		}, 'test');
 
 		const gen = await app.run('page.get', {
-			url: '/test/generic'
+			url: '/root/generic'
 		}, 'test');
 		assert.equal(gen.status, 200);
 		assert.equal(gen.item.data.match, true);
-		assert.equal(gen.item.data.url, '/test');
+		assert.equal(gen.item.data.url, '/root');
 
 		const spe = await app.run('page.get', {
-			url: '/test/special'
+			url: '/root/special'
 		}, 'test');
 		assert.equal(spe.status, 200);
-		assert.equal(spe.item.data.url, '/test/special');
+		assert.equal(spe.item.data.url, '/root/special');
 		assert.equal(spe.item.data.match, null);
 
 	});
