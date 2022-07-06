@@ -3,6 +3,7 @@ module.exports = class Upgrader {
 		this.idMap = Object.isEmpty(idMap) ? null : idMap;
 		this.DomainBlock = DomainBlock;
 		this.reverseMap = {};
+		console.info("trying import from", from, "to", to);
 		if (from && to) {
 			try {
 				this.module = require(`./from-${from}-to-${to}`);
