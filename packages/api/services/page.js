@@ -115,9 +115,7 @@ module.exports = class PageService {
 			.where(q => {
 				q.whereJsonText("page.data:url", url);
 				q.where(fn.coalesce(ref("page.data:match").castBool(), false), false);
-			})
-			.orWhere(q => {
-				q.where(val(url), 'LIKE', fn.concat(
+				q.orWhere(val(url), 'LIKE', fn.concat(
 					ref('page.data:url').castText(),
 					val('/%').castText()
 				));
