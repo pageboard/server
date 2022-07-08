@@ -124,7 +124,7 @@ module.exports = class LoginModule {
 		const tries = (priv.data.otp.tries || 0) + 1;
 		if (tries >= 5) {
 			const at = Date.parse(priv.data.otp.checked_at);
-			if (!Number.isNaN(at) && Date.now() - at < 1000 * otp.authenticator.options.step / 2) {
+			if (!Number.isNaN(at) && (Date.now() - at < 1000 * otp.authenticator.options.step / 2)) {
 				throw new HttpError.TooManyRequests();
 			}
 		}
