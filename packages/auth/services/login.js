@@ -130,9 +130,14 @@ module.exports = class LoginModule {
 		}
 		token = token.replaceAll(/\s/g, '');
 		const verified = otp.authenticator.check(token, priv.data.otp.secret);
-		await priv.$query(trx).patch({
-			'data:otp.checked_at': new Date().toISOString(),
-			'data:otp.tries': verified ? 0 : tries
+		await priv.$query(trx).patchObject({
+			type: priv.type,
+			data: {
+				otp: {
+					checked_at: new Date().toISOString(),
+					tries: verified ? 0 : tries
+				}
+			}
 		});
 		return verified;
 	}

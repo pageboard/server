@@ -763,7 +763,7 @@ function applyUpdate(req, list) {
 						raw("date_trunc('milliseconds', block.updated_at)"),
 						raw("date_trunc('milliseconds', ?::timestamptz)", [block.updated_at]),
 					)
-					.patch(block)
+					.patchObject(block)
 					.returning('id', 'updated_at')
 					.first()
 					.then((part) => {
@@ -841,7 +841,7 @@ async function updatePage({ site, trx, Block, Href }, page, sideEffects) {
 			raw("date_trunc('milliseconds', block.updated_at)"),
 			raw("date_trunc('milliseconds', ?::timestamptz)", [page.updated_at]),
 		)
-		.patch(page)
+		.patchObject(page)
 		.returning('block.id', 'block.updated_at')
 		.first();
 	if (!part) {

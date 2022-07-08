@@ -68,8 +68,9 @@ module.exports = class ReservationService {
 			parents: parents,
 			lock: { read: [`id-${req.user.id}`, 'scheduler'] }
 		});
-		await eventDate.$query(req.trx).patch({
-			'data:reservations': total
+		await eventDate.$query(req.trx).patchObject({
+			type: eventDate.type,
+			data: { reservations: total }
 		});
 		resa.parent = eventDate;
 		return resa;
@@ -200,8 +201,9 @@ module.exports = class ReservationService {
 		Object.assign(resa.data, reservation);
 
 		const sresa = await req.run('block.save', resa);
-		await eventDate.$query(req.trx).patch({
-			'data:reservations': total
+		await eventDate.$query(req.trx).patchObject({
+			type: eventDate.type,
+			data: { reservations: total }
 		});
 		return sresa;
 	}
@@ -243,7 +245,10 @@ module.exports = class ReservationService {
 		if (resa.data.seats == 0) return resa;
 		const total = (eventDate.data.reservations || 0) - resa.data.seats;
 		await Promise.allSettled([
-			eventDate.$query(trx).patch({ 'data:reservations': total }),
+			eventDate.$query(trx).patchObject({
+				type: eventDate.type,
+				data: { reservations: total }
+			}),
 			resa.$query(trx).delete()
 		]);
 		return {};

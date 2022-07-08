@@ -123,7 +123,10 @@ module.exports = class SettingsService {
 				// delete data.data.grants;
 			}
 			if (Object.keys(data.data).length == 0) return settings;
-			await settings.$query(trx).patchObject({ data: data.data });
+			await settings.$query(trx).patchObject({
+				type: settings.type,
+				data: data.data
+			});
 			return settings;
 		} catch (err) {
 			if (err.statusCode != 404) throw err;

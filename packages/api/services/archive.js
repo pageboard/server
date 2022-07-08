@@ -191,7 +191,10 @@ module.exports = class ArchiveService {
 			} else if (obj.type == "site") {
 				await upgrader.afterEach(obj);
 				await req.run('archive.empty');
-				await site.$query(trx).patchObject({ data: obj.data });
+				await site.$query(trx).patchObject({
+					type: site.type,
+					data: obj.data
+				});
 			} else if (obj.type == "user") {
 				await upgrader.afterEach(obj);
 				try {
