@@ -114,14 +114,14 @@ module.exports = class PageService {
 			})
 			.where(q => {
 				q.whereJsonText("page.data:url", url);
-				q.where(fn.coalesce(ref("page.data:match").castBool(), false), false);
-				q.orWhere(val(url), 'LIKE', fn.concat(
-					ref('page.data:url').castText(),
-					val('/%').castText()
-				));
-				q.where(ref("page.data:match").castBool(), true);
+				q.where(fn.coalesce(ref("page.data:prefix").castBool(), false), false);
+				q.orWhere(
+					// matching pages have url ending with /
+					fn('starts_with', val(url), ref('page.data:url').castText())
+				);
+				q.where(ref("page.data:prefix").castBool(), true);
 			})
-			.orderBy(fn.coalesce(ref("page.data:match").castBool(), false))
+			.orderBy(fn.coalesce(ref("page.data:prefix").castBool(), false))
 			.whereIn('page.type', site.$pkg.pages)
 			.select(
 				call('href.collect', {
@@ -440,19 +440,26 @@ module.exports = class PageService {
 			.whereIn('block.type', site.$pkg.pages)
 			.whereNotNull(ref('block.data:url'));
 		for (const page of pages.all) {
-			if (!page.data.url) {
+			const { url } = page.data;
+			if (!url) {
 				delete page.data.url;
-			} else if (allUrl[page.data.url]) {
+				continue;
+			}
+			if (page.data.prefix && !url.endsWith('/')) {
 				throw new HttpError.BadRequest(Text`
-					${page.id} and ${allUrl[page.data.url]} have the same url
-					${page.data.url}
+					${page.id} must have url ending with / to be able to match
+				`);
+			} else if (allUrl[url]) {
+				throw new HttpError.BadRequest(Text`
+					${page.id} and ${allUrl[url]} have the same url
+					${url}
 				`);
 			} else if (!page.id) {
 				throw new HttpError.BadRequest(
-					`Page without id: ${page.data.url}`
+					`Page without id: ${url}`
 				);
 			} else {
-				allUrl[page.data.url] = page.id;
+				allUrl[url] = page.id;
 			}
 		}
 		for (const dbPage of dbPages) {
@@ -676,7 +683,10 @@ function listPages({ site, trx }, data) {
 		q.whereJsonText('block.data:url', '~', regexp)
 			.orderBy(ref('block.data:index'));
 	} else if (data.url) {
-		q.whereJsonText('block.data:url', 'LIKE', `${data.url || ''}%`);
+		q.where(fn('starts_with',
+			ref('block.data:url').castText(),
+			data.url
+		));
 	} else {
 		// just return all pages for the sitemap
 	}
@@ -793,7 +803,8 @@ async function updatePage({ site, trx, Block, Href }, page, sideEffects) {
 				const rows = await site.$relatedQuery('children', trx)
 					.where('block.type', type)
 					.where(function () {
-						this.where(field, 'LIKE', `${oldUrlStr}/%`);
+						// use fn.starts_with
+						this.where(fn('starts_with', field, `${oldUrlStr}/`));
 						if (oldUrl == null) this.orWhereNull(field);
 						else this.orWhere(field, oldUrl);
 					})
@@ -820,7 +831,7 @@ async function updatePage({ site, trx, Block, Href }, page, sideEffects) {
 	await Href.query(trx).where('_parent_id', site._id)
 		.where('type', 'link')
 		.where(function () {
-			this.where('url', 'LIKE', `${oldUrlStr}/%`);
+			this.where(fn('starts_with', 'url', `${oldUrlStr}/`));
 			if (oldUrl == null) this.orWhereNull('url');
 			else this.orWhere('url', oldUrl);
 		}).delete();

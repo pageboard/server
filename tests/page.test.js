@@ -60,22 +60,26 @@ suite('page', function () {
 		}, 'test');
 
 		await app.run('page.add', {
-			type: 'page', data: { url: '/root', match: true }
+			type: 'page', data: { url: '/root/', prefix: true }
 		}, 'test');
+
+		await assert.rejects(() => app.run('page.add', {
+			type: 'page', data: { url: '/root/toto', prefix: true }
+		}, 'test'));
 
 		const gen = await app.run('page.get', {
 			url: '/root/generic'
 		}, 'test');
 		assert.equal(gen.status, 200);
-		assert.equal(gen.item.data.match, true);
-		assert.equal(gen.item.data.url, '/root');
+		assert.equal(gen.item.data.prefix, true);
+		assert.equal(gen.item.data.url, '/root/');
 
 		const spe = await app.run('page.get', {
 			url: '/root/special'
 		}, 'test');
 		assert.equal(spe.status, 200);
 		assert.equal(spe.item.data.url, '/root/special');
-		assert.equal(spe.item.data.match, null);
+		assert.equal(spe.item.data.prefix, null);
 
 	});
 
