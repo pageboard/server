@@ -263,6 +263,7 @@ class Block extends Model {
 			}
 
 			$schema(type = this.type) {
+				if (!type) return;
 				return DomainBlock.schema(type);
 			}
 
