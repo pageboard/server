@@ -763,7 +763,7 @@ function applyUpdate(req, list) {
 						raw("date_trunc('milliseconds', block.updated_at)"),
 						raw("date_trunc('milliseconds', ?::timestamptz)", [block.updated_at]),
 					)
-					.patchObject(block)
+					.patch(block)
 					.returning('id', 'updated_at')
 					.first()
 					.then((part) => {
@@ -794,38 +794,44 @@ async function updatePage({ site, trx, Block, Href }, page, sideEffects) {
 	const oldUrlStr = oldUrl == null ? '' : oldUrl;
 	const newUrl = page.data.url;
 	if (oldUrl != newUrl) {
-		await Promise.all(Object.keys(hrefs).map(async type => {
-			await Promise.all(hrefs[type].map(async desc => {
+		for (const [type, list] of Object.entries(hrefs)) {
+			for (const desc of list) {
+				if (desc.types.some(type => {
+					return ['image', 'video', 'audio', 'svg'].includes(type);
+				})) continue;
 				const key = 'block.data:' + desc.path;
 				const field = ref(key).castText();
 				// this is a fake query not part of trx
 				const args = field._createRawArgs(Block.query());
-				const rows = await site.$relatedQuery('children', trx)
-					.where('block.type', type)
-					.where(function () {
-						// use fn.starts_with
-						this.where(fn('starts_with', field, `${oldUrlStr}/`));
-						if (oldUrl == null) this.orWhereNull(field);
-						else this.orWhere(field, oldUrl);
-					})
-					.patch({
-						[key]: raw(
-							`overlay(${args[0]} placing ? from 1 for ${oldUrlStr.length})`,
-							args[1],
-							newUrl
-						)
-					})
-					.returning('block.id', 'block.updated_at');
-				for (const row of rows) {
-					const date = row.updated_at;
-					sideEffects[row.id] = date;
-					if (page.id == row.id) page.updated_at = date;
+				try {
+					const rows = await site.$relatedQuery('children', trx)
+						.where('block.type', type)
+						.where(function () {
+							// use fn.starts_with
+							this.where(fn('starts_with', field, `${oldUrlStr}/`));
+							if (oldUrl == null) this.orWhereNull(field);
+							else this.orWhere(field, oldUrl);
+						})
+						.patch({
+							type,
+							[key]: raw(
+								`overlay(${args[0]} placing ? from 1 for ${oldUrlStr.length})`,
+								args[1],
+								newUrl
+							)
+						})
+						.returning('block.id', 'block.updated_at');
+					for (const row of rows) {
+						const date = row.updated_at;
+						sideEffects[row.id] = date;
+						if (page.id == row.id) page.updated_at = date;
+					}
+				} catch (err) {
+					console.error(`Error with type: ${type}, key: ${key}`);
+					throw err;
 				}
-			})).catch((err) => {
-				console.error("Error with updatePage side effects", err);
-				throw err;
-			});
-		}));
+			}
+		}
 	}
 
 	await Href.query(trx).where('_parent_id', site._id)
