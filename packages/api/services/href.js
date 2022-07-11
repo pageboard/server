@@ -289,8 +289,8 @@ module.exports = class HrefService {
 		const qList = q => {
 			const urlQueries = [];
 			for (const [type, list] of Object.entries(hrefs)) {
-				if (!list.some((desc) => {
-					return desc.types.some((type) => {
+				if (!list.some(desc => {
+					return desc.types.some(type => {
 						return ['image', 'video', 'audio', 'svg'].includes(type);
 					});
 				})) continue;
@@ -315,7 +315,7 @@ module.exports = class HrefService {
 			q.unionAll(urlQueries, true);
 		};
 
-		const qBlocks = (q) => {
+		const qBlocks = q => {
 			const qList = [
 				this.#collectBlockUrls(req, data, 0)
 			];
@@ -393,8 +393,8 @@ module.exports = class HrefService {
 		const fhrefs = {};
 		for (const [type, list] of Object.entries(hrefs)) {
 			if (data.type && type != data.type) continue;
-			const flist = list.filter((desc) => {
-				return !data.types.length || desc.types.some((type) => {
+			const flist = list.filter(desc => {
+				return !data.types.length || desc.types.some(type => {
 					return data.types.includes(type);
 				});
 			});
