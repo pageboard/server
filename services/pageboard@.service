@@ -1,0 +1,16 @@
+[Unit]
+Description=%p %i
+PartOf=%p.service
+After=postgresql.service
+
+[Service]
+ExecStart=%h/%p/server/%i/bin/pageboard
+Restart=always
+RestartSec=5
+Environment=HOME=%h
+Environment=NODE_ENV=production
+Environment=VIPS_WARNING=0
+
+[Install]
+WantedBy=default.target
+
