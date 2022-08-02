@@ -115,9 +115,9 @@ module.exports = class PrerenderModule {
 	}
 
 	prerender(settings, req, res) {
-		const { site, query, $fake: { schema, type } } = req;
+		const { site, query, $fake: { schema = {}, type } } = req;
 
-		const outputOpts = schema.output || {};
+		const outputOpts = schema.output ?? {};
 		// begin compat (0.7 clients using ext names)
 		if (type == "mail" && outputOpts.mime == null) {
 			outputOpts.mime = "application/json";
