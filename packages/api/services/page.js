@@ -121,7 +121,7 @@ module.exports = class PageService {
 				);
 				q.where(ref("page.data:prefix").castBool(), true);
 			})
-			.orderBy(fn.coalesce(ref("page.data:prefix").castBool(), false))
+			.orderBy(fn.coalesce(ref("page.data:prefix").castBool(), false), "desc")
 			.whereIn('page.type', site.$pkg.pages)
 			.select(
 				call('href.collect', {
@@ -146,7 +146,7 @@ module.exports = class PageService {
 		let page = await this.#QueryPage(req, data.url);
 		if (!page) {
 			obj.status = 404;
-		} else if (req.locked((page.lock || {}).read)) {
+		} else if (req.locked((page.lock ?? {}).read)) {
 			obj.status = 401;
 		}
 		if (obj.status != 200) {
@@ -221,7 +221,7 @@ module.exports = class PageService {
 			? ''
 			: `AND (page.data->'nositemap' IS NULL OR (page.data->'nositemap')::BOOLEAN IS NOT TRUE)`;
 
-		const types = data.type || site.$pkg.pages;
+		const types = data.type ?? site.$pkg.pages;
 
 		const results = await trx.raw(`SELECT json_build_object(
 			'count', count,
@@ -657,7 +657,7 @@ function getParents({ site, trx }, url) {
 function listPages({ site, trx }, data) {
 	const q = site.$relatedQuery('children', trx)
 		.selectWithout('content')
-		.whereIn('block.type', data.type || site.$pkg.pages)
+		.whereIn('block.type', data.type ?? site.$pkg.pages)
 		.where('block.standalone', true);
 
 	if (!data.drafts) {
