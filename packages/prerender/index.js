@@ -13,6 +13,10 @@ module.exports = class PrerenderModule {
 		this.opts = opts;
 	}
 
+	prerendering(req) {
+		return req.get(dom.header) != null;
+	}
+
 	viewRoutes(app, server) {
 		this.dom = dom;
 
@@ -40,7 +44,7 @@ module.exports = class PrerenderModule {
 			'*',
 			app.cache.tag('app-:site'),
 			(req, res) => this.check(req, res),
-			dom((...args) => this.prerender(...args)),
+			dom().route((phase, req, res) => this.prerender(phase, req, res)),
 			(req, res, next) => this.source(req, res, next)
 		);
 	}
@@ -114,38 +118,48 @@ module.exports = class PrerenderModule {
 		}
 	}
 
-	prerender(settings, req, res) {
-		const { site, query, $fake: { schema = {}, type } } = req;
+	prerender(phase, req, res) {
+		const { site, $fake: { schema = {}, type } } = req;
 
-		const outputOpts = schema.output ?? {};
+		const { output = {} } = schema;
 		// begin compat (0.7 clients using ext names)
-		if (type == "mail" && outputOpts.mime == null) {
-			outputOpts.mime = "application/json";
+		if (type == "mail" && output.mime == null) {
+			output.mime = "application/json";
 		}
-		if (type == "rss" && outputOpts.mime == null) {
-			outputOpts.mime = "application/xml";
+		if (type == "rss" && output.mime == null) {
+			output.mime = "application/xml";
 		}
 		/* end compat */
 
-		const { mime = "text/html", pdf, display, medias, fonts } = outputOpts;
+		const { mime = "text/html", pdf, medias, fonts } = output;
+		if (pdf && this.app.pdf.router(phase, req, res)) {
+			// handled by pdf plugin
+			return;
+		}
 
-		const { plugins, policies } = settings.online;
+		const { location, settings, policies } = phase;
+		const { plugins } = settings;
 
-		if (mime == "text/html" && site.data.env == "dev" && !pdf) {
-			if (query.develop === "prerender") {
-				delete query.develop;
-				settings.location.searchParams.delete('develop');
-			} else if (query.develop == null) {
-				settings.location.searchParams.set('develop', '');
+		res.type(mime);
+		if (mime == "text/html") {
+			plugins.add('redirect');
+			plugins.add('preloads');
+		}
+		plugins.add('serialize');
+
+		if (phase.visible) {
+			if (mime == "text/html" && site.data.env == "dev") {
+				settings.enabled = false;
 			}
-		}
-
-		if (query.develop !== undefined && !["", "write", "on", "off"].includes(query.develop)) {
-			delete query.develop;
-			settings.location.searchParams.delete('develop');
-		}
-
-		if (query.develop === "") {
+			if (req.query.develop !== "write") {
+				location.searchParams.delete('develop');
+				if (req.query.develop == "render") {
+					settings.enabled = true;
+				} else {
+					settings.enabled = false;
+				}
+			}
+		} else if (phase.online) {
 			const { groups: {
 				code
 			}} = /^\.well-known\/(?<code>\d{3})$/.exec(req.path) ?? {
@@ -158,25 +172,14 @@ module.exports = class PrerenderModule {
 			} else {
 				req.call('cache.map', "/.well-known/200");
 			}
-		} else if (pdf) {
-			return this.app.pdf.helper(settings, req, res);
-		} else if (medias) {
-			policies.img = "'self' https: data:";
-			policies.font = "'self' https: data:";
-			policies.style = "'self' 'unsafe-inline' https:";
-		} else if (fonts) {
-			policies.font = "'self' https: data:";
+			if (medias) {
+				policies.img = "'self' https: data:";
+				policies.style = "'self' 'unsafe-inline' https:";
+			}
+			if (fonts) {
+				policies.font = "'self' https: data:";
+			}
 		}
-
-		res.type(mime);
-		if (mime == "text/html") {
-			plugins.add('redirect');
-			plugins.add('preloads');
-		}
-		if (!display) {
-			plugins.add('hidden');
-		}
-		plugins.add('serialize');
 	}
 
 	source({ site }, res) {
