@@ -35,7 +35,6 @@
     "@pageboard/image": "workspace:*",
     "@pageboard/inspector": "workspace:*",
     "@pageboard/mail": "workspace:*",
-    "@pageboard/pdf": "workspace:*",
     "@pageboard/prerender": "workspace:*",
     "@pageboard/statics": "workspace:*",
     "@pageboard/upload": "workspace:*",

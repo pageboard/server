@@ -3,10 +3,14 @@ const { pipeline } = require('node:stream');
 const { format: urlFormat } = require('node:url');
 const got = require.lazy('got'); // TODO switch to undici
 const dom = require.lazy('express-dom');
+const pdf = require.lazy('express-dom-pdf');
 
 module.exports = class PrerenderModule {
 	static name = 'prerender';
 	static priority = 0;
+
+	#pdfMw;
+	#domMw;
 
 	constructor(app, opts) {
 		this.app = app;
@@ -43,10 +47,28 @@ module.exports = class PrerenderModule {
 		server.get(
 			'*',
 			app.cache.tag('app-:site'),
-			(req, res) => this.check(req, res),
-			dom().route((phase, req, res) => this.prerender(phase, req, res)),
+			(req, res, next) => this.check(req, res, next),
 			(req, res, next) => this.source(req, res, next)
 		);
+	}
+
+	#callPdfMw(...args) {
+		if (!this.#pdfMw) this.#pdfMw = dom(pdf({
+			plugins: ['upcache', 'render']
+		})).route(({ location, settings }, req) => {
+			if (req.query.pdf != null) {
+				location.searchParams.delete('pdf');
+				settings.preset = req.query.pdf || null;
+			}
+		});
+		return this.#pdfMw(...args);
+	}
+
+	#callDomMw(...args) {
+		if (!this.#domMw) this.#domMw = dom().route(
+			(phase, req, res) => this.prerender(phase, req, res)
+		);
+		return this.#domMw(...args);
 	}
 
 	#requestedSchema({ site }, { pathname }) {
@@ -81,7 +103,6 @@ module.exports = class PrerenderModule {
 			schema,
 			type
 		} = this.#requestedSchema(req, { pathname: req.path });
-		req.$fake = { schema, type };
 
 		if (pathname == null) {
 			if (req.accepts(['image/*', 'json', 'html']) != 'html') {
@@ -116,10 +137,6 @@ module.exports = class PrerenderModule {
 				return res.redirect(urlFormat({ pathname, query }));
 			}
 		}
-	}
-
-	prerender(phase, req, res) {
-		const { site, $fake: { schema = {}, type } } = req;
 
 		const { output = {} } = schema;
 		// begin compat (0.7 clients using ext names)
@@ -130,12 +147,20 @@ module.exports = class PrerenderModule {
 			output.mime = "application/xml";
 		}
 		/* end compat */
+		req.output = output;
 
-		const { mime = "text/html", pdf, medias, fonts } = output;
-		if (pdf && this.app.pdf.router(phase, req, res)) {
-			// handled by pdf plugin
-			return;
+		const { pdf } = output;
+		if (pdf) {
+			this.#callPdfMw(req, res, next);
+		} else {
+			this.#callDomMw(req, res, next);
 		}
+	}
+
+	prerender(phase, req, res) {
+		const { site, output } = req;
+		delete req.output;
+		const { mime = "text/html", medias, fonts } = output;
 
 		const { location, settings, policies } = phase;
 		const { plugins } = settings;
