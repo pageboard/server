@@ -540,6 +540,9 @@ module.exports = class PageService {
 			},
 			unrelate: {
 				type: 'object'
+			},
+			recursive: {
+				type: 'boolean'
 			}
 		}
 	};
