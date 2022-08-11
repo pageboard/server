@@ -121,7 +121,7 @@ module.exports = class PageService {
 				);
 				q.where(ref("page.data:prefix").castBool(), true);
 			})
-			.orderBy(fn.coalesce(ref("page.data:prefix").castBool(), false), "desc")
+			.orderBy(fn.coalesce(ref("page.data:prefix").castBool(), false), "asc")
 			.whereIn('page.type', site.$pkg.pages)
 			.select(
 				call('href.collect', {
