@@ -176,7 +176,7 @@ module.exports = class PrerenderModule {
 			if (mime == "text/html" && site.data.env == "dev") {
 				settings.enabled = false;
 			}
-			if (req.query.develop !== "write") {
+			if (req.query.develop !== undefined) {
 				location.searchParams.delete('develop');
 				if (req.query.develop == "render") {
 					settings.enabled = true;

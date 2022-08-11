@@ -8,8 +8,8 @@ module.exports = class PageService {
 		server.get('/.api/page', async (req, res) => {
 			const { site, query } = req;
 			const isWebmaster = !req.locked(['webmaster']);
-			const dev = query.develop == "write";
-			delete query.develop;
+			const dev = Boolean(query.nested);
+			delete query.nested;
 			if (isWebmaster && !dev) {
 				res.return({
 					item: {
