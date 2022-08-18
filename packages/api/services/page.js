@@ -54,7 +54,7 @@ module.exports = class PageService {
 					query.type = site.$pkg.pages;
 				}
 			} else if (!query.type) {
-				query.type = ['page', 'blog'];
+				query.type = ['page'];
 			}
 
 			const action = query.text != null ? 'page.search' : 'page.all';
@@ -84,8 +84,7 @@ module.exports = class PageService {
 		server.get('/sitemap.txt', app.cache.tag('data-:site'), async (req, res) => {
 			const obj = await req.run('page.all', {
 				robot: true,
-				type: ['page', 'blog'] // TODO do not return pages that require a query
-				// TODO do not return pages that do not have a properties.nositemap (nor sitemap)
+				type: ['page']
 			});
 			res.type('text/plain');
 			app.auth.filter(req, obj);
@@ -614,7 +613,7 @@ module.exports = class PageService {
 			lines.push('User-agent: *');
 			const pages = await listPages(req, {
 				disallow: true,
-				type: ['page', 'blog']
+				type: ['page']
 			});
 			for (const page of pages) {
 				lines.push(`Disallow: ${page.data.url}`);
