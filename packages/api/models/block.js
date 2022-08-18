@@ -200,12 +200,6 @@ class Block extends Model {
 			findHrefs(element, hrefsList);
 			if (hrefsList.length) hrefs[type] = hrefsList;
 
-			Traverse(element, {
-				cb: (schema, pointer, root, parentPointer, keyword, parent, name) => {
-					if (schema.type == "string" && schema.format) schema.coerce = true;
-				}
-			});
-
 			const { standalone, properties, required = [], contents } = element;
 
 			const sub = {

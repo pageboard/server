@@ -4,14 +4,43 @@ const AjvKeywords = require('ajv-keywords');
 const AjvFormats = require('ajv-formats');
 const { default: betterAjvErrors } = require('better-ajv-errors');
 const NP = require('number-precision');
+const Traverse = require('json-schema-traverse');
+
+function fixSchema(schema) {
+	Traverse(schema, {
+		cb: (schema) => {
+			if (schema.properties && schema.type == null) {
+				schema.type = 'object';
+			}
+			switch (schema.type) {
+				case "object":
+					if (schema.additionalProperties == null) {
+						schema.additionalProperties = !schema.properties;
+					}
+					break;
+				case "string":
+					if (schema.format) {
+						schema.coerce = true;
+					}
+					break;
+			}
+		}
+	});
+	return schema;
+}
 
 class AjvValidatorExt extends AjvValidator {
 	compilePatchValidator(jsonSchema) {
-		jsonSchema = jsonSchemaWithoutRequired(jsonSchema);
+		jsonSchema = jsonSchemaWithoutRequired(fixSchema(jsonSchema));
 		// We need to use the ajv instance that doesn't set the default values.
 		return this.ajvNoDefaults.compile(jsonSchema);
 	}
+	compileNormalValidator(jsonSchema) {
+		fixSchema(jsonSchema);
+		return super.compileNormalValidator(jsonSchema);
+	}
 }
+
 module.exports = class Validation {
 	#validatorWithDefaults;
 	#validatorNoDefaults;
@@ -22,6 +51,7 @@ module.exports = class Validation {
 		discriminator: true,
 		ownProperties: true,
 		coerceTypes: 'array',
+		removeAdditional: "failing",
 		formats: {
 			singleline: /^[^\n\r]*$/,
 			pathname: /^(\/[\w.-]*)+$/,
@@ -68,20 +98,18 @@ module.exports = class Validation {
 		return new AjvValidatorExt({
 			onCreateAjv: (ajv) => this.#setupAjv(ajv),
 			options: {
+				...Validation.AjvOptions,
 				strictSchema: this.app.env == "dev" ? "log" : false,
-				validateSchema: false,
-				removeAdditional: "all",
-				...Validation.AjvOptions
+				validateSchema: false
 			}
 		});
 	}
 	#createSettings(opts) {
 		return {
+			...Validation.AjvOptions,
 			strictSchema: this.app.env == "dev" ? "log" : false,
 			validateSchema: true,
-			removeAdditional: "all",
 			invalidDefaults: 'log',
-			...Validation.AjvOptions,
 			...opts
 		};
 	}
@@ -171,6 +199,7 @@ module.exports = class Validation {
 	validate(schema, data, inst) {
 		if (!schema) return data;
 		if (!inst.validate) {
+			fixSchema(schema);
 			if (schema.defaults === false) {
 				inst.validate = this.#validatorNoDefaults.compile(schema);
 			} else {

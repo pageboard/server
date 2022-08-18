@@ -86,8 +86,7 @@ module.exports = class SearchService {
 				type: 'object',
 				nullable: true
 			}
-		},
-		additionalProperties: false
+		}
 	};
 };
 

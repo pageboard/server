@@ -292,6 +292,7 @@ module.exports = class ArchiveService {
 			idMap: {
 				title: 'Map ids',
 				type: 'object',
+				additionalProperties: { type: 'string' },
 				default: {}
 			},
 			excludes: {
