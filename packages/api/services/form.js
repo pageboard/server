@@ -47,7 +47,7 @@ module.exports = class FormService {
 		Log.api("form params", params, user, data.query);
 
 		// build body
-		if (params.type && Object.keys(body).length > 0) {
+		if (params.type && Array.isArray(params.type) == false && Object.keys(body).length > 0) {
 			const el = site.$schema(params.type);
 			if (!el) {
 				throw new HttpError.BadRequest("Unknown element type " + params.type);

@@ -761,12 +761,13 @@ module.exports = class BlockService {
 		const block = await run('block.get', { id });
 		// delete non-standalone children
 		await block.$relatedQuery('children', trx).delete().where('standalone', false);
-		// unrelated standalone children
+		// unrelate standalone children
 		await block.$relatedQuery('children', trx).unrelate().where('standalone', true);
 		// insert children and build content
 		const content = {};
 		block.children = [];
-		for (const { name, children } of contents) {
+
+		for (const [name, children] of Object.entries(contents)) {
 			for (const child of children) {
 				if (typeof child.content == "string") child.content = { "": child.content };
 			}
@@ -790,22 +791,21 @@ module.exports = class BlockService {
 				type: 'string',
 				format: 'id'
 			},
-			contents: {
-				title: 'List of [{ name, children }]',
+			type: {
+				title: 'Allowed types',
 				type: 'array',
 				items: {
-					type: 'object',
-					properties: {
-						name: {
-							type: 'string',
-							format: 'name'
-						},
-						children: {
-							type: 'array',
-							items: {
-								type: 'object'
-							}
-						}
+					type: 'string',
+					format: 'name'
+				}
+			},
+			contents: {
+				title: 'Maps content names to children lists',
+				type: 'object',
+				additionalProperties: {
+					type: 'array',
+					items: {
+						type: 'object'
 					}
 				}
 			}
