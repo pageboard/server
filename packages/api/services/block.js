@@ -757,31 +757,53 @@ module.exports = class BlockService {
 		}
 	};
 
-	async fill({ run, trx }, { id, contents = {} }) {
+	async fill({ run, trx }, { id, type, name, items = [] }) {
 		const block = await run('block.get', { id });
-		// delete non-standalone children
-		await block.$relatedQuery('children', trx).delete().where('standalone', false);
-		// unrelate standalone children
-		await block.$relatedQuery('children', trx).unrelate().where('standalone', true);
-		// insert children and build content
-		const content = {};
-		block.children = [];
 
-		for (const [name, children] of Object.entries(contents)) {
-			for (const child of children) {
-				if (typeof child.content == "string") child.content = { "": child.content };
-			}
-			const list = await block.$relatedQuery('children', trx).insert(children);
-			content[name] = list.map(child => {
-				block.children.push(child);
-				return `<div block-id="${child.id}"></div>`;
-			}).join('');
+		const contentIds = {};
+		for (const [name, content = ''] of Object.entries(block.content ?? {})) {
+			contentIds[name] = Array.from(content.matchAll(/block-id="([a-z0-9]+)"/g))
+				.map(item => item[1]);
 		}
-		await block.$query(trx).patchObject({ type: block.type, content });
+
+		// keep only ids that are not used in other content
+		let oldIds = contentIds[name].slice();
+		for (const [cn, list] of Object.entries(contentIds)) {
+			if (name == cn) continue;
+			for (let i = 0; i < oldIds.length; i++) {
+				if (oldIds[i] != null && list.includes(oldIds[i])) oldIds[i] = null;
+			}
+		}
+		oldIds = oldIds.filter(id => id != null);
+
+		// delete non-standalone children
+		await block.$relatedQuery('children', trx).delete()
+			.whereIn('block.id', oldIds).where('block.standalone', false);
+		// unrelate standalone children
+		await block.$relatedQuery('children', trx).unrelate()
+			.whereIn('block.id', oldIds).where('block.standalone', true);
+		// insert children and build content
+		items = items.filter(item => {
+			if (type.includes(item.type) == false) return false;
+			if (typeof item.content == "string") {
+				item.content = { "": item.content };
+			}
+			return true;
+		});
+		const newItems = await block.$relatedQuery('children', trx)
+			.insert(items).returning('*');
+		// inserted items have id
+		block.content[name] = newItems
+			.map(item => `<div block-id="${item.id}"></div>`)
+			.join('');
+		await block.$query(trx).patchObject({
+			type: block.type,
+			content: block.content
+		});
 		return block;
 	}
 	static fill = {
-		title: 'Fill block with children',
+		title: 'Fill block content',
 		$action: 'write',
 		external: true,
 		required: ['id'],
@@ -799,14 +821,16 @@ module.exports = class BlockService {
 					format: 'name'
 				}
 			},
-			contents: {
-				title: 'Maps content names to children lists',
-				type: 'object',
-				additionalProperties: {
-					type: 'array',
-					items: {
-						type: 'object'
-					}
+			name: {
+				title: 'Content name',
+				type: 'string',
+				format: 'name'
+			},
+			items: {
+				title: 'Items',
+				type: 'array',
+				items: {
+					type: 'object'
 				}
 			}
 		}
