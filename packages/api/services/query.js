@@ -37,7 +37,10 @@ module.exports = class SearchService {
 		}
 		// build parameters
 		const expr = ((form.expr || {}).action || {}).parameters || {};
+		const { $pathname } = data.query;
+		delete data.query.$pathname;
 		let params = mergeParameters(expr, {
+			$pathname,
 			$query: data.query || {},
 			$user: user
 		});
