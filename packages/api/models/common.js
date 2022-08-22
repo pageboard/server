@@ -249,14 +249,16 @@ exports.QueryBuilder = class CommonQueryBuilder extends QueryBuilder {
 				} else if (cond.op == "not") {
 					this.whereNot(refk.castText(), cond.val);
 				} else if (cond.op == "end") {
-					this.where(refk.castText(), "like", '%' + cond.val);
+					this.where(refk.castText(), "ilike", '%' + cond.val);
 				} else if (cond.op == "start") {
-					this.where(refk.castText(), "like", cond.val + '%');
+					this.where(refk.castText(), "ilike", cond.val + '%');
 				} else if (cond.op == "has") {
+					// TODO if schema of ref is string, do ref ilike %val%
 					// ref is a json text or array, and it intersects any of the values
 					const val = typeof cond.val == "string" ? [cond.val] : cond.val;
 					this.whereRaw('?? \\?| ?', [refk, val]);
 				} else if (cond.op == "in") {
+					// TODO if schema of ref is string, do val ilike %ref%
 					// ref is a json string, and it is in the values
 					const val = typeof cond.val == "string" ? [cond.val] : cond.val;
 					this.whereRaw('?? \\?& ?', [refk, val]);
