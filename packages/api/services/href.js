@@ -295,38 +295,38 @@ module.exports = class HrefService {
 					});
 				})) continue;
 				for (const desc of list) {
-					const bq = site.$modelClass.query(trx).from('blocks')
-						.where('type', type)
-						.whereNotNull(ref(`data:${desc.path}`));
+					const bq = site.$relatedQuery('children', trx).from('blocks')
+						.where('blocks.type', type)
+						.whereNotNull(ref(`blocks.data:${desc.path}`));
 					if (desc.array) {
 						bq.select(raw("jsonb_array_elements_text(??) AS url", [
-							ref(`data:${desc.path}`)
+							ref(`blocks.data:${desc.path}`)
 						]));
 						bq.where(
-							raw("jsonb_typeof(??)", [ref(`data:${desc.path}`)]),
+							raw("jsonb_typeof(??)", [ref(`blocks.data:${desc.path}`)]),
 							'array'
 						);
 					} else {
-						bq.select(ref(`data:${desc.path}`).castText().as('url'));
+						bq.select(ref(`blocks.data:${desc.path}`).castText().as('url'));
 					}
 					urlQueries.push(bq);
 				}
 			}
-			q.unionAll(urlQueries, true);
+			q.union(urlQueries, true);
 		};
 
-		const qBlocks = q => {
-			const qList = [
+		const unionBlocks = q => {
+			const unionList = [
 				this.#collectBlockUrls(req, data, 0)
 			];
 			if (data.content) {
-				qList.push(this.#collectBlockUrls(req, data, 1));
-				qList.push(this.#collectBlockUrls(req, data, 2));
+				unionList.push(this.#collectBlockUrls(req, data, 1));
+				unionList.push(this.#collectBlockUrls(req, data, 2));
 			}
-			q.unionAll(qList, true);
+			q.union(unionList, true);
 		};
 		const q = site.$relatedQuery('hrefs', trx)
-			.with('blocks', qBlocks)
+			.with('blocks', unionBlocks)
 			.with('list', qList)
 			.join('list', 'href.url', 'list.url');
 		if (data.asMap) {
