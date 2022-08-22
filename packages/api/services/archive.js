@@ -100,8 +100,8 @@ module.exports = class ArchiveService {
 			}
 		}
 
-		const hrefs = await req.call('href.collect', {
-			id: ids,
+		const hrefs = await req.run('href.collect', {
+			ids,
 			content: true
 		});
 		counts.hrefs = hrefs.length;

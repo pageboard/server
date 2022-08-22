@@ -329,7 +329,7 @@ module.exports = class HrefService {
 			.with('blocks', qBlocks)
 			.with('list', qList)
 			.join('list', 'href.url', 'list.url');
-		if (data.map) {
+		if (data.asMap) {
 			q.select(raw(`jsonb_object_agg(
 				href.url,
 				jsonb_set(href.meta, '{mime}', to_jsonb(href.mime))
@@ -339,6 +339,37 @@ module.exports = class HrefService {
 		}
 		return q;
 	}
+
+	static collect = {
+		title: 'Collect hrefs',
+		$action: 'read',
+		properties: {
+			ids: {
+				title: 'Select root blocks by id',
+				type: 'array',
+				items: {
+					type: "string",
+					format: 'id'
+				},
+				nullable: true
+			},
+			url: {
+				title: 'Select root block by url',
+				type: 'string',
+				format: 'pathname'
+			},
+			asMap: {
+				title: 'Return map of url: rows',
+				type: 'boolean',
+				default: false
+			},
+			content: {
+				title: 'Collect hrefs in blocks contents',
+				type: 'boolean',
+				default: false
+			}
+		}
+	};
 
 	#collectBlockUrls({ site, trx }, data, level) {
 		const hrefs = site.$hrefs;
@@ -379,10 +410,8 @@ module.exports = class HrefService {
 		if (data.url) {
 			qRoot.whereIn('root.type', site.$pkg.pages)
 				.where(ref('root.data:url').castText(), data.url);
-		} else if (data.id != null) {
-			let list = data.id;
-			if (!Array.isArray(list)) list = [data.id];
-			if (list.length) qRoot.whereIn('root.id', list);
+		} else if (data.ids?.length) {
+			qRoot.whereIn('root.id', data.ids);
 		}
 		return qRoot;
 	}

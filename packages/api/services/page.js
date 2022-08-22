@@ -126,7 +126,7 @@ module.exports = class PageService {
 				call('href.collect', {
 					url: url,
 					content: true,
-					map: true
+					asMap: true
 				}).as('hrefs')
 			);
 	}
