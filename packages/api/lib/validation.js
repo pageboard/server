@@ -32,6 +32,7 @@ function fixSchema(schema) {
 class AjvValidatorExt extends AjvValidator {
 	compilePatchValidator(jsonSchema) {
 		jsonSchema = jsonSchemaWithoutRequired(fixSchema(jsonSchema));
+		if (jsonSchema.id) jsonSchema.id += '?patch';
 		// We need to use the ajv instance that doesn't set the default values.
 		return this.ajvNoDefaults.compile(jsonSchema);
 	}
