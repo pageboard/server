@@ -1,6 +1,5 @@
 const common = require('./common');
 const { Model } = common;
-const Traverse = require('json-schema-traverse');
 const crypto = require('node:crypto');
 
 class Block extends Model {
@@ -180,6 +179,9 @@ class Block extends Model {
 
 	static initSite(block, pkg) {
 		const { eltsMap, groups, tag } = pkg;
+		if (!block.id) {
+			throw new Error("missing block.id\n" + JSON.stringify(block));
+		}
 		const schema = {
 			$id: `${Block.jsonSchema.$id}/${block.id}`,
 			type: 'object',
