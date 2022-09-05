@@ -155,7 +155,7 @@ module.exports = class PageService {
 				meta: site.$pkg.bundles.page.meta
 			});
 		}
-		const links = {};
+		const links = await navigationLinks(req, data.url, page.data.prefix);
 		Object.assign(obj, {
 			item: page,
 			items: [ ...page.children, ...page.standalones ],
@@ -167,41 +167,7 @@ module.exports = class PageService {
 		delete page.children;
 		delete page.hrefs;
 
-		const [parents, siblings] = await Promise.all([
-			getParents(req, data.url),
-			listPages(req, {
-				drafts: true,
-				parent: data.url.split('/').slice(0, -1).join('/')
-			}).clearSelect().select([
-				ref('block.data:url').as('url'),
-				ref('block.data:redirect').as('redirect'),
-				ref('block.data:title').as('title')
-			])
-		]);
-		links.up = parents.map(redUrl);
-		let found;
-		const position = siblings.findIndex(item => {
-			const same = item.url == data.url;
-			if (same) {
-				found = true;
-			} else if (!found && data.url.length > 1 && item.url.startsWith(data.url)) {
-				found = item.url;
-			}
-			return same;
-		});
-		if (found && found !== true) {
-			links.found = found;
-		}
-		if (position > 0) {
-			links.prev = redUrl(siblings[position - 1]);
-		}
-		if (position < siblings.length - 1) {
-			links.next = redUrl(siblings[position + 1]);
-		}
-		if (siblings.length > 1) {
-			links.first = redUrl(siblings[0]);
-			links.last = redUrl(siblings[siblings.length - 1]);
-		}
+
 		return obj;
 	}
 	static get = {
@@ -887,3 +853,44 @@ async function applyRelate({ site, trx }, obj) {
 	}));
 }
 
+async function navigationLinks(req, url, prefix) {
+	const [parents, siblings] = await Promise.all([
+		getParents(req, url),
+		prefix ? [] : listPages(req, {
+			drafts: true,
+			parent: url.split('/').slice(0, -1).join('/')
+		}).clearSelect().select([
+			ref('block.data:url').as('url'),
+			ref('block.data:redirect').as('redirect'),
+			ref('block.data:title').as('title')
+		])
+	]);
+	const links = {};
+	links.up = parents.map(redUrl);
+
+	// consider not doing this for prefixed pages
+	let found;
+	const position = siblings.findIndex(item => {
+		const same = item.url == url;
+		if (same) {
+			found = true;
+		} else if (!found && url.length > 1 && item.url.startsWith(url)) {
+			found = item.url;
+		}
+		return same;
+	});
+	if (found && found !== true) {
+		links.found = found;
+	}
+	if (position > 0) {
+		links.prev = redUrl(siblings[position - 1]);
+	}
+	if (position < siblings.length - 1) {
+		links.next = redUrl(siblings[position + 1]);
+	}
+	if (siblings.length > 1) {
+		links.first = redUrl(siblings[0]);
+		links.last = redUrl(siblings[siblings.length - 1]);
+	}
+	return links;
+}
