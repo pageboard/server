@@ -32,14 +32,11 @@ function fixSchema(schema) {
 class AjvValidatorExt extends AjvValidator {
 	compilePatchValidator(jsonSchema) {
 		jsonSchema = jsonSchemaWithoutRequired(fixSchema(jsonSchema));
-		if (jsonSchema.$id) jsonSchema.$id += '/patch';
 		// We need to use the ajv instance that doesn't set the default values.
 		return this.ajvNoDefaults.compile(jsonSchema);
 	}
 	compileNormalValidator(jsonSchema) {
-		if (jsonSchema.$id) jsonSchema.$id += '/norm';
-		fixSchema(jsonSchema);
-		return super.compileNormalValidator(jsonSchema);
+		return super.compileNormalValidator(fixSchema(jsonSchema));
 	}
 }
 
@@ -61,6 +58,9 @@ module.exports = class Validation {
 			id: /^[A-Za-z0-9]+$/,
 			name: /^\w+$/, // this should be the "type" format
 			grant: /^[a-z0-9-]+$/ // this should be the name format !
+		},
+		serialize(schema) {
+			return schema.$id;
 		}
 	};
 
