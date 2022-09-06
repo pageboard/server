@@ -74,6 +74,12 @@ module.exports = class FormService {
 					}
 				}
 			}
+			if (el.parents) {
+				const parent = body.$parent ?? body.$parents;
+				if (parent) {
+					newBody.parents = Array.isArray(parent) ? parent : [parent];
+				}
+			}
 			body = newBody;
 		}
 		body = mergeExpressions(body, params);
