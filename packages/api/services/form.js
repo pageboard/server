@@ -70,7 +70,7 @@ exports.submit = function(req, data) {
 				}
 			});
 			if (el.parents) {
-				const parent = body.$parent ?? body.$parents;
+				const parent = body.$parent || body.$parents;
 				if (parent) {
 					newBody.parents = Array.isArray(parent) ? parent : [parent];
 				}

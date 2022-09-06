@@ -542,7 +542,7 @@ exports.add.schema = {
 exports.add.external = true;
 
 exports.save = function (req, data) {
-	const parents = data.parents ?? [];
+	const parents = data.parents || [];
 	delete data.parents;
 	return exports.get(req, data).forUpdate().then((block) => {
 		const obj = {
