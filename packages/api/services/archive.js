@@ -235,7 +235,7 @@ module.exports = class ArchiveService {
 					for (const id of obj.standalones) {
 						const kid = refs.get(id);
 						if (!kid) {
-							throw new HttpError.BadRequest(
+							console.warn(
 								`Missing child id: ${upgrader.reverseMap[id] ?? id}`
 							);
 						}
