@@ -542,6 +542,8 @@ exports.add.schema = {
 exports.add.external = true;
 
 exports.save = function (req, data) {
+	const parents = data.parents ?? [];
+	delete data.parents;
 	return exports.get(req, data).forUpdate().then((block) => {
 		const obj = {
 			type: block.type
@@ -550,6 +552,19 @@ exports.save = function (req, data) {
 		if (data.lock && Object.keys(data.lock).length) obj.lock = data.lock;
 		return block.$query(req.trx).patchObject(obj).then(() => {
 			if (!block) throw new Error(`Block not found for update ${data.id}`);
+		}).then(() => {
+			if (parents.length == 0) return;
+			return block.$relatedQuery('parents', req.trx).whereIn('block.type', parents.map(item => item.type)).unrelate().then(() => {
+				const newParents = parents
+					.filter(item => item.id != null)
+					.map(item => [item.id, item.type]);
+				if (newParents.length == 0) return;
+				return req.site.$relatedQuery('children', req.trx).whereIn(['block.id', 'block.type'], newParents).then(ids => {
+					if (ids.length == 0) return;
+					return block.$relatedQuery('parents', req.trx).relate(ids);
+				});
+			});
+		}).then(() => {
 			return block;
 		});
 	});
@@ -581,7 +596,8 @@ exports.save.schema = {
 		},
 		get lock() {
 			return All.api.Block.jsonSchema.properties.lock;
-		}
+		},
+		parents: exports.add.schema.properties.parents
 	}
 };
 exports.save.external = true;
