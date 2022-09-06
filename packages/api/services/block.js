@@ -767,7 +767,7 @@ module.exports = class BlockService {
 		}
 
 		// keep only ids that are not used in other content
-		let oldIds = contentIds[name].slice();
+		let oldIds = contentIds[name]?.slice() ?? [];
 		for (const [cn, list] of Object.entries(contentIds)) {
 			if (name == cn) continue;
 			for (let i = 0; i < oldIds.length; i++) {
