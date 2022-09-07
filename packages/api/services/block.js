@@ -560,23 +560,23 @@ module.exports = class BlockService {
 	};
 
 	async add({ site, trx, Block }, data) {
-		const parents = (data.parents || []).filter((item) => {
-			return item.id != null;
-		});
+		const parents = data.parents ?? [];
 		delete data.parents;
 
-		const child = await site.$relatedQuery('children', trx)
+		const block = await site.$relatedQuery('children', trx)
 			.insert(data).returning(Block.columns);
-		if (parents.length == 0) return child;
-		const ids = await site.$relatedQuery('children', trx)
-			.whereIn(['block.id', 'block.type'], parents.map((item) => {
-				if (!item.type || !item.id) {
-					throw new HttpError.BadRequest("Parents must have id, type");
-				}
-				return [item.id, item.type];
-			}));
-		await child.$relatedQuery('parents', trx).relate(ids);
-		return child;
+
+		const newParents = parents.filter(item => item.id != null)
+			.map(item => [item.id, item.type]);
+
+		if (newParents.length) {
+			const ids = await site.$relatedQuery('children', trx)
+				.whereIn(['block.id', 'block.type'], newParents);
+			if (ids.length) {
+				await block.$relatedQuery('parents', trx).relate(ids);
+			}
+		}
+		return block;
 	}
 	static add = {
 		title: 'Add a block',
