@@ -2,7 +2,7 @@ const { AjvValidator } = require('objection');
 const Ajv = require('ajv');
 const AjvKeywords = require('ajv-keywords');
 const AjvFormats = require('ajv-formats');
-const { default: betterAjvErrors } = require('better-ajv-errors');
+const { betterAjvErrors } = require('@apideck/better-ajv-errors');
 const NP = require('number-precision');
 const Traverse = require('json-schema-traverse');
 
@@ -212,7 +212,11 @@ module.exports = class Validation {
 		if (inst.validate(data)) {
 			return data;
 		} else {
-			const messages = betterAjvErrors(schema, data, inst.validate.errors);
+			const messages = betterAjvErrors({
+				schema,
+				data,
+				errors: inst.validate.errors
+			});
 			throw new HttpError.BadRequest(messages);
 		}
 	}
