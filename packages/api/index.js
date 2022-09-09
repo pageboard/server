@@ -180,7 +180,13 @@ module.exports = class ApiModule {
 			(req.user.grants ?? []).map(grant => [grant, true])
 		);
 		if (obj.status) {
-			res.status(obj.status);
+			const code = Number.parseInt(obj.status);
+			if (code < 200 || code >= 600 || Number.isNaN(code)) {
+				console.error("Unknown error code", obj.status);
+				res.status(500);
+			} else {
+				res.status(code);
+			}
 			delete obj.status;
 		}
 
