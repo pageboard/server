@@ -8,7 +8,6 @@ monday = "postgres://pageboard@localhost/pageboard_monday"
 
 [image]
 hostnames = true
-im = "/usr/bin/convert-im6"
 
 [mail.conversations]
 sender = '"no reply" <noreply@example.com>'
