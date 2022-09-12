@@ -1,5 +1,4 @@
 const {
-	mergeParameters,
 	mergeExpressions
 } = require('../../../lib/utils');
 
@@ -27,24 +26,26 @@ module.exports = class SearchService {
 		const form = await run('block.get', {
 			id: data.id
 		});
-		const fd = form.data || {};
-		const method = (fd.action || {}).method;
+
+		const method = form.data?.action?.method;
 		if (!method) {
 			throw new HttpError.BadRequest("Missing method");
 		}
-		if (locked((form.lock || {}).read)) {
+		if (locked(form.lock?.read)) {
 			throw new HttpError.Unauthorized("Check user permissions");
 		}
-		// build parameters
-		const expr = ((form.expr || {}).action || {}).parameters || {};
 		const { $pathname } = data.query;
 		delete data.query.$pathname;
-		let params = mergeParameters(expr, {
-			$pathname,
-			$query: data.query || {},
-			$user: user
-		});
-		params = mergeExpressions(params, fd.action.parameters);
+		const params = mergeExpressions(
+			form.data?.action?.parameters ?? {},
+			form.expr?.action?.parameters ?? {},
+			{
+				$pathname,
+				$query: data.query || {},
+				$user: user
+			}
+		);
+
 		try {
 			const obj = await run(method, params);
 			// check if a non-page bundle is needed
@@ -70,9 +71,11 @@ module.exports = class SearchService {
 				status: err.statusCode || err.status || err.code || 400,
 				item: {
 					type: 'error',
-					data: {
-						message: err.message
-					}
+					data: err.data ?? {
+						method: err.method ?? method,
+						messages: err.message
+					},
+					content: err.content ?? err.toString()
 				}
 			};
 		}

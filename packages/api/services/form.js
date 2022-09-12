@@ -1,5 +1,5 @@
 const {
-	mergeParameters,
+	mergeRecursive,
 	mergeExpressions,
 	unflatten
 } = require('../../../lib/utils');
@@ -26,71 +26,68 @@ module.exports = class FormService {
 			id: data.id
 		});
 
-		const fd = form.data || {};
-		const method = (fd.action || {}).method;
+		const method = form.data?.action?.method;
 		if (!method) {
 			throw new HttpError.BadRequest("Missing method");
 		}
-		if (locked((form.lock || {}).write)) {
+		if (locked(form.lock?.write)) {
 			throw new HttpError.Unauthorized("Check user permissions");
 		}
-		let body = data.body;
-		// build parameters
-		const expr = ((form.expr || {}).action || {}).parameters || {};
-		let params = mergeParameters(expr, {
-			$request: body,
-			$query: data.query || {},
-			$user: user
-		});
-		params = mergeExpressions(params, fd.action.parameters);
+
+		const params = mergeExpressions(
+			form.data?.action?.parameters ?? {},
+			form.expr?.action?.parameters ?? {},
+			{
+				$request: data.body,
+				$query: data.query || {},
+				$user: user
+			}
+		);
 
 		Log.api("form params", params, user, data.query);
 
-		// build body
-		if (params.type && Array.isArray(params.type) == false && Object.keys(body).length > 0) {
+		// allow body keys as block.data
+		const body = {};
+		if (params.type && Array.isArray(params.type) == false && Object.keys(data.body).length > 0) {
 			const el = site.$schema(params.type);
 			if (!el) {
 				throw new HttpError.BadRequest("Unknown element type " + params.type);
 			}
-			const newBody = { data: {} };
-			for (const key of Object.keys((el.properties.data || {}).properties || {})) {
-				const val = body[key];
+			body.data = {};
+			for (const key of Object.keys(el.properties.data?.properties ?? {})) {
+				const val = data.body[key];
 				if (val !== undefined) {
-					newBody.data[key] = val;
-					delete body[key];
+					body.data[key] = val;
+					delete data.body[key];
 				}
 			}
+			// this should be removed - only expressions should be used to achieve this
 			for (const key of Object.keys(el.properties)) {
 				const mkey = '$' + key;
-				const mval = body[mkey];
+				const mval = data.body[mkey];
 				if (mval !== undefined) {
-					newBody[key] = mval;
+					body[key] = mval;
 				} else {
-					const val = body[key];
+					const val = data.body[key];
 					if (val !== undefined) {
 						console.warn(`Use $${key} for setting el.properties[key]`);
-						newBody[key] = val;
+						body[key] = val;
 					}
 				}
 			}
-			if (el.parents) {
-				const parent = body.$parent ?? body.$parents;
-				if (parent) {
-					newBody.parents = Array.isArray(parent) ? parent : [parent];
-				}
-			}
-			body = newBody;
 		}
-		body = mergeExpressions(body, params);
+		mergeRecursive(body, params);
 
 		return run(method, body).catch((err) => {
 			return {
 				status: err.statusCode || err.status || err.code || 400,
 				item: {
 					type: 'error',
-					data: {
-						message: err.message
-					}
+					data: err.data ?? {
+						method: err.method ?? method,
+						messages: err.message
+					},
+					content: err.content ?? err.toString()
 				}
 			};
 		});

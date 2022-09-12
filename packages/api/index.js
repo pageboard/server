@@ -109,7 +109,11 @@ module.exports = class ApiModule {
 		try {
 			this.validate(schema, data, fun);
 		} catch (err) {
-			err.message += '\n ' + apiStr + '\n' + jsonDoc(schema, app.opts.cli);
+			err.data = {
+				method: apiStr,
+				messages: err.message
+			};
+			err.content = jsonDoc(schema, app.opts.cli);
 			throw err;
 		}
 		// start a transaction on set trx object on site
