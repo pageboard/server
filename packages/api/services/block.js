@@ -220,12 +220,14 @@ module.exports = class BlockService {
 			parent: {
 				title: 'Select by parent',
 				description: 'search blocks only having these parents',
-				type: "object"
+				type: "object",
+				nullable: true
 			},
 			child: {
 				title: 'Select by child',
 				description: 'search blocks only having these children',
 				type: 'object',
+				nullable: true
 			},
 			id: {
 				title: 'Select by id',
