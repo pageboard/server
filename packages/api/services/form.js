@@ -75,6 +75,9 @@ module.exports = class FormService {
 					}
 				}
 			}
+		} else {
+			// this should be removed - only expressions should be used to achieve this
+			Object.assign(body, data.body);
 		}
 		mergeRecursive(body, params);
 
