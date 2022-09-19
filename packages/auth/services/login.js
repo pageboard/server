@@ -199,7 +199,7 @@ module.exports = class LoginModule {
 	};
 
 	async link(req, data) {
-		const token = await this.generate(req, data);
+		const token = await this.#generate(req, data);
 		return "/.api/login?" + new URLSearchParams({
 			email: data.email,
 			grant: 'webmaster',
