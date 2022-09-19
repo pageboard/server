@@ -217,7 +217,10 @@ module.exports = class Validation {
 				data,
 				errors: inst.validate.errors
 			});
-			throw new HttpError.BadRequest(messages);
+			const str = '\n' + messages.map(
+				item => ' ' + item.message.replaceAll(/\{base\}/g, 'data')
+			).join('\n');
+			throw new HttpError.BadRequest(str);
 		}
 	}
 };
