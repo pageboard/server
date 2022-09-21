@@ -26,6 +26,8 @@ module.exports = class FormService {
 			id: data.id
 		});
 
+		const reqBody = data.body ?? {};
+
 		const method = form.data?.action?.method;
 		if (!method) {
 			throw new HttpError.BadRequest("Missing method");
@@ -38,7 +40,7 @@ module.exports = class FormService {
 			form.data?.action?.parameters ?? {},
 			form.expr?.action?.parameters ?? {},
 			{
-				$request: data.body,
+				$request: reqBody,
 				$query: data.query || {},
 				$user: user
 			}
@@ -48,27 +50,27 @@ module.exports = class FormService {
 
 		// allow body keys as block.data
 		const body = {};
-		if (params.type && Array.isArray(params.type) == false && Object.keys(data.body).length > 0) {
+		if (params.type && Array.isArray(params.type) == false && Object.keys(reqBody).length > 0) {
 			const el = site.$schema(params.type);
 			if (!el) {
 				throw new HttpError.BadRequest("Unknown element type " + params.type);
 			}
 			body.data = {};
 			for (const key of Object.keys(el.properties.data?.properties ?? {})) {
-				const val = data.body[key];
+				const val = reqBody[key];
 				if (val !== undefined) {
 					body.data[key] = val;
-					delete data.body[key];
+					delete reqBody[key];
 				}
 			}
 			// this should be removed - only expressions should be used to achieve this
 			for (const key of Object.keys(el.properties)) {
 				const mkey = '$' + key;
-				const mval = data.body[mkey];
+				const mval = reqBody[mkey];
 				if (mval !== undefined) {
 					body[key] = mval;
 				} else {
-					const val = data.body[key];
+					const val = reqBody[key];
 					if (val !== undefined) {
 						console.warn(`Use $${key} for setting el.properties[key]`);
 						body[key] = val;
@@ -77,7 +79,7 @@ module.exports = class FormService {
 			}
 		} else {
 			// this should be removed - only expressions should be used to achieve this
-			Object.assign(body, data.body);
+			Object.assign(body, reqBody);
 		}
 		mergeRecursive(body, params);
 
