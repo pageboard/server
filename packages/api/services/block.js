@@ -780,7 +780,7 @@ module.exports = class BlockService {
 		}
 	};
 
-	async fill({ run, trx }, { id, type, name, items = [] }) {
+	async fill({ site, run, trx }, { id, type, name, items = [] }) {
 		const block = await run('block.get', { id });
 
 		const contentIds = {};
@@ -813,12 +813,13 @@ module.exports = class BlockService {
 			}
 			return true;
 		});
-		const newItems = await block.$relatedQuery('children', trx)
+		const newItems = await site.$relatedQuery('children', trx)
 			.insert(items).returning('*');
 		// inserted items have id
 		block.content[name] = newItems
 			.map(item => `<div block-id="${item.id}"></div>`)
 			.join('');
+		await block.$relatedQuery('children', trx).relate(newItems);
 		await block.$query(trx).patchObject({
 			type: block.type,
 			content: block.content
