@@ -87,7 +87,7 @@ module.exports = class ImageModule {
 			.toFormat('webp', {
 				quality: 50
 			})
-			.toBuffer().then((buf) => {
+			.toBuffer().then(buf => {
 				const dtu = new DatauriParser();
 				return dtu.format('.webp', buf);
 			});
