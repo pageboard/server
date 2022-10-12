@@ -187,7 +187,7 @@ module.exports = class PageService {
 
 		const types = data.type ?? site.$pkg.pages;
 
-		const results = await trx.raw(`SELECT json_build_object(
+		const q = trx.raw(`SELECT json_build_object(
 			'count', count,
 			'rows', json_agg(
 				json_build_object(
@@ -206,9 +206,29 @@ module.exports = class PageService {
 				id, type, title, url, updated_at, json_agg(DISTINCT headlines) AS headlines, sum(qrank) AS rank,
 				count(*) OVER() AS count
 			FROM (
-				SELECT
+				(SELECT
 					page.id,
-					page.type,
+					'site' || page.type AS type,
+					page.data->>'title' AS title,
+					page.data->>'url' AS url,
+					page.updated_at,
+					ts_headline('unaccent', page.data->>'title', search.query) AS headlines,
+					ts_rank(page.tsv, search.query) AS qrank
+				FROM
+					block AS site,
+					relation AS rs,
+					block AS page,
+					(SELECT websearch_to_tsquery('unaccent', :text) AS query) AS search
+				WHERE
+					site.type = 'site' AND site.id = :site
+					AND rs.parent_id = site._id AND page._id = rs.child_id
+					${drafts}
+					AND page.type = ANY(:types)
+					AND search.query @@ page.tsv)
+				UNION ALL
+				(SELECT
+					page.id,
+					'site' || page.type AS type,
 					page.data->>'title' AS title,
 					page.data->>'url' AS url,
 					page.updated_at,
@@ -220,25 +240,26 @@ module.exports = class PageService {
 					block,
 					relation AS rp,
 					block AS page,
-					(SELECT websearch_to_tsquery('unaccent', ?) AS query) AS search
+					(SELECT websearch_to_tsquery('unaccent', :text) AS query) AS search
 				WHERE
-					site.type = 'site' AND site.id = ?
+					site.type = 'site' AND site.id = :site
 					AND rs.parent_id = site._id AND block._id = rs.child_id
-					AND block.type NOT IN ('site', 'user', 'fetch', 'template', 'api_form', 'query_form', 'priv', 'settings', ${site.$pkg.pages.map(_ => '?').join(',')})
+					AND block.type != ALL(:noTypes)
 					AND rp.child_id = block._id AND page._id = rp.parent_id
 					${drafts}
-					AND page.type IN (${types.map(_ => '?').join(',')})
-					AND search.query @@ block.tsv
+					AND page.type = ANY(:types)
+					AND search.query @@ block.tsv)
 			) AS results
-			GROUP BY id, type, title, url, updated_at ORDER BY rank DESC, updated_at DESC OFFSET ? LIMIT ?
-		) AS foo GROUP BY count`, [
-			data.text,
-			site.id,
-			...site.$pkg.pages,
-			...types,
-			data.offset,
-			data.limit
-		]);
+			GROUP BY id, type, title, url, updated_at ORDER BY rank DESC, updated_at DESC OFFSET :offset LIMIT :limit
+		) AS foo GROUP BY count`, {
+			text: data.text,
+			site: site.id,
+			noTypes: ['site', 'user', 'fetch', 'template', 'api_form', 'query_form', 'priv', 'settings', ...site.$pkg.pages],
+			types,
+			offset: data.offset,
+			limit: data.limit
+		});
+		const results = await q;
 		const obj = {
 			offset: data.offset,
 			limit: data.limit,
@@ -283,6 +304,7 @@ module.exports = class PageService {
 				default: false
 			},
 			type: {
+				title: 'Types',
 				type: 'array',
 				items: {
 					type: 'string',
