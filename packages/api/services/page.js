@@ -138,22 +138,21 @@ module.exports = class PageService {
 			site: site.data
 		};
 
-		const wkp = /^\/\.well-known\/(\d{3})$/.exec(data.url);
-		if (wkp) {
-			obj.status = parseInt(wkp[1]);
-		}
 		let page = await this.#QueryPage(req, data.url);
 		if (!page) {
 			obj.status = 404;
 		} else if (req.locked((page.lock ?? {}).read)) {
 			obj.status = 401;
 		}
+		const wkp = /^\/\.well-known\/(\d{3})$/.exec(data.url);
 		if (obj.status != 200) {
 			page = await this.#QueryPage(req, `/.well-known/${obj.status}`);
 			if (!page) return Object.assign(obj, {
 				item: { type: 'page' },
 				meta: site.$pkg.bundles.page.meta
 			});
+		} else if (wkp) {
+			obj.status = parseInt(wkp[1]);
 		}
 		const links = await navigationLinks(req, data.url, page.data.prefix);
 		Object.assign(obj, {
