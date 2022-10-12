@@ -61,7 +61,7 @@ module.exports = class InspectorModule {
 				console.error("Error embedding thumbnail", thumb, err);
 			}
 		}
-		if (desc) {
+		if (!obj.preview && desc) {
 			obj.preview = desc;
 		}
 		return obj;
