@@ -73,7 +73,7 @@ module.exports = class PrerenderModule {
 
 	#requestedSchema({ site }, { pathname }) {
 		const ext = Path.extname(pathname);
-		// backward compat for rss
+		// backward compat for rss < 0.11
 		let type = ext.substring(1) || "page";
 		const fake = type == "rss" ? "page" : type;
 
