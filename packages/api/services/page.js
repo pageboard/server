@@ -180,7 +180,8 @@ module.exports = class PageService {
 		}
 	};
 
-	async search({ site, trx }, data) {
+	async search(req, data) {
+		const { site, trx } = req;
 		const drafts = data.drafts
 			? ''
 			: `AND (page.data->'nositemap' IS NULL OR (page.data->'nositemap')::BOOLEAN IS NOT TRUE)`;
@@ -246,6 +247,11 @@ module.exports = class PageService {
 			items: result.rows,
 			total: parseInt(count.rows[0].count)
 		};
+		const ids = obj.items.map(item => item.id);
+		const hrow = await req.call('href.collect', {
+			ids, asMap: true
+		}).first();
+		obj.hrefs = hrow.hrefs;
 		return obj;
 	}
 	static search = {
