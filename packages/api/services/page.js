@@ -193,8 +193,15 @@ module.exports = class PageService {
 				page.id,
 				'site' || page.type AS type,
 				page.data,
-				page.updated_at,
-				ts_headline('unaccent', page.data->>'title', search.query) AS headlines,
+				page.updated_at, (
+					SELECT string_agg(list.fragment, '<br>') FROM (
+						SELECT fragment FROM (
+							SELECT ts_headline('unaccent', page.data->>'title', search.query) AS fragment, page.data->>'title' AS field
+							UNION
+							SELECT ts_headline('unaccent', page.data->>'description', search.query) AS fragment, page.data->>'description' AS field
+						) AS headlines WHERE length(fragment) != length(field)
+					) AS list WHERE length(trim(list.fragment)) > 0
+				) AS headlines,
 				ts_rank(page.tsv, search.query) AS rank
 			FROM
 				block AS site,
@@ -212,8 +219,13 @@ module.exports = class PageService {
 				page.id,
 				'site' || page.type AS type,
 				page.data,
-				page.updated_at,
-				(SELECT string_agg(heads.value, '<br>') FROM (SELECT DISTINCT trim(value) AS value FROM jsonb_each_text(ts_headline('unaccent', block.content, search.query)) WHERE length(trim(value)) > 0) AS heads) AS headlines,
+				page.updated_at, (
+					SELECT string_agg(list.fragment, '<br>') FROM (
+						SELECT fragment FROM (
+							SELECT value AS fragment, jsonb_extract_path_text(block.content, key) AS field FROM jsonb_each_text(ts_headline('unaccent', block.content, search.query))
+						) AS headlines WHERE length(fragment) != length(field)
+					) AS list WHERE length(trim(list.fragment)) > 0
+				) AS headlines,
 				ts_rank(block.tsv, search.query) AS rank
 			FROM
 				block AS site,
@@ -248,10 +260,12 @@ module.exports = class PageService {
 			total: parseInt(count.rows[0].count)
 		};
 		const ids = obj.items.map(item => item.id);
-		const hrow = await req.call('href.collect', {
-			ids, asMap: true
-		}).first();
-		obj.hrefs = hrow.hrefs;
+		if (ids.length > 0) {
+			const hrow = await req.call('href.collect', {
+				ids, asMap: true
+			}).first();
+			obj.hrefs = hrow.hrefs;
+		}
 		return obj;
 	}
 	static search = {
