@@ -1,5 +1,7 @@
 exports.plugin = function (page, settings, req, res) {
 	settings.stall = 8000;
+	settings.timeout = 10000;
+	settings.runTimeout = 10000;
 	// does not really need a polyfill
 	settings.scripts.push(`window.ResizeObserver = class {
 		disconnect() {}
