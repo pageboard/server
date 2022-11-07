@@ -1,4 +1,4 @@
-const inspector = require.lazy('url-inspector');
+const Inspector = require.lazy('url-inspector');
 
 module.exports = class InspectorModule {
 	static name = 'inspector';
@@ -6,20 +6,22 @@ module.exports = class InspectorModule {
 	constructor(app, opts) {
 		this.app = app;
 		this.opts = opts;
+		this.local = new Inspector({
+			...this.opts,
+			nofavicon: true,
+			file: true
+		});
+		this.remote = new Inspector(this.opts);
 	}
 
 	async request(urlObj) {
-		return inspector.get(urlObj);
+		return Inspector.get(urlObj);
 	}
 
 	async get({ url, local }) {
-		const opts = {
-			...this.opts,
-			nofavicon: local,
-			file: local
-		};
 		try {
-			const result = this.#filterResult(await inspector(url, opts));
+			const meta = await local ? this.local.look(url) : this.remove.look(url);
+			const result = this.#filterResult(meta);
 			return this.#preview(result);
 		} catch (err) {
 			if (typeof err == 'number') throw new HttpError[err]("Inspector failure");
@@ -56,7 +58,7 @@ module.exports = class InspectorModule {
 		if (thumb != null) {
 			try {
 				const datauri = await this.app.image.thumbnail(thumb);
-				obj.preview = `<img src="${datauri}" alt="${desc}" />`;
+				obj.preview = `<img src="${datauri.content}" alt="${desc}" />`;
 			} catch (err) {
 				console.error("Error embedding thumbnail", thumb, err);
 			}
