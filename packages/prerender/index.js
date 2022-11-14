@@ -58,7 +58,7 @@ module.exports = class PrerenderModule {
 		})).route(({ location, settings }, req) => {
 			if (req.query.pdf != null) {
 				location.searchParams.delete('pdf');
-				settings.preset = req.query.pdf || null;
+				settings.pdf(req.query.pdf);
 			}
 		});
 		return this.#pdfMw(...args);
