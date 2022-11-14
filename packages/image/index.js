@@ -31,7 +31,6 @@ module.exports = class ImageModule {
 	fileRoutes(app, server) {
 		sharpie.sharp.simd(true);
 		server.get(/^\/\.(uploads|files)\//, (req, res, next) => {
-			Log.image("processing", req.url);
 			const extname = Path.extname(req.path);
 			if (!extname || /png|jpe?g|gif|webp|tiff|svg/.test(extname.substring(1)) == false) {
 				return next('route');
