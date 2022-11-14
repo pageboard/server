@@ -1,8 +1,9 @@
-CREATE FUNCTION block_tsv_update() RETURNS trigger
+CREATE OR REPLACE FUNCTION block_tsv_update() RETURNS trigger
     LANGUAGE plpgsql
     AS $$
 BEGIN
  new.tsv := to_tsvector('unaccent', COALESCE(new.data->>'title', ''))
+  || to_tsvector('unaccent', COALESCE(new.data->>'description', ''))
   || to_tsvector('unaccent', COALESCE(new.content, '{}'::jsonb));
  RETURN new;
 END
