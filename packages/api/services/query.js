@@ -46,39 +46,7 @@ module.exports = class SearchService {
 			}
 		);
 
-		try {
-			const obj = await run(method, params);
-			// check if a non-page bundle is needed
-			const bundles = {};
-			Object.entries(site.$pkg.bundles).forEach(([key, bundle]) => {
-				if (bundle.meta.group != "page") bundles[key] = bundle;
-			});
-			if (obj.item || obj.items) {
-				const metas = {};
-				Object.keys(fillTypes(obj.item || obj.items, {})).forEach((type) => {
-					const bundleType = Object.keys(bundles).find((key) => {
-						return bundles[key].elements.includes(type);
-					});
-					if (bundleType) {
-						metas[bundleType] = bundles[bundleType].meta;
-					}
-				});
-				obj.metas = Object.values(metas);
-			}
-			return obj;
-		} catch(err) {
-			return {
-				status: err.statusCode || err.status || err.code || 400,
-				item: {
-					type: 'error',
-					data: err.data ?? {
-						method: err.method ?? method,
-						messages: err.message
-					},
-					content: err.content ?? err.toString()
-				}
-			};
-		}
+		return run(method, params);
 	}
 	static query = {
 		$action: 'read',
@@ -96,15 +64,3 @@ module.exports = class SearchService {
 	};
 };
 
-function fillTypes(list, obj) {
-	if (!list) return obj;
-	if (!Array.isArray(list)) list = [list];
-	for (const row of list) {
-		if (row.type) obj[row.type] = true;
-		if (row.parent) fillTypes(row.parent, obj);
-		if (row.child) fillTypes(row.child, obj);
-		if (row.parents) fillTypes(row.parents, obj);
-		if (row.children) fillTypes(row.children, obj);
-	}
-	return obj;
-}

@@ -140,6 +140,7 @@ module.exports = class ApiModule {
 			if (!hadTrx && !req.trx.isCompleted()) {
 				await req.trx.rollback();
 			}
+			if (!err.method) err.method = apiStr;
 			throw err;
 		} finally {
 			if (req.trx && req.trx.isCompleted()) {
@@ -202,6 +203,60 @@ module.exports = class ApiModule {
 		}
 		if (req.granted) res.set('X-Granted', 1);
 		req.call('auth.headers', req.locks);
+
+		if (obj.item || obj.items) {
+			const { bundles, bundleMap } = req.site.$pkg;
+			const usedTypes = new Set();
+
+			if (obj.item) fillTypes(obj.item, usedTypes);
+			if (obj.items) fillTypes(obj.items, usedTypes);
+
+			// on parcourt tous les usedTypes
+			// et on compte les bundles qui les contiennent
+			// s'il n'y a qu'un bundle c'est lui qu'on prend
+			// s'il y a le choix, on prend le bundle qui contient le plus de usedTypes
+			const usedRoots = new Set();
+			for (const type of usedTypes) {
+				const rootSet = bundleMap.get(type);
+				// trick: ignore elements belonging to multiple roots
+				if (rootSet.size > 1) continue;
+				usedRoots.add(Array.from(rootSet).at(0));
+			}
+			const metas = [];
+			for (const root of usedRoots) {
+				metas.push(bundles[root].meta);
+			}
+			if (obj.meta) {
+				metas.unshift(obj.meta);
+			}
+
+			const meta = {
+				schemas: [],
+				scripts: [],
+				stylesheets: [],
+				services: [],
+				resources: {}
+			};
+
+			for (const item of metas) {
+				for (const name in meta) {
+					const dst = meta[name];
+					const src = item[name];
+					if (!src) continue;
+					if (Array.isArray(dst)) {
+						if (Array.isArray(src)) dst.push(...src);
+						else dst.push(src);
+					} else {
+						Object.assign(dst, src);
+					}
+				}
+			}
+			for (const name in meta) if (Object.isEmpty(meta[name])) {
+				delete meta[name];
+			}
+			obj.meta = meta;
+		}
+
 		res.json(obj);
 	}
 };
@@ -215,5 +270,18 @@ function itemFn(schema, block) {
 			jsonPath.unSet(block, src);
 		}
 	}
+}
+
+function fillTypes(list, set) {
+	if (!list) return set;
+	if (!Array.isArray(list)) list = [list];
+	for (const row of list) {
+		if (row.type) set.add(row.type);
+		if (row.parent) fillTypes(row.parent, set);
+		if (row.child) fillTypes(row.child, set);
+		if (row.parents) fillTypes(row.parents, set);
+		if (row.children) fillTypes(row.children, set);
+	}
+	return set;
 }
 

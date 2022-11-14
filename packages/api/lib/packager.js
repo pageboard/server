@@ -14,6 +14,7 @@ module.exports = class Packager {
 	}
 	async run(site, pkg) {
 		const { elements = [], directories = [] } = pkg || {};
+		if (!site) console.warn("no site in packager.run");
 		const id = site ? site.id : null;
 		Log.imports("installing", id, elements, directories);
 		const allDirs = id ? [ ...this.app.directories, ...directories ] : directories;
@@ -22,6 +23,7 @@ module.exports = class Packager {
 		sortPriority(allDirs);
 		sortPriority(allElts);
 
+		const bundleMap = pkg.bundleMap = new Map();
 		const elts = {};
 		const names = [];
 		const context = {};
@@ -41,23 +43,21 @@ module.exports = class Packager {
 			// backward compatibility with 0.7 extensions names, dropped in favor of output
 			if (updateExtension(el, eltsMap)) continue;
 			eltsMap[name] = el;
-			let isPage = false; // backward compatibility with < client@0.7
+			if (!bundleMap.has(name)) bundleMap.set(name, new Set());
+			const bundleSet = bundleMap.get(name);
 			if (el.group) el.group.split(/\s+/).forEach((gn) => {
-				if (gn == "page") isPage = true;
 				let group = groups[gn];
 				if (!group) group = groups[gn] = [];
 				if (!group.includes(name)) group.push(name);
 			});
-			if (isPage) {
-				if (!el.standalone) el.standalone = true;
-				if (!el.bundle) el.bundle = true;
-			}
+
 			if (el.bundle === true) {
 				bundles[name] = {};
 			} else if (el.bundle) {
 				if (!bundles[el.bundle]) bundles[el.bundle] = {};
 				if (!bundles[el.bundle].list) bundles[el.bundle].list = [];
 				bundles[el.bundle].list.push(el);
+				bundleSet.add(el.bundle);
 			}
 			if (el.intl) {
 				const { lang } = site.data;
@@ -88,19 +88,25 @@ module.exports = class Packager {
 
 	async makeBundles(site, pkg) {
 		const { eltsMap, bundles } = pkg;
-		await Promise.all(Object.entries(bundles).map(
-			([name, { list }]) => this.#bundle(site, pkg, eltsMap[name], list)
-		));
-		site.$pkg.services = await this.#bundleSource(
+		site.$pkg.bundleMap = pkg.bundleMap;
+		site.$pkg.services = [await this.#bundleSource(
 			site, pkg, null, 'services', this.app.services
-		);
+		)];
+		await Promise.all(Object.entries(bundles).map(
+			([name, { list }]) => this.#bundle(
+				site, pkg, eltsMap[name], list
+			)
+		));
+
 		// clear up some space
 		delete pkg.eltsMap;
 		delete pkg.bundles;
 	}
 
 	async #bundle(site, pkg, rootEl, cobundles = []) {
-		const list = this.#listDependencies(pkg, rootEl.group, rootEl, cobundles.slice());
+		const list = this.#listDependencies(
+			pkg, rootEl, rootEl, cobundles.slice()
+		);
 		list.sort((a, b) => {
 			return (a.priority || 0) - (b.priority || 0);
 		});
@@ -130,32 +136,34 @@ module.exports = class Packager {
 		]);
 		rootEl.scripts = scripts;
 		rootEl.stylesheets = styles;
-		for (const el of cobundles) {
-			if (el.group == "page") {
-				pkg.eltsMap[el.name].scripts = scripts;
-				pkg.eltsMap[el.name].stylesheets = styles;
-			}
-		}
+		// for (const el of cobundles) {
+		// 	if (el.bundle) {
+		// 		if (typeof el.bundle == "string") console.log("cobundle", el.bundle, "name", el.name);
+		// 		pkg.eltsMap[el.name].scripts = scripts;
+		// 		pkg.eltsMap[el.name].stylesheets = styles;
+		// 	}
+		// }
 		const path = await this.#bundleSource(site, pkg, prefix, 'elements', eltsMap);
-		if (path) metaEl.bundle = path;
-		metaEl.scripts = rootEl.group != "page" ? rootEl.scripts : [];
-		metaEl.stylesheets = rootEl.group != "page" ? rootEl.stylesheets : [];
+		metaEl.bundles = [];
+		metaEl.schemas = path ? [path] : [];
+		metaEl.scripts = rootEl.bundle === true ? rootEl.scripts : [];
+		metaEl.stylesheets = rootEl.bundle === true ? rootEl.stylesheets : [];
 		metaEl.resources = rootEl.resources;
 
-		for (const el of cobundles) {
-			if (el.group == "page") {
-				site.$pkg.bundles[el.name] = {
-					meta: {
-						...el,
-						scripts: metaEl.scripts,
-						stylesheets: metaEl.stylesheets,
-						resources: metaEl.resources,
-						bundle: metaEl.bundle
-					},
-					elements: metaKeys
-				};
-			}
-		}
+		// for (const el of cobundles) {
+		// 	if (el.bundle === true) {
+		// 		site.$pkg.bundles[el.name] = {
+		// 			meta: {
+		// 				...el,
+		// 				scripts: metaEl.scripts,
+		// 				stylesheets: metaEl.stylesheets,
+		// 				resources: metaEl.resources,
+		// 				schemas: metaEl.schemas
+		// 			},
+		// 			elements: metaKeys
+		// 		};
+		// 	}
+		// }
 	}
 
 	async #bundleSource(site, pkg, prefix, name, obj) {
@@ -172,37 +180,46 @@ module.exports = class Packager {
 		return paths[0];
 	}
 
-	#listDependencies(pkg, rootGroup, el, list = [], gDone = {}, eDone = {}) {
-		if (!el || eDone[el.name]) return list;
+	#listDependencies(
+		pkg, root, el,
+		list = [],
+		gDone = new Set()
+	) {
+		const bundleSet = pkg.bundleMap.get(el.name);
+		if (bundleSet.has(root.name)) {
+			return list;
+		}
 		const elts = pkg.eltsMap;
 		list.push(el);
-		eDone[el.name] = true;
+		// when listing dependencies, do not include elements from other bundles
+		// -> other bundles are known
+		bundleSet.add(root.name);
 		const contents = this.Block.normalizeContents(el.contents);
 		if (contents) for (const content of contents) {
 			if (!content.nodes) continue;
-			content.nodes.split(/\W+/).filter(Boolean).forEach((word) => {
-				if (word == rootGroup) {
-					console.warn("contents contains root group", rootGroup, el.name, contents);
-					return;
+			for (const word of content.nodes.split(/\W+/).filter(Boolean)) {
+				if (word == root.group) {
+					console.warn("contents contains root group", root.group, el.name, contents);
+					continue;
 				}
-				if (word == "text") return;
+				if (word == "text") continue;
 				let group = pkg.groups[word];
 				if (group) {
-					if (gDone[word]) return;
-					gDone[word] = true;
+					if (gDone.has(word)) continue;
+					gDone.add(word);
 				} else {
 					group = [word];
 				}
 				for (const sub of group) {
-					this.#listDependencies(pkg, rootGroup, elts[sub], list, gDone, eDone);
+					this.#listDependencies(pkg, root, elts[sub], list, gDone);
 				}
-			});
-		}	else if (el.name == rootGroup) {
+			}
+		} else if (el.name == root.group) {
 			const group = pkg.groups[el.name];
 			if (group) {
-				gDone[el.name] = true;
+				gDone.add(el.name);
 				for (const sub of group) {
-					this.#listDependencies(pkg, rootGroup, elts[sub], list, gDone, eDone);
+					this.#listDependencies(pkg, root, elts[sub], list, gDone);
 				}
 			}
 		}

@@ -83,19 +83,7 @@ module.exports = class FormService {
 		}
 		mergeRecursive(body, params);
 
-		return run(method, body).catch((err) => {
-			return {
-				status: err.statusCode || err.status || err.code || 400,
-				item: {
-					type: 'error',
-					data: err.data ?? {
-						method: err.method ?? method,
-						messages: err.message
-					},
-					content: err.content ?? err.toString()
-				}
-			};
-		});
+		return run(method, body);
 	}
 	static submit = {
 		$action: 'write',

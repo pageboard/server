@@ -8,33 +8,30 @@ module.exports = class PageService {
 		server.get('/.api/page', async (req, res) => {
 			const { site, query } = req;
 			const isWebmaster = !req.locked(['webmaster']);
-			const dev = Boolean(query.nested);
+			const forWebmaster = Boolean(query.nested);
 			delete query.nested;
-			if (isWebmaster && !dev) {
+			if (isWebmaster && !forWebmaster) {
 				res.return({
 					item: {
 						type: 'write',
 						data: {}
 					},
-					meta: {
-						services: site.$pkg.services,
-						...site.$pkg.bundles.write.meta
-					},
 					site: site.data,
+					meta: {
+						services: site.$pkg.services
+					},
 					commons: app.opts.commons
 				});
 			} else {
 				const data = await req.run('page.get', query);
 				const resources = site.$pkg.bundles.write.meta.resources;
-				if (dev && resources.develop) {
-					if (!data.meta) data.meta = { scripts: [] };
-					data.meta = { ...data.meta };
-					data.meta.scripts = [...data.meta.scripts];
-					if (site.$pkg.bundles.user) {
-						data.meta.scripts.unshift(site.$pkg.bundles.user.meta.bundle);
+				if (forWebmaster && resources.develop) {
+					data.meta = { scripts: [] };
+					if (!Object.isEmpty(site.$pkg.bundles.user?.meta?.schemas)) {
+						data.meta.schemas = site.$pkg.bundles.user.meta.schemas.slice();
 					}
 					data.meta.scripts.unshift(resources.develop);
-					data.meta.writes = {
+					data.meta.resources = {
 						scripts: [resources.editor, resources.readScript],
 						stylesheets: [resources.readStyle]
 					};
@@ -148,8 +145,7 @@ module.exports = class PageService {
 		if (obj.status != 200) {
 			page = await this.#QueryPage(req, `/.well-known/${obj.status}`);
 			if (!page) return Object.assign(obj, {
-				item: { type: 'page' },
-				meta: site.$pkg.bundles.page.meta
+				item: { type: 'page' }
 			});
 		} else if (wkp) {
 			obj.status = parseInt(wkp[1]);
@@ -158,14 +154,12 @@ module.exports = class PageService {
 		Object.assign(obj, {
 			item: page,
 			items: [ ...page.children, ...page.standalones ],
-			meta: site.$pkg.bundles[page.type].meta,
 			links: links,
 			hrefs: page.hrefs
 		});
 		delete page.standalones;
 		delete page.children;
 		delete page.hrefs;
-
 
 		return obj;
 	}
@@ -315,7 +309,6 @@ module.exports = class PageService {
 
 	async all(req, data) {
 		const pages = await listPages(req, data);
-		const els = {};
 		const obj = {
 			items: pages
 		};
@@ -325,15 +318,8 @@ module.exports = class PageService {
 				delete obj.item;
 			}
 		} else {
-			for (const type of req.site.$pkg.pages) {
-				const schema = req.site.$schema(type);
-				els[type] = schema;
-			}
 			obj.item = {
 				type: 'sitemap'
-			};
-			obj.meta = {
-				elements: els
 			};
 		}
 		return obj;
@@ -644,6 +630,7 @@ function getParents({ site, trx }, url) {
 function listPages({ site, trx }, data) {
 	const q = site.$relatedQuery('children', trx)
 		.selectWithout('content')
+		.select(raw("'site' || block.type AS type"))
 		.whereIn('block.type', data.type ?? site.$pkg.pages)
 		.where('block.standalone', true);
 
