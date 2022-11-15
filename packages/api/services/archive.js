@@ -13,7 +13,7 @@ module.exports = class ArchiveService {
 
 	apiRoutes(app, server) {
 		server.get('/.api/archive',
-			app.cache.disable,
+			app.cache.disable(),
 			app.auth.lock('webmaster'),
 			req => req.run('archive.export', req.query)
 		);
