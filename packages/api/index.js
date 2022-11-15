@@ -240,6 +240,11 @@ module.exports = class ApiModule {
 
 			for (const item of metas) {
 				for (const name in meta) {
+					if (item.group == "page" && ["scripts", "stylesheets"].includes(name)) {
+						// specificity: these are part of the element,
+						// and are loaded by document router
+						continue;
+					}
 					const dst = meta[name];
 					const src = item[name];
 					if (!src) continue;
