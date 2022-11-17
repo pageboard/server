@@ -20,7 +20,7 @@ module.exports = class InspectorModule {
 
 	async get({ url, local }) {
 		try {
-			const meta = await local ? this.local.look(url) : this.remove.look(url);
+			const meta = await (local ? this.local.look(url) : this.remote.look(url));
 			const result = this.#filterResult(meta);
 			return this.#preview(result);
 		} catch (err) {
