@@ -217,10 +217,14 @@ module.exports = class ApiModule {
 			// s'il y a le choix, on prend le bundle qui contient le plus de usedTypes
 			const usedRoots = new Set();
 			for (const type of usedTypes) {
-				const rootSet = bundleMap.get(type);
-				// trick: ignore elements belonging to multiple roots
-				if (rootSet.size > 1) continue;
-				usedRoots.add(Array.from(rootSet).at(0));
+				if (bundles[type]) {
+					usedRoots.add(type);
+				} else {
+					const rootSet = bundleMap.get(type);
+					// trick: ignore elements belonging to multiple roots
+					if (rootSet.size > 1) continue;
+					usedRoots.add(Array.from(rootSet).at(0));
+				}
 			}
 			const metas = [];
 			for (const root of usedRoots) {

@@ -388,11 +388,16 @@ module.exports = class PageService {
 			relate: {},
 			...changes
 		};
+		const pkg = site.$pkg;
 
-		const pages = {
-			add: changes.add.filter(b => site.$pkg.pages.includes(b.type)),
-			update: changes.update.filter(b => site.$pkg.pages.includes(b.type))
-		};
+		const pages = {};
+		for (const method of ['add', 'update', 'remove']) {
+			pages[method] = changes[method].filter(b => {
+				const alias = pkg.aliases[b.type];
+				if (alias) b.type = alias;
+				pkg.pages.includes(b.type);
+			});
+		}
 		pages.all = [ ...pages.add, ...pages.update ];
 
 		for (const b of changes.add) {
@@ -407,7 +412,7 @@ module.exports = class PageService {
 		const returning = {};
 		const dbPages = await site.$relatedQuery('children', trx)
 			.select('block.id', ref('block.data:url').as('url'))
-			.whereIn('block.type', site.$pkg.pages)
+			.whereIn('block.type', pkg.pages)
 			.whereNotNull(ref('block.data:url'));
 		for (const page of pages.all) {
 			const { url } = page.data;

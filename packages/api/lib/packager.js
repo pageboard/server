@@ -37,9 +37,11 @@ module.exports = class Packager {
 		const eltsMap = {};
 		const groups = {};
 		const bundles = {};
+		const aliases = {};
 		for (const name of names) {
 			const el = { ...elts[name] }; // drop proxy
 			el.name = name;
+			if (el.alias) aliases[name] = el.alias;
 			// backward compatibility with 0.7 extensions names, dropped in favor of output
 			if (updateExtension(el, eltsMap)) continue;
 			eltsMap[name] = el;
@@ -82,6 +84,7 @@ module.exports = class Packager {
 		pkg.eltsMap = eltsMap;
 		if (!pkg.eltsMap.site) pkg.eltsMap.site = schemas.site;
 		pkg.groups = groups;
+		pkg.aliases = aliases;
 		pkg.bundles = bundles;
 		return this.Block.initSite(site, pkg);
 	}
@@ -89,6 +92,7 @@ module.exports = class Packager {
 	async makeBundles(site, pkg) {
 		const { eltsMap, bundles } = pkg;
 		site.$pkg.bundleMap = pkg.bundleMap;
+		site.$pkg.aliases = pkg.aliases;
 		site.$pkg.services = [await this.#bundleSource(
 			site, pkg, null, 'services', this.app.services
 		)];
@@ -101,6 +105,7 @@ module.exports = class Packager {
 		// clear up some space
 		delete pkg.eltsMap;
 		delete pkg.bundles;
+		delete pkg.aliases;
 	}
 
 	async #bundle(site, pkg, rootEl, cobundles = []) {
