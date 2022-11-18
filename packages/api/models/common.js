@@ -253,15 +253,23 @@ exports.QueryBuilder = class CommonQueryBuilder extends QueryBuilder {
 				} else if (cond.op == "start") {
 					this.where(refk.castText(), "ilike", cond.val + '%');
 				} else if (cond.op == "has") {
-					// TODO if schema of ref is string, do ref ilike %val%
-					// ref is a json text or array, and it intersects any of the values
-					const val = typeof cond.val == "string" ? [cond.val] : cond.val;
-					this.whereRaw('?? \\?| ?', [refk, val]);
+					if (cond.type == "string" && typeof cond.val == "string") {
+						// ref is a string and it contains that value
+						this.where(refk.castText(), "ilike", '%' + cond.val + '%');
+					} else {
+						// ref is a json text or array, and it intersects any of the values
+						const val = typeof cond.val == "string" ? [cond.val] : cond.val;
+						this.whereRaw('?? \\?| ?', [refk, val]);
+					}
 				} else if (cond.op == "in") {
-					// TODO if schema of ref is string, do val ilike %ref%
-					// ref is a json string, and it is in the values
-					const val = typeof cond.val == "string" ? [cond.val] : cond.val;
-					this.whereRaw('?? \\?& ?', [refk, val]);
+					if (cond.type == "string" && typeof cond.val == "string") {
+						// ref is a string and it is contained in that value
+						this.whereRaw("? ilike '%' || ?? || '%'", [cond.val, refk.castText()]);
+					} else {
+						// ref is a json string, and it is in the values
+						const val = typeof cond.val == "string" ? [cond.val] : cond.val;
+						this.whereRaw('?? \\?& ?', [refk, val]);
+					}
 				} else if (cond.range == "numeric") {
 					this.whereRaw(':col: <@ numrange(:from, :to)', {
 						col: refk,
@@ -343,6 +351,7 @@ function asPaths(obj, ret, pre, first, schema) {
 			}
 			if (op) ret[cur] = {
 				op: op,
+				type: schem.type,
 				val: val
 			};
 			else ret[cur] = val;
