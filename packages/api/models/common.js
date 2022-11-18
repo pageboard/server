@@ -215,8 +215,8 @@ exports.QueryBuilder = class CommonQueryBuilder extends QueryBuilder {
 						// slot intersection
 						const start = `${k}.${cond.names[0]}`;
 						const end = `${k}.${cond.names[1]}`;
-						this.whereNotNull(ref(start));
-						this.whereNotNull(ref(end));
+						this.whereNotNull(ref(start)); // TODO optional start
+						this.whereNotNull(ref(end)); // TODO optional end
 						if (cond.start == cond.end) {
 							this.whereRaw(`(daterange(:start:, :end:) @> :at OR (:start: = :at AND :end: = :at))`, {
 								start: ref(start).castTo('date'),
@@ -271,11 +271,32 @@ exports.QueryBuilder = class CommonQueryBuilder extends QueryBuilder {
 						this.whereRaw('?? \\?& ?', [refk, val]);
 					}
 				} else if (cond.range == "numeric") {
-					this.whereRaw(':col: <@ numrange(:from, :to)', {
-						col: refk,
-						from: val(cond.start).castTo('numeric'),
-						to: val(cond.end).castTo('numeric')
-					});
+					if (cond.names) {
+						const start = `${k}.${cond.names[0]}`;
+						const end = `${k}.${cond.names[1]}`;
+						this.whereNotNull(ref(start)); // TODO optional start
+						this.whereNotNull(ref(end)); // TODO optional end
+						if (cond.start == cond.end) {
+							this.whereRaw(`(numrange(:start:, :end:) @> :at OR (:start: = :at AND :end: = :at))`, {
+								start: ref(start).castTo('numeric'),
+								end: ref(end).castTo('numeric'),
+								at: val(cond.start).castTo('numeric')
+							});
+						} else {
+							this.whereRaw(`numrange(:from, :to) && numrange(:start:, :end:)`, {
+								start: ref(start).castTo('numeric'),
+								end: ref(end).castTo('numeric'),
+								from: val(cond.start).castTo('numeric'),
+								to: val(cond.end).castTo('numeric')
+							});
+						}
+					} else {
+						this.whereRaw(':col: <@ numrange(:from, :to)', {
+							col: refk,
+							from: val(cond.start).castTo('numeric'),
+							to: val(cond.end).castTo('numeric')
+						});
+					}
 				} else {
 					throw new HttpError.BadRequest(
 						`Bad condition operator ${JSON.stringify(cond)}`
@@ -314,16 +335,31 @@ function asPaths(obj, ret, pre, first, schema) {
 		} else {
 			cur = key;
 		}
-		if (val && (typeof val == "string" || typeof val == "object" && val.start && val.end || Array.isArray(val)) && schem.type == "object" && Object.keys(schem.properties).sort().join(' ') == "end start" && dateTimes.includes(schem.properties.start.format) && dateTimes.includes(schem.properties.end.format)) {
-			// we have a date slot
-			const range = dateRange(val);
+		const propKeys = schem.properties ? Object.keys(schem.properties) : [];
+		if (
+			val && (
+				typeof val == "string"
+				|| typeof val == "object" && val.start && val.end
+				|| Array.isArray(val)
+			)
+			&& schem.type == "object" && propKeys.length == 2
+			&& (
+				dateTimes.includes(schem.properties[propKeys[0]].format)
+				&& dateTimes.includes(schem.properties[propKeys[1]].format)
+				|| schem.properties[propKeys[0]].type == "integer"
+				&& schem.properties[propKeys[1]].type == "integer"
+			)
+		) {
+			// we have a date or numeric slot
+			let range;
+			if (schem.properties[propKeys[0]].type == "integer" && schem.properties[propKeys[1]].type == "integer") {
+				range = numericRange(val);
+			} else {
+				range = dateRange(val);
+			}
 			if (range) {
-				ret[cur] = {
-					range: "date",
-					names: ["start", "end"],
-					start: range[0],
-					end: range[1]
-				};
+				range.names = propKeys;
+				ret[cur] = range;
 			} else if (op) ret[cur] = {
 				op: op,
 				val: val
@@ -336,11 +372,7 @@ function asPaths(obj, ret, pre, first, schema) {
 				} else {
 					const range = dateRange(val);
 					if (range) {
-						val = {
-							range: "date",
-							start: range[0],
-							end: range[1]
-						};
+						val = range;
 					}
 				}
 			} else if (schem.type == "boolean" && typeof val != "boolean") {
@@ -363,8 +395,9 @@ function asPaths(obj, ret, pre, first, schema) {
 }
 
 function dateRange(val) {
+	let start, end;
 	if (typeof val == "string") {
-		return partialDateRange(val);
+		[start, end] = partialDateRange(val);
 	} else if (Array.isArray(val) && val.length == 2) {
 		let start = new Date(val[0]);
 		let end = new Date(val[1]);
@@ -380,8 +413,10 @@ function dateRange(val) {
 		}
 		if (startTime == endTime) end = start;
 		else if (startTime > endTime) [start, end] = [end, start];
-		return [start, end];
 	}
+	return {
+		range: 'date', start, end
+	};
 }
 
 function partialDateRange(val) {
@@ -407,13 +442,14 @@ function partialDateRange(val) {
 }
 
 function numericRange(val, type) {
-	const [start, end] = val.split(/~|⩽/).map((n) => {
+	const [start, end] = val.split(/~|⩽/).map(n => {
 		return (type == "integer" ? parseInt : parseFloat)(n);
 	});
+
 	return {
 		range: "numeric",
 		start: start,
-		end: end
+		end: end ?? start
 	};
 }
 
