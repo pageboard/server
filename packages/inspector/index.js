@@ -1,11 +1,13 @@
-const Inspector = require.lazy('url-inspector');
-
 module.exports = class InspectorModule {
 	static name = 'inspector';
 
 	constructor(app, opts) {
 		this.app = app;
 		this.opts = opts;
+	}
+
+	async apiRoutes(app, server) {
+		const Inspector = this.Inspector = await import('url-inspector');
 		this.local = new Inspector({
 			...this.opts,
 			nofavicon: true,
@@ -15,7 +17,7 @@ module.exports = class InspectorModule {
 	}
 
 	async request(urlObj) {
-		return Inspector.get(urlObj);
+		return this.Inspector.get(urlObj);
 	}
 
 	async get({ url, local }) {
