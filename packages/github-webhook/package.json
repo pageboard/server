@@ -16,7 +16,7 @@
     "url": "https://github.com/pageboard/server/issues"
   },
   "dependencies": {
-    "semver": "5"
+    "semver": "7.3.8"
   },
   "homepage": "https://github.com/pageboard/server#readme"
 }

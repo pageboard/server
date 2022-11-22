@@ -19,18 +19,18 @@
   "dependencies": {
     "@apideck/better-ajv-errors": "^0.3.6",
     "@kapouer/path": "^4.2.1",
-    "ajv": "^8.11.0",
+    "ajv": "^8.11.2",
     "ajv-formats": "^2.1.1",
     "ajv-keywords": "^5.1.0",
-    "body-parser": "^1.20.0",
+    "body-parser": "^1.20.1",
     "class-deferred": "^1.0.1",
     "iso8601-duration": "^2.1.1",
     "json-schema-traverse": "^1.0.0",
     "ndjson": "2.0.0",
     "node-schedule": "^2.1.0",
-    "number-precision": "^1.5.2",
+    "number-precision": "^1.6.0",
     "objection": "^3.0.1",
-    "table": "^6.8.0",
+    "table": "^6.8.1",
     "tosource": "2.0.0-alpha.3"
   }
 }
