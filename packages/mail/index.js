@@ -47,14 +47,14 @@ module.exports = class MailModule {
 			}
 		});
 		server.post('/.api/mail/receive', multipart, (req, res, next) => {
-			req.run('mail.receive', req.body).then((ok) => {
+			req.run('mail.receive', req.body).then(ok => {
 				// https://documentation.mailgun.com/en/latest/user_manual.html#receiving-messages-via-http-through-a-forward-action
 				if (!ok) res.sendStatus(406);
 				else res.sendStatus(200);
 			}).catch(next);
 		});
 		server.post('/.api/mail/report', (req, res, next) => {
-			req.run('mail.report', req.body).then((ok) => {
+			req.run('mail.report', req.body).then(ok => {
 				// https://documentation.mailgun.com/en/latest/user_manual.html#webhooks
 				if (!ok) res.sendStatus(406);
 				else res.sendStatus(200);
@@ -288,7 +288,7 @@ module.exports = class MailModule {
 			} else {
 				list.push(req.run('settings.get', {
 					id: data.replyTo
-				}).then((settings) => {
+				}).then(settings => {
 					mailOpts.replyTo = {
 						address: settings.parent.data.email
 					};
@@ -296,7 +296,7 @@ module.exports = class MailModule {
 			}
 		}
 
-		list.push(Promise.all(data.to.map((to) => {
+		list.push(Promise.all(data.to.map(to => {
 			if (to.indexOf('@') > 0) {
 				return req.run('settings.save', { email: to });
 			} else {
@@ -315,7 +315,7 @@ module.exports = class MailModule {
 			address: `${site.id}.${rows[1].id}@${mailer.domain}`
 		};
 		const domains = {};
-		mailOpts.to = rows.slice(-1).pop().map((settings) => {
+		mailOpts.to = rows.slice(-1).pop().map(settings => {
 			const email = settings.parent.data.email;
 			const parsedAddress = AddressParser(email)[0];
 			domains[parsedAddress.address.split('@').pop()] = true;

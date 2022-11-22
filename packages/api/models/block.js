@@ -117,7 +117,7 @@ class Block extends Model {
 			}
 			if (!contents.nodes) {
 				// support old version
-				contents = Object.keys(contents).map((key) => {
+				contents = Object.keys(contents).map(key => {
 					let val = contents[key];
 					if (typeof val == "string") {
 						val = {nodes: val};

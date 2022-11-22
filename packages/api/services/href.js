@@ -473,7 +473,7 @@ module.exports = class HrefService {
 				}
 			}
 		}
-		const list = await Promise.all(urls.map((url) => {
+		const list = await Promise.all(urls.map(url => {
 			return req.run('href.add', { url });
 		}));
 		return {

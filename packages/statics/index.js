@@ -90,7 +90,7 @@ module.exports = class StaticsModule {
 
 		const outList = [];
 		const inputs = [];
-		list.forEach((url) => {
+		list.forEach(url => {
 			if (/^https?:\/\//.test(url)) outList.push(url);
 			else inputs.push(urlToPath(this.opts.files, site.id, url));
 		});

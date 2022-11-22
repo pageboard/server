@@ -239,7 +239,7 @@ function jsonSchemaWithoutRequired(jsonSchema) {
 		jsonSchema && jsonSchema.definitions
 			? {
 				definitions: Object.assign(
-					...Object.keys(jsonSchema.definitions).map((prop) => ({
+					...Object.keys(jsonSchema.definitions).map(prop => ({
 						[prop]: jsonSchemaWithoutRequired(jsonSchema.definitions[prop]),
 					}))
 				),

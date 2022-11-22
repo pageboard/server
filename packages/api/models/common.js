@@ -136,7 +136,7 @@ exports.QueryBuilder = class CommonQueryBuilder extends QueryBuilder {
 		const model = this.modelClass();
 		const table = this.tableRefFor(model);
 		const list = [];
-		model.columns.forEach((col) => {
+		model.columns.forEach(col => {
 			if (args.includes(col) == false) list.push(`${table}.${col}`);
 		});
 		return super.select(list);
@@ -454,7 +454,7 @@ function numericRange(val, type) {
 }
 
 function deepAssign(model, obj) {
-	Object.keys(obj).forEach((key) => {
+	Object.keys(obj).forEach(key => {
 		const val = obj[key];
 		const src = model[key];
 		if (val == null || typeof val != "object" || src == null) {

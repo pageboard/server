@@ -12,7 +12,7 @@ module.exports = function(schema, formatted) {
 				let type = schema.type;
 				if (typeof type != "string") type = 'object';
 				else if (type == "object" && schema.properties) type = "";
-				const path = pointer.split('/').slice(1).filter((x) => x != 'properties').join('.');
+				const path = pointer.split('/').slice(1).filter(x => x != 'properties').join('.');
 				if (schema.default) type += `|${JSON.stringify(schema.default)}`;
 				lines.push([path + (required ? ' *' : ''), type, schema.title || '-']);
 			}

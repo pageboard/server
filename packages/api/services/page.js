@@ -689,9 +689,9 @@ function stripHostname(site, block) {
 }
 
 function applyUnrelate({ site, trx }, obj) {
-	return Promise.all(Object.keys(obj).map((parentId) => {
+	return Promise.all(Object.keys(obj).map(parentId => {
 		return site.$relatedQuery('children', trx).where('block.id', parentId)
-			.first().throwIfNotFound().then((parent) => {
+			.first().throwIfNotFound().then(parent => {
 				return parent.$relatedQuery('children', trx)
 					.unrelate()
 					.whereIn('block.id', obj[parentId]);
@@ -745,14 +745,14 @@ function applyUpdate(req, list) {
 					.patch(block)
 					.returning('id', 'updated_at')
 					.first()
-					.then((part) => {
+					.then(part => {
 						if (!part) {
 							throw new HttpError.Conflict(`${block.type}:${block.id} last update mismatch ${block.updated_at}`);
 						}
 						return part;
 					});
 			}
-		}).then((update) => {
+		}).then(update => {
 			updates.push(update);
 		});
 	}, Promise.resolve()).then(() => {
@@ -853,7 +853,7 @@ async function applyRelate({ site, trx }, obj) {
 		const unrelateds = ids.filter(item => !item.child_id);
 		if (ids.length != obj[parentId].length) {
 			const missing = obj[parentId].reduce((list, id) => {
-				if (!ids.some((item) => {
+				if (!ids.some(item => {
 					return item.id === id;
 				})) list.push(id);
 				return list;

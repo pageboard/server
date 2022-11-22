@@ -739,7 +739,7 @@ module.exports = class BlockService {
 
 	async write(req, data) {
 		const list = data.operations;
-		return Promise.all(list.map((op) => {
+		return Promise.all(list.map(op => {
 			return req.run(`block.${op.method}`, op.item);
 		}));
 	}

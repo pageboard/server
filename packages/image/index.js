@@ -43,7 +43,7 @@ module.exports = class ImageModule {
 				}
 			} else {
 				const wrongParams = [];
-				Object.keys(req.query).some((key) => {
+				Object.keys(req.query).some(key => {
 					if (!allowedParameters[key]) wrongParams.push(key);
 				});
 				if (wrongParams.length) {

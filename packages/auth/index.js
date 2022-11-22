@@ -115,12 +115,12 @@ module.exports = class AuthModule {
 		else if (list.length == 0) return false;
 		let minLevel = Infinity;
 		const grants = user.grants || [];
-		grants.forEach((grant) => {
+		grants.forEach(grant => {
 			minLevel = Math.min(site.$pkg.grants[grant] || Infinity, minLevel);
 		});
 
 		let granted = false;
-		list.forEach((lock) => {
+		list.forEach(lock => {
 			const lockIndex = site.$pkg.grants[lock] || -1;
 			if (lock.startsWith('id-')) {
 				if (`id-${user.id}` == lock) granted = true;
@@ -149,9 +149,9 @@ module.exports = class AuthModule {
 			obj.item = this.filter(req, item, fn);
 			if (!obj.item.type) delete obj.items;
 		}
-		if (obj.items) obj.items = obj.items.map((item) => {
+		if (obj.items) obj.items = obj.items.map(item => {
 			return this.filter(req, item, fn);
-		}).filter((item) => {
+		}).filter(item => {
 			return item && item.type;
 		});
 		return obj;
@@ -180,17 +180,17 @@ module.exports = class AuthModule {
 		if (!item.type) return item;
 		const { children, child, parents, parent, items } = item;
 		if (children) {
-			item.children = children.filter((item) => {
+			item.children = children.filter(item => {
 				return this.filter(req, item, fn);
 			});
 		}
 		if (items) {
-			item.items = items.filter((item) => {
+			item.items = items.filter(item => {
 				return this.filter(req, item, fn);
 			});
 		}
 		if (parents) {
-			item.parents = parents.filter((item) => {
+			item.parents = parents.filter(item => {
 				return this.filter(req, item, fn);
 			});
 		}

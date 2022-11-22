@@ -47,7 +47,7 @@ module.exports = class Packager {
 			eltsMap[name] = el;
 			if (!bundleMap.has(name)) bundleMap.set(name, new Set());
 			const bundleSet = bundleMap.get(name);
-			if (el.group) el.group.split(/\s+/).forEach((gn) => {
+			if (el.group) el.group.split(/\s+/).forEach(gn => {
 				let group = groups[gn];
 				if (!group) group = groups[gn] = [];
 				if (!group.includes(name)) group.push(name);
@@ -261,7 +261,7 @@ function sortPriority(list) {
 function sortElements(elements, prop) {
 	const map = {};
 	let res = [];
-	elements.forEach((el) => {
+	elements.forEach(el => {
 		let list = el[prop];
 		if (!list) return;
 		if (typeof list == "string") list = [list];
@@ -272,7 +272,7 @@ function sortElements(elements, prop) {
 				if (el.priority != null) {
 					if (prev.priority == null) {
 						// move prev url on top of res
-						res = res.filter((lurl) => {
+						res = res.filter(lurl => {
 							return lurl != url;
 						});
 					} else if (prev.priority != el.priority) {
@@ -293,7 +293,7 @@ function sortElements(elements, prop) {
 }
 
 function getMountPath(eltPath, id, directories) {
-	const mount = directories.find((mount) => {
+	const mount = directories.find(mount => {
 		return eltPath.startsWith(mount.from);
 	});
 	if (!mount) return;

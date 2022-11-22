@@ -34,13 +34,13 @@ module.exports = class InspectorModule {
 	#filterResult(result) {
 		const obj = {meta:{}};
 		['mime', 'url', 'type', 'title', 'icon', 'site']
-			.forEach((key) => {
+			.forEach(key => {
 				if (result[key] !== undefined) obj[key] = result[key];
 			});
 		if (obj.icon == "data:/,") delete obj.icon;
 		if (result.url) obj.pathname = (new URL(result.url)).pathname;
 		['width', 'height', 'duration', 'size', 'thumbnail', 'description']
-			.forEach((key) => {
+			.forEach(key => {
 				if (result[key] !== undefined) obj.meta[key] = result[key];
 			});
 		if (obj.type == "image" && obj.mime != "text/html") {

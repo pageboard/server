@@ -40,7 +40,7 @@ if (!process.env.HOME) {
 			: JSON.stringify(results, null, ' ')
 	);
 	process.exit();
-})().catch((err) => {
+})().catch(err => {
 	console.error(err.statusCode ? err.name + ': ' + err.message : err);
 	process.exit(1);
 });

@@ -124,7 +124,7 @@ module.exports = class PrerenderModule {
 		} else {
 			const { query } = req;
 			let invalid = false;
-			Object.keys(query).forEach((key) => {
+			Object.keys(query).forEach(key => {
 				if (/^[a-zA-Z][\w.-]*$/.test(key) === false) {
 					invalid = true;
 					delete query[key];
