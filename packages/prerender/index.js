@@ -56,10 +56,11 @@ module.exports = class PrerenderModule {
 		if (!this.#pdfMw) this.#pdfMw = dom(pdf({
 			plugins: ['upcache', 'render']
 		})).route(({ location, settings }, req) => {
-			if (req.query.pdf != null) {
+			const preset = req.query.pdf;
+			if (preset != null) {
 				location.searchParams.delete('pdf');
-				settings.pdf(req.query.pdf);
 			}
+			settings.pdf(preset ?? 'printer');
 		});
 		return this.#pdfMw(...args);
 	}
