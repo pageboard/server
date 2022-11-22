@@ -30,10 +30,10 @@ module.exports = class PrerenderModule {
 
 		dom.online.plugins = new Set([
 			'console',
+			'cookies',
 			'form',
 			'upcache',
-			'equivs',
-			'cookies'
+			'equivs'
 		]);
 
 		Object.assign(dom.plugins, {
@@ -169,6 +169,7 @@ module.exports = class PrerenderModule {
 			plugins.add('redirect');
 			plugins.add('preloads');
 		}
+		plugins.add('hidden');
 		plugins.add('serialize');
 
 		if (phase.visible) {
