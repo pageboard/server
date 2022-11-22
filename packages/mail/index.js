@@ -5,8 +5,6 @@ const Transports = {
 };
 const Mailers = {};
 
-const got = require.lazy('got');
-
 const multipart = require.lazy('./lib/multipart.js');
 
 module.exports = class MailModule {
@@ -331,16 +329,19 @@ module.exports = class MailModule {
 		const emailUrl = new URL(emailPage.data.url, site.url);
 		try {
 			// TODO when all 0.7 are migrated, drop .mail extension
-			const response = await got(emailUrl + ".mail", {
+			emailUrl.searchParams = new URLSearchParams(data.body);
+			emailUrl.pathname += '.mail';
+			const controller = new AbortController();
+			const toId = setTimeout(() => controller.abort(), 10000);
+			const response = await fetch(emailUrl, {
 				headers: {
 					cookie: req.get('cookie')
 				},
-				json: true,
-				searchParams: data.body,
-				retry: 0,
-				timeout: 10000
+				signal: controller.signal
 			});
-			const mailObj = response.body;
+			clearTimeout(toId);
+
+			const mailObj = await response.json();
 			mailOpts.subject = data.subject || mailObj.title;
 			mailOpts.html = mailObj.html;
 			mailOpts.text = mailObj.text;
