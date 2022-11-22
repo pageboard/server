@@ -1,7 +1,7 @@
 const Path = require('node:path');
 const { pipeline } = require('node:stream');
-const { format: urlFormat } = require('node:url');
-const got = require.lazy('got'); // TODO switch to undici
+const http = require('http');
+const https = require('https');
 const dom = require.lazy('express-dom');
 const pdf = require.lazy('express-dom-pdf');
 
@@ -108,21 +108,18 @@ module.exports = class PrerenderModule {
 			if (req.accepts(['image/*', 'json', 'html']) != 'html') {
 				throw new HttpError.NotFound("Malformed path");
 			} else {
-				const gs = got.stream(new URL('/.well-known/404', site.url), {
-					retry: 0,
-					decompress: false,
-					throwHttpErrors: false,
+				const url = new URL('/.well-known/404', site.url);
+				const agent = url.protocol == "https:" ? https : http;
+				const subReq = agent.request(url, {
 					headers: req.headers,
-					https: {
-						rejectUnauthorized: false
-					}
-				});
-				gs.on('response', (gres) => {
+					rejectUnauthorized: false
+				}, subRes => {
 					res.status(404);
+					pipeline(subRes, res, err => {
+						if (err) next(err);
+					});
 				});
-				pipeline(gs, res, (err) => {
-					if (err) next(err);
-				});
+				subReq.end();
 			}
 		} else {
 			const { query } = req;
@@ -134,7 +131,9 @@ module.exports = class PrerenderModule {
 				}
 			});
 			if (invalid) {
-				return res.redirect(urlFormat({ pathname, query }));
+				const redUrl = new URL(pathname, site.url);
+				redUrl.searchParams = new URLSearchParams(query);
+				return res.redirect(redUrl);
 			}
 		}
 
