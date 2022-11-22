@@ -172,7 +172,7 @@ module.exports = class PrerenderModule {
 		plugins.add('serialize');
 
 		if (phase.visible) {
-			if (mime == "text/html" && site.data.env == "dev") {
+			if (mime == "text/html" && (site.data.env == "dev" || !req.locked(['webmaster']))) {
 				settings.enabled = false;
 			}
 			if (req.query.develop !== undefined) {
