@@ -3,7 +3,6 @@ const { promises: fs } = require('node:fs');
 const Path = require('node:path');
 const Stringify = require.lazy('fast-json-stable-stringify');
 const crypto = require.lazy('node:crypto');
-const got = require.lazy('got');
 
 module.exports = class CacheModule {
 	static name = 'cache';
@@ -61,19 +60,24 @@ module.exports = class CacheModule {
 
 	install(site) {
 		if (!site?.url) return;
-		setTimeout(() => {
+		setTimeout(async () => {
 			const url = new URL(this.opts.wkp, site.url);
-			got.post(url, {
-				timeout: 5000,
-				retry: false,
-				https: { rejectUnauthorized: false }
-			}).catch((err) => {
-				if (err.code == 'ETIMEDOUT') {
+			const controller = new AbortController();
+			const toId = setTimeout(() => controller.abort(), 10000);
+			try {
+				await fetch(url, {
+					method: 'post',
+					rejectUnauthorized: false,
+					signal: controller.signal
+				});
+				clearTimeout(toId);
+			} catch (err) {
+				if (err.name == 'AbortError') {
 					console.warn("cache: post timeout", url.href);
 				} else {
 					console.error("cache:", err.message, url.href);
 				}
-			});
+			}
 		});
 	}
 
