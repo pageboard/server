@@ -1,4 +1,4 @@
-const semver = require('semver');
+const semver = require.lazy('semver');
 const bodyParser = require.lazy('body-parser');
 const xHub = require.lazy('x-hub-signature-middleware');
 
@@ -34,20 +34,21 @@ module.exports = class GitModule {
 			} else {
 				next();
 			}
-		}, req => this.#deploy(req, req.body));
+		}, req => this.github(req, req.body));
 	}
 
-	async #deploy(req, payload) {
+	async github(req, payload) {
 		const { site } = req;
+		const { pusher = {} } = payload;
 		const mail = {
 			purpose: 'transactional',
 			to: [{
-				name: payload.pusher.name,
-				address: payload.pusher.email
+				name: pusher.name,
+				address: pusher.email
 			}]
 		};
 		try {
-			const changed = await req.run('git.save', getRefs(payload));
+			const changed = await req.run('git.install', getRefs(payload));
 			if (!changed) return;
 			await req.run('site.save', site);
 			mail.subject = `Pageboard deployed ${site.id} at version ${site.data.version}`;
@@ -63,10 +64,10 @@ module.exports = class GitModule {
 						${err.message}
 					`;
 		}
-		await req.run('mail.to', mail);
+		if (pusher.email) await req.run('mail.to', mail);
 	}
 
-	async save(req, data) {
+	async install(req, data) {
 		// site.data.module: url[#<commit-ish> | #semver:<range>]
 		// site.data.version: commit-ish
 		const { site } = req;
