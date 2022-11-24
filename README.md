@@ -8,7 +8,7 @@ On linux, these packages are needed:
 
 - postgresql database with unaccent extension
 - libexiftool
-- libwebkit2gtk4-dev
+- chrome or chromium
 - libvips-dev
 - libcurl-dev
 
@@ -52,8 +52,8 @@ Modules define internal and external API:
 - image
   Image thumbnailer and resizer/converter.
 
-- github-webhook
-  Listens to github json payloads /.api/github and deploy accordingly.
+- git
+  Listens to git webhooks json payloads on /.well-known/git and deploy accordingly.
 
 - upload
   deals with files uploads
