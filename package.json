@@ -31,7 +31,7 @@
     "@pageboard/auth": "workspace:*",
     "@pageboard/cache": "workspace:*",
     "@pageboard/db": "workspace:*",
-    "@pageboard/github-webhook": "workspace:*",
+    "@pageboard/git": "workspace:*",
     "@pageboard/image": "workspace:*",
     "@pageboard/inspector": "workspace:*",
     "@pageboard/mail": "workspace:*",
