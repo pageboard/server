@@ -7,9 +7,12 @@ module.exports = class GitModule {
 
 	constructor(app, opts) {
 		this.opts = opts;
+		if (!opts.wkp) {
+			opts.wkp = "/.well-known/git";
+		}
 	}
 	apiRoutes(app, server) {
-		server.post('/.api/github', bodyParser.json({
+		server.post(this.opts.wkp, bodyParser.json({
 			verify: xHub.extractRawBody
 		}), (req, res, next) => {
 			const { site } = req;
