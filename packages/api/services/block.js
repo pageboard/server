@@ -205,7 +205,8 @@ module.exports = class BlockService {
 			const hrow = await req.call('href.collect', {
 				ids,
 				content: data.content,
-				asMap: true
+				asMap: true,
+				preview: data.preview
 			}).first();
 			obj.hrefs = hrow.hrefs;
 		}
@@ -291,6 +292,12 @@ module.exports = class BlockService {
 			},
 			count: {
 				title: 'Count',
+				type: 'boolean',
+				default: false
+			},
+			preview: {
+				title: 'Preview',
+				description: 'Include preview tag',
 				type: 'boolean',
 				default: false
 			},

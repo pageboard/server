@@ -330,9 +330,13 @@ module.exports = class HrefService {
 			.with('list', qList)
 			.join('list', 'href.url', 'list.url');
 		if (data.asMap) {
+			let meta = "jsonb_set(href.meta, '{mime}', to_jsonb(href.mime))";
+			if (data.preview) {
+				meta = `jsonb_set(${meta}, '{preview}', to_jsonb(href.preview))`;
+			}
 			q.select(raw(`jsonb_object_agg(
 				href.url,
-				jsonb_set(href.meta, '{mime}', to_jsonb(href.mime))
+				${meta}
 			) AS hrefs`));
 		} else {
 			q.select();
@@ -367,6 +371,12 @@ module.exports = class HrefService {
 				title: 'Collect hrefs in blocks contents',
 				type: 'boolean',
 				default: false
+			},
+			preview: {
+				title: 'Preview',
+				description: 'Include img tag',
+				type: 'boolean',
+				default: false
 			}
 		}
 	};
@@ -377,7 +387,7 @@ module.exports = class HrefService {
 		const table = ['root', 'root:block', 'root:shared:block'][level];
 
 		const qRoot = site.$modelClass.query(trx)
-			.select(table + '.*')
+			.select(`${table}._id`, `${table}.id`, `${table}.type`, `${table}.data`)
 			.from('block').where('block._id', site._id);
 		const blockRelation = {
 			$relation: 'children',
