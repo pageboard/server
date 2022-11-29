@@ -38,8 +38,8 @@ module.exports = class StaticsModule {
 
 		server.get("/.files/*",
 			req => {
-				const { url, site } = req;
-				req.url = site.id + url.substring(7);
+				const { path, site } = req;
+				req.url = site.id + path.substring(7);
 			},
 			app.cache.tag('app-:site').for(opts.nocache ? null : '1 year'),
 			serveStatic(opts.files, serveOpts),
@@ -48,8 +48,8 @@ module.exports = class StaticsModule {
 
 		server.get("/.uploads/*",
 			req => {
-				const { url, site } = req;
-				req.url = site.id + url.substring(9);
+				const { path, site } = req;
+				req.url = site.id + path.substring(9);
 			},
 			app.cache.for(opts.nocache ? null : '1 year'),
 			serveStatic(opts.uploads, serveOpts),
