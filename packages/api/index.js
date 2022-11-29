@@ -11,7 +11,7 @@ const jsonDoc = require.lazy('./lib/json-doc');
 const Href = require('./models/href');
 const Block = require('./models/block');
 
-const { mergeRecursive } = require('../../lib/utils');
+const { mergeRecursive, mergeExpressions } = require('../../lib/utils');
 
 module.exports = class ApiModule {
 	static name = 'api';
@@ -271,13 +271,15 @@ module.exports = class ApiModule {
 };
 
 function itemFn(schema, block) {
-	if (!schema.upgrade) return;
-	for (const [src, dst] of Object.entries(schema.upgrade)) {
+	if (schema.upgrade) for (const [src, dst] of Object.entries(schema.upgrade)) {
 		const val = jsonPath.get(block, src);
 		if (val !== undefined) {
 			jsonPath.set(block, dst, val);
 			jsonPath.unSet(block, src);
 		}
+	}
+	if (schema.templates) {
+		mergeExpressions(block.data, schema.templates, block.data);
 	}
 }
 

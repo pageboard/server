@@ -193,7 +193,7 @@ class Block extends Model {
 
 		const hrefs = {};
 		const ElementKeywords = [
-			'$lock', 'parents', 'upgrade', 'output'
+			'$lock', 'parents', 'upgrade', 'output', 'templates'
 		];
 		const types = new Map();
 
