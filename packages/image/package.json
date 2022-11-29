@@ -1,6 +1,6 @@
 {
   "name": "@pageboard/image",
-  "version": "0.10.0",
+  "version": "0.11.0",
   "description": "",
   "main": "index.js",
   "scripts": {
@@ -18,7 +18,6 @@
   "homepage": "https://github.com/pageboard/server#readme",
   "dependencies": {
     "datauri": "^4.1.0",
-    "sharp": "^0.31.2",
-    "sharpie": "^4.10.0"
+    "sharpie": "^5.0.0"
   }
 }

@@ -1,4 +1,3 @@
-const sharpie = require.lazy('sharpie');
 const { promises: fs } = require('node:fs');
 const Path = require('node:path');
 
@@ -19,6 +18,9 @@ module.exports = class ImageModule {
 	constructor(app, opts) {
 		this.app = app;
 		this.opts = {
+			param(req) {
+				return app.statics.get(req);
+			},
 			dir: '.image',
 			signs: {
 				assignment: '-',
@@ -28,34 +30,31 @@ module.exports = class ImageModule {
 		};
 	}
 
+	async init() {
+		this.sharpie = await import('sharpie');
+		this.sharp = this.sharpie.sharp;
+	}
+
 	fileRoutes(app, server) {
-		sharpie.sharp.simd(true);
 		server.get(/^\/\.(uploads|files)\//, (req, res, next) => {
 			const extname = Path.extname(req.path);
 			if (!extname || /png|jpe?g|gif|webp|tiff|svg/.test(extname.substring(1)) == false) {
 				return next('route');
 			}
-			if (req.query.raw === "" || req.query.raw === null) {
-				if (Object.keys(req.query).length != 1) {
-					res.sendStatus(400);
-				} else {
-					next('route');
-				}
+			const wrongParams = [];
+			Object.keys(req.query).some(key => {
+				if (!allowedParameters[key]) wrongParams.push(key);
+			});
+			if (wrongParams.length) {
+				Log.image("wrong image params", req.url, wrongParams);
+				res.sendStatus(400);
 			} else {
-				const wrongParams = [];
-				Object.keys(req.query).some(key => {
-					if (!allowedParameters[key]) wrongParams.push(key);
-				});
-				if (wrongParams.length) {
-					Log.image("wrong image params", req.url, wrongParams);
-					res.sendStatus(400);
-				} else {
-					Log.image(req.url);
-					req.params.url = req.path + "?raw";
-					next();
-				}
+				Log.image(req.url);
+				// TODO req <=> createReadStream(app.statics.getPath(req)).pipe(req) ???
+				req.params.url = req.path + "?raw";
+				next();
 			}
-		}, sharpie(this.opts));
+		}, this.sharpie(this.opts));
 	}
 
 	serviceRoutes(server) {
@@ -63,15 +62,15 @@ module.exports = class ImageModule {
 		server.get('/.api/image', (req, res, next) => {
 			console.warn("/.api/image is used", req.url);
 			next();
-		}, sharpie(this.opts));
+		}, this.sharpie(this.opts));
 	}
 
 	async thumbnail(url) {
 		let pipeline;
 		if (url.startsWith('file://')) {
-			pipeline = sharpie.sharp(url.substring(7));
+			pipeline = this.sharp(url.substring(7));
 		} else {
-			pipeline = sharpie.sharp();
+			pipeline = this.sharp();
 			const req = await this.app.inspector.request(url);
 			req.res.pipe(pipeline);
 		}
@@ -99,13 +98,13 @@ module.exports = class ImageModule {
 		if (!mime.startsWith('image/')) return;
 		if (mime.startsWith('image/svg')) return;
 		const format = mime.split('/').pop();
-		if (!sharpie.sharp.format[format]) {
+		if (!this.sharp.format[format]) {
 			console.warn("image.upload cannot process", mime);
 			return;
 		}
 
 		const dst = path + '.tmp';
-		await sharpie.sharp(path)
+		await this.sharp(path)
 			.withMetadata()
 			.resize({
 				fit: "inside",
