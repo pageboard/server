@@ -279,7 +279,9 @@ function itemFn(schema, block) {
 		}
 	}
 	if (schema.templates) {
-		mergeExpressions(block.data, schema.templates, block.data);
+		if (!block.expr) block.expr = {};
+		mergeExpressions(block.expr, schema.templates, block.data);
+		if (Object.isEmpty(block.expr)) block.expr = null;
 	}
 }
 
