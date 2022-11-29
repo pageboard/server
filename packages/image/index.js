@@ -31,8 +31,9 @@ module.exports = class ImageModule {
 	}
 
 	async init() {
-		this.sharpie = await import('sharpie');
-		this.sharp = this.sharpie.sharp;
+		const { sharp, sharpie } = await import('sharp');
+		this.sharp = sharp;
+		this.sharpie = sharpie;
 	}
 
 	fileRoutes(app, server) {
