@@ -6,7 +6,7 @@ module.exports = class InspectorModule {
 		this.opts = opts;
 	}
 
-	async apiRoutes(app, server) {
+	async init() {
 		const Inspector = this.Inspector = (await import('url-inspector')).default;
 		this.local = new Inspector({
 			...this.opts,
