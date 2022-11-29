@@ -13,10 +13,12 @@ module.exports = class StaticsModule {
 	constructor(app, opts) {
 		this.opts = {
 			cache: Path.join(app.dirs.cache, "statics"),
+			uploads: app.upload.opts.dir,
 			files: Path.join(app.dirs.cache, "files"),
 			nocache: app.env == "development",
 			...opts
 		};
+
 		app.dirs.staticsCache = this.opts.cache;
 		app.dirs.staticsFiles = this.opts.files;
 
@@ -50,7 +52,7 @@ module.exports = class StaticsModule {
 				req.url = site.id + url.substring(9);
 			},
 			app.cache.for(opts.nocache ? null : '1 year'),
-			serveStatic(app.upload.opts.dir, serveOpts),
+			serveStatic(opts.uploads, serveOpts),
 			staticNotFound
 		);
 
