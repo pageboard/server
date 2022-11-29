@@ -71,7 +71,7 @@ module.exports = class DatabaseModule {
 		});
 	}
 
-	async init(req, { tenant, file }) {
+	async setup(req, { tenant, file }) {
 		const url = this.opts.url[tenant];
 		if (!url) {
 			throw new HttpError.BadRequest(`Unknown tenant ${tenant}`);
@@ -83,8 +83,8 @@ module.exports = class DatabaseModule {
 		]);
 		return file;
 	}
-	static init = {
-		title: 'Init tenant db',
+	static setup = {
+		title: 'Setup tenant db',
 		$action: 'write',
 		required: ['file', 'tenant'],
 		properties: {
