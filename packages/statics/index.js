@@ -68,6 +68,18 @@ module.exports = class StaticsModule {
 		);
 	}
 
+	get(req) {
+		const { path, site } = req;
+		const { uploads, files } = this.opts;
+		let pathname;
+		if (path.startsWith('/.uploads/')) {
+			pathname = Path.join(uploads, site.id, path.substring(9));
+		} else if (path.startsWith('/.files/')) {
+			pathname = Path.join(files, site.id, path.substring(7));
+		}
+		return pathname;
+	}
+
 	async bundle(site, pkg, list, filename) {
 		if (list.length == 0) return [];
 		const suffix = {
