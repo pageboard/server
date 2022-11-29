@@ -103,7 +103,7 @@ module.exports = class PrerenderModule {
 			type
 		} = this.#requestedSchema(req, { pathname: req.path });
 
-		if (pathname == null) {
+		if (pathname == null || schema == null) {
 			if (req.accepts(['image/*', 'json', 'html']) != 'html') {
 				throw new HttpError.NotFound("Malformed path");
 			} else {
@@ -114,11 +114,13 @@ module.exports = class PrerenderModule {
 					rejectUnauthorized: false
 				}, subRes => {
 					res.status(404);
+					res.set(subRes.headers);
 					pipeline(subRes, res, err => {
 						if (err) next(err);
 					});
 				});
 				subReq.end();
+				return;
 			}
 		} else {
 			const { query } = req;
