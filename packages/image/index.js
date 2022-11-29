@@ -31,7 +31,7 @@ module.exports = class ImageModule {
 	}
 
 	async init() {
-		const { sharp, sharpie } = await import('sharp');
+		const { sharp, sharpie } = await import('sharpie');
 		this.sharp = sharp;
 		this.sharpie = sharpie;
 	}
