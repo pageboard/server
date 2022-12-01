@@ -12,19 +12,15 @@ module.exports = class StaticsModule {
 
 	constructor(app, opts) {
 		this.opts = {
-			cache: Path.join(app.dirs.cache, "statics"),
+			cache: app.cache.opts,
 			uploads: app.upload.opts.dir,
+			statics: Path.join(app.dirs.cache, "statics"),
 			files: Path.join(app.dirs.cache, "files"),
-			nocache: app.env == "development",
 			...opts
 		};
 
-		app.dirs.staticsCache = this.opts.cache;
-		app.dirs.staticsFiles = this.opts.files;
-
-		if (this.opts.nocache) {
-			console.info("static:\tcache disabled for development");
-		}
+		app.dirs.staticsCache = this.opts.statics;
+		app.dirs.filesCache = this.opts.files;
 	}
 
 	fileRoutes(app, server) {
@@ -41,7 +37,7 @@ module.exports = class StaticsModule {
 				const { path, site } = req;
 				req.url = site.id + path.substring(7);
 			},
-			app.cache.tag('app-:site').for(opts.nocache ? null : '1 year'),
+			app.cache.tag('app-:site').for(opts.cache.files),
 			serveStatic(opts.files, serveOpts),
 			staticNotFound
 		);
@@ -51,13 +47,14 @@ module.exports = class StaticsModule {
 				const { path, site } = req;
 				req.url = site.id + path.substring(9);
 			},
-			app.cache.for(opts.nocache ? null : '1 year'),
+			// app does not change the files - do not tag
+			app.cache.for(opts.cache.uploads),
 			serveStatic(opts.uploads, serveOpts),
 			staticNotFound
 		);
 
 		server.get('/favicon.ico',
-			app.cache.tag('data-:site').for(opts.nocache ? null : '1 month'),
+			app.cache.tag('data-:site').for(opts.cache.icon),
 			({ site }, res, next) => {
 				if (!site || !site.data.favicon) {
 					res.sendStatus(204);
@@ -131,7 +128,7 @@ module.exports = class StaticsModule {
 			await bundlers[ext](inputs, output, {
 				minify: site.data.env == "production",
 				cache: {
-					dir: this.opts.cache
+					dir: this.opts.statics
 				}
 			});
 		} catch(err) {

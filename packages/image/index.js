@@ -36,26 +36,32 @@ module.exports = class ImageModule {
 		this.sharpie = sharpie;
 	}
 
+	mw(req, res, next) {
+		const extname = Path.extname(req.path);
+		if (!extname || /png|jpe?g|gif|webp|tiff|svg/.test(extname.substring(1)) == false) {
+			return next('route');
+		}
+		const wrongParams = [];
+		Object.keys(req.query).some(key => {
+			if (!allowedParameters[key]) wrongParams.push(key);
+		});
+		if (wrongParams.length) {
+			Log.image("wrong image params", req.url, wrongParams);
+			res.sendStatus(400);
+		} else {
+			Log.image(req.url);
+			next();
+		}
+	}
+
 	fileRoutes(app, server) {
-		server.get(/^\/\.(uploads|files)\//, (req, res, next) => {
-			const extname = Path.extname(req.path);
-			if (!extname || /png|jpe?g|gif|webp|tiff|svg/.test(extname.substring(1)) == false) {
-				return next('route');
-			}
-			const wrongParams = [];
-			Object.keys(req.query).some(key => {
-				if (!allowedParameters[key]) wrongParams.push(key);
-			});
-			if (wrongParams.length) {
-				Log.image("wrong image params", req.url, wrongParams);
-				res.sendStatus(400);
-			} else {
-				Log.image(req.url);
-				// TODO req <=> createReadStream(app.statics.getPath(req)).pipe(req) ???
-				req.params.url = req.path + "?raw";
-				next();
-			}
-		}, this.sharpie(this.opts));
+		server.get(
+			/^\/\.(uploads|files)\//,
+			this.mw,
+			// tag because images are transformed
+			app.cache.tag('app').for(app.cache.opts.uploads),
+			this.sharpie(this.opts)
+		);
 	}
 
 	serviceRoutes(server) {
