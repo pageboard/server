@@ -121,8 +121,8 @@ module.exports = class ImageModule {
 				height: 2560
 			})
 			.toFormat("webp", {
-				quality: 100,
-				lossless: true,
+				quality: 85,
+				lossless: false,
 				smartSubsample: true,
 				reductionEffort: 2
 			})
