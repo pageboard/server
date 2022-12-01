@@ -64,7 +64,10 @@ module.exports = class CacheModule {
 	}
 
 	install(site) {
-		if (!site?.url) return;
+		if (!site?.url) {
+			console.warn("No url to invalidate the cache", site?.id);
+			return;
+		}
 		setTimeout(async () => {
 			const url = new URL(this.opts.wkp, site.url);
 			const controller = new AbortController();
