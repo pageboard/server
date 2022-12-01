@@ -116,9 +116,15 @@ module.exports = class GitModule {
 			return false;
 		}
 	}
-	static deploy = {
+	static install = {
 		$action: 'write',
 		properties: {
+			url: {
+				title: 'Repository',
+				type: 'string',
+				format: 'singleline',
+				nullable: true
+			},
 			branch: {
 				title: 'Branch',
 				type: 'string',
