@@ -237,6 +237,12 @@ module.exports = class BlockService {
 				}, {
 					type: "string",
 					format: 'id'
+				}, {
+					type: 'array',
+					items: {
+						type: 'string',
+						format: 'id'
+					}
 				}]
 			},
 			type: {
@@ -884,7 +890,11 @@ function whereSub(q, data, alias = 'block') {
 	}
 	if (data.id) {
 		valid = true;
-		q.where(`${alias}.id`, data.id);
+		if (Array.isArray(data.id)) {
+			q.whereIn(`${alias}.id`, data.id);
+		} else {
+			q.where(`${alias}.id`, data.id);
+		}
 	}
 	if (data.data && Object.keys(data.data).length > 0) {
 		valid = true;
