@@ -728,7 +728,9 @@ function applyUpdate(req, list) {
 	const updates = [];
 	return list.reduce((p, block) => {
 		return p.then(() => {
-			if (block.id in blocksMap) block.updated_at = blocksMap[block.id];
+			if (block.id in blocksMap) {
+				block.updated_at = blocksMap[block.id];
+			}
 			if (block.lock) {
 				if (Object.isEmpty(block.lock?.read)) {
 					block.lock.read = null;
