@@ -659,7 +659,15 @@ module.exports = class BlockService {
 		};
 		if (!Object.isEmpty(data.data)) obj.data = data.data;
 		if (!Object.isEmpty(data.content)) obj.content = data.content;
-		if (!Object.isEmpty(data.lock)) obj.lock = data.lock;
+		if (data.lock) {
+			if (Object.isEmpty(data.lock?.read)) {
+				data.lock.read = null;
+			}
+			if (Object.isEmpty(data.lock?.write)) {
+				data.lock.write = null;
+			}
+			obj.lock = data.lock;
+		}
 		await block.$query(req.trx).patchObject(obj);
 
 		if (parents.length == 0) return block;
