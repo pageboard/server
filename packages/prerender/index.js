@@ -169,13 +169,21 @@ module.exports = class PrerenderModule {
 		if (mime == "text/html") {
 			plugins.add('redirect');
 			plugins.add('preloads');
+			plugins.add('hidden');
 		}
-		plugins.add('hidden');
 		plugins.add('serialize');
 
 		if (phase.visible) {
-			if (mime == "text/html" && (site.data.env == "dev" || !req.locked(['webmaster']))) {
-				settings.enabled = false;
+			if (mime == "text/html") {
+				if (site.data.env == "dev" || !req.locked(['webmaster'])) {
+					settings.enabled = false;
+				}
+			} else {
+				// all other outputs mime
+				settings.enabled = true;
+				policies.img = "'self' https: data:";
+				policies.style = "'self' 'unsafe-inline' https:";
+				policies.font = "'self' https: data:";
 			}
 			if (req.query.develop !== undefined) {
 				location.searchParams.delete('develop');
@@ -197,13 +205,6 @@ module.exports = class PrerenderModule {
 				res.status(Number.parseInt(code));
 			} else {
 				req.call('cache.map', "/.well-known/200");
-			}
-			if (medias) {
-				policies.img = "'self' https: data:";
-				policies.style = "'self' 'unsafe-inline' https:";
-			}
-			if (fonts) {
-				policies.font = "'self' https: data:";
 			}
 		}
 	}
