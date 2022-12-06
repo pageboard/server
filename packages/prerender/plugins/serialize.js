@@ -28,7 +28,7 @@ module.exports = function(page, settings, req, res) {
 		if (!obj) throw new HttpError.BadRequest("Empty response");
 		if (obj.mime && obj.mime != "text/html") {
 			// browsers revalidate only html by default
-			res.set("Cache-Control", "must-revalidate");
+			res.append("Cache-Control", "must-revalidate");
 		}
 		if (obj.mime) res.type(obj.mime);
 		res.send(obj.body);
