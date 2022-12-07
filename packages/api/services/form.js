@@ -59,7 +59,7 @@ module.exports = class FormService {
 			for (const key of Object.keys(el.properties.data?.properties ?? {})) {
 				const val = reqBody[key];
 				if (val !== undefined) {
-					body.data[key] = val;
+					mergeRecursive(body.data, { [key]: val });
 					delete reqBody[key];
 				}
 			}
