@@ -132,13 +132,18 @@ module.exports = class PrerenderModule {
 	#callPdfMw(...args) {
 		if (!this.#pdfMw) this.#pdfMw = dom(pdf({
 			plugins: ['upcache', 'render']
-		})).route(({ visible, location, settings }, req) => {
+		})).route(({ visible, online, location, settings, policies }, req) => {
 			if (visible) {
 				const preset = req.query.pdf;
 				if (preset != null) {
 					location.searchParams.delete('pdf');
 				}
 				settings.pdf(preset ?? 'printer');
+			} else if (online) {
+				// pass to next middleware
+				for (const [key, list] of Object.entries(req.schema.csp)) {
+					policies[key] = list.join(' ');
+				}
 			}
 		});
 		return this.#pdfMw(...args);
