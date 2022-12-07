@@ -42,8 +42,6 @@ module.exports = class Packager {
 			const el = { ...elts[name] }; // drop proxy
 			el.name = name;
 			if (el.alias) aliases[name] = el.alias;
-			// backward compatibility with 0.7 extensions names, dropped in favor of output
-			if (updateExtension(el, eltsMap)) continue;
 			eltsMap[name] = el;
 			if (!bundleMap.has(name)) bundleMap.set(name, new Set());
 			const bundleSet = bundleMap.get(name);
@@ -231,19 +229,6 @@ module.exports = class Packager {
 		return list;
 	}
 };
-
-
-function updateExtension(el, eltsMap) {
-	const extPage = {
-		'.mail': 'mail'
-	}[el.name];
-	if (!extPage) return;
-	const page = eltsMap[extPage];
-	page.scripts = [ ...page.scripts, ...el.scripts];
-	if (el.prerender) page.output = el.prerender;
-	if (el.print) page.output = { ...page.output, pdf: true };
-	return true;
-}
 
 function sortPriority(list) {
 	list.sort((a, b) => {
