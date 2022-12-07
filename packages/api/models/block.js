@@ -193,7 +193,7 @@ class Block extends Model {
 
 		const hrefs = {};
 		const ElementKeywords = [
-			'$lock', 'parents', 'upgrade', 'output', 'templates'
+			'$lock', 'parents', 'upgrade', 'csp', 'mime', 'templates'
 		];
 		const types = new Map();
 
@@ -226,6 +226,11 @@ class Block extends Model {
 			} : {
 				type: 'null'
 			};
+			if (element.output) {
+				// temporary compatibility, remove soon
+				element.mime = element.output.mime;
+				delete element.output;
+			}
 
 			for (const p of ElementKeywords) {
 				if (element[p] != null) sub[p] = element[p];

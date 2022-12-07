@@ -10,7 +10,8 @@ module.exports = class PrerenderModule {
 	static priority = 0;
 
 	#pdfMw;
-	#domMw;
+	#htmlMw;
+	#fullMw;
 
 	constructor(app, opts) {
 		this.app = app;
@@ -52,27 +53,7 @@ module.exports = class PrerenderModule {
 		);
 	}
 
-	#callPdfMw(...args) {
-		if (!this.#pdfMw) this.#pdfMw = dom(pdf({
-			plugins: ['upcache', 'render']
-		})).route(({ location, settings }, req) => {
-			const preset = req.query.pdf;
-			if (preset != null) {
-				location.searchParams.delete('pdf');
-			}
-			settings.pdf(preset ?? 'printer');
-		});
-		return this.#pdfMw(...args);
-	}
-
-	#callDomMw(...args) {
-		if (!this.#domMw) this.#domMw = dom().route(
-			(phase, req, res) => this.prerender(phase, req, res)
-		);
-		return this.#domMw(...args);
-	}
-
-	#requestedSchema({ site }, { pathname }) {
+	#requestedRenderingSchema({ site }, { pathname }) {
 		const ext = Path.extname(pathname);
 		let type = ext.substring(1) || "page";
 
@@ -88,7 +69,7 @@ module.exports = class PrerenderModule {
 			pathname = null;
 		}
 		return {
-			type, pathname,
+			pathname,
 			schema: site.$schema(type)
 		};
 	}
@@ -99,9 +80,8 @@ module.exports = class PrerenderModule {
 
 		const {
 			pathname,
-			schema,
-			type
-		} = this.#requestedSchema(req, { pathname: req.path });
+			schema
+		} = this.#requestedRenderingSchema(req, { pathname: req.path });
 
 		if (pathname == null || schema == null) {
 			if (req.accepts(['image/*', 'json', 'html']) != 'html') {
@@ -138,75 +118,90 @@ module.exports = class PrerenderModule {
 			}
 		}
 
-		const { output = {} } = schema;
-		// begin compat (0.7 clients using ext names)
-		if (type == "mail" && output.mime == null) {
-			output.mime = "application/json";
-		}
-		if (type == "rss" && output.mime == null) {
-			output.mime = "application/xml";
-		}
-		/* end compat */
-		req.output = output;
+		req.schema = schema;
 
-		const { pdf } = output;
-		if (pdf) {
+		if (schema.mime == "application/pdf") {
 			this.#callPdfMw(req, res, next);
+		} else if (!schema.mime || schema.mime == "text/html") {
+			this.#callHtmlMw(req, res, next);
 		} else {
-			this.#callDomMw(req, res, next);
+			this.#callFullMw(req, res, next);
 		}
 	}
 
-	prerender(phase, req, res) {
-		const { site, output } = req;
-		delete req.output;
-		const { mime = "text/html", medias, fonts } = output;
+	#callPdfMw(...args) {
+		if (!this.#pdfMw) this.#pdfMw = dom(pdf({
+			plugins: ['upcache', 'render']
+		})).route(({ visible, location, settings }, req) => {
+			if (visible) {
+				const preset = req.query.pdf;
+				if (preset != null) {
+					location.searchParams.delete('pdf');
+				}
+				settings.pdf(preset ?? 'printer');
+			}
+		});
+		return this.#pdfMw(...args);
+	}
 
-		const { location, settings, policies } = phase;
-		const { plugins } = settings;
-
-		res.type(mime);
-		if (mime == "text/html") {
-			plugins.add('redirect');
-			plugins.add('preloads');
-			plugins.add('hidden');
-		}
-		plugins.add('serialize');
-
-		if (phase.visible) {
-			if (mime == "text/html") {
+	#callHtmlMw(...args) {
+		if (!this.#htmlMw) this.#htmlMw = dom().route((phase, req, res) => {
+			const { site } = req;
+			const { location, settings, online, visible } = phase;
+			if (visible) {
+				const { plugins } = settings;
+				res.type("text/html");
+				plugins.add('redirect');
+				plugins.add('preloads');
+				plugins.add('hidden');
+				plugins.add('serialize');
 				if (site.data.env == "dev" || !req.locked(['webmaster'])) {
 					settings.enabled = false;
 				}
-			} else {
-				// all other outputs mime
-				settings.enabled = true;
-				policies.img = "'self' https: data:";
-				policies.style = "'self' 'unsafe-inline' https:";
-				policies.font = "'self' https: data:";
-			}
-			if (req.query.develop !== undefined) {
-				location.searchParams.delete('develop');
-				if (req.query.develop == "render") {
-					settings.enabled = true;
+				if (req.query.develop !== undefined) {
+					location.searchParams.delete('develop');
+					if (req.query.develop == "render") {
+						settings.enabled = true;
+					} else {
+						settings.enabled = false;
+					}
+				}
+			} else if (online) {
+				const { groups: {
+					code
+				} } = /^\.well-known\/(?<code>\d{3})$/.exec(req.path) ?? {
+					groups: {}
+				};
+				if (code) {
+					// ends with a status code, not set in develop mode
+					req.call('cache.map', req.path);
+					res.status(Number.parseInt(code));
 				} else {
-					settings.enabled = false;
+					req.call('cache.map', "/.well-known/200");
 				}
 			}
-		} else if (phase.online) {
-			const { groups: {
-				code
-			}} = /^\.well-known\/(?<code>\d{3})$/.exec(req.path) ?? {
-				groups: {}
-			};
-			if (code) {
-				// ends with a status code, not set in develop mode
-				req.call('cache.map', req.path);
-				res.status(Number.parseInt(code));
-			} else {
-				req.call('cache.map', "/.well-known/200");
+		});
+		return this.#htmlMw(...args);
+	}
+
+	#callFullMw(...args) {
+		if (!this.#fullMw) this.#fullMw = dom(handler => {
+			handler.online.enabled = true;
+		}).route((phase, req, res) => {
+			const { schema } = req;
+			const { settings, policies } = phase;
+			if (phase.visible) {
+				const { plugins } = settings;
+				plugins.add('serialize');
+				settings.enabled = true;
+			} else if (phase.online) {
+				// pass to next middleware
+				for (const [key, list] of Object.entries(schema.csp)) {
+					policies[key] = list.join(' ');
+				}
 			}
-		}
+		});
+		return this.#fullMw(...args);
 	}
 
 	source({ site }, res) {
