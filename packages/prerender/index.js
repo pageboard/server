@@ -141,9 +141,7 @@ module.exports = class PrerenderModule {
 				settings.pdf(preset ?? 'printer');
 			} else if (online) {
 				// pass to next middleware
-				for (const [key, list] of Object.entries(req.schema.csp)) {
-					policies[key] = list.join(' ');
-				}
+				cspSchemaToPhase(policies, req.schema.csp);
 			}
 		});
 		return this.#pdfMw(...args);
@@ -201,9 +199,7 @@ module.exports = class PrerenderModule {
 				settings.enabled = true;
 			} else if (phase.online) {
 				// pass to next middleware
-				for (const [key, list] of Object.entries(schema.csp)) {
-					policies[key] = list.join(' ');
-				}
+				cspSchemaToPhase(policies, schema.csp);
 			}
 		});
 		return this.#fullMw(...args);
@@ -226,3 +222,10 @@ module.exports = class PrerenderModule {
 			</html>`);
 	}
 };
+
+
+function cspSchemaToPhase(policies, csp) {
+	for (const [key, list] of Object.entries(csp)) {
+		policies[key] = list.join(' ');
+	}
+}
