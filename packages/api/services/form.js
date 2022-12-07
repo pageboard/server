@@ -36,6 +36,12 @@ module.exports = class FormService {
 			throw new HttpError.Unauthorized("Check user permissions");
 		}
 
+		const formData = form.data?.action?.parameters ?? {};
+		for (const key of Object.keys(formData)) {
+			// else mergeRecursive(body, params) will drop everything
+			if (formData[key] === null) delete formData[key];
+		}
+
 		const params = mergeExpressions(
 			form.data?.action?.parameters ?? {},
 			form.expr?.action?.parameters ?? {},
