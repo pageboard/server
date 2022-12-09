@@ -38,10 +38,12 @@ module.exports = class CacheModule {
 	async apiRoutes(app, server) {
 		try {
 			this.data = JSON.parse(
-				await fs.readFile(this.opts.metafile, { flag: 'a+' })
-			) || {};
+				await fs.readFile(this.opts.metafile)
+			);
 		} catch (err) {
 			console.error("Cannot read", this.opts.metafile);
+		} finally {
+			if (!this.data) this.data = {};
 		}
 		server.get('*', Upcache.tag('app'));
 		server.post(this.opts.wkp, (req, res, next) => {
