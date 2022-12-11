@@ -1,6 +1,6 @@
 {
   "name": "@pageboard/cache",
-  "version": "0.8.0",
+  "version": "0.11.0",
   "description": "",
   "main": "index.js",
   "scripts": {
@@ -19,6 +19,6 @@
   "dependencies": {
     "fast-json-stable-stringify": "^2.1.0",
     "glob": "^8.0.3",
-    "upcache": "^2.5.0"
+    "upcache": "^2.6.0"
   }
 }
