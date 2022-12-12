@@ -30,10 +30,6 @@ module.exports = class AuthModule {
 		server.use(this.#lock.init);
 	}
 
-	vary() {
-		return this.#lock.vary();
-	}
-
 	cookie({ site, user }) {
 		return {
 			value: this.#lock.sign({
