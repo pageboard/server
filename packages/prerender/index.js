@@ -149,7 +149,7 @@ module.exports = class PrerenderModule {
 
 	#callHtmlMw(...args) {
 		if (!this.#htmlMw) this.#htmlMw = dom().route((phase, req, res) => {
-			const { site } = req;
+			const { site, user } = req;
 			const { location, settings, online, visible } = phase;
 			if (visible) {
 				const { plugins } = settings;
@@ -158,7 +158,7 @@ module.exports = class PrerenderModule {
 				plugins.add('preloads');
 				plugins.add('hidden');
 				plugins.add('serialize');
-				if (site.data.env == "dev" || !req.locked(['webmaster'])) {
+				if (site.data.env == "dev" || user?.grants?.includes?.('webmaster')) {
 					settings.enabled = false;
 				}
 				if (req.query.develop !== undefined) {
