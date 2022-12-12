@@ -111,9 +111,9 @@ module.exports = class AuthModule {
 		else if (list.length == 0) return false;
 		let minLevel = Infinity;
 		const grants = user.grants || [];
-		grants.forEach(grant => {
+		for (const grant of grants) {
 			minLevel = Math.min(site.$pkg.grants[grant] || Infinity, minLevel);
-		});
+		}
 
 		let granted = false;
 		list.forEach(lock => {
