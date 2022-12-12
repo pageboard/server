@@ -158,7 +158,7 @@ module.exports = class PrerenderModule {
 				plugins.add('preloads');
 				plugins.add('hidden');
 				plugins.add('serialize');
-				if (site.data.env == "dev" || user?.grants?.includes?.('webmaster')) {
+				if (site.data.env == "dev" || !req.locked(['webmaster'])) {
 					settings.enabled = false;
 				}
 				if (req.query.develop !== undefined) {
