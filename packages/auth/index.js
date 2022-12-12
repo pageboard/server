@@ -87,7 +87,6 @@ module.exports = class AuthModule {
 	lock(...list) {
 		return (req, res, next) => {
 			if (this.locked(req, list)) {
-				this.headers(req, list);
 				const status = (req.user.grants || []).length == 0 ? 401 : 403;
 				res.status(status);
 				res.send({ locks: req.locks });
@@ -98,6 +97,7 @@ module.exports = class AuthModule {
 	}
 
 	locked(req, list) {
+		this.headers(req, list); // response varies on this list
 		const { site, user } = req;
 		let { locks } = req;
 		if (!locks) locks = req.locks = [];
