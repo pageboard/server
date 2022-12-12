@@ -19,6 +19,6 @@
   "dependencies": {
     "fast-json-stable-stringify": "^2.1.0",
     "glob": "^8.0.3",
-    "upcache": "^2.6.0"
+    "upcache": "^2.6.1"
   }
 }
