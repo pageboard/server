@@ -38,10 +38,16 @@ module.exports = class Packager {
 		const groups = {};
 		const bundles = {};
 		const aliases = {};
+		const standalones = new Set();
 		for (const name of names) {
 			const el = { ...elts[name] }; // drop proxy
 			el.name = name;
-			if (el.alias) aliases[name] = el.alias;
+			if (el.alias) {
+				aliases[name] = el.alias;
+			} else if (el.standalone && !Object.isEmpty(el.properties) && el.$lock !== true) {
+				// e.g. "write", "user", "private"
+				standalones.add(name);
+			}
 			eltsMap[name] = el;
 			if (!bundleMap.has(name)) bundleMap.set(name, new Set());
 			const bundleSet = bundleMap.get(name);
@@ -84,6 +90,7 @@ module.exports = class Packager {
 		pkg.groups = groups;
 		pkg.aliases = aliases;
 		pkg.bundles = bundles;
+		pkg.standalones = standalones;
 		return this.Block.initSite(site, pkg);
 	}
 
@@ -91,16 +98,24 @@ module.exports = class Packager {
 		const { eltsMap, bundles } = pkg;
 		site.$pkg.bundleMap = pkg.bundleMap;
 		site.$pkg.aliases = pkg.aliases;
-		site.$pkg.services = [await this.#bundleSource(
-			site, pkg, null, 'services', this.app.services
-		)];
 		await Promise.all(Object.entries(bundles).map(
 			([name, { list }]) => this.#bundle(
 				site, pkg, eltsMap[name], list
 			)
 		));
-
+		const standalones = [];
+		for (const name of pkg.standalones) {
+			standalones.push(pkg.eltsMap[name]);
+		}
+		if (site.$pkg.bundles.write) {
+			site.$pkg.bundles.write.meta.scripts.push(await this.#bundleSource(
+				site, pkg, null, 'services', this.app.services
+			), await this.#bundleSource(
+				site, pkg, null, 'standalones', standalones
+			));
+		}
 		// clear up some space
+		delete pkg.standalones;
 		delete pkg.eltsMap;
 		delete pkg.bundles;
 		delete pkg.aliases;
@@ -176,10 +191,16 @@ module.exports = class Packager {
 		const filename = [prefix, name].filter(Boolean).join('-') + '.js';
 		const sourceUrl = `/.files/${tag}/${filename}`;
 		const sourcePath = this.app.statics.resolve(site.id, sourceUrl);
-		const str = `Pageboard.${name} = Object.assign(Pageboard.${name} || {}, ${toSource(obj)});`;
+		let source = toSource(obj);
+		if (!Array.isArray(obj)) {
+			source = `Object.assign(Pageboard.${name} || {}, ${source})`;
+		}
+		const str = `Pageboard.${name} = ${source};`;
 		await fs.mkdir(Path.dirname(sourcePath), { recursive: true });
 		await fs.writeFile(sourcePath, str);
-		const paths = await this.app.statics.bundle(site, pkg, [sourceUrl], filename);
+		const paths = await this.app.statics.bundle(
+			site, pkg, [sourceUrl], filename
+		);
 		return paths[0];
 	}
 

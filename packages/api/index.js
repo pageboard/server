@@ -238,7 +238,6 @@ module.exports = class ApiModule {
 				schemas: [],
 				scripts: [],
 				stylesheets: [],
-				services: [],
 				resources: {}
 			};
 

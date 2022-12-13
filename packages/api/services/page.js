@@ -17,9 +17,6 @@ module.exports = class PageService {
 						data: {}
 					},
 					site: site.data,
-					meta: {
-						services: site.$pkg.services
-					},
 					commons: app.opts.commons
 				});
 			} else {
