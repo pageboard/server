@@ -49,7 +49,9 @@ module.exports = class Packager {
 				standalones.add(name);
 			}
 			eltsMap[name] = el;
-			if (!bundleMap.has(name)) bundleMap.set(name, new Set());
+			if (!bundleMap.has(name)) {
+				bundleMap.set(name, new Set());
+			}
 			const bundleSet = bundleMap.get(name);
 			if (el.group) el.group.split(/\s+/).forEach(gn => {
 				let group = groups[gn];
