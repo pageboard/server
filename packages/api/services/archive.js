@@ -143,7 +143,7 @@ module.exports = class ArchiveService {
 		$action: 'write'
 	};
 
-	async import(req, { file, idMap, types = [] }) {
+	async import(req, { file, empty, idMap, types = [] }) {
 		const { site, trx } = req;
 		const counts = {
 			users: 0,
@@ -182,12 +182,7 @@ module.exports = class ArchiveService {
 				counts.hrefs++;
 				return site.$relatedQuery('hrefs', trx).insert(obj);
 			} else if (obj.type == "site") {
-				await upgrader.afterEach(obj);
-				await req.run('archive.empty');
-				await site.$query(trx).patchObject({
-					type: site.type,
-					data: obj.data
-				});
+				if (empty) await req.run('archive.empty');
 			} else if (obj.type == "user") {
 				await upgrader.afterEach(obj);
 				try {
@@ -287,6 +282,11 @@ module.exports = class ArchiveService {
 				type: 'object',
 				additionalProperties: { type: 'string' },
 				default: {}
+			},
+			empty: {
+				title: 'Empty before',
+				type: 'boolean',
+				default: false
 			},
 			excludes: {
 				title: 'Excluded types',
