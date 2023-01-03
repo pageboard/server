@@ -165,15 +165,8 @@ module.exports = class ArchiveService {
 				}
 				return obj;
 			} else if (obj.type == "site") {
-				if (!obj.data) obj.data = {};
 				const toVersion = site.data.server;
-				const fromVersion = obj.data.server ?? toVersion;
-				// these imported values must not overwrite current ones
-				delete obj.data.domains;
-				if (site.data.module) delete obj.data.module;
-				if (site.data.version) delete obj.data.version;
-				// keep existing site.data values
-				Object.assign(obj.data, site.data);
+				const fromVersion = obj.data?.server ?? toVersion;
 
 				upgrader = new Upgrader(site.$modelClass, {
 					idMap,
