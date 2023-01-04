@@ -176,15 +176,17 @@ ALTER TABLE ONLY relation
     ADD CONSTRAINT relation_pkey PRIMARY KEY (id);
 CREATE UNIQUE INDEX block_expr_domain_idx ON block USING btree (((data #>> '{domain}'::text[]))) WHERE ((type)::text = 'site'::text);
 CREATE UNIQUE INDEX block_expr_email_idx ON block USING btree (((data #>> '{email}'::text[]))) WHERE ((type)::text = 'user'::text);
-CREATE UNIQUE INDEX block_expr_lang_idx ON block USING btree (((data #>> '{url}'::text[])), lang) WHERE ((data -> 'url'::text) IS NOT NULL);
+
+CREATE INDEX block_url_index ON block(((data->'url')::text));
+
 CREATE UNIQUE INDEX block_user_site_index ON block USING btree (id) WHERE type::text = ANY (ARRAY['site'::text, 'user'::text]);
 CREATE INDEX block_id_index ON block USING btree (id);
 CREATE INDEX block_type_index ON block USING btree (type);
 CREATE INDEX block_updated_at_idx ON block USING btree (updated_at DESC);
-CREATE UNIQUE INDEX href__parent_id_url_lang_idx ON href USING btree (_parent_id, url, lang);
+
 CREATE INDEX href_mime_index ON href USING btree (mime);
 CREATE INDEX href_updated_at_idx ON href USING btree (updated_at DESC);
-CREATE INDEX href_url_idx ON href USING btree (url);
+CREATE UNIQUE INDEX href__parent_id_url_idx ON href(_parent_id, url);
 CREATE INDEX index_block_tsv ON block USING gin (tsv);
 CREATE INDEX index_href_tsv ON href USING gin (tsv);
 CREATE INDEX relation_child_id_index ON relation USING btree (child_id);

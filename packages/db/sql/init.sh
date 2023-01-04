@@ -13,4 +13,8 @@ psql --dbname "${db}" \
 --command 'CREATE EXTENSION "uuid-ossp" WITH SCHEMA extensions' \
 --command 'CREATE EXTENSION "unaccent" WITH SCHEMA extensions' \
 --command 'CREATE TEXT SEARCH CONFIGURATION extensions.unaccent ( COPY = simple )' \
---command 'ALTER TEXT SEARCH CONFIGURATION extensions.unaccent ALTER MAPPING FOR hword, hword_part, word WITH extensions.unaccent, simple'
+--command 'ALTER TEXT SEARCH CONFIGURATION extensions.unaccent ALTER MAPPING FOR hword, hword_part, word WITH extensions.unaccent, simple' \
+--command 'CREATE TEXT SEARCH CONFIGURATION fr_unaccent ( COPY = french )' \
+--command 'ALTER TEXT SEARCH CONFIGURATION fr_unaccent ALTER MAPPING FOR hword, hword_part, word WITH unaccent, french_stem' \
+--command 'CREATE TEXT SEARCH CONFIGURATION en_unaccent ( COPY = english )' \
+--command 'ALTER TEXT SEARCH CONFIGURATION en_unaccent ALTER MAPPING FOR hword, hword_part, word WITH unaccent, english_stem'
