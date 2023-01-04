@@ -295,7 +295,7 @@ module.exports = class HrefService {
 					});
 				})) continue;
 				for (const desc of list) {
-					const bq = site.$relatedQuery('children', trx).from('blocks')
+					const bq = site.$modelClass.query(trx).from('blocks')
 						.where('blocks.type', type)
 						.whereNotNull(ref(`blocks.data:${desc.path}`));
 					if (desc.array) {
@@ -386,9 +386,6 @@ module.exports = class HrefService {
 		const types = Object.keys(hrefs);
 		const table = ['root', 'root:block', 'root:shared:block'][level];
 
-		const qRoot = site.$modelClass.query(trx)
-			.select(`${table}._id`, `${table}.id`, `${table}.type`, `${table}.data`)
-			.from('block').where('block._id', site._id);
 		const blockRelation = {
 			$relation: 'children',
 			$modify: [(q) => {
@@ -400,6 +397,12 @@ module.exports = class HrefService {
 				$relation: 'children',
 				$modify: [(q) => {
 					q.where('standalone', true);
+					if (data.url) {
+						q.whereIn('type', site.$pkg.pages)
+							.where(ref('data:url').castText(), data.url);
+					} else if (data.ids?.length) {
+						q.whereIn('id', data.ids);
+					}
 				}]
 			}
 		};
@@ -416,14 +419,9 @@ module.exports = class HrefService {
 			};
 			delete rel.root.block;
 		}
-		qRoot.joinRelated(rel);
-		if (data.url) {
-			qRoot.whereIn('root.type', site.$pkg.pages)
-				.where(ref('root.data:url').castText(), data.url);
-		} else if (data.ids?.length) {
-			qRoot.whereIn('root.id', data.ids);
-		}
-		return qRoot;
+		return site.$modelClass.query(trx)
+			.select(`${table}._id`, `${table}.id`, `${table}.type`, `${table}.data`)
+			.from('block').where('block._id', site._id).joinRelated(rel);
 	}
 
 	async reinspect(req, data) {
