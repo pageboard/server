@@ -180,7 +180,7 @@ module.exports = class ArchiveService {
 			if (types.includes(obj.type)) return;
 			if (!obj.id) {
 				counts.hrefs++;
-				return site.$relatedQuery('hrefs', trx).insert(obj);
+				return site.$relatedQuery('hrefs', trx).insert(obj).onConflict(['_parent_id', 'url']).ignore();
 			} else if (obj.type == "site") {
 				if (empty) await req.run('archive.empty');
 			} else if (obj.type == "user") {
