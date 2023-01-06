@@ -149,7 +149,7 @@ module.exports = class PrerenderModule {
 
 	#callHtmlMw(...args) {
 		if (!this.#htmlMw) this.#htmlMw = dom().route((phase, req, res) => {
-			const { site, user } = req;
+			const { site } = req;
 			const { location, settings, online, visible } = phase;
 			if (visible) {
 				const { plugins } = settings;
