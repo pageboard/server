@@ -98,24 +98,24 @@ module.exports = class Packager {
 
 	async makeBundles(site, pkg) {
 		const { eltsMap, bundles } = pkg;
-		site.$pkg.bundleMap = pkg.bundleMap;
-		site.$pkg.aliases = pkg.aliases;
-		await Promise.all(Object.entries(bundles).map(
-			([name, { list }]) => this.#bundle(
-				site, pkg, eltsMap[name], list
-			)
-		));
 		const standalones = [];
 		for (const name of pkg.standalones) {
 			standalones.push(pkg.eltsMap[name]);
 		}
-		if (site.$pkg.bundles.write) {
-			site.$pkg.bundles.write.meta.scripts.push(await this.#bundleSource(
+		site.$pkg.bundleMap = pkg.bundleMap;
+		site.$pkg.aliases = pkg.aliases;
+		if (eltsMap.write) {
+			eltsMap.write.scripts.push(await this.#bundleSource(
 				site, pkg, null, 'services', this.app.services
 			), await this.#bundleSource(
 				site, pkg, null, 'standalones', standalones
 			));
 		}
+		await Promise.all(Object.entries(bundles).map(
+			([name, { list }]) => this.#bundle(
+				site, pkg, eltsMap[name], list
+			)
+		));
 		// clear up some space
 		delete pkg.standalones;
 		delete pkg.eltsMap;
