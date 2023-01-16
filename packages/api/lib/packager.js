@@ -215,7 +215,7 @@ module.exports = class Packager {
 		if (bundleSet.has(root.name)) {
 			return list;
 		}
-		if (typeof el.bundle == "string" && root.name != el.bundle) {
+		if (typeof el.bundle == "string" && root.name != el.bundle || el.bundle === true && el.name != root.name) {
 			return list;
 		}
 		const elts = pkg.eltsMap;
