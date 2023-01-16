@@ -31,16 +31,18 @@ if (!process.env.HOME) {
 	} else if (!command) {
 		return app;
 	}
-
-	const results = await app.run(command, data, site);
-	// eslint-disable-next-line no-console
-	console.log(
-		typeof results == "string"
-			? results
-			: JSON.stringify(results, null, ' ')
-	);
-	process.exit();
-})().catch(err => {
-	console.error(err.statusCode ? err.name + ': ' + err.message : err);
-	process.exit(1);
-});
+	try {
+		const results = await app.run(command, data, site);
+		// eslint-disable-next-line no-console
+		console.log(
+			typeof results == "string"
+				? results
+				: JSON.stringify(results, null, ' ')
+		);
+		process.exit();
+	} catch (err) {
+		console.error(err.statusCode ? err.name + ': ' + err.message : err);
+		if (err.content) console.error(err.content);
+		process.exit(1);
+	}
+})();
