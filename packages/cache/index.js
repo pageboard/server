@@ -67,7 +67,7 @@ module.exports = class CacheModule {
 
 	install(site) {
 		if (!site?.url) {
-			console.warn("No url to invalidate the cache", site?.id);
+			console.info("No url to invalidate the cache", site?.id);
 			return;
 		}
 		setTimeout(async () => {
