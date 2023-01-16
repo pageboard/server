@@ -215,6 +215,9 @@ module.exports = class Packager {
 		if (bundleSet.has(root.name)) {
 			return list;
 		}
+		if (typeof el.bundle == "string" && root.name != el.bundle) {
+			return list;
+		}
 		const elts = pkg.eltsMap;
 		list.push(el);
 		// when listing dependencies, do not include elements from other bundles
