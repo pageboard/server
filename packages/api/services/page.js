@@ -23,11 +23,13 @@ module.exports = class PageService {
 				const data = await req.run('page.get', query);
 				const resources = site.$pkg.bundles.write.meta.resources;
 				if (forWebmaster && resources.develop) {
-					data.meta = { scripts: [] };
+					data.meta = {
+						scripts: [resources.develop],
+						schemas: []
+					};
 					if (!Object.isEmpty(site.$pkg.bundles.user?.meta?.schemas)) {
-						data.meta.schemas = site.$pkg.bundles.user.meta.schemas.slice();
+						data.meta.schemas.push(...site.$pkg.bundles.user.meta.schemas);
 					}
-					data.meta.scripts.unshift(resources.develop);
 					data.meta.resources = {
 						scripts: [resources.editor, resources.readScript],
 						stylesheets: [resources.readStyle]
