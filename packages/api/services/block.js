@@ -288,12 +288,11 @@ module.exports = class BlockService {
 				type: 'integer',
 				minimum: 0,
 				maximum: 1000,
-				nullable: true
+				default: 10
 			},
 			offset: {
 				title: 'Offset',
 				type: 'integer',
-				minimum: 0,
 				default: 0
 			},
 			count: {
@@ -370,12 +369,11 @@ module.exports = class BlockService {
 						type: 'integer',
 						minimum: 0,
 						maximum: 1000,
-						nullable: true
+						default: 10
 					},
 					offset: {
 						title: 'Offset',
 						type: 'integer',
-						minimum: 0,
 						default: 0
 					}
 				}
@@ -443,12 +441,11 @@ module.exports = class BlockService {
 						type: 'integer',
 						minimum: 0,
 						maximum: 1000,
-						nullable: true
+						default: 10
 					},
 					offset: {
 						title: 'Offset',
 						type: 'integer',
-						minimum: 0,
 						default: 0
 					},
 					count: {
@@ -930,8 +927,14 @@ function filterSub(q, data, alias) {
 		seen[col.expression] = true;
 		q.orderBy(col, dir);
 	}
-	q.offset(data.offset);
-	if (data.limit != null) q.limit(data.limit);
+	if (data.offset < 0) {
+		data.limit += data.offset;
+		data.offset = 0;
+		if (data.limit < 0) {
+			throw new HttpError.BadRequest("limit cannot be negative");
+		}
+	}
+	q.offset(data.offset).limit(data.limit);
 	return valid;
 }
 

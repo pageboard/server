@@ -58,6 +58,13 @@ module.exports = class HrefService {
 		if (data.maxHeight) {
 			q.where(ref('href.meta:height'), '<=', data.maxHeight);
 		}
+		if (data.offset < 0) {
+			data.limit += data.offset;
+			data.offset = 0;
+			if (data.limit < 0) {
+				throw new HttpError.BadRequest("limit cannot be negative");
+			}
+		}
 		q.offset(data.offset).limit(data.limit);
 
 		let items = [];
@@ -153,7 +160,6 @@ module.exports = class HrefService {
 			},
 			offset: {
 				type: 'integer',
-				minimum: 0,
 				default: 0
 			}
 		}

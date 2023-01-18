@@ -180,6 +180,13 @@ module.exports = class PageService {
 			: `AND (page.data->'nositemap' IS NULL OR (page.data->'nositemap')::BOOLEAN IS NOT TRUE)`;
 
 		const types = data.type ?? site.$pkg.pages;
+		if (data.offset < 0) {
+			data.limit += data.offset;
+			data.offset = 0;
+			if (data.limit < 0) {
+				throw new HttpError.BadRequest("limit cannot be negative");
+			}
+		}
 
 		let sql = `
 			SELECT
@@ -280,13 +287,12 @@ module.exports = class PageService {
 				title: 'Limit',
 				type: 'integer',
 				minimum: 0,
-				maximum: 50,
+				maximum: 100,
 				default: 10
 			},
 			offset: {
 				title: 'Offset',
 				type: 'integer',
-				minimum: 0,
 				default: 0
 			},
 			drafts: {
@@ -341,17 +347,6 @@ module.exports = class PageService {
 			url: {
 				type: 'string',
 				format: 'pathname'
-			},
-			limit: {
-				title: 'Limit',
-				type: 'integer',
-				minimum: 0
-			},
-			offset: {
-				title: 'Offset',
-				type: 'integer',
-				minimum: 0,
-				default: 0
 			},
 			drafts: {
 				type: 'boolean',
@@ -668,8 +663,6 @@ function listPages({ site, trx }, data) {
 	} else {
 		// just return all pages for the sitemap
 	}
-	if (data.limit) q.limit(data.limit);
-	if (data.offset) q.offset(data.offset);
 	return q.orderBy(ref('block.data:url'), 'block.updated_at DESC');
 }
 
