@@ -34,7 +34,13 @@ module.exports = class GitModule {
 			} else {
 				next();
 			}
-		}, req => this.github(req, req.body));
+		}, req => {
+			// run this async on purpose
+			this.github(req, req.body).catch(err => {
+				console.error(err);
+			});
+			return 200;
+		});
 	}
 
 	async github(req, payload) {
@@ -64,7 +70,9 @@ module.exports = class GitModule {
 						${err.message}
 					`;
 		}
-		if (pusher.email) await req.run('mail.to', mail);
+		if (pusher.email) {
+			await req.run('mail.to', mail);
+		}
 	}
 
 	async install(req, data) {

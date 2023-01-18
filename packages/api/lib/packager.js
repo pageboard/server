@@ -7,6 +7,25 @@ const vm = require.lazy('node:vm');
 const translateJSON = require.lazy('./translate');
 const schemas = require.lazy('./schemas');
 
+
+/*
+An element has these properties:
+
+- name: the type of the block
+- group: elements are grouped by content identifiers. An element can contain a group of elements (in the contents specifiers). A bundle contain all elements of all groups that are contained in the root element.
+- bundle: if true, indicates that an element is the root of a bundle - in which case that bundle carries its name. If a string, indicates in which bundle an element must be included, this is needed when an element is not part of any content.
+- standalone: if true, indicates that all instances of an element are independent in the site. They can have multiple parents, or none (except the site itself). These elements are usually fetched by queries. Those instances won't be garbage-collected.
+- standalone block: this is different, it tells that a specific instance of an element can be shared amongst multiple parents. These blocks are usually embedded in the content of a standalone element (e.g. a page). Those blocks can be garbage-collected, if they happen to have no parents for a while.
+
+There are several specific groups:
+
+- text: content-specific, no element is part of the text group
+- inline, block: the most common content groups
+- page: instances of elements in that group have a data.url,
+and can be rendered at that url. In consequence they are eligible to being part
+of the site map. Pages are usually also bundles, and the sitemap bundles the elements in the page group too.
+*/
+
 module.exports = class Packager {
 	constructor(app, Block) {
 		this.app = app;
