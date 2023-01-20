@@ -389,7 +389,7 @@ module.exports = class PageService {
 			pages[method] = changes[method].filter(b => {
 				const alias = pkg.aliases[b.type];
 				if (alias) b.type = alias;
-				pkg.pages.includes(b.type);
+				return pkg.pages.includes(b.type);
 			});
 		}
 		pages.all = [ ...pages.add, ...pages.update ];
