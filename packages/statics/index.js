@@ -129,7 +129,8 @@ module.exports = class StaticsModule {
 				minify: site.data.env == "production",
 				cache: {
 					dir: this.opts.statics
-				}
+				},
+				browsers: this.opts.browsers
 			});
 		} catch(err) {
 			delete err.input;
