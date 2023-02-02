@@ -123,15 +123,17 @@ module.exports = class AuthModule {
 		else if (typeof list == "string") list = [list];
 		else if (list === true) return true;
 		else if (list.length == 0) return false;
+
 		let minLevel = Infinity;
 		const grants = user.grants || [];
+		const grantsMap = site.$pkg.grants;
 		for (const grant of grants) {
-			minLevel = Math.min(site.$pkg.grants[grant] || Infinity, minLevel);
+			minLevel = Math.min(grantsMap[grant] || Infinity, minLevel);
 		}
 
 		let granted = false;
 		list.forEach(lock => {
-			const lockIndex = site.$pkg.grants[lock] || -1;
+			const lockIndex = grantsMap[lock] || -1;
 			if (lock.startsWith('id-')) {
 				if (`id-${user.id}` == lock) granted = true;
 				lock = 'id-:id';
