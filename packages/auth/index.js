@@ -29,9 +29,12 @@ module.exports = class AuthModule {
 		Object.assign(this.opts, keys);
 		this.#lock = Upcache.lock(this.opts);
 		server.use((req, res, next) => {
+			req.locks = [];
 			onHeaders(res, () => {
-				this.sort(req);
-				this.#lock.headers(res, req.locks);
+				if (req.locks?.length) {
+					this.sort(req);
+					this.#lock.headers(res, req.locks);
+				}
 			});
 			this.#lock.init(req, res, next);
 		});
@@ -113,8 +116,7 @@ module.exports = class AuthModule {
 
 	locked(req, list) {
 		const { site, user } = req;
-		let { locks } = req;
-		if (!locks) locks = req.locks = [];
+		const { locks } = req;
 		if (list != null && !Array.isArray(list) && typeof list == "object" && list.read !== undefined) {
 			// backward compat, block.lock only cares about read access
 			list = list.read;
