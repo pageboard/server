@@ -202,7 +202,6 @@ module.exports = class ApiModule {
 			res.status(req.user.id ? 403 : 401);
 		}
 		if (req.granted) res.set('X-Granted', 1);
-		req.call('auth.headers', req.locks);
 
 		if (obj.item || obj.items) {
 			const { bundles, bundleMap } = req.site.$pkg;

@@ -8,7 +8,7 @@ module.exports = function upcachePlugin(page, settings, req, res) {
 		if (tags) for (const str of tags.split(',')) tagSet.add(str.trim());
 	});
 	page.on('idle', () => {
-		if (lockSet.size) req.call("auth.headers", [...lockSet]);
+		if (lockSet.size) req.locks.push(...lockSet);
 		if (tagSet.size) req.tag(...tagSet);
 	});
 };

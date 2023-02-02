@@ -3,6 +3,7 @@ const Path = require('node:path');
 const { promises: fs } = require('node:fs');
 const { promisify } = require('node:util');
 const generateKeyPair = promisify(require('node:crypto').generateKeyPair);
+const onHeaders = require('on-headers');
 
 module.exports = class AuthModule {
 	static name = 'auth';
@@ -27,7 +28,13 @@ module.exports = class AuthModule {
 		);
 		Object.assign(this.opts, keys);
 		this.#lock = Upcache.lock(this.opts);
-		server.use(this.#lock.init);
+		server.use((req, res, next) => {
+			onHeaders(res, () => {
+				this.sort(req);
+				this.#lock.headers(res, req.locks);
+			});
+			this.#lock.init(req, res, next);
+		});
 	}
 
 	cookie({ site, user }) {
@@ -80,8 +87,16 @@ module.exports = class AuthModule {
 		site.$pkg.grants = this.#grantsLevels(site);
 	}
 
-	headers({ res }, list) {
-		return this.#lock.headers(res, list);
+	sort({ site , locks }) {
+		const { grants } = site.$pkg;
+		locks.sort((a, b) => {
+			const al = grants[a] || -1;
+			const bl = grants[b] || -1;
+			if (al == bl) return 0;
+			else if (al < bl) return 1;
+			else if (al > bl) return -1;
+		});
+		return locks;
 	}
 
 	lock(...list) {
@@ -97,7 +112,6 @@ module.exports = class AuthModule {
 	}
 
 	locked(req, list) {
-		this.headers(req, list); // response varies on this list
 		const { site, user } = req;
 		let { locks } = req;
 		if (!locks) locks = req.locks = [];
@@ -125,13 +139,6 @@ module.exports = class AuthModule {
 				granted = true;
 			}
 			if (!locks.includes(lock)) locks.push(lock);
-		});
-		locks.sort((a, b) => {
-			const al = site.$pkg.grants[a] || -1;
-			const bl = site.$pkg.grants[b] || -1;
-			if (al == bl) return 0;
-			else if (al < bl) return 1;
-			else if (al > bl) return -1;
 		});
 		return !granted;
 	}
