@@ -8,15 +8,9 @@ module.exports = function(page, settings, req, res) {
 				throw err;
 			}
 			try {
-				const state = await Page.finish();
-				if (Page.serialize) {
-					let obj = await Page.serialize(state);
-					// backward compatibility with old clients
-					if (typeof obj == "string") obj = {
-						mime: settings.mime || "text/html",
-						body: obj
-					};
-					return obj;
+				const state = await Page.patch();
+				if (state.constructor.serialize) {
+					return state.constructor.serialize(state);
 				} else return {
 					mime: "text/html",
 					body: '<!DOCTYPE html>\n' + document.documentElement.outerHTML
