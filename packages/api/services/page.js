@@ -117,14 +117,7 @@ module.exports = class PageService {
 				q.where(ref("page.data:prefix").castBool(), true);
 			})
 			.orderBy(fn.coalesce(ref("page.data:prefix").castBool(), false), "asc")
-			.whereIn('page.type', site.$pkg.pages)
-			.select(
-				call('href.collect', {
-					url: url,
-					content: true,
-					asMap: true
-				}).as('hrefs')
-			);
+			.whereIn('page.type', site.$pkg.pages);
 	}
 
 	async get(req, data) {
@@ -149,16 +142,20 @@ module.exports = class PageService {
 		} else if (wkp) {
 			obj.status = parseInt(wkp[1]);
 		}
+		const hrefs = await req.call('href.collect', {
+			ids: [page.id],
+			content: true,
+			asMap: true
+		});
 		const links = await navigationLinks(req, data.url, page.data.prefix);
 		Object.assign(obj, {
 			item: page,
 			items: [ ...page.children, ...page.standalones ],
 			links: links,
-			hrefs: page.hrefs
+			hrefs: hrefs[0].hrefs
 		});
 		delete page.standalones;
 		delete page.children;
-		delete page.hrefs;
 
 		return obj;
 	}

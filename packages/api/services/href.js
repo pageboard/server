@@ -363,11 +363,6 @@ module.exports = class HrefService {
 				},
 				nullable: true
 			},
-			url: {
-				title: 'Select root block by url',
-				type: 'string',
-				format: 'pathname'
-			},
 			asMap: {
 				title: 'Return map of url: rows',
 				type: 'boolean',
@@ -403,12 +398,7 @@ module.exports = class HrefService {
 				$relation: 'children',
 				$modify: [(q) => {
 					q.where('standalone', true);
-					if (data.url) {
-						q.whereIn('type', site.$pkg.pages)
-							.where(ref('data:url').castText(), data.url);
-					} else if (data.ids?.length) {
-						q.whereIn('id', data.ids);
-					}
+					q.whereIn('id', data.ids);
 				}]
 			}
 		};
