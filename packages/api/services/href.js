@@ -398,7 +398,7 @@ module.exports = class HrefService {
 				$relation: 'children',
 				$modify: [(q) => {
 					q.where('standalone', true);
-					q.whereIn('id', data.ids);
+					if (data.ids.length) q.whereIn('id', data.ids);
 				}]
 			}
 		};
