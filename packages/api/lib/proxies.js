@@ -83,7 +83,7 @@ function absolutePaths(list, context) {
 	const obj = Array.isArray(list) ? null : {};
 	const arr = Object.entries(list).map(([key, path]) => {
 		if (path == null) {
-			console.warn("null path in", context);
+			console.warn("null path", key, "in", context);
 			return;
 		}
 		if (path.startsWith('/') || /^(http|https|data):/.test(path)) {
