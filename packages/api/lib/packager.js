@@ -1,6 +1,6 @@
 const Path = require('node:path');
 const toSource = require.lazy('tosource');
-const { AbsoluteProxy, EltProxy, MapProxy } = require('./proxies');
+const { EltProxy, MapProxy } = require('./proxies');
 
 const { promises: fs } = require('node:fs');
 const vm = require.lazy('node:vm');
@@ -356,14 +356,12 @@ function loadFromFile(buf, elts, names, context) {
 		timeout: 1000
 	});
 
-	AbsoluteProxy.create(context);
 	for (const name in elts) {
 		let elt = elts[name];
 		if (!elt) {
 			console.warn("element", name, "is not defined at", context.path);
 			continue;
 		}
-
 		names.push(name);
 		elt = new Proxy(elt, new EltProxy(name, context));
 		Object.defineProperty(elts, name, {
