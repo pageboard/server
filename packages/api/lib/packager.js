@@ -124,11 +124,14 @@ module.exports = class Packager {
 		site.$pkg.bundleMap = pkg.bundleMap;
 		site.$pkg.aliases = pkg.aliases;
 		if (eltsMap.write) {
-			eltsMap.write.scripts.push(await this.#bundleSource(
+			const writeBundles = await Promise.all([this.#bundleSource(
 				site, pkg, null, 'services', this.app.services
-			), await this.#bundleSource(
+			), this.#bundleSource(
 				site, pkg, null, 'standalones', standalones
-			));
+			)]);
+			for (const bundle of writeBundles) if (bundle) {
+				eltsMap.write.scripts.push(bundle);
+			}
 		}
 		await Promise.all(Object.entries(bundles).map(
 			([name, { list }]) => this.#bundle(
