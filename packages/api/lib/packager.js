@@ -59,7 +59,12 @@ module.exports = class Packager {
 		const aliases = {};
 		const standalones = new Set();
 		for (const name of names) {
-			const el = { ...elts[name] }; // drop proxy
+			// drop proxies
+			const el = { ...elts[name] };
+			if (el.scripts) el.scripts = el.scripts.slice();
+			if (el.stylesheets) el.stylesheets = el.stylesheets.slice();
+			if (el.resources) el.resources = { ...el.ressources };
+
 			el.name = name;
 			if (el.alias) {
 				aliases[name] = el.alias;
