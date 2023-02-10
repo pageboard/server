@@ -2,7 +2,7 @@ const {
 	mergeRecursive,
 	mergeExpressions,
 	unflatten
-} = require('../../../lib/utils');
+} = require('../../../src/utils');
 
 module.exports = class FormService {
 	static name = 'form';

@@ -1,6 +1,6 @@
 const { ref, raw } = require('objection');
 const Block = require('../models/block');
-const { unflatten, mergeRecursive } = require('../../../lib/utils');
+const { unflatten, mergeRecursive } = require('../../../src/utils');
 
 module.exports = class BlockService {
 	static name = 'block';

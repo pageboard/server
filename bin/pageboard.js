@@ -1,6 +1,6 @@
 #!/usr/bin/node
 
-const Pageboard = require("../lib/pageboard");
+const Pageboard = require("../src/pageboard");
 
 if (!process.env.HOME) {
 	throw new Error("Missing HOME environment variable");

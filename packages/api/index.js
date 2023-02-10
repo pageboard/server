@@ -11,7 +11,7 @@ const jsonDoc = require.lazy('./lib/json-doc');
 const Href = require('./models/href');
 const Block = require('./models/block');
 
-const { mergeRecursive, mergeExpressions } = require('../../lib/utils');
+const { mergeRecursive, mergeExpressions } = require('../../src/utils');
 
 module.exports = class ApiModule {
 	static name = 'api';

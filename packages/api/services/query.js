@@ -1,6 +1,6 @@
 const {
 	mergeExpressions
-} = require('../../../lib/utils');
+} = require('../../../src/utils');
 
 module.exports = class SearchService {
 	static name = 'search';

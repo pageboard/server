@@ -1,7 +1,7 @@
 const { nestie } = require.lazy('nestie');
 const { flattie } = require.lazy('flattie');
 const dget = require.lazy('dlv');
-const { Matchdom, TextPlugin } = require('./matchdom');
+const { Matchdom, TextPlugin } = require('../lib/matchdom');
 const getSlug = require.lazy('speakingurl');
 
 const md = new Matchdom(TextPlugin, {

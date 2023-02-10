@@ -1,4 +1,4 @@
-const { mergeRecursive } = require('../../../lib/utils');
+const { mergeRecursive } = require('../../../src/utils');
 
 module.exports = class SiteService {
 	static name = 'site';
