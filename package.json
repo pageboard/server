@@ -5,7 +5,11 @@
   "main": "lib/pageboard.js",
   "scripts": {
     "start": "pageboard",
-    "test": "mocha"
+    "test": "mocha",
+    "postinstall": "postinstall"
+  },
+  "postinstall": {
+    "matchdom": "bundle --format=cjs --name=Matchdom lib/matchdom.js"
   },
   "bin": {
     "pageboard": "./bin/pageboard.js"
@@ -46,12 +50,13 @@
     "http-errors": "^2.0.0",
     "import-lazy": "^4.0.0",
     "lodash.merge": "^4.6.2",
-    "matchdom": "^5.10.8",
+    "matchdom": "^9.8.0",
     "morgan": "^1.10.0",
     "nestie": "^1.0.2",
     "outdent": "^0.8.0",
     "pad": "^3.2.0",
     "postinstall": "^0.8.0",
+    "postinstall-bundle": "^0.8.0",
     "pretty-bytes": "^5.6.0",
     "semver-regex": "^3.1.3",
     "speakingurl": "^14.0.1",
@@ -99,9 +104,9 @@
     "ui": "tdd"
   },
   "devDependencies": {
-    "@kapouer/eslint-config": "^1.8.0",
-    "eslint": "8.28.0",
+    "@kapouer/eslint-config": "^1.9.0",
+    "eslint": "8.33.0",
     "eslint-plugin-mocha": "^10.1.0",
-    "mocha": "^10.1.0"
+    "mocha": "^10.2.0"
   }
 }
