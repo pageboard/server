@@ -184,7 +184,8 @@ module.exports = class Pageboard {
 		this.domains = new Domains(this, opts);
 		this.domains.routes(this, server);
 		server.use((err, req, res, next) =>
-			this.#domainsError(err, req, res, next));
+			this.#domainsError(err, req, res, next)
+		);
 		this.responseFilter = new ResponseFilter();
 
 		await this.#initPlugins();
@@ -195,7 +196,8 @@ module.exports = class Pageboard {
 		// call plugins#file
 		await this.#initPlugins('file');
 		server.use((err, req, res, next) =>
-			this.#filesError(err, req, res, next));
+			this.#filesError(err, req, res, next)
+		);
 		server.use((req, res, next) => this.log(req, res, next));
 
 		// call plugins#service
@@ -206,13 +208,15 @@ module.exports = class Pageboard {
 			}
 		});
 		server.use((err, req, res, next) =>
-			this.#servicesError(err, req, res, next));
+			this.#servicesError(err, req, res, next)
+		);
 
 		// call plugins#view
 		if (!this.cli) await this.#initPlugins('view');
 
 		server.use((err, req, res, next) =>
-			this.#viewsError(err, req, res, next));
+			this.#viewsError(err, req, res, next)
+		);
 		await this.#start();
 	}
 
