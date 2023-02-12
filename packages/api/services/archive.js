@@ -247,12 +247,8 @@ module.exports = class ArchiveService {
 
 
 		await new Promise((resolve, reject) => {
-			fstream.on('error', (err) => {
-				reject(err);
-			});
-			fstream.on('finish', () => {
-				resolve();
-			});
+			fstream.on('error', reject);
+			fstream.on('finish', resolve);
 		});
 
 		for (let obj of list) {
