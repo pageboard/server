@@ -37,6 +37,7 @@ module.exports = class ApiModule {
 	}
 
 	apiRoutes(app, server) {
+		app.responseFilter.register(this);
 		const tenantsLen = Object.keys(app.opts.database.url).length - 1;
 		// api depends on site files, that tag is invalidated in cache install
 		server.get('/.api/*',
@@ -195,7 +196,7 @@ module.exports = class ApiModule {
 			delete obj.status;
 		}
 
-		obj = this.app.auth.filterResponse(req, obj, itemFn);
+		obj = this.app.responseFilter.run(req, obj);
 		if (obj.item && !obj.item.type) {
 			// 401 Unauthorized: missing or bad authentication
 			// 403 Forbidden: authenticated but not authorized
@@ -262,22 +263,23 @@ module.exports = class ApiModule {
 
 		res.json(obj);
 	}
-};
 
-function itemFn(schema, block) {
-	if (schema.upgrade) for (const [src, dst] of Object.entries(schema.upgrade)) {
-		const val = jsonPath.get(block, src);
-		if (val !== undefined) {
-			jsonPath.set(block, dst, val);
-			jsonPath.unSet(block, src);
+	filter(req, schema, block) {
+		if (schema.upgrade) for (const [src, dst] of Object.entries(schema.upgrade)) {
+			const val = jsonPath.get(block, src);
+			if (val !== undefined) {
+				jsonPath.set(block, dst, val);
+				jsonPath.unSet(block, src);
+			}
+		}
+		if (schema.templates) {
+			if (!block.expr) block.expr = {};
+			mergeExpressions(block.expr, schema.templates, block.data);
+			if (Object.isEmpty(block.expr)) block.expr = null;
 		}
 	}
-	if (schema.templates) {
-		if (!block.expr) block.expr = {};
-		mergeExpressions(block.expr, schema.templates, block.data);
-		if (Object.isEmpty(block.expr)) block.expr = null;
-	}
-}
+
+};
 
 function fillTypes(list, set) {
 	if (!list) return set;

@@ -28,6 +28,7 @@ module.exports = class AuthModule {
 		);
 		Object.assign(this.opts, keys);
 		this.#lock = Upcache.lock(this.opts);
+		app.responseFilter.register(this);
 		server.use((req, res, next) => {
 			req.locks = [];
 			onHeaders(res, () => {
@@ -147,22 +148,6 @@ module.exports = class AuthModule {
 		return !granted;
 	}
 
-	filterResponse(req, obj, fn) {
-		const { item, items } = obj;
-		if (!item && !items) {
-			return this.filter(req, obj, fn);
-		}
-		if (item) {
-			obj.item = this.filter(req, item, fn);
-			if (!obj.item.type) delete obj.items;
-		}
-		if (obj.items) obj.items = obj.items.map(item => {
-			return this.filter(req, item, fn);
-		}).filter(item => {
-			return item && item.type;
-		});
-		return obj;
-	}
 
 	#grantsLevels(site) {
 		const grants = {};
@@ -183,36 +168,7 @@ module.exports = class AuthModule {
 		return grants;
 	}
 
-	filter(req, item, fn) {
-		if (!item.type) return item;
-		const { children, child, parents, parent, items } = item;
-		if (children) {
-			item.children = children.filter(item => {
-				return this.filter(req, item, fn);
-			});
-		}
-		if (items) {
-			item.items = items.filter(item => {
-				return this.filter(req, item, fn);
-			});
-		}
-		if (parents) {
-			item.parents = parents.filter(item => {
-				return this.filter(req, item, fn);
-			});
-		}
-		if (child) {
-			item.child = this.filter(req, child, fn);
-			if (item.child && !item.child.type) delete item.type;
-		}
-		if (parent) {
-			item.parent = this.filter(req, parent, fn);
-			if (item.parent && !item.parent.type) delete item.type;
-		}
-		// old types might not have schema
-		const schema = req.site.$schema(item.type) || {};
-		if (fn && schema) fn(schema, item);
-
+	filter(req, schema, item) {
 		let $lock = schema.$lock || {};
 		if (typeof $lock == "boolean" || typeof $lock == "string" || Array.isArray($lock)) $lock = { '*': $lock };
 		const lock = (item.lock || {}).read || [];

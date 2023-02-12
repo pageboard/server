@@ -39,6 +39,7 @@ const cli = require.lazy('./cli');
 const Domains = require.lazy('./domains');
 const { mergeRecursive } = require('./utils');
 const Installer = require('./installer');
+const ResponseFilter = require('./filter');
 
 // exceptional but so natural
 global.HttpError = require('http-errors');
@@ -201,6 +202,7 @@ module.exports = class Pageboard {
 		this.domains.routes(this, server);
 		server.use((err, req, res, next) =>
 			this.#domainsError(err, req, res, next));
+		this.responseFilter = new ResponseFilter();
 
 		await this.#initPlugins();
 		this.#initServices();
