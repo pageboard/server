@@ -173,6 +173,8 @@ module.exports = class Pageboard {
 		this.#initLog();
 		this.#installer = new Installer(this, opts.installer);
 
+		this.responseFilter = new ResponseFilter();
+
 		this.#plugins = [];
 		this.#loadPlugins(this.opts);
 		await this.#initDirs(this.dirs);
@@ -186,7 +188,6 @@ module.exports = class Pageboard {
 		server.use((err, req, res, next) =>
 			this.#domainsError(err, req, res, next)
 		);
-		this.responseFilter = new ResponseFilter();
 
 		await this.#initPlugins();
 		this.#initServices();
