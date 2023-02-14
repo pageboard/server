@@ -35,6 +35,7 @@ exports.mergeExpressions = function mergeExpressions(data, expr, obj) {
 		hooks: {
 			afterAll(ctx, val) {
 				hit = val !== undefined;
+				return val;
 			}
 		}
 	});
