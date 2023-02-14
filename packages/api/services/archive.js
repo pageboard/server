@@ -168,7 +168,8 @@ module.exports = class ArchiveService {
 				const toVersion = site.data.server;
 				const fromVersion = obj.data?.server ?? toVersion;
 
-				upgrader = new Upgrader(site.$modelClass, {
+				upgrader = new Upgrader({
+					site,
 					idMap,
 					from: fromVersion,
 					to: toVersion
