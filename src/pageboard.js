@@ -253,7 +253,7 @@ module.exports = class Pageboard {
 			await this.auth.install(site);
 			await this.cache.install(site);
 			if (this.env != "development") await this.#installer.clean(site, pkg);
-			site.data.server = pkg.server || this.version;
+			site.data.server = pkg.server ?? this.version;
 			this.domains.release(site);
 			return site;
 		} catch (err) {
