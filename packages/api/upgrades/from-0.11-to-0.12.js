@@ -19,21 +19,22 @@ function doReplacements(str) {
 		["|bmagnet]", "|prune:]"],
 		["|bmagnet:", "|prune:"],
 		["|eq:a-la-une:", "|switch:a-la-une:"],
+		["[$item", "[item"],
 		[
-			"[$items.data.thumbnail|repeat:.wide.column:item|magnet:*]",
-			"[$items|at:.wide.column|repeat:item|.data.thumbnail|fail:*]"
+			"[items.data.thumbnail|repeat:.wide.column:item|magnet:*]",
+			"[items|at:.wide.column|repeat:item|.data.thumbnail|fail:*]"
 		],
 		[
-			"[$items.data.thumbnail|repeat:.layout:item:3:0|",
-			"[$items|at:.layout|nth:3:1|repeat:item|.data.thumbnail|"
+			"[items.data.thumbnail|repeat:.layout:item:3:0|",
+			"[items|at:.layout|nth:3:1|repeat:item|.data.thumbnail|"
 		],
 		[
-			"[$items.data.thumbnail|repeat:.layout:item:3:1|",
-			"[$items|at:.layout|nth:3:1|repeat:item|.data.thumbnail|"
+			"[items.data.thumbnail|repeat:.layout:item:3:1|",
+			"[items|at:.layout|nth:3:1|repeat:item|.data.thumbnail|"
 		],
 		[
-			"[$items.data.thumbnail|repeat:.layout:item:3:2|",
-			"[$items|at:.layout|nth:3:1|repeat:item|.data.thumbnail|"
+			"[items.data.thumbnail|repeat:.layout:item:3:2|",
+			"[items|at:.layout|nth:3:1|repeat:item|.data.thumbnail|"
 		],
 		[
 			"[item.data.topics|repeat:a:topic]",
@@ -56,16 +57,16 @@ function doReplacements(str) {
 			"|date:"
 		],
 		[
-			"[$items.data.title|repeat:p:result]",
-			"[$items|at:p|repeat:result|.data.title]"
+			"[items.data.title|repeat:p:result]",
+			"[items|at:p|repeat:result|.data.title]"
 		],
 		[
-			"[$items.data.title|repeat:.card:result]",
-			"[$items|at:.card|repeat:result|.data.title]"
+			"[items.data.title|repeat:.card:result]",
+			"[items|at:.card|repeat:result|.data.title]"
 		],
 		[
 			"[result.data.headlines|html|slice:0:3|join::br]",
-			"[result.data.headlines|slice:0:3|join:<br>|as:html]"
+			"[result.headlines|slice:0:3|join:<br>|as:html]"
 		],
 		[
 			"|now|",
@@ -144,8 +145,8 @@ function doReplacements(str) {
 			"|$elements.blog.properties.topics.items.anyOf|at:.item|repeat:option|.title"
 		],
 		[
-			"[$item.items|repeat:.column+++++:item|",
-			"[$item.items|at:.column:5|repeat:item|"
+			"[item.items|repeat:.column+++++:item|",
+			"[item.items|at:.column:5|repeat:item|"
 		],
 		[
 			"|repeat:.item:label",
