@@ -191,7 +191,7 @@ module.exports = class PageService {
 				'site' || page.type AS type,
 				page.data,
 				page.updated_at, (
-					SELECT string_agg(list.fragment, '<br>') FROM (
+					SELECT jsonb_agg(list.fragment) FROM (
 						SELECT fragment FROM (
 							SELECT ts_headline('unaccent', page.data->>'title', search.query) AS fragment, page.data->>'title' AS field
 							UNION
@@ -217,7 +217,7 @@ module.exports = class PageService {
 				'site' || page.type AS type,
 				page.data,
 				page.updated_at, (
-					SELECT string_agg(list.fragment, '<br>') FROM (
+					SELECT jsonb_agg(list.fragment) FROM (
 						SELECT fragment FROM (
 							SELECT value AS fragment, jsonb_extract_path_text(block.content, key) AS field FROM jsonb_each_text(ts_headline('unaccent', block.content, search.query))
 						) AS headlines WHERE length(fragment) != length(field)
