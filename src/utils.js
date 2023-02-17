@@ -1,10 +1,12 @@
 const { nestie } = require.lazy('nestie');
 const { flattie } = require.lazy('flattie');
 const dget = require.lazy('dlv');
-const { Matchdom, TextPlugin } = require('../lib/matchdom');
+const {
+	Matchdom, TextPlugin, ArrayPlugin, OpsPlugin, NumPlugin, DatePlugin
+} = require('../lib/matchdom');
 const getSlug = require.lazy('speakingurl');
 
-const md = new Matchdom(TextPlugin, {
+const sharedMd = new Matchdom(TextPlugin, ArrayPlugin, OpsPlugin, NumPlugin, DatePlugin, {
 	types: {
 		as: {
 			slug: (ctx, str) => getSlug(str, { custom: { "_": "-" } })
@@ -13,7 +15,7 @@ const md = new Matchdom(TextPlugin, {
 });
 
 exports.fuse = (obj, data, scope) => {
-	return md.merge(obj, data, scope);
+	return sharedMd.merge(obj, data, scope);
 };
 
 exports.mergeRecursive = require.lazy('lodash.merge');
@@ -31,7 +33,7 @@ exports.mergeExpressions = function mergeExpressions(data, expr, obj) {
 	const flatExpr = flattie(expr);
 	obj = Object.assign(obj);
 	let hit;
-	const md = new Matchdom(TextPlugin, {
+	const md = new Matchdom(sharedMd, {
 		hooks: {
 			afterAll(ctx, val) {
 				hit = val !== undefined;
