@@ -259,7 +259,7 @@ exports.QueryBuilder = class CommonQueryBuilder extends QueryBuilder {
 					} else {
 						// ref is a json text or array, and it intersects any of the values
 						const val = typeof cond.val == "string" ? [cond.val] : cond.val;
-						this.whereRaw('?? \\?| ?', [refk, val]);
+						if (val != null) this.whereRaw('?? \\?| ?', [refk, val]);
 					}
 				} else if (cond.op == "in") {
 					if (cond.type == "string" && typeof cond.val == "string") {
@@ -268,7 +268,7 @@ exports.QueryBuilder = class CommonQueryBuilder extends QueryBuilder {
 					} else {
 						// ref is a json string, and it is in the values
 						const val = typeof cond.val == "string" ? [cond.val] : cond.val;
-						this.whereRaw('?? \\?& ?', [refk, val]);
+						if (val != null) this.whereRaw('?? \\?& ?', [refk, val]);
 					}
 				} else if (cond.range == "numeric") {
 					if (cond.names) {
