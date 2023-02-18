@@ -18,27 +18,64 @@ function doReplacements(str) {
 		["|magnet]", "|fail:]"],
 		["|bmagnet]", "|prune:]"],
 		["|bmagnet:", "|prune:"],
-		["|eq:a-la-une:", "|switch:a-la-une:"],
-		["[$item", "[item"],
+		["|eq:a-la-une:", "|eq:a-la-une|alt:"],
+		["[$item.data.", "["],
+		["[$item.items", "[$items"],
 		[
-			"[items.data.thumbnail|repeat:.wide.column:item|magnet:*]",
-			"[items|at:.wide.column|repeat:item|.data.thumbnail|fail:*]"
+			"$items|repeat:.layout:item:0:0:1|prune:*",
+			"$items|at:.layout|.first|repeat:item|prune:*"
 		],
 		[
-			"[items.data.thumbnail|repeat:.layout:item:3:0|",
-			"[items|at:.layout|nth:3:1|repeat:item|.data.thumbnail|"
+			"$items|repeat:.layout:item:3:0|prune:*",
+			"$items|at:.layout|nth:3:0|repeat:item|prune:*"
 		],
 		[
-			"[items.data.thumbnail|repeat:.layout:item:3:1|",
-			"[items|at:.layout|nth:3:1|repeat:item|.data.thumbnail|"
+			"$items|repeat:.layout:item:3:1|prune:*",
+			"$items|at:.layout|nth:3:1|repeat:item|prune:*"
 		],
 		[
-			"[items.data.thumbnail|repeat:.layout:item:3:2|",
-			"[items|at:.layout|nth:3:1|repeat:item|.data.thumbnail|"
+			"$items|repeat:.layout:item:3:2|prune:*",
+			"$items|at:.layout|nth:3:2|repeat:item|prune:*"
 		],
 		[
-			"[item.data.topics|repeat:a:topic]",
-			"[item.data.topics|at:a|repeat:topic]"
+			"$items|repeat:.layout:item:3:3|prune:*",
+			"$items|at:.layout|nth:3:3|repeat:item|prune:*"
+		],
+		[
+			"[$items.data.thumbnail|repeat:.wide.column:item|magnet:*]",
+			"[$items|at:.wide.column|repeat:item|.data.thumbnail|fail:*]"
+		],
+		[
+			"[$items.data.thumbnail|repeat:.layout:item:3:0|",
+			"[$items|at:.layout|nth:3:0|repeat:item|.data.thumbnail|"
+		],
+		[
+			"[$items.data.thumbnail|repeat:.layout:item:3:1|",
+			"[$items|at:.layout|nth:3:1|repeat:item|.data.thumbnail|"
+		],
+		[
+			"[$items.data.thumbnail|repeat:.layout:item:3:2|",
+			"[$items|at:.layout|nth:3:2|repeat:item|.data.thumbnail|"
+		],
+		[
+			"[$items.data.thumbnail|repeat:.wide.column:item|",
+			"[$items|at:.wide.column|repeat:item|.data.thumbnail|"
+		],
+		[
+			"|$elements.event.properties.label.anyOf.title|repeat:.item:labels",
+			"|$elements.event.properties.label.anyOf|at:.item|repeat:labels|.title"
+		],
+		[
+			"$elements.blog.properties.topics.items.anyOf.title|repeat:.item:option",
+			"$elements.blog.properties.topics.items.anyOf|at:.item|repeat:option|.title"
+		],
+		[
+			"$elements.blog.properties.topics.items.anyOf.title|repeat:.item:opt",
+			"$elements.blog.properties.topics.items.anyOf|at:.item|repeat:opt|.title"
+		],
+		[
+			"|repeat:a:topic",
+			"|at:a|repeat:topic"
 		],
 		[
 			"|repeat:.item:opt",
@@ -57,12 +94,12 @@ function doReplacements(str) {
 			"|date:"
 		],
 		[
-			"[items.data.title|repeat:p:result]",
-			"[items|at:p|repeat:result|.data.title]"
+			"[$items.data.title|repeat:p:result]",
+			"[$items|at:p|repeat:result|.data.title]"
 		],
 		[
-			"[items.data.title|repeat:.card:result]",
-			"[items|at:.card|repeat:result|.data.title]"
+			"[$items.data.title|repeat:.card:result]",
+			"[$items|at:.card|repeat:result|.data.title]"
 		],
 		[
 			"[result.data.headlines|html|slice:0:3|join::br]",
@@ -137,16 +174,8 @@ function doReplacements(str) {
 			"|at:.column|to:class"
 		],
 		[
-			"|$elements.event.properties.label.anyOf.title|repeat:.item:labels",
-			"|$elements.event.properties.label.anyOf|at:.item|repeat:labels|.title"
-		],
-		[
-			"|$elements.blog.properties.topics.items.anyOf.title|repeat:.item:option",
-			"|$elements.blog.properties.topics.items.anyOf|at:.item|repeat:option|.title"
-		],
-		[
-			"[item.items|repeat:.column+++++:item|",
-			"[item.items|at:.column:5|repeat:item|"
+			"[$items|repeat:.column+++++:item|",
+			"[$items|at:.column:5|repeat:item|"
 		],
 		[
 			"|repeat:.item:label",
