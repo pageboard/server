@@ -281,21 +281,21 @@ module.exports = class Domains {
 	async #resolvableHost(hostname, host) {
 		const rec = this.#ips[host.by];
 		const lookup = await dns.lookup(hostname, {
-			all: false
+			family: 4
 		});
 		if (lookup.address == hostname) {
 			throw new Error("hostname is an ip " + hostname);
 		}
 		const expected = rec['ip' + lookup.family];
+
 		if (lookup.address != expected) {
 			setTimeout(() => {
 				// allow checking again in a minute
 				host.reset();
 			}, 60000);
-			throw new HttpError.ServiceUnavailable(
-				Text`${hostname} ${lookup.family} ${lookup.address}
-				does not match ${expected}`
-			);
+			console.error(Text`${hostname} ${lookup.family} ${lookup.address}
+				does not match ${expected}`);
+			throw new HttpError.ServiceUnavailable('Host unknown');
 		}
 	}
 
