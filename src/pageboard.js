@@ -189,6 +189,14 @@ module.exports = class Pageboard {
 			this.#domainsError(err, req, res, next)
 		);
 
+		server.get('/.well-known/traffic-advice', (req, res) => {
+			res.type('application/trafficadvice+json');
+			res.json([{
+				"user_agent": "prefetch-proxy",
+				"fraction": 1.0
+			}]);
+		});
+
 		await this.#initPlugins();
 		this.#initServices();
 
