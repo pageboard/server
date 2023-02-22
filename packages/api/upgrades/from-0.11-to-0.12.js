@@ -98,12 +98,16 @@ function doReplacements(str) {
 			"[$items|at:p|repeat:result|.data.title]"
 		],
 		[
+			"$items.data.title|repeat:.row:item",
+			"$items|at:.row|repeat:item|.data.title"
+		],
+		[
 			"[$items.data.title|repeat:.card:result]",
 			"[$items|at:.card|repeat:result|.data.title]"
 		],
 		[
-			"[result.data.headlines|html|slice:0:3|join::br]",
-			"[result.headlines|slice:0:3|join:<br>|as:html]"
+			"result.headlines|html|slice:0:3|join::br",
+			"result.headlines|slice:0:3|join:<br>|as:html"
 		],
 		[
 			"|now|",
