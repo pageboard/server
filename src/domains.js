@@ -1,9 +1,10 @@
-const { promises: dns } = require.lazy('node:dns');
+const { promises: dns, setDefaultResultOrder } = require.lazy('node:dns');
 const { Deferred } = require.lazy('class-deferred');
 const Queue = require.lazy('./express-queue');
 
 // const localhost4 = "127.0.0.1";
 // const localhost6 = "::1";
+setDefaultResultOrder("ipv4first");
 
 const [
 	INIT,
