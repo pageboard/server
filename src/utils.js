@@ -7,7 +7,7 @@ const {
 const getSlug = require.lazy('speakingurl');
 
 const sharedMd = new Matchdom(TextPlugin, ArrayPlugin, OpsPlugin, NumPlugin, DatePlugin, {
-	types: {
+	formats: {
 		as: {
 			slug: (ctx, str) => getSlug(str, { custom: { "_": "-" } })
 		}
