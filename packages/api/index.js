@@ -211,6 +211,12 @@ module.exports = class ApiModule {
 			if (obj.item) fillTypes(obj.item, usedTypes);
 			if (obj.items) fillTypes(obj.items, usedTypes);
 
+			// FIXME request knows which types could be sent back
+			// and client needs the bundles even if results are empty
+			// -> there is no need to walk obj.item(s). Just trust the "types"
+
+			if (obj.types) for (const type of obj.types) if (type) usedTypes.add(type);
+
 			const usedRoots = new Set();
 			for (const type of usedTypes) {
 				if (bundles[type]) {
