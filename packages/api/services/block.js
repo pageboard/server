@@ -178,7 +178,7 @@ module.exports = class BlockService {
 		const rows = await q;
 		const obj = {
 			// types are used by send()
-			types: [data.type, data.parents?.type, data.children?.type],
+			types: [data.type],
 			items: rows,
 			offset: data.offset,
 			limit: data.limit
