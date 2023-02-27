@@ -11,6 +11,7 @@ module.exports = class PageService {
 			const forWebmaster = Boolean(query.nested);
 			delete query.nested;
 			let data;
+			req.bundles.add('core');
 			if (isWebmaster && !forWebmaster) {
 				data = {
 					item: {
@@ -21,10 +22,9 @@ module.exports = class PageService {
 				};
 			} else {
 				data = await req.run('page.get', query);
-				if (isWebmaster && forWebmaster) req.bundles.add('nested');
+				if (isWebmaster && forWebmaster) req.bundles.add('editor');
 			}
 			data.commons = app.opts.commons;
-			req.bundles.add('core');
 			res.return(data);
 		});
 		server.get('/.api/pages', async (req, res) => {
