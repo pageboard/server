@@ -48,7 +48,10 @@ module.exports = class ApiModule {
 			// invalid site by site
 			app.cache.tag('data-:site'),
 			// parse json bodies
-			bodyParser.json({ limit: '1000kb' })
+			bodyParser.json({ limit: '1000kb' }),
+			req => {
+				req.bundles = new Set();
+			}
 		);
 	}
 
@@ -155,7 +158,7 @@ module.exports = class ApiModule {
 	}
 
 	send(res, obj) {
-		const req = res.req;
+		const { req } = res;
 		if (obj == null || typeof obj != "object") {
 			// eslint-disable-next-line no-console
 			console.trace("app.send expects an object, got", obj);
@@ -206,19 +209,12 @@ module.exports = class ApiModule {
 
 		if (obj.item || obj.items) {
 			const { bundles, bundleMap } = req.site.$pkg;
-			const usedTypes = new Set();
 
-			if (obj.item) fillTypes(obj.item, usedTypes);
-			if (obj.items) fillTypes(obj.items, usedTypes);
-
-			// FIXME request knows which types could be sent back
-			// and client needs the bundles even if results are empty
-			// -> there is no need to walk obj.item(s). Just trust the "types"
-
-			if (obj.types) for (const type of obj.types) if (type) usedTypes.add(type);
+			if (obj.item) fillTypes(obj.item, req.bundles);
+			if (obj.items) fillTypes(obj.items, req.bundles);
 
 			const usedRoots = new Set();
-			for (const type of usedTypes) {
+			for (const type of req.bundles) {
 				if (bundles[type]) {
 					usedRoots.add(type);
 				} else {
@@ -246,8 +242,7 @@ module.exports = class ApiModule {
 			for (const item of metas) {
 				for (const name in meta) {
 					if (item.group == "page" && ["scripts", "stylesheets"].includes(name)) {
-						// specificity: these are part of the element,
-						// and are loaded by document router
+						// loaded schema will install those
 						continue;
 					}
 					const dst = meta[name];

@@ -10,34 +10,21 @@ module.exports = class PageService {
 			const isWebmaster = !req.locked(['webmaster']);
 			const forWebmaster = Boolean(query.nested);
 			delete query.nested;
+			let data;
 			if (isWebmaster && !forWebmaster) {
-				res.return({
+				data = {
 					item: {
 						type: 'write',
 						data: {}
 					},
-					site: site.data,
-					commons: app.opts.commons
-				});
+					site: site.data
+				};
 			} else {
-				const data = await req.run('page.get', query);
-				const resources = site.$pkg.bundles.write.meta.resources;
-				if (forWebmaster && resources.develop) {
-					data.meta = {
-						scripts: [resources.develop],
-						schemas: []
-					};
-					if (!Object.isEmpty(site.$pkg.bundles.user?.meta?.schemas)) {
-						data.meta.schemas.push(...site.$pkg.bundles.user.meta.schemas);
-					}
-					data.meta.resources = {
-						scripts: [resources.editor, resources.readScript],
-						stylesheets: [resources.readStyle]
-					};
-				}
-				data.commons = app.opts.commons;
-				res.return(data);
+				data = await req.run('page.get', query);
 			}
+			data.commons = app.opts.commons;
+			req.bundles.add('core');
+			res.return(data);
 		});
 		server.get('/.api/pages', async (req, res) => {
 			const { query, site } = req;

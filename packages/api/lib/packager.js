@@ -185,7 +185,8 @@ module.exports = class Packager {
 		// 		pkg.eltsMap[el.name].stylesheets = styles;
 		// 	}
 		// }
-		const path = await this.#bundleSource(site, pkg, prefix, 'elements', eltsMap);
+		const skipSchemas = metaKeys.length == 1 && rootEl.name == "core";
+		const path = skipSchemas ? null : await this.#bundleSource(site, pkg, prefix, 'elements', eltsMap);
 		metaEl.bundles = [];
 		metaEl.schemas = path ? [path] : [];
 		metaEl.scripts = rootEl.bundle === true ? rootEl.scripts : [];
