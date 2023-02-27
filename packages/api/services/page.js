@@ -21,6 +21,7 @@ module.exports = class PageService {
 				};
 			} else {
 				data = await req.run('page.get', query);
+				if (isWebmaster && forWebmaster) req.bundles.add('nested');
 			}
 			data.commons = app.opts.commons;
 			req.bundles.add('core');
