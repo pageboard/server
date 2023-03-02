@@ -176,7 +176,7 @@ module.exports = class PageService {
 		let sql = `
 			SELECT
 				page.id,
-				'site' || page.type AS type,
+				page.type,
 				page.data,
 				page.updated_at, (
 					SELECT jsonb_agg(list.fragment) FROM (
@@ -202,7 +202,7 @@ module.exports = class PageService {
 		if (data.content) sql += ` UNION ALL
 			SELECT
 				page.id,
-				'site' || page.type AS type,
+				page.type,
 				page.data,
 				page.updated_at, (
 					SELECT jsonb_agg(list.fragment) FROM (
