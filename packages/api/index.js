@@ -225,41 +225,25 @@ module.exports = class ApiModule {
 				}
 			}
 			const metas = [];
+			if (obj.meta) {
+				metas.push(obj.meta);
+				delete obj.meta;
+			}
 			for (const root of usedRoots) {
 				metas.push(bundles[root].meta);
 			}
-			if (obj.meta) {
-				metas.unshift(obj.meta);
-			}
-
-			const meta = {
-				schemas: [],
-				scripts: [],
-				stylesheets: [],
-				resources: {}
-			};
-
-			for (const item of metas) {
-				for (const name in meta) {
-					if (item.group == "page" && ["scripts", "stylesheets"].includes(name)) {
-						// loaded schema will install those
-						continue;
-					}
-					const dst = meta[name];
-					const src = item[name];
-					if (!src) continue;
-					if (Array.isArray(dst)) {
-						if (Array.isArray(src)) dst.push(...src);
-						else dst.push(src);
-					} else {
-						Object.assign(dst, src);
-					}
+			metas.sort((a, b) => {
+				if (a.priority == b.priority) return 0;
+				else if (a.priority < b.priority) return 1;
+				else return -1;
+			});
+			obj.metas = metas.map(meta => {
+				const obj = {};
+				for (const key of ['schemas', 'scripts', 'stylesheets', 'resources', 'priority']) if (meta[key]) {
+					obj[key] = meta[key];
 				}
-			}
-			for (const name in meta) if (Object.isEmpty(meta[name])) {
-				delete meta[name];
-			}
-			obj.meta = meta;
+				return obj;
+			});
 		}
 
 		res.json(obj);

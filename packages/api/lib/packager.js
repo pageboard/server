@@ -192,6 +192,7 @@ module.exports = class Packager {
 		metaEl.scripts = rootEl.bundle === true ? rootEl.scripts : [];
 		metaEl.stylesheets = rootEl.bundle === true ? rootEl.stylesheets : [];
 		metaEl.resources = rootEl.resources;
+		metaEl.priority = rootEl.priority;
 
 		// for (const el of cobundles) {
 		// 	if (el.bundle === true) {
