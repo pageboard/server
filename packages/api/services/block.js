@@ -176,7 +176,7 @@ module.exports = class BlockService {
 		});
 
 		const rows = await q;
-		req.bundles.add(data.type);
+		for (const type of data.type) req.bundles.add(type);
 		const obj = {
 			items: rows,
 			offset: data.offset,
