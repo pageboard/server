@@ -232,9 +232,9 @@ module.exports = class ApiModule {
 			for (const root of usedRoots) {
 				metas.push(bundles[root].meta);
 			}
-			metas.sort((a, b) => {
-				if (a.priority == b.priority) return 0;
-				else if (a.priority < b.priority) return 1;
+			metas.sort(({ priority: a = 0 }, { priority: b = 0 }) => {
+				if (a == b) return 0;
+				else if (a > b) return 1;
 				else return -1;
 			});
 			obj.metas = metas.map(meta => {
