@@ -226,6 +226,7 @@ module.exports = class ApiModule {
 			}
 			const metas = [];
 			if (obj.meta) {
+				console.warn("obj.meta is set", obj.meta);
 				metas.push(obj.meta);
 				delete obj.meta;
 			}
