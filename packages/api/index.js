@@ -219,6 +219,10 @@ module.exports = class ApiModule {
 					usedRoots.add(type);
 				} else {
 					const rootSet = bundleMap.get(type);
+					if (!rootSet) {
+						console.warn("missing bundle for block type:", type);
+						continue;
+					}
 					// ignore elements without bundles, or belonging to multiple roots
 					if (rootSet.size != 1) continue;
 					usedRoots.add(Array.from(rootSet).at(0));
