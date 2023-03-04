@@ -48,10 +48,7 @@ module.exports = class ApiModule {
 			// invalid site by site
 			app.cache.tag('data-:site'),
 			// parse json bodies
-			bodyParser.json({ limit: '1000kb' }),
-			req => {
-				req.bundles = new Set();
-			}
+			bodyParser.json({ limit: '1000kb' })
 		);
 	}
 
