@@ -155,18 +155,11 @@ module.exports = class ArchiveService {
 
 		let upgrader;
 		const refs = new Map();
+		const list = [];
 		const beforeEach = async obj => {
-			if (!obj.id) {
-				if (obj.pathname) {
-					obj.pathname = obj.pathname.replace(
-						/\/uploads\/[^/]+\//,
-						`/uploads/${site.id}/`
-					);
-				}
-				return obj;
-			} else if (obj.type == "site") {
+			if (obj.type == "site" || list.length == 0) {
 				const toVersion = site.data.server;
-				const fromVersion = obj.data?.server ?? toVersion;
+				const fromVersion = obj.type == "site" && obj.data?.server || toVersion;
 
 				upgrader = new Upgrader({
 					site,
@@ -174,6 +167,14 @@ module.exports = class ArchiveService {
 					from: fromVersion,
 					to: toVersion
 				});
+			} else if (!obj.id) {
+				if (obj.pathname) {
+					obj.pathname = obj.pathname.replace(
+						/\/uploads\/[^/]+\//,
+						`/uploads/${site.id}/`
+					);
+				}
+				return obj;
 			}
 			return upgrader.beforeEach(obj);
 		};
@@ -241,7 +242,6 @@ module.exports = class ArchiveService {
 			}
 		};
 
-		const list = [];
 		fstream.on('data', async obj => {
 			list.push(await beforeEach(obj));
 		});
