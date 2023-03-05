@@ -43,4 +43,3 @@ jspm_packages
 /lib
 
 yarn.lock
-*.ndjson
