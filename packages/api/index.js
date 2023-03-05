@@ -273,6 +273,10 @@ function fillTypes(list, set) {
 	if (!Array.isArray(list)) list = [list];
 	for (const row of list) {
 		if (row.type) set.add(row.type);
+		if (row.type == "binding" || row.type == "block_binding") {
+			findTypeBinding(row.data.fill, set);
+			findTypeBinding(row.data.attr, set);
+		}
 		if (row.parent) fillTypes(row.parent, set);
 		if (row.child) fillTypes(row.child, set);
 		if (row.parents) fillTypes(row.parents, set);
@@ -281,3 +285,13 @@ function fillTypes(list, set) {
 	return set;
 }
 
+
+function findTypeBinding(str, set) {
+	if (!str) return;
+	const { groups: {
+		type
+	} } = /^schema:[.\w]+:(?<type>\w+)\./m.exec(str) ?? {
+		groups: {}
+	};
+	if (type) set.add(type);
+}
