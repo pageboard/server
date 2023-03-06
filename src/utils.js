@@ -36,7 +36,7 @@ exports.mergeExpressions = function mergeExpressions(data, expr, obj) {
 	const md = new Matchdom(sharedMd, {
 		hooks: {
 			afterAll(ctx, val) {
-				hit = val !== undefined;
+				hit = val != null;
 				return val;
 			}
 		}
