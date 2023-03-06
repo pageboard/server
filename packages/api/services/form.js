@@ -47,7 +47,7 @@ module.exports = class FormService {
 			form.expr?.action?.parameters ?? {},
 			{
 				$request: reqBody,
-				$query: data.query || {},
+				$query: unflatten(data.query || {}),
 				$user: user
 			}
 		);

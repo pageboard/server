@@ -1,5 +1,5 @@
 const {
-	mergeExpressions
+	mergeExpressions, unflatten
 } = require('../../../src/utils');
 
 module.exports = class SearchService {
@@ -41,7 +41,7 @@ module.exports = class SearchService {
 			form.expr?.action?.parameters ?? {},
 			{
 				$pathname,
-				$query: data.query || {},
+				$query: unflatten(data.query || {}),
 				$user: user
 			}
 		);
