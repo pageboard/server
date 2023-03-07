@@ -150,7 +150,7 @@ module.exports = class PrerenderModule {
 	#callHtmlMw(...args) {
 		if (!this.#htmlMw) this.#htmlMw = dom().route((phase, req, res) => {
 			const { site } = req;
-			const { location, settings, online, visible } = phase;
+			const { settings, online, visible } = phase;
 			if (visible) {
 				const { plugins } = settings;
 				res.type("text/html");
@@ -161,14 +161,6 @@ module.exports = class PrerenderModule {
 				if (site.data.env == "dev" || !req.locked(['webmaster'])) {
 					settings.enabled = false;
 				}
-				if (req.query.develop !== undefined) {
-					location.searchParams.delete('develop');
-					if (req.query.develop == "render") {
-						settings.enabled = true;
-					} else {
-						settings.enabled = false;
-					}
-				}
 			} else if (online) {
 				const { groups: {
 					code
@@ -176,7 +168,6 @@ module.exports = class PrerenderModule {
 					groups: {}
 				};
 				if (code) {
-					// ends with a status code, not set in develop mode
 					req.call('cache.map', req.path);
 					res.status(Number.parseInt(code));
 				} else {
