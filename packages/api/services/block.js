@@ -920,6 +920,7 @@ function filterSub(q, data, alias) {
 	const valid = whereSub(q, data, alias);
 
 	const orders = data.order || [];
+	orders.push('created_at');
 	const seen = {};
 	for (const order of orders) {
 		const { col, dir } = parseOrder('block', order);
