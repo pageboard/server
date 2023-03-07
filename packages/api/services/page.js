@@ -11,7 +11,6 @@ module.exports = class PageService {
 			const forWebmaster = Boolean(query.nested);
 			delete query.nested;
 			let data;
-			req.bundles.add('core');
 			if (isWebmaster && !forWebmaster) {
 				data = {
 					item: {
