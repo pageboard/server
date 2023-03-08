@@ -442,8 +442,9 @@ module.exports = class MailModule {
 				nullable: true
 			},
 			body: {
-				title: 'Body',
-				type: 'object'
+				title: 'Query',
+				type: 'object',
+				default: {}
 			}
 		}
 	};
