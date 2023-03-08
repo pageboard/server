@@ -153,6 +153,10 @@ module.exports = class MailModule {
 		if (req.site.id) {
 			data.headers["X-PM-Tag"] = req.site.id;
 		}
+		if (data.attachments) data.attachments = data.attachments.filter(obj => {
+			const url = new URL(obj.href, req.site.url);
+			return url.host == req.site.url.host;
+		});
 		Log.mail("mail.to", data);
 		return mailer.transport.sendMail(data).then(sentStatus => {
 			return {
@@ -193,6 +197,26 @@ module.exports = class MailModule {
 			html: {
 				title: 'HTML body',
 				type: 'string'
+			},
+			attachments: {
+				title: 'Attachments',
+				description: 'List of URL',
+				type: 'array',
+				items: {
+					type: 'object',
+					properties: {
+						filename: {
+							title: 'File name',
+							type: 'string'
+						},
+						href: {
+							title: 'url',
+							type: 'string',
+							format: 'uri-reference'
+						}
+					}
+				},
+				nullable: true
 			},
 			from: {
 				title: 'Sender',
@@ -351,11 +375,7 @@ module.exports = class MailModule {
 			mailOpts.subject = data.subject || mailObj.title;
 			mailOpts.html = mailObj.html;
 			mailOpts.text = mailObj.text;
-			// mailOpts.attachments = [{
-			// 	path: '/path/to/test.txt',
-			// 	filename: 'test.txt', // optional
-			// 	contentType: 'text/plain' // optional
-			// }];
+			mailOpts.attachments = mailObj.attachments;
 		} catch (err) {
 			if (err && err.response && err.response.statusCode) {
 				throw new HttpError[err.response.statusCode];
