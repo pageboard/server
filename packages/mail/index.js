@@ -352,7 +352,6 @@ module.exports = class MailModule {
 		}
 		const emailUrl = new URL(emailPage.data.url, site.url);
 		try {
-			// TODO when all 0.7 are migrated, drop .mail extension
 			for (const [key, val] of Object.entries(data.body)) {
 				if (Array.isArray(val)) for (const sval of val) {
 					emailUrl.searchParams.append(key, sval);
