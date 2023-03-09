@@ -78,7 +78,7 @@ class Href extends common.Model {
 					duration: {
 						nullable: true,
 						type: "string",
-						format: "time"
+						pattern: /^\d+:\d{2}:\d{2}$/.source
 					}
 				}
 			}
