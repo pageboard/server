@@ -79,6 +79,11 @@ class Href extends common.Model {
 						nullable: true,
 						type: "string",
 						pattern: /^\d+:\d{2}:\d{2}$/.source
+					},
+					source: {
+						nullable: true,
+						type: "string",
+						format: "uri-reference"
 					}
 				}
 			}

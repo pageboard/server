@@ -297,7 +297,7 @@ module.exports = class HrefService {
 			for (const [type, list] of Object.entries(hrefs)) {
 				if (!list.some(desc => {
 					return desc.types.some(type => {
-						return ['image', 'video', 'audio', 'svg'].includes(type);
+						return ['image', 'video', 'audio', 'svg', 'embed'].includes(type);
 					});
 				})) continue;
 				for (const desc of list) {
@@ -337,6 +337,7 @@ module.exports = class HrefService {
 			.join('list', 'href.url', 'list.url');
 		if (data.asMap) {
 			let meta = "jsonb_set(href.meta, '{mime}', to_jsonb(href.mime))";
+			meta = `jsonb_set(${meta}, '{title}', to_jsonb(href.title))`;
 			if (data.preview) {
 				meta = `jsonb_set(${meta}, '{preview}', to_jsonb(href.preview))`;
 			}
