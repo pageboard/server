@@ -33,9 +33,8 @@ module.exports = class SettingsService {
 		return settings;
 	}
 	static get = {
-		title: 'Get User',
+		title: 'Get user settings',
 		$action: 'read',
-		external: true,
 		required: ['id'],
 		properties: {
 			id: {
@@ -75,6 +74,7 @@ module.exports = class SettingsService {
 		return settings;
 	}
 	static find = {
+		title: 'Find user settings',
 		properties: {
 			id: {
 				type: 'string',
@@ -99,6 +99,7 @@ module.exports = class SettingsService {
 			.whereJsonText('parent.data:email', 'in', data.email);
 	}
 	static search = {
+		title: 'Search user settings',
 		$action: 'read',
 		required: ['email'],
 		properties: {
@@ -152,6 +153,7 @@ module.exports = class SettingsService {
 	}
 
 	static save = {
+		title: 'Save/Add user settings',
 		$action: 'save',
 		properties: {
 			id: {

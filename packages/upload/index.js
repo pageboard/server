@@ -100,6 +100,7 @@ module.exports = class UploadModule {
 	}
 	static parse = {
 		title: 'Parse request',
+		$lock: 'root',
 		description: 'Returns a list of { name, title, path, mime, size }',
 		properties: {
 			files: {

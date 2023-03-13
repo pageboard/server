@@ -21,6 +21,8 @@ module.exports = class UserService {
 		return this.#QueryUser(req, data);
 	}
 	static get = {
+		title: 'Get user',
+		$lock: 'root',
 		$action: 'read',
 		anyOf: [{
 			required: ['email']
@@ -54,6 +56,8 @@ module.exports = class UserService {
 		}).returning('*');
 	}
 	static add = {
+		title: 'Add user',
+		$lock: 'root',
 		$action: 'add',
 		required: ['email'],
 		properties: {
@@ -71,6 +75,8 @@ module.exports = class UserService {
 	}
 	static del = {
 		...this.add,
+		title: 'Delete user',
+		$lock: 'root',
 		$action: 'del'
 	};
 };

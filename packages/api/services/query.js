@@ -49,6 +49,8 @@ module.exports = class SearchService {
 		return run(method, params);
 	}
 	static query = {
+		title: 'Form query',
+		$lock: 'root',
 		$action: 'read',
 		required: ['id'],
 		properties: {

@@ -37,6 +37,7 @@ module.exports = class SiteService {
 	static get = {
 		title: 'Get site',
 		$action: 'read',
+		$lock: 'root',
 		properties: {
 			id: {
 				title: 'ID',
@@ -86,6 +87,7 @@ module.exports = class SiteService {
 	static search = {
 		title: 'Search user sites',
 		$action: 'read',
+		$lock: 'root',
 		required: ['email'],
 		properties: {
 			email: {
@@ -133,6 +135,7 @@ module.exports = class SiteService {
 	static add = {
 		title: 'Add site',
 		$action: 'add',
+		$lock: 'root',
 		required: ['id'],
 		properties: {
 			id: {
@@ -166,6 +169,7 @@ module.exports = class SiteService {
 	static save = {
 		title: 'Save site',
 		$action: 'save',
+		$lock: 'root',
 		required: ['id', 'data'],
 		properties: {
 			id: {
@@ -211,6 +215,7 @@ module.exports = class SiteService {
 	static del = {
 		title: 'Delete a site',
 		$action: 'del',
+		$lock: 'root',
 		required: ['id'],
 		properties: {
 			id: {

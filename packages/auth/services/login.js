@@ -95,7 +95,6 @@ module.exports = class LoginModule {
 	}
 	static send = {
 		title: 'Send token',
-		external: true,
 		$action: 'write',
 		required: ['email'],
 		properties: {
@@ -170,7 +169,6 @@ module.exports = class LoginModule {
 	}
 	static grant = {
 		title: 'Grant',
-		external: true,
 		description: 'Sets cookie with grants',
 		$action: 'write',
 		required: ['email', 'token'],
@@ -210,6 +208,7 @@ module.exports = class LoginModule {
 		title: 'Internal login link',
 		$action: 'write',
 		required: ['email', 'grant'],
+		$lock: 'root',
 		properties: {
 			email: {
 				title: 'Email',
@@ -265,6 +264,7 @@ module.exports = class LoginModule {
 	static key = {
 		title: 'Private Key URI',
 		$action: 'read',
+		$lock: 'root',
 		required: ['email'],
 		properties: {
 			email: {

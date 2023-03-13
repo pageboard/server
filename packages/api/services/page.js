@@ -147,6 +147,8 @@ module.exports = class PageService {
 		return obj;
 	}
 	static get = {
+		title: 'Get page',
+		$lock: 'root',
 		$action: 'read',
 		required: ['url'],
 		properties: {
@@ -255,7 +257,6 @@ module.exports = class PageService {
 	static search = {
 		title: 'Search pages',
 		$action: 'read',
-		external: true,
 		required: ['text'],
 		properties: {
 			text: {
@@ -316,7 +317,7 @@ module.exports = class PageService {
 	static all = {
 		title: 'Site map',
 		$action: 'read',
-		external: true,
+		$lock: 'root',
 		properties: {
 			parent: {
 				title: 'Root pathname',
@@ -467,6 +468,8 @@ module.exports = class PageService {
 		return returning;
 	}
 	static save = {
+		title: 'Save page',
+		$lock: 'root',
 		$action: 'save',
 		properties: {
 			add: {
@@ -508,6 +511,8 @@ module.exports = class PageService {
 		return obj.update[0];
 	}
 	static add = {
+		title: 'Add page',
+		$lock: 'root',
 		$action: 'add',
 		required: ['type', 'data'],
 		properties: {
@@ -548,6 +553,8 @@ module.exports = class PageService {
 		});
 	}
 	static del = {
+		title: 'Delete page',
+		$lock: 'root',
 		$action: 'del',
 		required: ['id'],
 		properties: {
@@ -579,6 +586,8 @@ module.exports = class PageService {
 		return lines.join('\n');
 	}
 	static robots = {
+		title: 'Get robots.txt',
+		$lock: 'root',
 		$action: 'read'
 	};
 };

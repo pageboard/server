@@ -303,19 +303,15 @@ module.exports = class Pageboard {
 		for (const plugin of this.#plugins) {
 			const { constructor } = plugin;
 			const { name } = constructor;
-			const services = this.services;
-			const service = services[name] || {};
+			const { services } = this;
+			const service = services[name] ?? {};
 			let defined = false;
 			for (const key of Object.getOwnPropertyNames(constructor)) {
 				const desc = constructor[key];
 				if (desc == null || typeof desc != "object") continue;
 				if (typeof plugin[key] != "function") continue;
 				defined = true;
-				Object.defineProperty(service, key, {
-					enumerable: desc.external,
-					value: desc
-				});
-				delete desc.external;
+				service[key] = desc;
 			}
 			if (!services[name] && defined) {
 				services[name] = service;

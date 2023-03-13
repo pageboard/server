@@ -79,7 +79,6 @@ module.exports = class ReservationService {
 	static add = {
 		title: 'Add reservation',
 		$action: 'write',
-		external: true,
 		required: ['event_date', 'reservation', 'email'],
 		properties: {
 			event_date: {
@@ -210,7 +209,6 @@ module.exports = class ReservationService {
 	static save = {
 		title: 'Save reservation',
 		$action: 'write',
-		external: true,
 		required: ['id', 'reservation'],
 		properties: {
 			id: {
@@ -256,7 +254,6 @@ module.exports = class ReservationService {
 	static del = {
 		title: 'Delete reservation',
 		$action: 'write',
-		external: true,
 		required: ['reservation'],
 		properties: {
 			reservation: {
@@ -353,7 +350,6 @@ module.exports = class ReservationService {
 	static search = {
 		title: 'Search reservations',
 		$action: 'read',
-		external: true,
 		required: ['id'],
 		properties: {
 			id: {

@@ -216,7 +216,6 @@ module.exports = class BlockService {
 	static search = {
 		title: 'Search blocks',
 		$action: 'read',
-		external: true,
 		required: ['type'],
 		properties: {
 			parent: {
@@ -474,7 +473,6 @@ module.exports = class BlockService {
 	static find = {
 		title: 'Find one block',
 		$action: 'read',
-		external: true,
 		required: ['type'],
 		get properties() {
 			const obj = { ...BlockService.search.properties };
@@ -907,6 +905,7 @@ function whereSub(q, data, alias = 'block') {
 		q.whereObject({ data: data.data }, data.type, alias);
 	}
 	if (data.text) {
+		// whereText(q, data.text, alias);
 		valid = true;
 		q.from(raw("websearch_to_tsquery('unaccent', ?) AS query, ??", [data.text, alias]));
 		q.whereRaw(`query @@ ${alias}.tsv`);
@@ -914,11 +913,75 @@ function whereSub(q, data, alias = 'block') {
 	}
 	return valid;
 }
+/*
+function whereText(q, text, alias) {
+	const drafts = data.drafts
+		? ''
+		: `AND (page.data->'nositemap' IS NULL OR (page.data->'nositemap')::BOOLEAN IS NOT TRUE)`;
+
+	const types = data.type ?? site.$pkg.pages;
+
+	const results = await trx.raw(`SELECT json_build_object(
+			'count', count,
+			'rows', json_agg(
+				json_build_object(
+					'id', id,
+					'type', type,
+					'updated_at', updated_at,
+					'data', json_build_object(
+						'title', title,
+						'url', url,
+						'headlines', headlines,
+						'rank', rank
+					)
+				)
+			)) AS result FROM (
+			SELECT
+				id, type, title, url, updated_at, json_agg(DISTINCT headlines) AS headlines, sum(qrank) AS rank,
+				count(*) OVER() AS count
+			FROM (
+				SELECT
+					page.id,
+					page.type,
+					page.data->>'title' AS title,
+					page.data->>'url' AS url,
+					page.updated_at,
+					(SELECT string_agg(heads.value, '<br>') FROM (SELECT DISTINCT trim(value) AS value FROM jsonb_each_text(ts_headline('unaccent', block.content, search.query)) WHERE length(trim(value)) > 0) AS heads) AS headlines,
+					ts_rank(block.tsv, search.query) AS qrank
+				FROM
+					block AS site,
+					relation AS rs,
+					block,
+					relation AS rp,
+					block AS page,
+					(SELECT websearch_to_tsquery('unaccent', ?) AS query) AS search
+				WHERE
+					site.type = 'site' AND site.id = ?
+					AND rs.parent_id = site._id AND block._id = rs.child_id
+					AND block.type NOT IN ('site', 'user', 'fetch', 'template', 'api_form', 'query_form', 'priv', 'settings', ${site.$pkg.pages.map(_ => '?').join(',')})
+					AND rp.child_id = block._id AND page._id = rp.parent_id
+					${drafts}
+					AND page.type IN (${types.map(_ => '?').join(',')})
+					AND search.query @@ block.tsv
+			) AS results
+			GROUP BY id, type, title, url, updated_at ORDER BY rank DESC, updated_at DESC OFFSET ? LIMIT ?
+		) AS foo GROUP BY count`, [
+		data.text,
+		site.id,
+		...site.$pkg.pages,
+		...types,
+		data.offset,
+		data.limit
+	]);
+}
+*/
 
 function filterSub(q, data, alias) {
 	q.select();
 	const valid = whereSub(q, data, alias);
-
+	// TODO ORDER BY array_position(ARRAY['f', 'p', 'i', 'a']::varchar[], myfieldref)
+	// when myfield=[f, p, i, a]
+	// to keep same order
 	const orders = data.order || [];
 	orders.push('created_at');
 	const seen = {};

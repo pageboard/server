@@ -115,6 +115,7 @@ module.exports = class ArchiveService {
 	static export = {
 		title: 'Export site',
 		$action: 'read',
+		$lock: 'root',
 		properties: {
 			file: {
 				title: 'File name',
@@ -268,6 +269,7 @@ module.exports = class ArchiveService {
 	static import = {
 		title: 'Import site',
 		$action: 'write',
+		$lock: 'root',
 		required: ['file'],
 		properties: {
 			file: {

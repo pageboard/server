@@ -31,6 +31,7 @@ module.exports = class HrefService {
 			.where('href.url', data.url).first();
 	}
 	static get = {
+		title: 'Get URL metadata',
 		$action: 'read',
 		required: ['url'],
 		properties: {
@@ -123,6 +124,7 @@ module.exports = class HrefService {
 	}
 
 	static search = {
+		title: 'Search URL metadata',
 		$action: 'read',
 		properties: {
 			type: {
@@ -231,6 +233,7 @@ module.exports = class HrefService {
 	}
 
 	static add = {
+		title: 'Add URL',
 		$action: 'add',
 		required: ['url'],
 		properties: {
@@ -255,6 +258,7 @@ module.exports = class HrefService {
 			.returning(Href.columns);
 	}
 	static save = {
+		title: 'Change URL title',
 		$action: 'save',
 		required: ['url', 'title'],
 		properties: {
@@ -279,6 +283,7 @@ module.exports = class HrefService {
 		return href;
 	}
 	static del = {
+		title: 'Delete URL',
 		$action: 'del',
 		required: ['url'],
 		properties: {
@@ -353,6 +358,7 @@ module.exports = class HrefService {
 
 	static collect = {
 		title: 'Collect hrefs',
+		$lock: 'root',
 		$action: 'read',
 		properties: {
 			ids: {
@@ -487,6 +493,8 @@ module.exports = class HrefService {
 		};
 	}
 	static reinspect = {
+		title: 'Batch URL reinspection',
+		$lock: 'root',
 		$action: 'write',
 		properties: {
 			all: {

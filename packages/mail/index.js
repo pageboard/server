@@ -76,6 +76,8 @@ module.exports = class MailModule {
 		});
 	}
 	static report = {
+		title: 'Process report-to email',
+		$lock: 'root',
 		$action: 'write',
 		additionalProperties: true
 	};
@@ -126,6 +128,8 @@ module.exports = class MailModule {
 		return checks.some(ok => Boolean(ok));
 	}
 	static receive = {
+		title: 'Receive email',
+		$lock: 'root',
 		$action: 'write',
 		additionalProperties: true
 	};
@@ -169,6 +173,8 @@ module.exports = class MailModule {
 		});
 	}
 	static to = {
+		title: 'Send email to',
+		$lock: 'root',
 		$action: 'write',
 		required: ['subject', 'to', 'text'],
 		properties: {
@@ -386,7 +392,6 @@ module.exports = class MailModule {
 	}
 	static send = {
 		title: 'Send email',
-		external: true,
 		$action: 'write',
 		required: ['url', 'to'],
 		properties: {
