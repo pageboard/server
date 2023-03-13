@@ -50,7 +50,7 @@ module.exports = class SearchService {
 	}
 	static query = {
 		title: 'Form query',
-		$lock: 'root',
+		$lock: true,
 		$action: 'read',
 		required: ['id'],
 		properties: {

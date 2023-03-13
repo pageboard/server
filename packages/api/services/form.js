@@ -93,7 +93,7 @@ module.exports = class FormService {
 	}
 	static submit = {
 		title: 'Form submit',
-		$lock: 'root',
+		$lock: true,
 		$action: 'write',
 		required: ["id"],
 		properties: {

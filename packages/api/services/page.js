@@ -148,7 +148,7 @@ module.exports = class PageService {
 	}
 	static get = {
 		title: 'Get page',
-		$lock: 'root',
+		$lock: true,
 		$action: 'read',
 		required: ['url'],
 		properties: {
@@ -317,7 +317,7 @@ module.exports = class PageService {
 	static all = {
 		title: 'Site map',
 		$action: 'read',
-		$lock: 'root',
+		$lock: true,
 		properties: {
 			parent: {
 				title: 'Root pathname',
@@ -469,8 +469,8 @@ module.exports = class PageService {
 	}
 	static save = {
 		title: 'Save page',
-		$lock: 'root',
-		$action: 'save',
+		$lock: true,
+		$action: 'write',
 		properties: {
 			add: {
 				type: 'array',
@@ -512,8 +512,8 @@ module.exports = class PageService {
 	}
 	static add = {
 		title: 'Add page',
-		$lock: 'root',
-		$action: 'add',
+		$lock: true,
+		$action: 'write',
 		required: ['type', 'data'],
 		properties: {
 			type: {
@@ -554,8 +554,8 @@ module.exports = class PageService {
 	}
 	static del = {
 		title: 'Delete page',
-		$lock: 'root',
-		$action: 'del',
+		$lock: true,
+		$action: 'write',
 		required: ['id'],
 		properties: {
 			id: {
@@ -587,7 +587,7 @@ module.exports = class PageService {
 	}
 	static robots = {
 		title: 'Get robots.txt',
-		$lock: 'root',
+		$lock: true,
 		$action: 'read'
 	};
 };

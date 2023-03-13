@@ -154,7 +154,7 @@ module.exports = class SettingsService {
 
 	static save = {
 		title: 'Save/Add user settings',
-		$action: 'save',
+		$action: 'write',
 		properties: {
 			id: {
 				type: 'string',

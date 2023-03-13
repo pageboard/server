@@ -52,9 +52,6 @@ module.exports = class DatabaseModule {
 		if (list.length) return list;
 		return "No migrations";
 	}
-	static migrate = {
-		$action: 'write'
-	};
 
 	#scheduleTenantCopy(app) {
 		const tenants = { ...this.opts.url };
@@ -85,7 +82,7 @@ module.exports = class DatabaseModule {
 	}
 	static setup = {
 		title: 'Setup tenant database',
-		$lock: 'root',
+		$lock: true,
 		$action: 'write',
 		required: ['file', 'tenant'],
 		properties: {
@@ -110,7 +107,7 @@ module.exports = class DatabaseModule {
 	static copy = {
 		title: 'Copy current database to tenant database',
 		$action: 'write',
-		$lock: 'root',
+		$lock: true,
 		required: ['tenant'],
 		properties: {
 			tenant: {
@@ -141,7 +138,7 @@ module.exports = class DatabaseModule {
 		title: 'Dump database',
 		$action: 'read',
 		required: ['file'],
-		$lock: 'root',
+		$lock: true,
 		properties: {
 			file: {
 				title: 'File path',
@@ -183,7 +180,7 @@ module.exports = class DatabaseModule {
 	static restore = {
 		title: 'Restore dump to tenant database',
 		$action: 'write',
-		$lock: 'root',
+		$lock: true,
 		required: ['file', 'tenant'],
 		properties: {
 			file: {

@@ -208,7 +208,7 @@ module.exports = class LoginModule {
 		title: 'Internal login link',
 		$action: 'write',
 		required: ['email', 'grant'],
-		$lock: 'root',
+		$lock: true,
 		properties: {
 			email: {
 				title: 'Email',
@@ -239,7 +239,6 @@ module.exports = class LoginModule {
 	}
 	static clear = {
 		title: 'Logout',
-		external: true,
 		description: 'Clear cookie',
 		$action: 'write'
 	};
@@ -264,7 +263,7 @@ module.exports = class LoginModule {
 	static key = {
 		title: 'Private Key URI',
 		$action: 'read',
-		$lock: 'root',
+		$lock: true,
 		required: ['email'],
 		properties: {
 			email: {

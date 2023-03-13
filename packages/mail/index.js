@@ -77,7 +77,7 @@ module.exports = class MailModule {
 	}
 	static report = {
 		title: 'Process report-to email',
-		$lock: 'root',
+		$lock: true,
 		$action: 'write',
 		additionalProperties: true
 	};
@@ -129,7 +129,7 @@ module.exports = class MailModule {
 	}
 	static receive = {
 		title: 'Receive email',
-		$lock: 'root',
+		$lock: true,
 		$action: 'write',
 		additionalProperties: true
 	};
@@ -174,7 +174,7 @@ module.exports = class MailModule {
 	}
 	static to = {
 		title: 'Send email to',
-		$lock: 'root',
+		$lock: true,
 		$action: 'write',
 		required: ['subject', 'to', 'text'],
 		properties: {

@@ -47,6 +47,7 @@ module.exports = class BlockService {
 		return q.first().throwIfNotFound();
 	}
 	static get = {
+		title: 'Get block',
 		$action: 'read',
 		required: ['id'],
 		properties: {
@@ -518,8 +519,7 @@ module.exports = class BlockService {
 	}
 	static clone = {
 		title: 'Clone a block',
-		$action: 'add',
-		external: true,
+		$action: 'write',
 		required: ['id'],
 		properties: {
 			id: {
@@ -591,8 +591,7 @@ module.exports = class BlockService {
 	}
 	static add = {
 		title: 'Add a block',
-		$action: 'add',
-		external: true,
+		$action: 'write',
 		required: ['type'],
 		properties: {
 			type: {
@@ -686,8 +685,7 @@ module.exports = class BlockService {
 	}
 	static save = {
 		title: 'Modify a block',
-		$action: 'save',
-		external: true,
+		$action: 'write',
 		required: ['id', 'type'],
 		properties: {
 			id: {
@@ -732,8 +730,7 @@ module.exports = class BlockService {
 	}
 	static del = {
 		title: 'Delete a block',
-		$action: 'del',
-		external: true,
+		$action: 'write',
 		required: ['id', 'type'],
 		properties: {
 			id: {
@@ -764,7 +761,7 @@ module.exports = class BlockService {
 	static write = {
 		title: 'Write multiple blocks',
 		$action: 'write',
-		external: true,
+		$lock: true,
 		required: ['operations'],
 		properties: {
 			operations: {
@@ -846,7 +843,6 @@ module.exports = class BlockService {
 	static fill = {
 		title: 'Fill block content',
 		$action: 'write',
-		external: true,
 		required: ['id'],
 		properties: {
 			id: {

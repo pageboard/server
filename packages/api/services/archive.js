@@ -115,7 +115,7 @@ module.exports = class ArchiveService {
 	static export = {
 		title: 'Export site',
 		$action: 'read',
-		$lock: 'root',
+		$lock: true,
 		properties: {
 			file: {
 				title: 'File name',
@@ -141,7 +141,8 @@ module.exports = class ArchiveService {
 	}
 	static empty = {
 		title: 'Empty site',
-		$action: 'write'
+		$action: 'write',
+		$lock: true
 	};
 
 	async import(req, { file, empty, idMap, types = [] }) {
@@ -269,7 +270,7 @@ module.exports = class ArchiveService {
 	static import = {
 		title: 'Import site',
 		$action: 'write',
-		$lock: 'root',
+		$lock: true,
 		required: ['file'],
 		properties: {
 			file: {

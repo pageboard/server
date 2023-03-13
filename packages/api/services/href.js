@@ -234,7 +234,7 @@ module.exports = class HrefService {
 
 	static add = {
 		title: 'Add URL',
-		$action: 'add',
+		$action: 'write',
 		required: ['url'],
 		properties: {
 			url: {
@@ -259,7 +259,7 @@ module.exports = class HrefService {
 	}
 	static save = {
 		title: 'Change URL title',
-		$action: 'save',
+		$action: 'write',
 		required: ['url', 'title'],
 		properties: {
 			url: {
@@ -284,7 +284,7 @@ module.exports = class HrefService {
 	}
 	static del = {
 		title: 'Delete URL',
-		$action: 'del',
+		$action: 'write',
 		required: ['url'],
 		properties: {
 			url: {
@@ -358,7 +358,7 @@ module.exports = class HrefService {
 
 	static collect = {
 		title: 'Collect hrefs',
-		$lock: 'root',
+		$lock: true,
 		$action: 'read',
 		properties: {
 			ids: {
@@ -494,7 +494,7 @@ module.exports = class HrefService {
 	}
 	static reinspect = {
 		title: 'Batch URL reinspection',
-		$lock: 'root',
+		$lock: true,
 		$action: 'write',
 		properties: {
 			all: {

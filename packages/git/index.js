@@ -126,7 +126,7 @@ module.exports = class GitModule {
 	}
 	static install = {
 		title: 'Install from git deploy',
-		$lock: 'root',
+		$lock: true,
 		$action: 'write',
 		properties: {
 			url: {

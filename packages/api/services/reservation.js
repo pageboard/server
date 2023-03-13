@@ -280,7 +280,6 @@ module.exports = class ReservationService {
 	static pay = {
 		title: 'Pay reservation',
 		$action: 'write',
-		external: true,
 		required: ['reservation'],
 		properties: {
 			reservation: {
