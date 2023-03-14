@@ -156,6 +156,7 @@ module.exports = class Domains {
 	extendRequest(req, app) {
 		req.opts = app.opts;
 		const { res } = req;
+		if (!res.locals) res.locals = {};
 		req.call = (command, data) => {
 			const [mod, name] = command.split('.');
 			return app[mod][name](req, data);
