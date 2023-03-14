@@ -82,7 +82,10 @@ module.exports = class Pageboard {
 			start: false
 		},
 		commons: {},
-		upstreams: {}
+		upstreams: {},
+		database: {
+			tenant: 'current'
+		}
 	};
 
 	constructor(opts = {}) {
@@ -124,7 +127,13 @@ module.exports = class Pageboard {
 	}
 
 	async run(command, data, site) {
-		const req = { res: {} };
+		const req = {
+			res: {
+				locals: {
+					tenant: this.opts.database.tenant
+				}
+			}
+		};
 		this.domains.extendRequest(req, this);
 		if (site) {
 			req.site = await this.install(
