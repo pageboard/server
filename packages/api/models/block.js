@@ -330,7 +330,7 @@ function contentsNames(list) {
 }
 
 function findHrefs(schema, list, root, array) {
-	if (!schema.properties) return;
+	if (!schema.properties || schema.virtual) return;
 	for (const [key, prop] of Object.entries(schema.properties)) {
 		if (!prop) throw new Error("Missing prop:" + key);
 		let path;
