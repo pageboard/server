@@ -108,7 +108,7 @@ module.exports = class PageService {
 	}
 
 	async get(req, data) {
-		const { site } = req;
+		const { site, Href } = req;
 		const obj = {
 			status: 200,
 			site: site.data
@@ -132,7 +132,8 @@ module.exports = class PageService {
 		const hrefs = await req.call('href.collect', {
 			ids: [page.id],
 			content: true,
-			asMap: true
+			asMap: true,
+			types: Href.mediaTypes
 		});
 		const links = await navigationLinks(req, data.url, page.data.prefix);
 		Object.assign(obj, {
@@ -160,7 +161,7 @@ module.exports = class PageService {
 	};
 
 	async search(req, data) {
-		const { site, trx } = req;
+		const { site, trx, Href } = req;
 		const drafts = data.drafts
 			? ''
 			: `AND (page.data->'nositemap' IS NULL OR (page.data->'nositemap')::BOOLEAN IS NOT TRUE)`;
@@ -248,7 +249,9 @@ module.exports = class PageService {
 		const ids = obj.items.map(item => item.id);
 		if (ids.length > 0) {
 			const hrow = await req.call('href.collect', {
-				ids, asMap: true
+				ids,
+				asMap: true,
+				types: Href.mediaTypes
 			}).first();
 			obj.hrefs = hrow.hrefs;
 		}

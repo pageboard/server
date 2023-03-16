@@ -8,6 +8,8 @@ class Href extends common.Model {
 
 	static idColumn = '_id';
 
+	static mediaTypes = ['image', 'video', 'audio', 'svg', 'embed'];
+
 	static jsonSchema = {
 		type: 'object',
 		required: ['url', 'mime'],

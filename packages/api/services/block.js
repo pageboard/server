@@ -77,7 +77,7 @@ module.exports = class BlockService {
 	async search(req, data) {
 		// TODO data.id or data.parent.id or data.child.id must be set
 		// currently the check filterSub -> boolean is only partially applied
-		const { site, trx, Block } = req;
+		const { site, trx, Block, Href } = req;
 		let parents = data.parents;
 		if (parents) {
 			if (parents.type || parents.id || parents.standalone) {
@@ -208,7 +208,8 @@ module.exports = class BlockService {
 				ids,
 				content: data.content,
 				asMap: true,
-				preview: data.preview
+				preview: data.preview,
+				types: Href.mediaTypes
 			}).first();
 			obj.hrefs = hrow.hrefs;
 		}

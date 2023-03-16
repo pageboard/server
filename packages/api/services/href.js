@@ -300,11 +300,13 @@ module.exports = class HrefService {
 		const qList = q => {
 			const urlQueries = [];
 			for (const [type, list] of Object.entries(hrefs)) {
-				if (!list.some(desc => {
+				if (data.types.length && !list.some(desc => {
 					return desc.types.some(type => {
-						return ['image', 'video', 'audio', 'svg', 'embed'].includes(type);
+						return data.types.includes(type);
 					});
-				})) continue;
+				})) {
+					continue;
+				}
 				for (const desc of list) {
 					const bq = site.$modelClass.query(trx).from('blocks')
 						.where('blocks.type', type)
@@ -385,6 +387,15 @@ module.exports = class HrefService {
 				description: 'Include img tag',
 				type: 'boolean',
 				default: false
+			},
+			types: {
+				title: 'Types',
+				description: 'Defaults to all types',
+				type: 'array',
+				items: {
+					type: 'string'
+				},
+				default: []
 			}
 		}
 	};
