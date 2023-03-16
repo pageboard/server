@@ -434,10 +434,14 @@ module.exports = class MailModule {
 				title: 'Mail page',
 				type: "string",
 				format: "pathname",
-				$helper: {
-					name: 'page',
-					type: 'mail'
-				}
+				$filter: {
+					name: 'helper',
+					helper: {
+						name: 'page',
+						type: 'mail'
+					}
+				},
+				$helper: 'href'
 			},
 			subject: {
 				title: 'Subject',

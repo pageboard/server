@@ -338,9 +338,7 @@ function findHrefs(schema, list, root, array) {
 		else if (root) path = `${root}.${key}`;
 		else path = key;
 		const helper = prop.$helper;
-		if (helper && helper.name == "href") {
-			// FIXME $helper.name == "page" ???
-			// https://github.com/pageboard/server/issues/104
+		if (helper == "href" || helper?.name == "href") {
 			let types = helper.filter && helper.filter.type || [];
 			if (!Array.isArray(types)) types = [types];
 			list.push({ path, types, array });
