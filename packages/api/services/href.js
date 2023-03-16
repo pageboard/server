@@ -15,7 +15,11 @@ module.exports = class HrefService {
 			const href = await req.run('href.search', req.query);
 			res.send(href);
 		});
-		server.post("/.api/href", app.auth.lock('webmaster'), async (req, res) => {
+		server.get("/.api/href", app.auth.lock('user'), async (req, res) => {
+			const href = await req.run('href.find', req.query);
+			res.send(href);
+		});
+		server.post("/.api/href", app.auth.lock('user'), async (req, res) => {
 			const href = await req.run('href.add', req.body);
 			res.send(href);
 		});
@@ -30,7 +34,12 @@ module.exports = class HrefService {
 			.whereSite(site.id)
 			.where('href.url', data.url).first();
 	}
-	static get = {
+	async find(req, data) {
+		return {
+			item: await this.get(req, data)
+		};
+	}
+	static find = {
 		title: 'Get URL metadata',
 		$action: 'read',
 		required: ['url'],
@@ -117,7 +126,7 @@ module.exports = class HrefService {
 			items = await q;
 		}
 		return {
-			data: items,
+			items,
 			offset: data.offset,
 			limit: data.limit
 		};
