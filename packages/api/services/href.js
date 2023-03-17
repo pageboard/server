@@ -36,7 +36,7 @@ module.exports = class HrefService {
 	}
 	async find(req, data) {
 		return {
-			item: await this.get(req, data)
+			item: await this.get(req, data).throwIfNotFound()
 		};
 	}
 	static find = {
@@ -177,10 +177,9 @@ module.exports = class HrefService {
 	};
 
 	async add(req, data) {
-		const obj = await req.run('href.search', data);
-		if (obj.data.length > 0) {
-			return obj.data[0];
-		} else {
+		try {
+			return await req.run('href.find', data);
+		} catch(err) {
 			return this.#blindAdd(req, data);
 		}
 	}
