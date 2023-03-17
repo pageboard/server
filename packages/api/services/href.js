@@ -12,20 +12,20 @@ module.exports = class HrefService {
 
 	apiRoutes(app, server) {
 		server.get("/.api/hrefs", app.auth.lock('webmaster'), async (req, res) => {
-			const href = await req.run('href.search', req.query);
-			res.send(href);
+			const obj = await req.run('href.search', req.query);
+			res.send(obj);
 		});
 		server.get("/.api/href", app.auth.lock('user'), async (req, res) => {
-			const href = await req.run('href.find', req.query);
-			res.send(href);
+			const obj = await req.run('href.find', req.query);
+			res.send(obj);
 		});
 		server.post("/.api/href", app.auth.lock('user'), async (req, res) => {
-			const href = await req.run('href.add', req.body);
-			res.send(href);
+			const obj = await req.run('href.add', req.body);
+			res.send(obj);
 		});
 		server.delete("/.api/href", app.auth.lock('webmaster'), async (req, res) => {
-			const href = await req.run('href.del', req.query);
-			res.send(href);
+			const obj = await req.run('href.del', req.query);
+			res.send(obj);
 		});
 	}
 
@@ -34,10 +34,12 @@ module.exports = class HrefService {
 			.whereSite(site.id)
 			.where('href.url', data.url).first();
 	}
-	async find(req, data) {
-		return {
-			item: await this.get(req, data).throwIfNotFound()
-		};
+
+	async find({ Href, site, trx }, data) {
+		const item = await Href.query(trx).select()
+			.whereSite(site.id)
+			.where('href.url', data.url).first().throwIfNotFound();
+		return { item };
 	}
 	static find = {
 		title: 'Get URL metadata',
