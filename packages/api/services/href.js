@@ -289,7 +289,7 @@ module.exports = class HrefService {
 		const item = await this.get(req, data).throwIfNotFound();
 		await site.$relatedQuery('hrefs', trx).patchObject({
 			visible: false
-		}).where('_id', href._id);
+		}).where('_id', item._id);
 		item.visible = false;
 		return { item };
 	}
