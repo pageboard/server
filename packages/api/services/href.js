@@ -182,7 +182,8 @@ module.exports = class HrefService {
 		try {
 			return await req.run('href.find', data);
 		} catch(err) {
-			return this.#blindAdd(req, data);
+			const item = await this.#blindAdd(req, data);
+			return { item };
 		}
 	}
 
@@ -285,12 +286,12 @@ module.exports = class HrefService {
 
 	async del(req, data) {
 		const { site, trx } = req;
-		const href = await this.get(req, data).throwIfNotFound();
+		const item = await this.get(req, data).throwIfNotFound();
 		await site.$relatedQuery('hrefs', trx).patchObject({
 			visible: false
 		}).where('_id', href._id);
-		href.visible = false;
-		return href;
+		item.visible = false;
+		return { item };
 	}
 	static del = {
 		title: 'Delete URL',
