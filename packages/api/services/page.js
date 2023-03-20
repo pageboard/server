@@ -593,8 +593,25 @@ module.exports = class PageService {
 		$lock: true,
 		$action: 'read'
 	};
-};
 
+	async relink(req) {
+		const pages = await req.run('page.all');
+		for (const page of pages.items) {
+			await req.run('href.add', {
+				url: page.data.url,
+				title: page.data.title
+			});
+		}
+		return {
+			count: pages.items.length
+		};
+	}
+	static relink = {
+		title: 'Reprovision all hrefs for pages',
+		$lock: true,
+		$action: 'write'
+	};
+};
 
 
 function redUrl(obj) {
