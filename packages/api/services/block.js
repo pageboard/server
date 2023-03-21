@@ -261,6 +261,17 @@ module.exports = class BlockService {
 					multiple: true
 				}
 			},
+			preview: {
+				title: 'Preview',
+				description: 'Include preview tag',
+				type: 'boolean',
+				default: false
+			},
+			content: {
+				title: 'Content',
+				type: 'boolean',
+				default: false
+			},
 			text: {
 				title: 'Search text',
 				nullable: true,
@@ -271,11 +282,6 @@ module.exports = class BlockService {
 				title: 'Filter by data',
 				type: 'object',
 				nullable: true
-			},
-			content: {
-				title: 'Content',
-				type: 'boolean',
-				default: false
 			},
 			order: {
 				title: 'Sort by',
@@ -302,22 +308,11 @@ module.exports = class BlockService {
 				type: 'boolean',
 				default: false
 			},
-			preview: {
-				title: 'Preview',
-				description: 'Include preview tag',
-				type: 'boolean',
-				default: false
-			},
 			parents: {
 				title: 'Parents',
 				type: 'object',
 				nullable: true,
 				properties: {
-					first: {
-						title: 'Single',
-						type: 'boolean',
-						default: false
-					},
 					id: {
 						title: 'Select by id',
 						anyOf: [{ /* because nullable does not have priority */
@@ -342,6 +337,16 @@ module.exports = class BlockService {
 							multiple: true
 						}
 					},
+					first: {
+						title: 'Single',
+						type: 'boolean',
+						default: false
+					},
+					content: {
+						title: 'Content',
+						type: 'boolean',
+						default: false
+					},
 					text: {
 						title: 'Search text',
 						nullable: true,
@@ -352,11 +357,6 @@ module.exports = class BlockService {
 						title: 'Filter by data',
 						type: 'object',
 						nullable: true
-					},
-					content: {
-						title: 'Content',
-						type: 'boolean',
-						default: false
 					},
 					order: {
 						title: 'Sort by',
@@ -385,11 +385,6 @@ module.exports = class BlockService {
 				type: 'object',
 				nullable: true,
 				properties: {
-					first: {
-						title: 'Single',
-						type: 'boolean',
-						default: false
-					},
 					id: {
 						title: 'Select by id',
 						anyOf: [{ /* because nullable does not have priority */
@@ -414,6 +409,16 @@ module.exports = class BlockService {
 							multiple: true
 						}
 					},
+					first: {
+						title: 'Single',
+						type: 'boolean',
+						default: false
+					},
+					content: {
+						title: 'Content',
+						type: 'boolean',
+						default: false
+					},
 					text: {
 						title: 'Search text',
 						nullable: true,
@@ -424,11 +429,6 @@ module.exports = class BlockService {
 						title: 'Filter by data',
 						type: 'object',
 						nullable: true
-					},
-					content: {
-						title: 'Content',
-						type: 'boolean',
-						default: false
 					},
 					order: {
 						title: 'Sort by',
