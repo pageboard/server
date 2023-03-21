@@ -21,7 +21,7 @@ exports.fuse = (obj, data, scope) => {
 exports.mergeRecursive = require.lazy('lodash.merge');
 
 exports.unflatten = function(query) {
-	return nestie(query);
+	return nestie(query) ?? {};
 };
 
 exports.flatten = function (obj) {
