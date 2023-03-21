@@ -1,4 +1,4 @@
-const inspector = require.lazy('url-inspector');
+const Inspector = require.lazy('url-inspector');
 const URL = require('url');
 
 exports = module.exports = function(opt) {
@@ -9,24 +9,11 @@ exports = module.exports = function(opt) {
 };
 
 exports.get = function({url, local}) {
-	return new Promise((resolve, reject) => {
-		try {
-			inspector(url, Object.assign({}, All.opt.inspector, {
-				nofavicon: local,
-				file: local
-			}), (err, result) => {
-				if (err) reject(err);
-				else resolve(result);
-			});
-		} catch(err) {
-			reject(err);
-		}
-	}).catch((err) => {
-		if (typeof err == 'number') err = new HttpError[err]("Inspector failure");
-		throw err;
-	})
-		.then(filterResult)
-		.then(preview);
+	const inspector = new Inspector(Object.assign({}, All.opt.inspector, {
+		nofavicon: local,
+		file: local
+	}));
+	return inspector.look(url).then(filterResult).then(preview);
 };
 
 function filterResult(result) {
