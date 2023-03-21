@@ -569,10 +569,11 @@ module.exports = class PageService {
 		}
 	};
 
-	async robots(req) {
-		const { site } = req;
+	async robots(req, data) {
 		const lines = [];
-		if (site.data.env == "production") {
+		const { site } = req;
+		const { env = site.data.env } = data;
+		if (env == "production") {
 			lines.push(`Sitemap: ${new URL("/sitemap.txt", site.url)}`);
 			lines.push('User-agent: *');
 			const pages = await listPages(req, {
@@ -591,7 +592,13 @@ module.exports = class PageService {
 	static robots = {
 		title: 'Get robots.txt',
 		$lock: true,
-		$action: 'read'
+		$action: 'read',
+		properties: {
+			env: {
+				title: 'Environment',
+				type: 'string'
+			}
+		}
 	};
 
 	async relink(req) {
