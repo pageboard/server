@@ -41,7 +41,7 @@ module.exports = class SearchService {
 			form.expr?.action?.parameters ?? {},
 			{
 				$pathname,
-				$query: unflatten(data.query || {}),
+				$query: unflatten(data.query || {}) ?? {},
 				$user: user
 			}
 		);
