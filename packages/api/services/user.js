@@ -71,37 +71,38 @@ module.exports = class UserService {
 	};
 
 
-	async save({ trx, Block }, obj) {
-		const { id } = obj;
-		const data = Object.assign({}, obj);
-		delete data.id;
+	async save({ trx, Block }, { id, data }) {
 		const user = await this.#QueryUser({ trx, Block }, { id });
 		await user.$query(trx).patchObject({ data });
 		return user;
 	}
 	static save = {
 		title: 'Save user',
-		description: 'Change user email',
 		$lock: true,
 		$action: 'write',
-		required: ['id', 'email'],
+		required: ['id', 'data'],
 		properties: {
 			id: {
 				type: 'string',
 				minLength: 1,
 				format: 'id'
 			},
-			name: {
-				title: 'Name',
-				type: 'string',
-				nullable: true,
-				format: 'singleline'
-			},
-			email: {
-				title: 'User email',
-				type: 'string',
-				format: 'email',
-				transform: ['trim', 'toLowerCase']
+			data: {
+				type: 'object',
+				properties: {
+					name: {
+						title: 'Name',
+						type: 'string',
+						nullable: true,
+						format: 'singleline'
+					},
+					email: {
+						title: 'User email',
+						type: 'string',
+						format: 'email',
+						transform: ['trim', 'toLowerCase']
+					}
+				}
 			}
 		}
 	};
