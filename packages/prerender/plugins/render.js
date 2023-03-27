@@ -5,7 +5,7 @@ module.exports = function render(page) {
 				// eslint-disable-next-line no-undef
 				Page.paint(state => {
 					state.finish(() => {
-						Promise.all(state.scope.reveals ?? []).finally(resolve);
+						Promise.allSettled(state.scope.reveals ?? []).then(resolve);
 					});
 				});
 			});
