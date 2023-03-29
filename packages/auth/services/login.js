@@ -148,7 +148,7 @@ module.exports = class LoginModule {
 		const settings = await req.run('settings.find', {
 			email: data.email
 		});
-		const grants = user?.grants ?? [];
+		const prevGrants = user?.grants ?? [];
 		req.user = Object.assign(user, {
 			id: settings.id,
 			grants: settings.data?.grants ?? []
@@ -159,11 +159,11 @@ module.exports = class LoginModule {
 			throw new HttpError.Forbidden("User has insufficient grants");
 		}
 		user.grants = locks;
-		req.granted = grants.join(',') != locks.join(',');
+		req.granted = prevGrants.join(',') != user.grants.join(',');
 		return {
 			item: settings,
 			cookies: {
-				bearer: req.call('auth.cookie')
+				bearer: await req.run('auth.cookie', data)
 			}
 		};
 	}
@@ -192,6 +192,12 @@ module.exports = class LoginModule {
 					name: 'schema',
 					path: 'settings.properties.grants.items'
 				}
+			},
+			maxAge: {
+				title: 'Max Age',
+				description: 'max age of cookie in seconds',
+				type: 'integer',
+				default: 60 * 60 * 24 * 30
 			}
 		}
 	};

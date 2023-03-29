@@ -15,7 +15,6 @@ module.exports = class AuthModule {
 	constructor(app, opts) {
 		this.app = app;
 		this.opts = {
-			maxAge: 60 * 60 * 24 * 31,
 			userProperty: 'user',
 			keysize: 2048,
 			...opts
@@ -41,7 +40,7 @@ module.exports = class AuthModule {
 		});
 	}
 
-	cookie({ site, user }) {
+	cookie({ site, user }, { maxAge }) {
 		return {
 			value: this.#lock.sign({
 				id: user.id,
@@ -50,9 +49,21 @@ module.exports = class AuthModule {
 				hostname: site.url.hostname,
 				...this.opts
 			}),
-			maxAge: this.opts.maxAge * 1000
+			maxAge: maxAge * 1000
 		};
 	}
+	static cookie = {
+		title: 'Create cookie',
+		$lock: true,
+		properties: {
+			maxAge: {
+				title: 'Max Age',
+				description: 'max age of cookie in seconds',
+				type: 'integer',
+				default: 60 * 60 * 24
+			}
+		}
+	};
 
 	async #keygen(keysPath) {
 		let keys;
