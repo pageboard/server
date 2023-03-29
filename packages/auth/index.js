@@ -16,9 +16,11 @@ module.exports = class AuthModule {
 		this.app = app;
 		this.opts = {
 			userProperty: 'user',
-			keysize: 2048,
-			...opts
+			keysize: 2048
 		};
+		if (opts.keysize > this.opts.keysize) {
+			this.opts.keysize = opts.keysize;
+		}
 	}
 
 	async apiRoutes(app, server) {
@@ -47,6 +49,7 @@ module.exports = class AuthModule {
 				grants: user.grants
 			}, {
 				hostname: site.url.hostname,
+				maxAge,
 				...this.opts
 			}),
 			maxAge: maxAge * 1000
