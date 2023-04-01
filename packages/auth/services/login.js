@@ -258,10 +258,25 @@ module.exports = class LoginModule {
 			user.data.email, this.app.name, priv.data.otp.secret
 		);
 		if (data.qr) {
-			return qrcode.toString(uri, {
-				type: 'terminal',
-				errorCorrectionLevel: 'L'
-			});
+			if (this.app.opts.cli) {
+				return qrcode.toString(uri, {
+					type: 'terminal',
+					errorCorrectionLevel: 'L'
+				});
+			} else {
+				return {
+					item: {
+						type: 'qrcode',
+						data: {
+							url: await qrcode.toDataURL(uri, {
+								errorCorrectionLevel: 'L'
+							}),
+							width: 196,
+							height: 196
+						}
+					}
+				};
+			}
 		} else {
 			return uri;
 		}
@@ -269,7 +284,6 @@ module.exports = class LoginModule {
 	static key = {
 		title: 'Private Key URI',
 		$action: 'read',
-		$lock: true,
 		required: ['email'],
 		properties: {
 			email: {
