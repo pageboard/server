@@ -9,8 +9,8 @@ module.exports = class LoginModule {
 	}
 	apiRoutes(app, server) {
 		otp.authenticator.options = {
-			step: 30, // do not change this value, we want third-party otp apps to work with us
-			window: [40, 1] // ten minutes-old tokens are still valid
+			// third-party TOTP apps expect steps of 30 seconds
+			step: 30
 		};
 		server.get("/.api/login", async (req, res) => {
 			const data = await req.run('login.grant', req.query);
@@ -116,7 +116,7 @@ module.exports = class LoginModule {
 			}
 		}
 	};
-	async #verifyToken(req, { email, token }) {
+	async #verifyToken(req, { email, token, tokenMaxAge }) {
 		const { trx } = req;
 		const user = await req.run('user.get', { email });
 		const priv = await this.#userPriv(req, user);
@@ -128,6 +128,7 @@ module.exports = class LoginModule {
 			}
 		}
 		token = token.replaceAll(/\s/g, '');
+		otp.authenticator.options.window = [tokenMaxAge, 0];
 		const verified = otp.authenticator.check(token, priv.data.otp.secret);
 		await priv.$query(trx).patchObject({
 			type: priv.type,
@@ -198,6 +199,12 @@ module.exports = class LoginModule {
 				description: 'max age of cookie in seconds',
 				type: 'integer',
 				default: 60 * 60 * 24 * 30
+			},
+			tokenMaxAge: {
+				title: 'Token Max Age',
+				description: 'in steps of 30 seconds',
+				type: 'integer',
+				default: 20
 			}
 		}
 	};
