@@ -1,5 +1,3 @@
-const { ref } = require('objection');
-
 module.exports = class SettingsService {
 	static name = 'settings';
 
@@ -46,41 +44,25 @@ module.exports = class SettingsService {
 		}
 	};
 
-	async find({ site, trx }, data) {
-		if (!data.id && !data.email) {
-			throw new HttpError.BadRequest("Missing id or email");
-		}
-		const settings = await site.$relatedQuery('children', trx).alias('settings')
-			.where('settings.type', 'settings')
-			.where(q => {
-				if (data.id) {
-					q.where('parent.id', data.id);
-				} else if (data.email) {
-					q.whereJsonText('parent.data:email', data.email);
+	async find(req, data) {
+		return req.run('block.find', {
+			type: 'settings',
+			parents: {
+				first: true,
+				type: 'user'
+			},
+			parent: {
+				data: {
+					email: data.email
 				}
-			})
-			.first().throwIfNotFound()
-			.joinRelated('parents', { alias: 'parent' }).where('parent.type', 'user')
-			.withGraphFetched('[parents(userFilter) as parent]')
-			.modifiers({
-				userFilter(query) {
-					query.select().where('type', 'user');
-				}
-			});
-		settings.parent = settings.parent[0];
-		settings.parent.lock = {
-			read: [`id-${settings.id}`]
-		};
-		return settings;
+			}
+
+		});
 	}
 	static find = {
 		title: 'Find user settings',
+		required: ['email'],
 		properties: {
-			id: {
-				type: 'string',
-				minLength: 1,
-				format: 'id'
-			},
 			email: {
 				title: 'User email',
 				type: 'string',
@@ -90,54 +72,49 @@ module.exports = class SettingsService {
 		}
 	};
 
-	async search({ site, trx }, data) {
-		return site.$relatedQuery('children', trx).alias('settings')
-			.where('settings.type', 'settings')
-			.first().throwIfNotFound()
-			.select().select(ref('parent.data:email').as('email'))
-			.joinRelated('parents', { alias: 'parent' }).where('parent.type', 'user')
-			.whereJsonText('parent.data:email', 'in', data.email);
+	async search(req, data) {
+		const { items } = await req.run('block.search', {
+			type: 'settings',
+			parents: {
+				type: 'user',
+				first: true
+			},
+			parent: data
+		});
+		return { items: items.map(row => row.parent) };
 	}
 	static search = {
-		title: 'Search user settings',
+		title: 'Search users',
 		$action: 'read',
-		required: ['email'],
 		properties: {
-			email: {
-				title: 'User emails',
-				type: 'array',
-				items: {
-					type: 'string',
-					format: 'email',
-					transform: ['trim', 'toLowerCase']
-				}
+			data: {
+				title: 'Data',
+				type: 'object',
+				default: {}
 			}
 		}
 	};
 
-	async save(req, data) {
+	async save(req, { email, data }) {
 		const { trx, site } = req;
 		try {
-			const settings = await req.run('settings.find', data);
-			if (!data.data) return settings;
-			if (data.data.grants) {
-				// delete data.data.grants;
-			}
-			if (Object.keys(data.data).length == 0) return settings;
+			const settings = await req.run('settings.find', { email, data });
+			if (!data) return settings;
+			if (Object.keys(data).length == 0) return settings;
 			await settings.$query(trx).patchObject({
-				type: settings.type,
-				data: data.data
+				type: 'settings',
+				data
 			});
 			return settings;
 		} catch (err) {
 			if (err.statusCode != 404) throw err;
 		}
 		const user = await req.run('user.add', {
-			email: data.email
+			email
 		});
 		const block = {
 			type: 'settings',
-			data: data.data,
+			data,
 			parents: [user]
 		};
 		await site.$beforeInsert.call(block);
@@ -168,7 +145,19 @@ module.exports = class SettingsService {
 				transform: ['trim', 'toLowerCase']
 			},
 			data: {
+				title: 'Data',
 				type: 'object',
+				additionalProperties: true,
+				properties: {
+					grants: {
+						title: 'Grants',
+						type: 'array',
+						uniqueItems: true,
+						items: {
+							type: 'string'
+						}
+					},
+				},
 				default: {}
 			}
 		}
