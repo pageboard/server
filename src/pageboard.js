@@ -230,7 +230,7 @@ module.exports = class Pageboard {
 		);
 
 		// call plugins#view
-		if (!this.cli) await this.#initPlugins('view');
+		if (!this.opts.cli) await this.#initPlugins('view');
 
 		server.use((err, req, res, next) =>
 			this.#viewsError(err, req, res, next)
