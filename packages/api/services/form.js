@@ -25,15 +25,15 @@ module.exports = class FormService {
 		const form = await run('block.get', {
 			id: data.id
 		});
+		if (locked(form.lock)) {
+			throw new HttpError.Unauthorized("Check user permissions");
+		}
 
 		const reqBody = data.body ?? {};
 
 		const method = form.data?.action?.method;
 		if (!method) {
 			throw new HttpError.BadRequest("Missing method");
-		}
-		if (locked(form.lock?.write)) {
-			throw new HttpError.Unauthorized("Check user permissions");
 		}
 
 		const formData = form.data?.action?.parameters ?? {};

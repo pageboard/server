@@ -743,14 +743,6 @@ function applyUpdate(req, list) {
 			if (block.id in blocksMap) {
 				block.updated_at = blocksMap[block.id];
 			}
-			if (block.lock) {
-				if (Object.isEmpty(block.lock?.read)) {
-					block.lock.read = null;
-				}
-				if (Object.isEmpty(block.lock?.write)) {
-					block.lock.write = null;
-				}
-			}
 			if (req.site.$pkg.pages.includes(block.type)) {
 				return updatePage(req, block, blocksMap);
 			} else if (!block.updated_at) {

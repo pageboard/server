@@ -41,28 +41,13 @@ class Block extends Model {
 				type: 'string'
 			},
 			lock: {
-				type: 'object',
+				type: 'array',
 				nullable: true,
-				properties: {
-					read: {
-						type: 'array',
-						nullable: true,
-						items: {
-							type: 'string',
-							format: 'grant'
-						},
-						uniqueItems: true
-					},
-					write: {
-						type: 'array',
-						nullable: true,
-						items: {
-							type: 'string',
-							format: 'grant'
-						},
-						uniqueItems: true
-					}
-				}
+				items: {
+					type: 'string',
+					format: 'grant'
+				},
+				uniqueItems: true
 			}
 		}
 	};

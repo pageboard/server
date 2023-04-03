@@ -26,13 +26,13 @@ module.exports = class SearchService {
 		const form = await run('block.get', {
 			id: data.id
 		});
+		if (locked(form.lock)) {
+			throw new HttpError.Unauthorized("Check user permissions");
+		}
 
 		const method = form.data?.action?.method;
 		if (!method) {
 			throw new HttpError.BadRequest("Missing method");
-		}
-		if (locked(form.lock?.read)) {
-			throw new HttpError.Unauthorized("Check user permissions");
 		}
 		const { $pathname } = data.query;
 		delete data.query.$pathname;

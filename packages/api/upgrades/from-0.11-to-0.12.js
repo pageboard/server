@@ -1,5 +1,9 @@
 exports.any = function (block) {
-	const { expr } = block;
+	const { expr, lock } = block;
+	if (lock) {
+		if (lock.read) block.lock = lock.read;
+		else delete block.lock;
+	}
 	if (!expr) return;
 	block.expr = JSON.parse(doReplacements(JSON.stringify(expr)));
 };

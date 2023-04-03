@@ -82,7 +82,7 @@ module.exports = class Upgrader {
 		}
 	}
 	copyLock(block) {
-		const locks = block.lock && block.lock.read;
+		const locks = block.lock;
 		if (!locks) return;
 		locks.forEach((item, i) => {
 			item = item.split('-');

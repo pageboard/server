@@ -66,7 +66,7 @@ module.exports = class ReservationService {
 			type: 'event_reservation',
 			data: reservation,
 			parents: parents,
-			lock: { read: [`id-${req.user.id}`, 'scheduler'] }
+			lock: [`id-${req.user.id}`, 'scheduler']
 		});
 		await eventDate.$query(req.trx).patchObject({
 			type: eventDate.type,
