@@ -264,32 +264,19 @@ module.exports = class LoginModule {
 		const uri = otp.authenticator.keyuri(
 			user.data.email, this.app.name, priv.data.otp.secret
 		);
-		if (data.qr) {
-			if (this.app.opts.cli) {
-				return qrcode.toString(uri, {
-					type: 'terminal',
-					errorCorrectionLevel: 'L'
-				});
-			} else {
-				return {
-					item: {
-						type: 'qrcode',
-						data: {
-							url: await qrcode.toDataURL(uri, {
-								errorCorrectionLevel: 'L'
-							}),
-							width: 196,
-							height: 196
-						}
-					}
-				};
-			}
-		} else {
-			return uri;
+		const item = {
+			type: 'otp',
+			data: { uri }
+		};
+		if (!this.app.opts.cli) {
+			item.data.uri = await qrcode.toDataURL(uri, {
+				errorCorrectionLevel: 'L'
+			});
 		}
+		return { item };
 	}
 	static key = {
-		title: 'Private Key URI',
+		title: 'Get user otp key',
 		$action: 'read',
 		required: ['email'],
 		properties: {
@@ -297,11 +284,6 @@ module.exports = class LoginModule {
 				title: 'Email',
 				type: 'string',
 				format: 'email'
-			},
-			qr: {
-				title: 'QR Code',
-				type: 'boolean',
-				default: false
 			}
 		}
 	};

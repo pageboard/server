@@ -129,7 +129,7 @@ module.exports = class AuthModule {
 		};
 	}
 
-	locked(req, list) {
+	locked(req, list, cannotEscalate = false) {
 		const { site, user } = req;
 		const { locks } = req;
 		if (list != null && !Array.isArray(list) && typeof list == "object" && list.read !== undefined) {
@@ -154,7 +154,7 @@ module.exports = class AuthModule {
 			if (lock.startsWith('id-')) {
 				if (`id-${user.id}` == lock) granted = true;
 				lock = 'id-:id';
-			} else if ((lockIndex > minLevel) || grants.includes(lock)) {
+			} else if ((lockIndex > minLevel) || !cannotEscalate && grants.includes(lock)) {
 				granted = true;
 			}
 			if (!locks.includes(lock)) locks.push(lock);
