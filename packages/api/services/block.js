@@ -468,13 +468,10 @@ module.exports = class BlockService {
 		data.limit = 1;
 		data.offset = 0;
 		const obj = await this.search(req, data);
-		if (obj.items.length == 0) {
-			throw new HttpError.NotFound("Block not found");
-		}
-		return {
-			item: obj.items[0],
-			hrefs: obj.hrefs
-		};
+		const ret = { href: obj.hrefs };
+		if (obj.items.length == 0) ret.status = 404;
+		else ret.item = obj.items[0];
+		return ret;
 	}
 	static find = {
 		title: 'Find one block',
