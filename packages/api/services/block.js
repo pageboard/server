@@ -134,10 +134,12 @@ module.exports = class BlockService {
 		if (data.lang && data.dictionary) {
 			const { item: dictionary } = await req.run('block.find', { type: 'dictionary', id: data.dictionary });
 			if (!dictionary) throw new HttpError.BadRequest("Missing dictionary");
-			q.selectRaw('translate_content(block.type, block.content, :dictionary_id, :lang) AS content', {
-				dictionary_id: dictionary._id,
-				lang: data.lang
-			});
+			q.select(raw(
+				'translate_content(block.type, block.content, :dict, :lang) AS content', {
+					dict: dictionary._id,
+					lang: data.lang
+				}
+			));
 		}
 		if (parents) {
 			eagers.parents = {
@@ -901,17 +903,18 @@ module.exports = class BlockService {
 		if (!dictionary) throw new Error('Dictionary not found');
 
 		const q = req.site.$relatedQuery('children', req.trx)
-			.joinRelated('parents')
-			.where('parents.id', data.parent)
-			.where('children.type', data.type)
-			.selectRaw('translatable_content(children.type, children.content, :dictionary_id, :site_id)', {
+			.select(raw('translatable_content(child.type, child.content, :dictionary_id, :site_id)', {
 				dictionary_id: dictionary._id,
 				site_id: req.site._id
-			});
+			}))
+			.from('block AS child')
+			.where('child.type', data.type)
+			.joinRelated('parents')
+			.where('parents.id', data.parent);
 		const res = await q;
-		console.log(res);
-		return res;
-		// TODO measure how much has been translated
+		return {
+			count: res.reduce((sum, item) => sum + item.translatable_content, 0)
+		};
 	}
 	static translatable = {
 		title: 'Translatable',
@@ -932,7 +935,8 @@ module.exports = class BlockService {
 			type: {
 				title: 'Block type',
 				type: 'string',
-				format: 'id'
+				format: 'name',
+				$filter: 'element'
 			}
 		}
 	};
