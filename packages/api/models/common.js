@@ -470,7 +470,7 @@ function convertFieldExpressionsToRaw(builder, model, json) {
 	const convertedJson = {};
 
 	for (const key of Object.keys(json)) {
-		let val = json[key];
+		let value = json[key];
 
 		if (key.indexOf(':') > -1) {
 			// 'col:attr' : ref('other:lol') is transformed to
@@ -482,22 +482,24 @@ function convertFieldExpressionsToRaw(builder, model, json) {
 				+ '}';
 			let valuePlaceholder = '?';
 
-			if (isKnexQueryBuilder(val) || isKnexRaw(val)) {
+			if (isKnexQueryBuilder(value) || isKnexRaw(value)) {
 				valuePlaceholder = 'to_jsonb(?)';
 			} else {
-				val = JSON.stringify(val);
+				value = JSON.stringify(value);
 			}
 
 			convertedJson[
 				parsed.column
 			] = knex.raw(`jsonb_set_recursive(??, '${jsonRefs}', ${valuePlaceholder})`, [
 				convertedJson[parsed.column] || parsed.column,
-				val
+				value
 			]);
 
 			delete model[key];
+		} else if (Array.isArray(value)) {
+			convertedJson[key] = knex.raw('?::jsonb', JSON.stringify(value));
 		} else {
-			convertedJson[key] = val;
+			convertedJson[key] = value;
 		}
 	}
 
