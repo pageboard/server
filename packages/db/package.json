@@ -19,6 +19,6 @@
   "dependencies": {
     "knex": "^0.95.15",
     "node-schedule": "^2.1.1",
-    "pg": "^8.9.0"
+    "pg": "^8.10.0"
   }
 }
