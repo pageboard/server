@@ -228,7 +228,7 @@ module.exports = class Validation {
 
 // NB: this is mostly objection code, do not refactor
 function jsonSchemaWithoutRequired(jsonSchema) {
-	const subSchemaProps = ['anyOf', 'oneOf', 'allOf', 'not', 'then', 'else'];
+	const subSchemaProps = ['anyOf', 'oneOf', 'allOf', 'not', 'then', 'else', 'properties'];
 	const discriminatorRequired = {};
 	if (jsonSchema.discriminator && jsonSchema.discriminator.propertyName) {
 		discriminatorRequired.required = [jsonSchema.discriminator.propertyName];
@@ -261,6 +261,10 @@ function subSchemaWithoutRequired(jsonSchema, prop) {
 			} else {
 				return {};
 			}
+		} else if (prop == "properties" && jsonSchema.type == "object") {
+			return {
+				[prop]: jsonSchemaPropertiesWithoutRequired(jsonSchema[prop])
+			};
 		} else {
 			return {
 				[prop]: jsonSchemaWithoutRequired(jsonSchema[prop]),
@@ -271,8 +275,18 @@ function subSchemaWithoutRequired(jsonSchema, prop) {
 	}
 }
 
+function jsonSchemaPropertiesWithoutRequired(jsonSchemaProperties) {
+	const schema = {};
+	for (const [key, sub] of Object.entries(jsonSchemaProperties)) {
+		schema[key] = jsonSchemaWithoutRequired(sub);
+	}
+	return schema;
+}
+
 function jsonSchemaArrayWithoutRequired(jsonSchemaArray) {
-	return jsonSchemaArray.map(jsonSchemaWithoutRequired).filter(obj => !Object.isEmpty(obj));
+	return jsonSchemaArray
+		.map(jsonSchemaWithoutRequired)
+		.filter(obj => !Object.isEmpty(obj));
 }
 
 function omit(obj, keys) {
