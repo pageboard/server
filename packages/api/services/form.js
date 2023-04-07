@@ -54,9 +54,10 @@ module.exports = class FormService {
 
 		Log.api("form params", params, user, data.query);
 
-		// allow body keys as block.data
 		const body = {};
-		if (params.type && Array.isArray(params.type) == false && Object.keys(reqBody).length > 0) {
+
+		if (params.type && Array.isArray(params.type) == false && !(reqBody.data && reqBody.id) && Object.keys(reqBody).length > 0) {
+			// TODO remove this all thing
 			const el = site.$schema(params.type);
 			if (!el) {
 				throw new HttpError.BadRequest("Unknown element type " + params.type);
@@ -84,7 +85,6 @@ module.exports = class FormService {
 				}
 			}
 		} else {
-			// this should be removed - only expressions should be used to achieve this
 			Object.assign(body, reqBody);
 		}
 		mergeRecursive(body, params);
