@@ -135,7 +135,7 @@ module.exports = class BlockService {
 			const { item: dictionary } = await req.run('block.find', { type: 'dictionary', id: data.dictionary });
 			if (!dictionary) throw new HttpError.BadRequest("Missing dictionary");
 			q.select(raw(
-				'translate_content(block.type, block.content, :dict, :lang) AS content', {
+				'translate_block_content(block, :dict, :lang) AS content', {
 					dict: dictionary._id,
 					lang: data.lang
 				}

@@ -1,68 +1,204 @@
-CREATE OR REPLACE FUNCTION translate_content(
-	_type TEXT, _content JSONB, dictionary_id INTEGER, _lang TEXT
-) RETURNS JSONB
-  LANGUAGE plpgsql STABLE
-	AS $$
+CREATE OR REPLACE FUNCTION translate_block_content(_block block, dict_id INTEGER, _lang TEXT) RETURNS JSONB AS $$
 DECLARE
-	_target TEXT;
-	_row RECORD;
+	_target JSONB;
+	_translation block;
+	_key TEXT;
+	_content JSONB;
 BEGIN
-	FOR _row IN
-		SELECT * FROM jsonb_each_text(_content)
+	_content := _block.content;
+	FOR _key IN
+		SELECT * FROM jsonb_object_keys(_content)
 	LOOP
-		-- TODO if lang == dictionary.data.source, do not translate
-		SELECT block.data['targets'][_lang] INTO _target FROM block, relation
-			WHERE relation.parent_id = dictionary_id
-			AND block._id = relation.child_id
-			AND block.type = 'translation'
-			AND block.data['type']::text = _type
-			AND block.data['content']::text = _row.key
-			AND block.data['source']::text = _row.value;
-		IF (FOUND AND _target IS NOT NULL) THEN
-			_content = jsonb_set(_content, _row.key, _target);
+		SELECT INTO _translation * FROM translate_find_translation(_block, _key, dict_id);
+		IF FOUND THEN
+			_target := _translation.data['targets'][_lang];
+			IF _target IS NOT NULL THEN
+				_content := jsonb_set(_content, ARRAY[_key], _target, TRUE);
+			END IF;
 		END IF;
 	END LOOP;
 	RETURN _content;
 END
-$$;
+$$ LANGUAGE plpgsql;
 
-CREATE OR REPLACE FUNCTION translatable_content(
-	_type TEXT, _content JSONB, dictionary_id INTEGER, site_id INTEGER
-) RETURNS INTEGER
-	LANGUAGE plpgsql
-	AS $$
+CREATE OR REPLACE FUNCTION translate_find_translation(_block block, _key TEXT, dict_id INTEGER) RETURNS block AS $$
 DECLARE
-	block_id INTEGER;
-	_row RECORD;
-	_total INTEGER := 0;
+	_result block;
 BEGIN
-	FOR _row IN
-		SELECT * FROM jsonb_each_text(_content)
+	SELECT block.* INTO _result FROM block, relation
+		WHERE relation.parent_id = dict_id
+		AND block._id = relation.child_id
+		AND block.type = 'translation'
+		AND block.data->>'type' = _block.type
+		AND block.data->>'content' = _key
+		AND block.data['source'] = _block.content[_key];
+	IF FOUND THEN
+		RETURN _result;
+	ELSE
+		RETURN NULL;
+	END IF;
+END
+$$ LANGUAGE plpgsql;
+
+CREATE OR REPLACE FUNCTION translate_find_blocks(_translation block, dict_id INTEGER) RETURNS SETOF block AS $$
+BEGIN
+	RETURN QUERY SELECT block.* FROM block, relation, block AS parent, block AS dict
+		WHERE dict._id = dict_id AND parent.data['dictionary']::text = dict.id
+		AND relation.parent_id = parent._id
+		AND block._id = relation.child_id
+		AND block.type = _translation.data->>'type'
+		AND (block.content[_translation.data->>'content'])::text = _translation.data['source'];
+	RETURN;
+END
+$$ LANGUAGE plpgsql;
+
+CREATE OR REPLACE PROCEDURE translate_new_translation(_block block, _key TEXT, dict_id INTEGER) AS $$
+DECLARE
+	translation_id INTEGER;
+	site_id INTEGER;
+	cur_id TEXT;
+BEGIN
+	SELECT INTO STRICT site_id relation.parent_id FROM relation WHERE relation.child_id = dict_id;
+
+	INSERT INTO block (id, type, data) VALUES (
+			replace(gen_random_uuid()::text, '-', ''),
+			'translation',
+			jsonb_build_object(
+				'type', _block.type,
+				'content', _key,
+				'source', _block.content[_key],
+				'targets', '{}'::jsonb
+			)
+		);
+	SELECT INTO translation_id currval(pg_get_serial_sequence('block','_id'));
+	INSERT INTO relation (child_id, parent_id) VALUES (translation_id, site_id);
+	INSERT INTO relation (child_id, parent_id) VALUES (translation_id, dict_id);
+END
+$$ LANGUAGE plpgsql;
+
+CREATE OR REPLACE FUNCTION translate_find_dictionary(block_id INTEGER)
+	RETURNS INTEGER AS $$
+DECLARE
+	dict_id INTEGER;
+BEGIN
+	SELECT INTO dict_id dict._id
+		FROM relation AS block_parent, block AS parent,
+			relation AS block_site, block AS site, relation AS dict_site, block AS dict
+		WHERE block_parent.child_id = block_id AND parent._id = block_parent.parent_id AND parent.type != 'site' AND block_site.child_id = block_parent.child_id AND site._id = block_site.parent_id AND site.type = 'site'
+		AND dict_site.parent_id = site._id AND dict._id = dict_site.child_id AND dict.type = 'dictionary' AND dict.id = parent.data->>'dictionary';
+	IF FOUND THEN
+		RETURN dict_id;
+	ELSE
+		RETURN -1;
+	END IF;
+END
+$$ LANGUAGE plpgsql;
+
+-- Insert new translation if none is found
+CREATE OR REPLACE PROCEDURE translate_content_insert(_row block) AS $$
+DECLARE
+	dict_id INTEGER;
+	_key TEXT;
+	_translation block;
+BEGIN
+	SELECT translate_find_dictionary(_row._id) INTO dict_id;
+	IF dict_id < 0 THEN
+		RETURN;
+	END IF;
+	FOR _key IN
+		SELECT * FROM jsonb_object_keys(_row.content)
 	LOOP
-		IF NOT EXISTS (SELECT FROM block, relation
-			WHERE relation.parent_id = dictionary_id
-			AND block._id = relation.child_id
-			AND block.type = 'translation'
-			AND block.data['type']::text = _type
-			AND block.data['content']::text = _row.key)
-		THEN
-			INSERT INTO block (id, type, data)
-				VALUES (
-					replace(gen_random_uuid()::text, '-', ''),
-					'translation',
-					jsonb_build_object(
-						'type', _type,
-						'content', _row.key,
-						'source', _row.value,
-						'targets', '{}'::jsonb
-					)
-				)
-				RETURNING _id INTO block_id;
-			INSERT INTO relation (child_id, parent_id) VALUES (block_id, site_id);
-			INSERT INTO relation (child_id, parent_id) VALUES (block_id, dictionary_id);
-			_total := _total + 1;
+		SELECT INTO _translation * FROM translate_find_translation(_row, _key, dict_id);
+		IF NOT FOUND THEN
+			CALL translate_new_translation(_row, _key, dict_id);
 		END IF;
 	END LOOP;
-	RETURN _total;
 END
-$$;
+$$ LANGUAGE plpgsql;
+
+-- Remove translation if no other block is using it
+CREATE OR REPLACE PROCEDURE translate_content_delete(_row block) AS $$
+DECLARE
+	dict_id INTEGER;
+	_key TEXT;
+	_translation block;
+	_count INTEGER;
+BEGIN
+	SELECT translate_find_dictionary(_row._id) INTO dict_id;
+	IF dict_id < 0 THEN
+		RETURN;
+	END IF;
+	FOR _key IN
+		SELECT * FROM jsonb_object_keys(_row.content)
+	LOOP
+		SELECT INTO _translation * FROM translate_find_translation(_row, _key, dict_id);
+		IF FOUND THEN
+			SELECT INTO _count count(*) FROM translate_find_blocks(_translation, dict_id);
+		ELSE
+			_count := 0;
+		END IF;
+		IF _count = 0 THEN
+			PERFORM DELETE FROM block WHERE _id = _translation._id;
+		END IF;
+	END LOOP;
+END
+$$ LANGUAGE plpgsql;
+
+CREATE OR REPLACE FUNCTION translate_content_delete_func() RETURNS trigger AS $$
+BEGIN
+	CALL translate_content_delete(OLD);
+	RETURN OLD;
+END
+$$ LANGUAGE plpgsql;
+
+CREATE OR REPLACE FUNCTION translate_content_insert_func() RETURNS trigger AS $$
+BEGIN
+	CALL translate_content_insert(NEW);
+	RETURN NEW;
+END
+$$ LANGUAGE plpgsql;
+
+CREATE OR REPLACE FUNCTION translate_content_update_func() RETURNS trigger AS $$
+DECLARE
+	dict_id INTEGER;
+	_key TEXT;
+	_translation block;
+	_count INTEGER;
+BEGIN
+	SELECT translate_find_dictionary(OLD._id) INTO dict_id;
+	IF dict_id < 0 THEN
+		RETURN NEW;
+	END IF;
+	FOR _key IN
+		SELECT * FROM jsonb_object_keys(OLD.content)
+	LOOP
+		IF OLD.content[_key] = NEW.content[_key] THEN
+			CONTINUE;
+		END IF;
+		SELECT INTO _translation * FROM translate_find_translation(OLD, _key, dict_id);
+		IF FOUND THEN
+			SELECT INTO _count count(*) FROM translate_find_blocks(_translation, dict_id);
+		ELSE
+			_count := 0;
+		END IF;
+		IF _count = 0 THEN
+			PERFORM DELETE FROM block WHERE _id = _translation._id;
+		END IF;
+	END LOOP;
+	FOR _key IN
+		SELECT * FROM jsonb_object_keys(NEW.content)
+	LOOP
+		SELECT INTO _translation * FROM translate_find_translation(NEW, _key, dict_id);
+		IF NOT FOUND THEN
+			CALL translate_new_translation(NEW, _key, dict_id);
+		END IF;
+	END LOOP;
+	RETURN NEW;
+END
+$$ LANGUAGE plpgsql;
+
+CREATE OR REPLACE TRIGGER translate_content_insert_trigger AFTER INSERT ON block FOR EACH ROW EXECUTE FUNCTION translate_content_insert_func();
+
+CREATE OR REPLACE TRIGGER translate_content_update_trigger AFTER UPDATE OF content ON block FOR EACH ROW EXECUTE FUNCTION translate_content_update_func();
+
+CREATE OR REPLACE TRIGGER translate_content_delete_trigger AFTER DELETE ON block FOR EACH ROW EXECUTE FUNCTION translate_content_delete_func();
