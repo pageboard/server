@@ -12,7 +12,7 @@ BEGIN
 		SELECT * FROM jsonb_object_keys(_content)
 	LOOP
 		SELECT * FROM translate_find_translation(_block, _key, dict_id) INTO _translation;
-		IF FOUND THEN
+		IF _translation._id IS NOT NULL THEN
 			_target := _translation.data['targets'][_lang];
 			IF _target IS NOT NULL THEN
 				_content := jsonb_set(_content, ARRAY[_key], _target, TRUE);
@@ -35,11 +35,7 @@ BEGIN
 		AND block.data->>'content' = _key
 		AND block.data['source'] = _block.content[_key]
 		INTO _result;
-	IF FOUND THEN
-		RETURN _result;
-	ELSE
-		RETURN NULL;
-	END IF;
+	RETURN _result;
 END
 $$ LANGUAGE plpgsql;
 
@@ -113,7 +109,7 @@ BEGIN
 		SELECT * FROM jsonb_object_keys(_block.content)
 	LOOP
 		SELECT * FROM translate_find_translation(_block, _key, dict_id) INTO _translation;
-		IF NOT FOUND THEN
+		IF _translation._id IS NULL THEN
 			CALL translate_new_translation(_block, _key, dict_id);
 		END IF;
 	END LOOP;
@@ -136,7 +132,7 @@ BEGIN
 		SELECT * FROM jsonb_object_keys(_block.content)
 	LOOP
 		SELECT * FROM translate_find_translation(_block, _key, dict_id) INTO _translation;
-		IF FOUND THEN
+		IF _translation._id IS NOT NULL THEN
 			SELECT count(*) FROM translate_find_blocks(_translation, dict_id) INTO _count;
 		ELSE
 			_count := 0;
@@ -180,7 +176,7 @@ BEGIN
 			CONTINUE;
 		END IF;
 		SELECT * FROM translate_find_translation(OLD, _key, dict_id) INTO _translation;
-		IF FOUND THEN
+		IF _translation._id IS NOT NULL THEN
 			SELECT count(*) FROM translate_find_blocks(_translation, dict_id) INTO _count;
 		ELSE
 			_count := 0;
@@ -193,8 +189,11 @@ BEGIN
 		SELECT * FROM jsonb_object_keys(NEW.content)
 	LOOP
 		SELECT * FROM translate_find_translation(NEW, _key, dict_id) INTO _translation;
-		IF NOT FOUND THEN
+		IF _translation._id IS NULL THEN
+			RAISE NOTICE 'new translation %', NEW.type;
 			CALL translate_new_translation(NEW, _key, dict_id);
+		ELSE
+			RAISE NOTICE 'translation found %', _translation;
 		END IF;
 	END LOOP;
 	RETURN NEW;
@@ -206,3 +205,19 @@ CREATE OR REPLACE TRIGGER translate_content_insert_trigger AFTER INSERT ON block
 CREATE OR REPLACE TRIGGER translate_content_update_trigger AFTER UPDATE OF content ON block FOR EACH ROW EXECUTE FUNCTION translate_content_update_func();
 
 CREATE OR REPLACE TRIGGER translate_content_delete_trigger AFTER DELETE ON block FOR EACH ROW EXECUTE FUNCTION translate_content_delete_func();
+
+CREATE OR REPLACE FUNCTION translate_update_dictionary_func() RETURNS trigger AS $$
+DECLARE
+	old_dict TEXT;
+	new_dict TEXT;
+BEGIN
+	-- old_dict := OLD.data->>'dictionary';
+	-- new_dict := NEW.data->>'dictionary';
+	-- all translations in that dictionary must be checked and removed is not used ?
+
+	UPDATE block SET content = block.content FROM relation WHERE relation.parent_id = NEW._id AND _id = relation.child_id;
+	RETURN NEW;
+END
+$$ LANGUAGE plpgsql;
+
+CREATE OR REPLACE TRIGGER translate_update_dictionary_trigger AFTER UPDATE OF data ON block FOR EACH ROW WHEN (OLD.data->>'dictionary' IS DISTINCT FROM NEW.data->>'dictionary') EXECUTE FUNCTION translate_update_dictionary_func();

@@ -131,12 +131,9 @@ module.exports = class BlockService {
 		if (!valid) {
 			throw new HttpError.BadRequest("Insufficient search parameters");
 		}
-		if (data.lang && data.dictionary) {
-			const { item: dictionary } = await req.run('block.find', { type: 'dictionary', id: data.dictionary });
-			if (!dictionary) throw new HttpError.BadRequest("Missing dictionary");
+		if (data.lang) {
 			q.select(raw(
-				'translate_block_content(block, :dict, :lang) AS content', {
-					dict: dictionary._id,
+				'translate_block_content(block, :lang) AS content', {
 					lang: data.lang
 				}
 			));
@@ -322,19 +319,9 @@ module.exports = class BlockService {
 				type: 'boolean',
 				default: false
 			},
-			dictionary: {
-				title: 'Dictionary id',
-				type: 'string',
-				format: 'id',
-				nullable: true,
-				$helper: {
-					name: 'block',
-					type: 'dictionary'
-				}
-			},
 			lang: {
-				title: 'Language',
-				description: 'ISO 639-3 code',
+				title: 'Translate to lang',
+				description: 'ISO 639-3 language code',
 				type: 'string',
 				pattern: /^[a-z]{3}$/.source,
 				nullable: true
@@ -894,55 +881,7 @@ module.exports = class BlockService {
 			}
 		}
 	};
-
-	async translatable(req, data) {
-		const { item: dictionary } = await req.run('block.find', {
-			type: 'dictionary',
-			id: data.dictionary
-		});
-		if (!dictionary) throw new Error('Dictionary not found');
-
-		const q = req.site.$relatedQuery('children', req.trx)
-			.select(raw('translatable_content(child.type, child.content, :dictionary_id, :site_id)', {
-				dictionary_id: dictionary._id,
-				site_id: req.site._id
-			}))
-			.from('block AS child')
-			.where('child.type', data.type)
-			.joinRelated('parents')
-			.where('parents.id', data.parent);
-		const res = await q;
-		return {
-			count: res.reduce((sum, item) => sum + item.translatable_content, 0)
-		};
-	}
-	static translatable = {
-		title: 'Translatable',
-		description: 'Prepare dictionary for selected blocks',
-		$action: 'write',
-		required: ['dictionary', 'parent', 'type'],
-		properties: {
-			dictionary: {
-				title: 'Dictionary id',
-				type: 'string',
-				format: 'id'
-			},
-			parent: {
-				title: 'Parent id',
-				type: 'string',
-				format: 'id'
-			},
-			type: {
-				title: 'Block type',
-				type: 'string',
-				format: 'name',
-				$filter: 'element'
-			}
-		}
-	};
 };
-
-
 
 function whereSub(q, data, alias = 'block') {
 	let valid = false;
