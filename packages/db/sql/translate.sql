@@ -1,15 +1,17 @@
-CREATE OR REPLACE FUNCTION translate_block_content(_block block, dict_id INTEGER, _lang TEXT) RETURNS JSONB AS $$
+CREATE OR REPLACE FUNCTION translate_block_content(_block block, _lang TEXT) RETURNS JSONB AS $$
 DECLARE
+	dict_id INTEGER;
 	_target JSONB;
 	_translation block;
 	_key TEXT;
 	_content JSONB;
 BEGIN
+	SELECT translate_find_dictionary(_block._id) INTO dict_id;
 	_content := _block.content;
 	FOR _key IN
 		SELECT * FROM jsonb_object_keys(_content)
 	LOOP
-		SELECT INTO _translation * FROM translate_find_translation(_block, _key, dict_id);
+		SELECT * FROM translate_find_translation(_block, _key, dict_id) INTO _translation;
 		IF FOUND THEN
 			_target := _translation.data['targets'][_lang];
 			IF _target IS NOT NULL THEN
@@ -25,13 +27,14 @@ CREATE OR REPLACE FUNCTION translate_find_translation(_block block, _key TEXT, d
 DECLARE
 	_result block;
 BEGIN
-	SELECT block.* INTO _result FROM block, relation
+	SELECT block.* FROM block, relation
 		WHERE relation.parent_id = dict_id
 		AND block._id = relation.child_id
 		AND block.type = 'translation'
 		AND block.data->>'type' = _block.type
 		AND block.data->>'content' = _key
-		AND block.data['source'] = _block.content[_key];
+		AND block.data['source'] = _block.content[_key]
+		INTO _result;
 	IF FOUND THEN
 		RETURN _result;
 	ELSE
@@ -58,7 +61,7 @@ DECLARE
 	site_id INTEGER;
 	cur_id TEXT;
 BEGIN
-	SELECT INTO STRICT site_id relation.parent_id FROM relation WHERE relation.child_id = dict_id;
+	SELECT relation.parent_id FROM relation WHERE relation.child_id = dict_id INTO STRICT site_id;
 
 	INSERT INTO block (id, type, data) VALUES (
 			replace(gen_random_uuid()::text, '-', ''),
@@ -70,7 +73,7 @@ BEGIN
 				'targets', '{}'::jsonb
 			)
 		);
-	SELECT INTO translation_id currval(pg_get_serial_sequence('block','_id'));
+	SELECT currval(pg_get_serial_sequence('block','_id')) INTO translation_id;
 	INSERT INTO relation (child_id, parent_id) VALUES (translation_id, site_id);
 	INSERT INTO relation (child_id, parent_id) VALUES (translation_id, dict_id);
 END
@@ -81,11 +84,12 @@ CREATE OR REPLACE FUNCTION translate_find_dictionary(block_id INTEGER)
 DECLARE
 	dict_id INTEGER;
 BEGIN
-	SELECT INTO dict_id dict._id
+	SELECT dict._id
 		FROM relation AS block_parent, block AS parent,
 			relation AS block_site, block AS site, relation AS dict_site, block AS dict
 		WHERE block_parent.child_id = block_id AND parent._id = block_parent.parent_id AND parent.type != 'site' AND block_site.child_id = block_parent.child_id AND site._id = block_site.parent_id AND site.type = 'site'
-		AND dict_site.parent_id = site._id AND dict._id = dict_site.child_id AND dict.type = 'dictionary' AND dict.id = parent.data->>'dictionary';
+		AND dict_site.parent_id = site._id AND dict._id = dict_site.child_id AND dict.type = 'dictionary' AND dict.id = parent.data->>'dictionary'
+		INTO dict_id;
 	IF FOUND THEN
 		RETURN dict_id;
 	ELSE
@@ -95,45 +99,45 @@ END
 $$ LANGUAGE plpgsql;
 
 -- Insert new translation if none is found
-CREATE OR REPLACE PROCEDURE translate_content_insert(_row block) AS $$
+CREATE OR REPLACE PROCEDURE translate_content_insert(_block block) AS $$
 DECLARE
 	dict_id INTEGER;
 	_key TEXT;
 	_translation block;
 BEGIN
-	SELECT translate_find_dictionary(_row._id) INTO dict_id;
+	SELECT translate_find_dictionary(_block._id) INTO dict_id;
 	IF dict_id < 0 THEN
 		RETURN;
 	END IF;
 	FOR _key IN
-		SELECT * FROM jsonb_object_keys(_row.content)
+		SELECT * FROM jsonb_object_keys(_block.content)
 	LOOP
-		SELECT INTO _translation * FROM translate_find_translation(_row, _key, dict_id);
+		SELECT * FROM translate_find_translation(_block, _key, dict_id) INTO _translation;
 		IF NOT FOUND THEN
-			CALL translate_new_translation(_row, _key, dict_id);
+			CALL translate_new_translation(_block, _key, dict_id);
 		END IF;
 	END LOOP;
 END
 $$ LANGUAGE plpgsql;
 
 -- Remove translation if no other block is using it
-CREATE OR REPLACE PROCEDURE translate_content_delete(_row block) AS $$
+CREATE OR REPLACE PROCEDURE translate_content_delete(_block block) AS $$
 DECLARE
 	dict_id INTEGER;
 	_key TEXT;
 	_translation block;
 	_count INTEGER;
 BEGIN
-	SELECT translate_find_dictionary(_row._id) INTO dict_id;
+	SELECT translate_find_dictionary(_block._id) INTO dict_id;
 	IF dict_id < 0 THEN
 		RETURN;
 	END IF;
 	FOR _key IN
-		SELECT * FROM jsonb_object_keys(_row.content)
+		SELECT * FROM jsonb_object_keys(_block.content)
 	LOOP
-		SELECT INTO _translation * FROM translate_find_translation(_row, _key, dict_id);
+		SELECT * FROM translate_find_translation(_block, _key, dict_id) INTO _translation;
 		IF FOUND THEN
-			SELECT INTO _count count(*) FROM translate_find_blocks(_translation, dict_id);
+			SELECT count(*) FROM translate_find_blocks(_translation, dict_id) INTO _count;
 		ELSE
 			_count := 0;
 		END IF;
@@ -175,9 +179,9 @@ BEGIN
 		IF OLD.content[_key] = NEW.content[_key] THEN
 			CONTINUE;
 		END IF;
-		SELECT INTO _translation * FROM translate_find_translation(OLD, _key, dict_id);
+		SELECT * FROM translate_find_translation(OLD, _key, dict_id) INTO _translation;
 		IF FOUND THEN
-			SELECT INTO _count count(*) FROM translate_find_blocks(_translation, dict_id);
+			SELECT count(*) FROM translate_find_blocks(_translation, dict_id) INTO _count;
 		ELSE
 			_count := 0;
 		END IF;
@@ -188,7 +192,7 @@ BEGIN
 	FOR _key IN
 		SELECT * FROM jsonb_object_keys(NEW.content)
 	LOOP
-		SELECT INTO _translation * FROM translate_find_translation(NEW, _key, dict_id);
+		SELECT * FROM translate_find_translation(NEW, _key, dict_id) INTO _translation;
 		IF NOT FOUND THEN
 			CALL translate_new_translation(NEW, _key, dict_id);
 		END IF;
