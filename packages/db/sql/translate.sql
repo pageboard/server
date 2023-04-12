@@ -46,7 +46,7 @@ BEGIN
 		AND relation.parent_id = parent._id
 		AND block._id = relation.child_id
 		AND block.type = _translation.data->>'type'
-		AND (block.content[_translation.data->>'content'])::text = _translation.data['source'];
+		AND block.content[_translation.data->>'content'] = _translation.data['source'];
 	RETURN;
 END
 $$ LANGUAGE plpgsql;
@@ -138,7 +138,7 @@ BEGIN
 			_count := 0;
 		END IF;
 		IF _count = 0 THEN
-			PERFORM DELETE FROM block WHERE _id = _translation._id;
+			DELETE FROM block WHERE _id = _translation._id;
 		END IF;
 	END LOOP;
 END
@@ -182,7 +182,7 @@ BEGIN
 			_count := 0;
 		END IF;
 		IF _count = 0 THEN
-			PERFORM DELETE FROM block WHERE _id = _translation._id;
+			DELETE FROM block WHERE _id = _translation._id;
 		END IF;
 	END LOOP;
 	FOR _key IN
@@ -190,10 +190,7 @@ BEGIN
 	LOOP
 		SELECT * FROM translate_find_translation(NEW, _key, dict_id) INTO _translation;
 		IF _translation._id IS NULL THEN
-			RAISE NOTICE 'new translation %', NEW.type;
 			CALL translate_new_translation(NEW, _key, dict_id);
-		ELSE
-			RAISE NOTICE 'translation found %', _translation;
 		END IF;
 	END LOOP;
 	RETURN NEW;
@@ -210,12 +207,25 @@ CREATE OR REPLACE FUNCTION translate_update_dictionary_func() RETURNS trigger AS
 DECLARE
 	old_dict TEXT;
 	new_dict TEXT;
+	dict_id INTEGER;
+	_translation block;
+	_count INTEGER;
 BEGIN
-	-- old_dict := OLD.data->>'dictionary';
-	-- new_dict := NEW.data->>'dictionary';
-	-- all translations in that dictionary must be checked and removed is not used ?
-
-	UPDATE block SET content = block.content FROM relation WHERE relation.parent_id = NEW._id AND _id = relation.child_id;
+	old_dict := OLD.data->>'dictionary';
+	new_dict := NEW.data->>'dictionary';
+	IF old_dict IS NOT NULL THEN
+		SELECT _id FROM block WHERE id = old_dict AND type = 'dictionary' INTO dict_id;
+		FOR _translation IN
+			SELECT block.* FROM relation, block WHERE relation.parent_id = dict_id AND block._id = relation.child_id AND block.type = 'translation'
+		LOOP
+			SELECT count(*) FROM translate_find_blocks(_translation, dict_id) INTO _count;
+			IF _count = 0 THEN
+				DELETE FROM block WHERE _id = _translation._id;
+			END IF;
+		END LOOP;
+	ELSE
+		UPDATE block SET content = block.content FROM relation WHERE relation.parent_id = NEW._id AND _id = relation.child_id;
+	END IF;
 	RETURN NEW;
 END
 $$ LANGUAGE plpgsql;
