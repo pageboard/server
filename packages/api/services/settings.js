@@ -97,7 +97,7 @@ module.exports = class SettingsService {
 		if (req.locked([grant], true)) {
 			throw new HttpError.Forbidden("Higher grant is needed");
 		}
-		const obj = await this.have(req, email);
+		const obj = await req.run('settings.have', { email });
 		const { grants = [] } = obj.item.data ?? {};
 		if (!grants.includes(grant)) {
 			grants.push(grant);
@@ -172,7 +172,7 @@ module.exports = class SettingsService {
 		}
 	};
 
-	async have(req, email) {
+	async have(req, { email }) {
 		try {
 			return await req.run('settings.find', { email });
 		} catch (err) {
@@ -190,9 +190,29 @@ module.exports = class SettingsService {
 					relate: ['parents']
 				});
 			delete settings.parents;
-			return settings;
+			return { item: settings };
 		}
 	}
+
+	static have = {
+		title: 'Have user settings',
+		$action: 'write',
+		required: ['email'],
+		properties: {
+			email: {
+				title: 'User email',
+				type: 'string',
+				format: 'email',
+				transform: ['trim', 'toLowerCase']
+			},
+			data: {
+				title: 'Data',
+				type: 'object',
+				additionalProperties: true,
+				default: {}
+			}
+		}
+	};
 
 	async save(req, { id, data }) {
 		const settings = await req.run('settings.get', { id });

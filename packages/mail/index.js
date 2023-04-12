@@ -328,7 +328,7 @@ module.exports = class MailModule {
 
 		list.push(Promise.all(data.to.map(to => {
 			if (to.indexOf('@') > 0) {
-				return req.run('settings.save', { email: to });
+				return req.run('settings.have', { email: to });
 			} else {
 				return req.run('settings.get', { id: to });
 			}

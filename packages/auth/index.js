@@ -132,10 +132,6 @@ module.exports = class AuthModule {
 	locked(req, list, cannotEscalate = false) {
 		const { site, user } = req;
 		const { locks } = req;
-		if (list != null && !Array.isArray(list) && typeof list == "object" && list.read !== undefined) {
-			// backward compat, block.lock only cares about read access
-			list = list.read;
-		}
 		if (list == null) return false;
 		else if (typeof list == "string") list = [list];
 		else if (list === true) return true;
@@ -185,7 +181,7 @@ module.exports = class AuthModule {
 	filter(req, schema, item) {
 		let $lock = schema.$lock || {};
 		if (typeof $lock == "boolean" || typeof $lock == "string" || Array.isArray($lock)) $lock = { '*': $lock };
-		const lock = (item.lock || {}).read || [];
+		const lock = item.lock || [];
 
 		if (Object.keys($lock).length == 0 && lock.length == 0) return item;
 

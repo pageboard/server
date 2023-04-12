@@ -58,12 +58,12 @@ module.exports = class LoginModule {
 			return "login.send requires a hostname. Use login.link";
 		}
 		const token = await this.#generate(req, data);
-		const settings = data.settings || {};
-		delete settings.grants;
-		await req.run('settings.save', {
-			email: data.email,
-			data: settings
+		const { item: settings } = await req.run('settings.have', {
+			email: data.email
 		});
+		if (data.settings) {
+			await req.run('settings.save', { id: settings.id, data: data.settings });
+		}
 		const mail = {
 			purpose: 'transactional',
 			from: {
@@ -128,7 +128,10 @@ module.exports = class LoginModule {
 			}
 		}
 		token = token.replaceAll(/\s/g, '');
-		otp.authenticator.options.window = [tokenMaxAge, 0];
+		otp.authenticator.options = {
+			window: [tokenMaxAge, 0],
+			step: otp.authenticator.options.step
+		};
 		const verified = otp.authenticator.check(token, priv.data.otp.secret);
 		await priv.$query(trx).patchObject({
 			type: priv.type,
@@ -146,7 +149,7 @@ module.exports = class LoginModule {
 		const { user = {} } = req;
 		const verified = await this.#verifyToken(req, data);
 		if (!verified) throw new HttpError.BadRequest("Bad token");
-		const settings = await req.run('settings.find', {
+		const { item: settings } = await req.run('settings.find', {
 			email: data.email
 		});
 		const prevGrants = user?.grants ?? [];

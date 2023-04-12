@@ -117,7 +117,7 @@ module.exports = class PageService {
 		let page = await this.#QueryPage(req, data.url);
 		if (!page) {
 			obj.status = 404;
-		} else if (req.locked((page.lock ?? {}).read)) {
+		} else if (req.locked(page.lock)) {
 			obj.status = 401;
 		}
 		const wkp = /^\/\.well-known\/(\d{3})$/.exec(data.url);
