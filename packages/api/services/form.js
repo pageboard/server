@@ -57,7 +57,7 @@ module.exports = class FormService {
 		const body = {};
 
 		if (params.type && Array.isArray(params.type) == false && !(reqBody.data && reqBody.id) && Object.keys(reqBody).length > 0) {
-			// TODO remove this all thing
+			// TODO remove this whole thing
 			const el = site.$schema(params.type);
 			if (!el) {
 				throw new HttpError.BadRequest("Unknown element type " + params.type);
