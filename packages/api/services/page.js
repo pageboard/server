@@ -439,7 +439,7 @@ module.exports = class PageService {
 		];
 		await applyRelate(req, changes.relate);
 		await Promise.all(pages.update.map(async child => {
-			if (!child.data.url || child.data.url.startsWith('/.')) return;
+			if (!child.data.url || child.data.url.startsWith('/.') || child.data.title == null) return;
 			try {
 				await req.run('href.save', {
 					url: child.data.url,
