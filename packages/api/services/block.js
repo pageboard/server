@@ -510,7 +510,7 @@ module.exports = class BlockService {
 			data: mergeRecursive({}, src.data, data.data),
 			expr: mergeRecursive({}, src.expr, data.expr),
 			content: mergeRecursive({}, src.content),
-			locks: mergeRecursive({}, src.locks)
+			lock: mergeRecursive([], src.lock)
 		};
 
 
