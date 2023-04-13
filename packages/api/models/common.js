@@ -193,13 +193,16 @@ exports.QueryBuilder = class CommonQueryBuilder extends QueryBuilder {
 			gt: '>',
 			gte: '>='
 		};
-		Object.keys(refs).forEach(function(k) {
-			const cond = refs[k];
+		for (const [k, cond] of Object.entries(refs)) {
 			const refk = ref(k);
 			if (cond == null) {
 				this.whereNull(refk);
 			} else if (Array.isArray(cond)) {
-				this.where(refk.castText(), 'IN', cond);
+				this.where(function () {
+					const noNulls = cond.filter(x => x !== null);
+					this.where(refk.castText(), 'IN', noNulls);
+					if (noNulls.length != cond.length) this.orWhereNull(refk);
+				});
 			} else if (typeof cond == "object") {
 				if (cond.op in comps) {
 					if (cond.val instanceof Date) {
@@ -305,7 +308,7 @@ exports.QueryBuilder = class CommonQueryBuilder extends QueryBuilder {
 			} else {
 				this.where(refk.castText(), cond);
 			}
-		}, this);
+		}
 		return this;
 	}
 	clone() {
@@ -376,15 +379,22 @@ function asPaths(obj, ret, pre, first, schema) {
 					}
 				}
 			} else if (schem.type == "boolean" && typeof val != "boolean") {
-				if (val == "false" || val == 0 || !val) val = false;
-				else val = true;
+				if (!val || val == "false") {
+					if (schem.default == false) {
+						val = [false, null];
+					} else {
+						val = false;
+					}
+				} else {
+					val = true;
+				}
 			} else if (["integer", "number"].includes(schem.type) && typeof val == "string" && (val.includes("~") || val.includes("⩽"))) {
 				val = numericRange(val, schem.type);
 			}
 			if (op) ret[cur] = {
-				op: op,
 				type: schem.type,
-				val: val
+				op,
+				val
 			};
 			else ret[cur] = val;
 		} else if (typeof val == "object") {
