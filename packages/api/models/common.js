@@ -506,8 +506,6 @@ function convertFieldExpressionsToRaw(builder, model, json) {
 			]);
 
 			delete model[key];
-		} else if (Array.isArray(value)) {
-			convertedJson[key] = knex.raw('?::jsonb', JSON.stringify(value));
 		} else {
 			convertedJson[key] = value;
 		}
