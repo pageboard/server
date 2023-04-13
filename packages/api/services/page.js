@@ -77,21 +77,25 @@ module.exports = class PageService {
 		});
 	}
 
-	#QueryPage({ trx, call, site }, url) {
+	#QueryPage({ trx, site }, url, lang) {
 		return site.$relatedQuery('children', trx).alias('page')
 			.select()
 			.first()
 			// eager load children (in which there are standalones)
 			// and children of standalones
 			.withGraphFetched(`[
-				children(childrenFilter),
+				children(childrenFilter) as children,
 				children(standalonesFilter) as standalones .children(childrenFilter)
 			]`).modifiers({
 				childrenFilter(query) {
-					return query.select().where('page.standalone', false);
+					query.select().where('page.standalone', false);
+					if (lang) query.select(raw(
+						'translate_block_content(page, :lang) AS content', { lang }
+					));
+					return query;
 				},
-				standalonesFilter(query) {
-					return query.select().where('page.standalone', true);
+				standalonesFilter(q) {
+					return q.select().where('page.standalone', true);
 				}
 			})
 			.where(q => {
@@ -114,7 +118,7 @@ module.exports = class PageService {
 			site: site.data
 		};
 
-		let page = await this.#QueryPage(req, data.url);
+		let page = await this.#QueryPage(req, data.url, data.lang);
 		if (!page) {
 			obj.status = 404;
 		} else if (req.locked(page.lock)) {
@@ -122,7 +126,7 @@ module.exports = class PageService {
 		}
 		const wkp = /^\/\.well-known\/(\d{3})$/.exec(data.url);
 		if (obj.status != 200) {
-			page = await this.#QueryPage(req, `/.well-known/${obj.status}`);
+			page = await this.#QueryPage(req, `/.well-known/${obj.status}`, data.lang);
 			if (!page) return Object.assign(obj, {
 				item: { type: 'page' }
 			});
@@ -156,6 +160,13 @@ module.exports = class PageService {
 			url: {
 				type: 'string',
 				format: 'pathname'
+			},
+			lang: {
+				title: 'Translate to lang',
+				description: 'ISO 639-3 language code',
+				type: 'string',
+				pattern: /^[a-z]{3}$/.source,
+				nullable: true
 			}
 		}
 	};
