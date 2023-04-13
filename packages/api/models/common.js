@@ -142,7 +142,7 @@ exports.QueryBuilder = class CommonQueryBuilder extends QueryBuilder {
 		return super.select(list);
 	}
 	select(...args) {
-		if (args.length == 0) {
+		if (args.length == 0 || args.length == 1 && args[0] == null) {
 			const model = this.modelClass();
 			const table = this.tableRefFor(model);
 			args = model.columns.map(col => `${table}.${col}`);
