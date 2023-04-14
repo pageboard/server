@@ -851,7 +851,7 @@ async function updatePage({ site, trx, Block, Href }, page, sideEffects) {
 			raw("date_trunc('milliseconds', block.updated_at)"),
 			raw("date_trunc('milliseconds', ?::timestamptz)", [page.updated_at]),
 		)
-		.patchObject(page)
+		.patch(page)
 		.returning('block.id', 'block.updated_at')
 		.first();
 	if (!part) {
