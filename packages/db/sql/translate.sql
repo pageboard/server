@@ -197,11 +197,11 @@ BEGIN
 END
 $$ LANGUAGE plpgsql;
 
-CREATE OR REPLACE TRIGGER translate_content_insert_trigger AFTER INSERT ON block FOR EACH ROW EXECUTE FUNCTION translate_content_insert_func();
+CREATE OR REPLACE TRIGGER translate_content_insert_trigger AFTER INSERT ON block FOR EACH ROW WHEN (NEW.type NOT IN ('translation', 'dictionary')) EXECUTE FUNCTION translate_content_insert_func();
 
-CREATE OR REPLACE TRIGGER translate_content_update_trigger AFTER UPDATE OF content ON block FOR EACH ROW EXECUTE FUNCTION translate_content_update_func();
+CREATE OR REPLACE TRIGGER translate_content_update_trigger AFTER UPDATE OF content ON block FOR EACH ROW WHEN (NEW.type NOT IN ('translation', 'dictionary')) EXECUTE FUNCTION translate_content_update_func();
 
-CREATE OR REPLACE TRIGGER translate_content_delete_trigger AFTER DELETE ON block FOR EACH ROW EXECUTE FUNCTION translate_content_delete_func();
+CREATE OR REPLACE TRIGGER translate_content_delete_trigger AFTER DELETE ON block FOR EACH ROW WHEN (OLD.type NOT IN ('translation', 'dictionary')) EXECUTE FUNCTION translate_content_delete_func();
 
 CREATE OR REPLACE FUNCTION translate_update_dictionary_func() RETURNS trigger AS $$
 DECLARE
@@ -230,4 +230,4 @@ BEGIN
 END
 $$ LANGUAGE plpgsql;
 
-CREATE OR REPLACE TRIGGER translate_update_dictionary_trigger AFTER UPDATE OF data ON block FOR EACH ROW WHEN (OLD.data->>'dictionary' IS DISTINCT FROM NEW.data->>'dictionary') EXECUTE FUNCTION translate_update_dictionary_func();
+CREATE OR REPLACE TRIGGER translate_update_dictionary_trigger AFTER UPDATE OF data ON block FOR EACH ROW WHEN (NEW.standalone IS TRUE AND NEW.type NOT IN ('translation', 'dictionary') AND OLD.data->>'dictionary' IS DISTINCT FROM NEW.data->>'dictionary') EXECUTE FUNCTION translate_update_dictionary_func();
