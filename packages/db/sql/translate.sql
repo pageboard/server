@@ -1,17 +1,23 @@
 CREATE OR REPLACE FUNCTION translate_block_content(_block block, _lang TEXT) RETURNS JSONB AS $$
 DECLARE
-	dict_id INTEGER;
+	_dict block;
 	_target JSONB;
 	_translation block;
 	_key TEXT;
 	_content JSONB;
 BEGIN
-	SELECT translate_find_dictionary(_block._id) INTO dict_id;
+	SELECT * FROM translate_find_dictionary(_block._id) INTO _dict;
+	IF NOT _dict.data['targets'] ? _lang THEN
+		RAISE EXCEPTION 'Unknown lang: %', _lang  USING ERRCODE = 'invalid_parameter_value'; -- 22023
+	END IF;
 	_content := _block.content;
+	IF _dict.data->>'source' = _lang THEN
+		RETURN _content;
+	END IF;
 	FOR _key IN
 		SELECT * FROM jsonb_object_keys(_content)
 	LOOP
-		SELECT * FROM translate_find_translation(_block, _key, dict_id) INTO _translation;
+		SELECT * FROM translate_find_translation(_block, _key, _dict._id) INTO _translation;
 		IF _translation._id IS NOT NULL THEN
 			_target := _translation.data['targets'][_lang];
 			IF _target IS NOT NULL THEN
@@ -82,21 +88,17 @@ END
 $$ LANGUAGE plpgsql;
 
 CREATE OR REPLACE FUNCTION translate_find_dictionary(block_id INTEGER)
-	RETURNS INTEGER AS $$
+	RETURNS block AS $$
 DECLARE
-	dict_id INTEGER;
+	_result block;
 BEGIN
-	SELECT dict._id
+	SELECT dict.*
 		FROM relation AS block_parent, block AS parent,
 			relation AS block_site, block AS site, relation AS dict_site, block AS dict
 		WHERE block_parent.child_id = block_id AND parent._id = block_parent.parent_id AND parent.type != 'site' AND block_site.child_id = block_parent.child_id AND site._id = block_site.parent_id AND site.type = 'site'
 		AND dict_site.parent_id = site._id AND dict._id = dict_site.child_id AND dict.type = 'dictionary' AND dict.id = parent.data->>'dictionary'
-		INTO dict_id;
-	IF FOUND THEN
-		RETURN dict_id;
-	ELSE
-		RETURN -1;
-	END IF;
+		INTO _result;
+	RETURN _result;
 END
 $$ LANGUAGE plpgsql;
 
@@ -107,8 +109,8 @@ DECLARE
 	_key TEXT;
 	_translation block;
 BEGIN
-	SELECT translate_find_dictionary(_block._id) INTO dict_id;
-	IF dict_id < 0 THEN
+	SELECT _id FROM translate_find_dictionary(_block._id) INTO dict_id;
+	IF dict_id IS NULL THEN
 		RETURN;
 	END IF;
 	FOR _key IN
@@ -130,8 +132,8 @@ DECLARE
 	_translation block;
 	_count INTEGER;
 BEGIN
-	SELECT translate_find_dictionary(_block._id) INTO dict_id;
-	IF dict_id < 0 THEN
+	SELECT _id FROM translate_find_dictionary(_block._id) INTO dict_id;
+	IF dict_id IS NULL THEN
 		RETURN;
 	END IF;
 	FOR _key IN
@@ -171,8 +173,8 @@ DECLARE
 	_translation block;
 	_count INTEGER;
 BEGIN
-	SELECT translate_find_dictionary(OLD._id) INTO dict_id;
-	IF dict_id < 0 THEN
+	SELECT _id FROM translate_find_dictionary(OLD._id) INTO dict_id;
+	IF dict_id IS NULL THEN
 		RETURN NEW;
 	END IF;
 	FOR _key IN
