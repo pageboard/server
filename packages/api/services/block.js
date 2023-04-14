@@ -320,8 +320,8 @@ module.exports = class BlockService {
 				default: false
 			},
 			lang: {
-				title: 'Translate to lang',
-				description: 'Language tag syntax',
+				title: 'Language',
+				description: '$query.lang in language tag syntax',
 				type: 'string',
 				pattern: /^([a-zA-Z]+-?)+$/.source,
 				nullable: true
@@ -475,6 +475,10 @@ module.exports = class BlockService {
 					}
 				}
 			}
+		},
+		templates: {
+			lang: '[$query.lang?]',
+			offset: '[$query.offset?]'
 		}
 	};
 
