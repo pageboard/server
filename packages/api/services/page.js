@@ -118,7 +118,18 @@ module.exports = class PageService {
 			site: site.data
 		};
 
-		let page = await this.#QueryPage(req, data.url, data.lang);
+		let page;
+		try {
+			page = await this.#QueryPage(req, data.url, data.lang);
+		} catch (err) {
+			if (err.nativeError?.code == '22023') {
+				err.status = 400;
+				err.message = 'Unknown lang';
+				throw err;
+			} else {
+				throw err;
+			}
+		}
 		if (!page) {
 			obj.status = 404;
 		} else if (req.locked(page.lock)) {
