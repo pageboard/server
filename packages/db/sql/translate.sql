@@ -56,7 +56,13 @@ DECLARE
 	translation_id INTEGER;
 	site_id INTEGER;
 	cur_id TEXT;
+	_content TEXT;
 BEGIN
+	_content := (_block.content[_key])::text;
+	IF _content IS NULL OR _content = '""' OR (starts_with(_content, '"<') AND regexp_count(_content, '>\w') = 0) THEN
+		RETURN;
+	END IF;
+
 	SELECT relation.parent_id FROM relation WHERE relation.child_id = dict_id INTO STRICT site_id;
 
 	INSERT INTO block (id, type, data) VALUES (
