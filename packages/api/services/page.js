@@ -163,9 +163,9 @@ module.exports = class PageService {
 			},
 			lang: {
 				title: 'Translate to lang',
-				description: 'ISO 639-3 language code',
+				description: 'Language tag syntax',
 				type: 'string',
-				pattern: /^[a-z]{3}$/.source,
+				pattern: /^([a-zA-Z]+-?)+$/.source,
 				nullable: true
 			}
 		}
