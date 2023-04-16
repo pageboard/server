@@ -19,7 +19,7 @@ BEGIN
 	LOOP
 		SELECT * FROM translate_find_translation(_block, _key, _dict._id) INTO _translation;
 		IF _translation._id IS NOT NULL THEN
-			_target := _translation.data['targets'][_lang];
+			_target := _translation.data['targets'][_lang]['text'];
 			IF _target IS NOT NULL THEN
 				_content := jsonb_set(_content, ARRAY[_key], _target, TRUE);
 			END IF;
