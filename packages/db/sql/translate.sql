@@ -89,8 +89,7 @@ BEGIN
 				'source', _block.content[_key],
 				'targets', _def
 			)
-		);
-	SELECT currval(pg_get_serial_sequence('block','_id')) INTO translation_id;
+		) RETURNING block._id INTO translation_id;
 	INSERT INTO relation (child_id, parent_id) VALUES (translation_id, site_id);
 	INSERT INTO relation (child_id, parent_id) VALUES (translation_id, _dict._id);
 END
