@@ -37,7 +37,7 @@ module.exports = class TranslateService {
 		} else if (data.operation == "auto") {
 			const sources = await dict.$relatedQuery('children', trx)
 				.select('block.id', ref('block.data:source').as('source'))
-				.where('block.type', 'translation').limit(100);
+				.where('block.type', 'translation').limit(10);
 			const words = sources.map(row => { return { w: row.source, t: 1 }; });
 
 			const res = await fetch(this.opts.url, {
@@ -45,7 +45,7 @@ module.exports = class TranslateService {
 				body: JSON.stringify({
 					l_from: dict.data.source,
 					l_to: data.lang,
-					request_url: "https://myse.museum",
+					request_url: site.url.href,
 					words
 				}),
 				headers: {
