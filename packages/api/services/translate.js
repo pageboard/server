@@ -37,7 +37,9 @@ module.exports = class TranslateService {
 		} else if (data.operation == "auto") {
 			const sources = await dict.$relatedQuery('children', trx)
 				.select('block.id', ref('block.data:source').as('source'))
-				.where('block.type', 'translation').limit(10);
+				.where('block.type', 'translation')
+				.whereNull(ref(col))
+				.limit(10);
 
 			const body = new URLSearchParams({
 				tag_handling: 'html',
