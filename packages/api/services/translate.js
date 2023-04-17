@@ -38,30 +38,29 @@ module.exports = class TranslateService {
 			const sources = await dict.$relatedQuery('children', trx)
 				.select('block.id', ref('block.data:source').as('source'))
 				.where('block.type', 'translation').limit(10);
-			const words = sources.map(row => { return { w: row.source, t: 1 }; });
+
+			const body = new URLSearchParams({
+				tag_handling: 'html',
+				preserve_formatting: 1,
+				source_lang: dict.data.source,
+				target_lang: data.lang
+			});
+			for (const row of sources) body.append('text', row.source);
 
 			const res = await fetch(this.opts.url, {
 				method: 'post',
-				body: JSON.stringify({
-					l_from: dict.data.source,
-					l_to: data.lang,
-					request_url: site.url.href,
-					words
-				}),
 				headers: {
-					'Content-Type': 'application/json'
-				}
+					Authorization: this.opts.key,
+					'Content-Type': 'application/x-www-form-urlencoded'
+				},
+				body
 			});
 			if (res.status != 200) {
 				throw new HttpError[res.status](res.statusText);
 			}
 			const obj = await res.json();
-			for (let i = 0; i < obj.from_words.length; i++) {
-				const source = obj.from_words[i];
-				if (source != sources[i].source) {
-					console.error("Source mismatch", i);
-				}
-				const target = obj.to_words[i];
+			for (let i = 0; i < obj.translations.length; i++) {
+				const target = obj.translations[i].text;
 				await dict.$relatedQuery('children', trx)
 					.where('block.type', 'translation')
 					.where('block.id', sources[i].id)
