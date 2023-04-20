@@ -158,7 +158,7 @@ module.exports = class ArchiveService {
 		let upgrader;
 		const refs = new Map();
 		const list = [];
-		const beforeEach = async obj => {
+		const beforeEach = obj => {
 			if (obj.type == "site" || list.length == 0) {
 				const toVersion = site.data.server;
 				const fromVersion = obj.type == "site" && obj.data?.server || toVersion;
@@ -244,8 +244,8 @@ module.exports = class ArchiveService {
 			}
 		};
 
-		fstream.on('data', async obj => {
-			list.push(await beforeEach(obj));
+		fstream.on('data', obj => {
+			list.push(beforeEach(obj));
 		});
 
 
