@@ -19,7 +19,7 @@ function fixSchema(schema) {
 					}
 					break;
 				case "string":
-					if (schema.format) {
+					if (schema.format || schema.pattern) {
 						schema.coerce = true;
 					}
 					break;
