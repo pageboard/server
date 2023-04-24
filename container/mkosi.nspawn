@@ -1,0 +1,13 @@
+[Exec]
+Boot=true
+PrivateUsers=off
+
+
+[Files]
+Overlay=/var/lib/machines/bookworm:/var/lib/machines/pageboard-proxy:/
+PrivateUsersOwnership=off
+
+[Network]
+Private=no
+VirtualEthernet=no
+

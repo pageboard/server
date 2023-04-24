@@ -1,0 +1,33 @@
+[Output]
+Output=/var/lib/machines/pageboard-server
+Format=directory
+
+[Partitions]
+# mkosi --distribution=debian --release=bookworm --output=bookworm --format=directory --packages=systemd-resolved
+BaseImage=/var/lib/machines/bookworm
+
+[Content]
+CleanPackageMetadata=true
+BuildSources=..
+
+# build proxy deps
+BuildPackages=
+ make
+ patch
+ gcc
+ npm
+ vips-dev
+
+# runtime
+# keep redis-server on the host
+Packages=
+ systemd-container
+ ca-certificates
+ curl
+ exiftool
+ libvips
+ xvfb
+ google-chrome-stable
+
+# proxy needs access to luarocks/github
+WithNetwork=true
