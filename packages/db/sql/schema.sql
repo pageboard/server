@@ -1,15 +1,3 @@
-CREATE OR REPLACE FUNCTION block_tsv_update() RETURNS trigger
-    LANGUAGE plpgsql
-    AS $$
-BEGIN
- new.tsv := to_tsvector('unaccent', COALESCE(new.data->>'title', ''))
-  || to_tsvector('unaccent', COALESCE(new.data->>'description', ''))
-  || to_tsvector('unaccent', COALESCE(new.content, '{}'::jsonb));
- RETURN new;
-END
-$$;
-ALTER FUNCTION block_tsv_update();
-
 CREATE FUNCTION href_tsv_update() RETURNS trigger
     LANGUAGE plpgsql
     AS $$
@@ -102,7 +90,6 @@ CREATE TABLE block (
     standalone boolean DEFAULT false NOT NULL,
     created_at timestamp with time zone DEFAULT now() NOT NULL,
     updated_at timestamp with time zone DEFAULT now() NOT NULL,
-    tsv tsvector,
     locks jsonb,
     expr jsonb,
     lock jsonb
@@ -187,12 +174,10 @@ CREATE INDEX block_updated_at_idx ON block USING btree (updated_at DESC);
 CREATE INDEX href_mime_index ON href USING btree (mime);
 CREATE INDEX href_updated_at_idx ON href USING btree (updated_at DESC);
 CREATE UNIQUE INDEX href__parent_id_url_idx ON href(_parent_id, url);
-CREATE INDEX index_block_tsv ON block USING gin (tsv);
 CREATE INDEX index_href_tsv ON href USING gin (tsv);
 CREATE INDEX relation_child_id_index ON relation USING btree (child_id);
 CREATE UNIQUE INDEX relation_parent_id_child_id_idx ON relation USING btree (parent_id, child_id);
 CREATE INDEX relation_parent_id_index ON relation USING btree (parent_id);
-CREATE TRIGGER block_tsv_trigger BEFORE INSERT OR UPDATE ON block FOR EACH ROW EXECUTE FUNCTION block_tsv_update();
 CREATE TRIGGER href_tsv_trigger BEFORE INSERT OR UPDATE ON href FOR EACH ROW EXECUTE FUNCTION href_tsv_update();
 ALTER TABLE ONLY href
     ADD CONSTRAINT href__parent_id_foreign FOREIGN KEY (_parent_id) REFERENCES block(_id) ON DELETE CASCADE;

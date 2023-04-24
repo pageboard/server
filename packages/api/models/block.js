@@ -30,7 +30,8 @@ class Block extends Model {
 				nullable: true
 			},
 			content: {
-				type: 'object'
+				type: 'object',
+				additionalProperties: { type: 'string' }
 			},
 			standalone: { // a standalone block can have 0 or multiple parents
 				type: 'boolean',
@@ -290,6 +291,16 @@ class Block extends Model {
 		const site = new DomainBlock();
 		Object.assign(site, block);
 		return site;
+	}
+
+	$formatDatabaseJson(json) {
+		if (json.content != null) json.content = Object.entries(json.content);
+		return super.$formatDatabaseJson(json);
+	}
+
+	$parseDatabaseJson(json) {
+		if (Array.isArray(json.content)) json.content = Object.fromEntries(json.content);
+		return super.$parseDatabaseJson(json);
 	}
 }
 
