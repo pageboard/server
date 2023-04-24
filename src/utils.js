@@ -1,4 +1,3 @@
-const { nestie } = require.lazy('nestie');
 const { flattie } = require.lazy('flattie');
 const dget = require.lazy('dlv');
 const {
@@ -65,3 +64,40 @@ function dset(obj, keys, val) {
 		t = t[k] = (i === l) ? val : ((x = t[k]) && typeof (x) === typeof (keys)) ? x : (k = '+' + keys[i]) * 0 !== 0 || /\./.test(k) ? {} : [];
 	}
 }
+
+
+function empty(key) {
+	if (parseInt(key) == key) return [];
+	else return {};
+}
+
+function nestie(input, glue = ".") {
+	let tmp, output;
+	for (const k in input) {
+		tmp = output; // reset
+		const arr = k.split(glue);
+
+		for (let i = 0; i < arr.length;) {
+			const key = arr[i++];
+
+			if (tmp == null) {
+				tmp = empty('' + key);
+				output = output || tmp;
+			}
+
+			if (key == '__proto__' || key == 'constructor' || key == 'prototype') break;
+
+			if (i < arr.length) {
+				if (key in tmp) {
+					tmp = tmp[key];
+				} else {
+					tmp = tmp[key] = empty('' + arr[i]);
+				}
+			} else {
+				tmp[key] = input[k];
+			}
+		}
+	}
+	return output;
+}
+
