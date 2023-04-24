@@ -49,6 +49,7 @@ module.exports = class Upgrader {
 		if (block.children) for (const child of block.children) {
 			this.process(child, block);
 		}
+		this.afterEach(block);
 		return block;
 	}
 	upgrade(block, parent) {
