@@ -1,6 +1,6 @@
 const {
-	mergeExpressions
-} = require('../../../lib/utils');
+	mergeExpressions, unflatten
+} = require('../../../src/utils');
 
 module.exports = class SearchService {
 	static name = 'search';
@@ -26,13 +26,13 @@ module.exports = class SearchService {
 		const form = await run('block.get', {
 			id: data.id
 		});
+		if (locked(form.lock)) {
+			throw new HttpError.Unauthorized("Check user permissions");
+		}
 
 		const method = form.data?.action?.method;
 		if (!method) {
 			throw new HttpError.BadRequest("Missing method");
-		}
-		if (locked(form.lock?.read)) {
-			throw new HttpError.Unauthorized("Check user permissions");
 		}
 		const { $pathname } = data.query;
 		delete data.query.$pathname;
@@ -41,7 +41,7 @@ module.exports = class SearchService {
 			form.expr?.action?.parameters ?? {},
 			{
 				$pathname,
-				$query: data.query || {},
+				$query: unflatten(data.query ?? {}),
 				$user: user
 			}
 		);
@@ -49,6 +49,8 @@ module.exports = class SearchService {
 		return run(method, params);
 	}
 	static query = {
+		title: 'Form query',
+		$lock: true,
 		$action: 'read',
 		required: ['id'],
 		properties: {

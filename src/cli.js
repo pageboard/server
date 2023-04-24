@@ -44,7 +44,7 @@ exports.parse = function (args) {
 
 function parseArg(str) {
 	const { key, val } = (
-		/^(?<key>(?:--)?[a-z.]+)(?:=(?<val>.*))?$/.exec(str) || {
+		/^(?<key>(?:--)?[a-z.:]+)(?:=(?<val>.*))?$/.exec(str) || {
 			groups: {}
 		}
 	).groups;

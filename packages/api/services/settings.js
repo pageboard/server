@@ -1,5 +1,3 @@
-const { ref } = require('objection');
-
 module.exports = class SettingsService {
 	static name = 'settings';
 
@@ -16,26 +14,19 @@ module.exports = class SettingsService {
 			res.return(data);
 		});
 	}
-	async get({ site, trx }, data) {
-		const settings = await site.$relatedQuery('children', trx)
-			.where('block.type', 'settings')
-			.where('block.id', data.id).first().throwIfNotFound().select()
-			.withGraphFetched('[parents(userFilter) as parent]')
-			.modifiers({
-				userFilter(query) {
-					query.select().where('type', 'user');
-				}
-			});
-		settings.parent = settings.parent[0];
-		settings.parent.lock = {
-			read: [`id-${settings.id}`]
-		};
-		return settings;
+	async get(req, { id }) {
+		return req.run('block.find', {
+			id,
+			type: 'settings',
+			parents: {
+				first: true,
+				type: 'user'
+			}
+		});
 	}
 	static get = {
-		title: 'Get User',
+		title: 'Get user settings',
 		$action: 'read',
-		external: true,
 		required: ['id'],
 		properties: {
 			id: {
@@ -47,40 +38,24 @@ module.exports = class SettingsService {
 		}
 	};
 
-	async find({ site, trx }, data) {
-		if (!data.id && !data.email) {
-			throw new HttpError.BadRequest("Missing id or email");
-		}
-		const settings = await site.$relatedQuery('children', trx).alias('settings')
-			.where('settings.type', 'settings')
-			.where(q => {
-				if (data.id) {
-					q.where('parent.id', data.id);
-				} else if (data.email) {
-					q.whereJsonText('parent.data:email', data.email);
+	async find(req, data) {
+		return req.run('block.find', {
+			type: 'settings',
+			parents: {
+				first: true,
+				type: 'user'
+			},
+			parent: {
+				data: {
+					email: data.email
 				}
-			})
-			.first().throwIfNotFound()
-			.joinRelated('parents', { alias: 'parent' }).where('parent.type', 'user')
-			.withGraphFetched('[parents(userFilter) as parent]')
-			.modifiers({
-				userFilter(query) {
-					query.select().where('type', 'user');
-				}
-			});
-		settings.parent = settings.parent[0];
-		settings.parent.lock = {
-			read: [`id-${settings.id}`]
-		};
-		return settings;
+			}
+		});
 	}
 	static find = {
+		title: 'Find user settings',
+		required: ['email'],
 		properties: {
-			id: {
-				type: 'string',
-				minLength: 1,
-				format: 'id'
-			},
 			email: {
 				title: 'User email',
 				type: 'string',
@@ -90,75 +65,140 @@ module.exports = class SettingsService {
 		}
 	};
 
-	async search({ site, trx }, data) {
-		return site.$relatedQuery('children', trx).alias('settings')
-			.where('settings.type', 'settings')
-			.first().throwIfNotFound()
-			.select().select(ref('parent.data:email').as('email'))
-			.joinRelated('parents', { alias: 'parent' }).where('parent.type', 'user')
-			.whereJsonText('parent.data:email', 'in', data.email);
+	async search(req, data) {
+		const { items } = await req.run('block.search', {
+			type: 'settings',
+			parents: {
+				type: 'user',
+				first: true
+			},
+			parent: data
+		});
+		return {
+			items: items.map(item => {
+				item.data = { grants: item.data.grants };
+				return item;
+			})
+		};
 	}
 	static search = {
+		title: 'Search users',
 		$action: 'read',
-		required: ['email'],
 		properties: {
-			email: {
-				title: 'User emails',
-				type: 'array',
-				items: {
-					type: 'string',
-					format: 'email',
-					transform: ['trim', 'toLowerCase']
-				}
+			data: {
+				title: 'Data',
+				type: 'object',
+				default: {}
 			}
 		}
 	};
 
-	async save(req, data) {
-		const { trx, site } = req;
-		try {
-			const settings = await req.run('settings.find', data);
-			if (!data.data) return settings;
-			if (data.data.grants) {
-				// delete data.data.grants;
-			}
-			if (Object.keys(data.data).length == 0) return settings;
-			await settings.$query(trx).patchObject({
-				type: settings.type,
-				data: data.data
+	async grant(req, { email, grant }) {
+		if (req.locked([grant], true)) {
+			throw new HttpError.Forbidden("Higher grant is needed");
+		}
+		const obj = await req.run('settings.have', { email });
+		const { grants = [] } = obj.item.data ?? {};
+		if (!grants.includes(grant)) {
+			grants.push(grant);
+			return req.run('block.save', {
+				id: obj.item.id,
+				type: 'settings',
+				data: {
+					grants
+				}
 			});
-			return settings;
+		} else {
+			return obj;
+		}
+	}
+	static grant = {
+		title: 'Grant user permission',
+		description: 'A higher permission is needed to grant a lower permission',
+		$action: 'write',
+		required: ['email', 'grant'],
+		properties: {
+			email: {
+				title: 'User email',
+				type: 'string',
+				format: 'email',
+				transform: ['trim', 'toLowerCase']
+			},
+			grant: {
+				title: 'Grant',
+				type: 'string',
+				format: 'grant'
+			}
+		}
+	};
+
+	async revoke(req, { email, grant }) {
+		if (req.locked([grant], true)) {
+			throw new HttpError.Forbidden("Higher grant is needed");
+		}
+		const obj = await req.run('settings.find', { email });
+		const { grants = [] } = obj.item?.data ?? {};
+
+		if (grants.includes(grant)) {
+			grants.splice(grants.indexOf(grant), 1);
+			return req.run('block.save', {
+				id: obj.item.id,
+				type: 'settings',
+				data: {
+					grants
+				}
+			});
+		} else {
+			return obj;
+		}
+	}
+	static revoke = {
+		title: 'Revoke user permission',
+		description: 'A higher permission is needed to revoke a lower permission',
+		$action: 'write',
+		required: ['email', 'grant'],
+		properties: {
+			email: {
+				title: 'User email',
+				type: 'string',
+				format: 'email',
+				transform: ['trim', 'toLowerCase']
+			},
+			grant: {
+				title: 'Grant',
+				type: 'string',
+				format: 'grant'
+			}
+		}
+	};
+
+	async have(req, { email }) {
+		try {
+			return await req.run('settings.find', { email });
 		} catch (err) {
 			if (err.statusCode != 404) throw err;
+			const user = await req.run('user.add', { email });
+			const block = {
+				type: 'settings',
+				parents: [user]
+			};
+			const { site, trx } = req;
+			await site.$beforeInsert.call(block); // prepopulate block.id
+			block.lock = { read: [`id-${block.id}`] };
+			const settings = await site.$relatedQuery('children', trx)
+				.insertGraph(block, {
+					relate: ['parents']
+				});
+			delete settings.parents;
+			return { item: settings };
 		}
-		const user = await req.run('user.add', {
-			email: data.email
-		});
-		const block = {
-			type: 'settings',
-			data: data.data,
-			parents: [user]
-		};
-		await site.$beforeInsert.call(block);
-		block.lock = { read: [`id-${block.id}`] };
-		const settings = await site.$relatedQuery('children', trx)
-			.insertGraph(block, {
-				relate: ['parents']
-			});
-		settings.parent = settings.parents[0];
-		delete settings.parents;
-		settings.email = user.data.email;
-		return settings;
 	}
 
-	static save = {
-		$action: 'save',
+	static have = {
+		title: 'Have user settings',
+		$action: 'write',
+		required: ['email'],
 		properties: {
-			id: {
-				type: 'string',
-				minLength: 1,
-				format: 'id'
-			},
 			email: {
 				title: 'User email',
 				type: 'string',
@@ -166,7 +206,41 @@ module.exports = class SettingsService {
 				transform: ['trim', 'toLowerCase']
 			},
 			data: {
+				title: 'Data',
 				type: 'object',
+				additionalProperties: true,
+				default: {}
+			}
+		}
+	};
+
+	async save(req, { id, data }) {
+		const settings = await req.run('settings.get', { id });
+		if (data.grants) {
+			throw new HttpError.Unauthorized("Cannot change grants");
+		}
+		if (Object.keys(data).length == 0) return settings;
+		await settings.$query(req.trx).patchObject({
+			type: 'settings',
+			data
+		});
+		return settings;
+	}
+
+	static save = {
+		title: 'Save user settings',
+		$action: 'write',
+		required: ['id'],
+		properties: {
+			id: {
+				type: 'string',
+				minLength: 1,
+				format: 'id'
+			},
+			data: {
+				title: 'Data',
+				type: 'object',
+				additionalProperties: true,
 				default: {}
 			}
 		}

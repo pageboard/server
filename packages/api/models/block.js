@@ -41,28 +41,13 @@ class Block extends Model {
 				type: 'string'
 			},
 			lock: {
-				type: 'object',
+				type: 'array',
 				nullable: true,
-				properties: {
-					read: {
-						type: 'array',
-						nullable: true,
-						items: {
-							type: 'string',
-							format: 'grant'
-						},
-						uniqueItems: true
-					},
-					write: {
-						type: 'array',
-						nullable: true,
-						items: {
-							type: 'string',
-							format: 'grant'
-						},
-						uniqueItems: true
-					}
-				}
+				items: {
+					type: 'string',
+					format: 'grant'
+				},
+				uniqueItems: true
 			}
 		}
 	};
@@ -106,6 +91,7 @@ class Block extends Model {
 
 	static normalizeContents(contents) {
 		if (!contents) return;
+		if (contents === true) return [];
 		if (typeof contents == "string") contents = {
 			nodes: contents
 		};
@@ -220,9 +206,12 @@ class Block extends Model {
 				type: 'null'
 			};
 
+			const normContents = Block.normalizeContents(contents);
+
 			const contentSchema = contents ? {
 				type: 'object',
-				properties: contentsNames(Block.normalizeContents(contents))
+				properties: contentsNames(normContents),
+				additionalProperties: normContents.length == 0 ? true : false
 			} : {
 				type: 'null'
 			};
@@ -330,7 +319,7 @@ function contentsNames(list) {
 }
 
 function findHrefs(schema, list, root, array) {
-	if (!schema.properties) return;
+	if (!schema.properties || schema.virtual) return;
 	for (const [key, prop] of Object.entries(schema.properties)) {
 		if (!prop) throw new Error("Missing prop:" + key);
 		let path;
@@ -338,9 +327,7 @@ function findHrefs(schema, list, root, array) {
 		else if (root) path = `${root}.${key}`;
 		else path = key;
 		const helper = prop.$helper;
-		if (helper && helper.name == "href") {
-			// FIXME $helper.name == "page" ???
-			// https://github.com/pageboard/server/issues/104
+		if (helper == "href" || helper?.name == "href") {
 			let types = helper.filter && helper.filter.type || [];
 			if (!Array.isArray(types)) types = [types];
 			list.push({ path, types, array });

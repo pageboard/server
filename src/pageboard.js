@@ -1,21 +1,4 @@
-Object.isEmpty = function (obj) {
-	if (obj == null) return true;
-	if (Array.isArray(obj)) return obj.length === 0;
-	for (const key in obj) {
-		if (Object.prototype.hasOwnProperty.call(obj, key)) {
-			return false;
-		}
-	}
-	return JSON.stringify(obj) === JSON.stringify({});
-};
-
-if (!RegExp.escape) {
-	// https://github.com/tc39/proposal-regex-escaping/blob/main/polyfill.js
-	RegExp.escape = function (s) {
-		return String(s).replace(/[\\^$*+?.()|[\]{}]/g, '\\$&');
-	};
-}
-
+require('./polyfills');
 const importLazy = require('import-lazy');
 Object.getPrototypeOf(require).lazy = function(str) {
 	return importLazy(this)(str);
@@ -39,6 +22,7 @@ const cli = require.lazy('./cli');
 const Domains = require.lazy('./domains');
 const { mergeRecursive } = require('./utils');
 const Installer = require('./installer');
+const ResponseFilter = require('./filter');
 
 // exceptional but so natural
 global.HttpError = require('http-errors');
@@ -98,7 +82,10 @@ module.exports = class Pageboard {
 			start: false
 		},
 		commons: {},
-		upstreams: {}
+		upstreams: {},
+		database: {
+			tenant: 'current'
+		}
 	};
 
 	constructor(opts = {}) {
@@ -140,7 +127,13 @@ module.exports = class Pageboard {
 	}
 
 	async run(command, data, site) {
-		const req = { res: {} };
+		const req = {
+			res: {
+				locals: {
+					tenant: this.opts.database.tenant
+				}
+			}
+		};
 		this.domains.extendRequest(req, this);
 		if (site) {
 			req.site = await this.install(
@@ -189,6 +182,8 @@ module.exports = class Pageboard {
 		this.#initLog();
 		this.#installer = new Installer(this, opts.installer);
 
+		this.responseFilter = new ResponseFilter();
+
 		this.#plugins = [];
 		this.#loadPlugins(this.opts);
 		await this.#initDirs(this.dirs);
@@ -200,7 +195,16 @@ module.exports = class Pageboard {
 		this.domains = new Domains(this, opts);
 		this.domains.routes(this, server);
 		server.use((err, req, res, next) =>
-			this.#domainsError(err, req, res, next));
+			this.#domainsError(err, req, res, next)
+		);
+
+		server.get('/.well-known/traffic-advice', (req, res) => {
+			res.type('application/trafficadvice+json');
+			res.json([{
+				"user_agent": "prefetch-proxy",
+				"fraction": 1.0
+			}]);
+		});
 
 		await this.#initPlugins();
 		this.#initServices();
@@ -210,7 +214,8 @@ module.exports = class Pageboard {
 		// call plugins#file
 		await this.#initPlugins('file');
 		server.use((err, req, res, next) =>
-			this.#filesError(err, req, res, next));
+			this.#filesError(err, req, res, next)
+		);
 		server.use((req, res, next) => this.log(req, res, next));
 
 		// call plugins#service
@@ -221,13 +226,15 @@ module.exports = class Pageboard {
 			}
 		});
 		server.use((err, req, res, next) =>
-			this.#servicesError(err, req, res, next));
+			this.#servicesError(err, req, res, next)
+		);
 
 		// call plugins#view
-		if (!this.cli) await this.#initPlugins('view');
+		if (!this.opts.cli) await this.#initPlugins('view');
 
 		server.use((err, req, res, next) =>
-			this.#viewsError(err, req, res, next));
+			this.#viewsError(err, req, res, next)
+		);
 		await this.#start();
 	}
 
@@ -263,7 +270,7 @@ module.exports = class Pageboard {
 			await this.auth.install(site);
 			await this.cache.install(site);
 			if (this.env != "development") await this.#installer.clean(site, pkg);
-			site.data.server = pkg.server || this.version;
+			site.data.server = pkg.server ?? this.version;
 			this.domains.release(site);
 			return site;
 		} catch (err) {
@@ -305,19 +312,15 @@ module.exports = class Pageboard {
 		for (const plugin of this.#plugins) {
 			const { constructor } = plugin;
 			const { name } = constructor;
-			const services = this.services;
-			const service = services[name] || {};
+			const { services } = this;
+			const service = services[name] ?? {};
 			let defined = false;
 			for (const key of Object.getOwnPropertyNames(constructor)) {
 				const desc = constructor[key];
 				if (desc == null || typeof desc != "object") continue;
 				if (typeof plugin[key] != "function") continue;
 				defined = true;
-				Object.defineProperty(service, key, {
-					enumerable: desc.external,
-					value: desc
-				});
-				delete desc.external;
+				service[key] = desc;
 			}
 			if (!services[name] && defined) {
 				services[name] = service;

@@ -17,6 +17,6 @@
   },
   "homepage": "https://github.com/pageboard/server#readme",
   "dependencies": {
-    "url-inspector": "^8.2.1"
+    "url-inspector": "^8.3.0"
   }
 }

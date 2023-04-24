@@ -12,16 +12,20 @@ module.exports = class HrefService {
 
 	apiRoutes(app, server) {
 		server.get("/.api/hrefs", app.auth.lock('webmaster'), async (req, res) => {
-			const href = await req.run('href.search', req.query);
-			res.send(href);
+			const obj = await req.run('href.search', req.query);
+			res.send(obj);
 		});
-		server.post("/.api/href", app.auth.lock('webmaster'), async (req, res) => {
-			const href = await req.run('href.add', req.body);
-			res.send(href);
+		server.get("/.api/href", app.auth.lock('user'), async (req, res) => {
+			const obj = await req.run('href.find', req.query);
+			res.send(obj);
+		});
+		server.post("/.api/href", app.auth.lock('user'), async (req, res) => {
+			const obj = await req.run('href.add', req.body);
+			res.send(obj);
 		});
 		server.delete("/.api/href", app.auth.lock('webmaster'), async (req, res) => {
-			const href = await req.run('href.del', req.query);
-			res.send(href);
+			const obj = await req.run('href.del', req.query);
+			res.send(obj);
 		});
 	}
 
@@ -30,7 +34,15 @@ module.exports = class HrefService {
 			.whereSite(site.id)
 			.where('href.url', data.url).first();
 	}
-	static get = {
+
+	async find({ Href, site, trx }, data) {
+		const item = await Href.query(trx).select()
+			.whereSite(site.id)
+			.where('href.url', data.url).first().throwIfNotFound();
+		return { item };
+	}
+	static find = {
+		title: 'Get URL metadata',
 		$action: 'read',
 		required: ['url'],
 		properties: {
@@ -116,13 +128,14 @@ module.exports = class HrefService {
 			items = await q;
 		}
 		return {
-			data: items,
+			items,
 			offset: data.offset,
 			limit: data.limit
 		};
 	}
 
 	static search = {
+		title: 'Search URL metadata',
 		$action: 'read',
 		properties: {
 			type: {
@@ -166,11 +179,11 @@ module.exports = class HrefService {
 	};
 
 	async add(req, data) {
-		const obj = await req.run('href.search', data);
-		if (obj.data.length > 0) {
-			return obj.data[0];
-		} else {
-			return this.#blindAdd(req, data);
+		try {
+			return await req.run('href.find', data);
+		} catch(err) {
+			const item = await this.#blindAdd(req, data);
+			return { item };
 		}
 	}
 
@@ -231,7 +244,8 @@ module.exports = class HrefService {
 	}
 
 	static add = {
-		$action: 'add',
+		title: 'Add URL',
+		$action: 'write',
 		required: ['url'],
 		properties: {
 			url: {
@@ -255,7 +269,8 @@ module.exports = class HrefService {
 			.returning(Href.columns);
 	}
 	static save = {
-		$action: 'save',
+		title: 'Change URL title',
+		$action: 'write',
 		required: ['url', 'title'],
 		properties: {
 			url: {
@@ -271,15 +286,16 @@ module.exports = class HrefService {
 
 	async del(req, data) {
 		const { site, trx } = req;
-		const href = await this.get(req, data).throwIfNotFound();
+		const item = await this.get(req, data).throwIfNotFound();
 		await site.$relatedQuery('hrefs', trx).patchObject({
 			visible: false
-		}).where('_id', href._id);
-		href.visible = false;
-		return href;
+		}).where('_id', item._id);
+		item.visible = false;
+		return { item };
 	}
 	static del = {
-		$action: 'del',
+		title: 'Delete URL',
+		$action: 'write',
 		required: ['url'],
 		properties: {
 			url: {
@@ -295,11 +311,13 @@ module.exports = class HrefService {
 		const qList = q => {
 			const urlQueries = [];
 			for (const [type, list] of Object.entries(hrefs)) {
-				if (!list.some(desc => {
+				if (data.types.length && !list.some(desc => {
 					return desc.types.some(type => {
-						return ['image', 'video', 'audio', 'svg'].includes(type);
+						return data.types.includes(type);
 					});
-				})) continue;
+				})) {
+					continue;
+				}
 				for (const desc of list) {
 					const bq = site.$modelClass.query(trx).from('blocks')
 						.where('blocks.type', type)
@@ -337,6 +355,7 @@ module.exports = class HrefService {
 			.join('list', 'href.url', 'list.url');
 		if (data.asMap) {
 			let meta = "jsonb_set(href.meta, '{mime}', to_jsonb(href.mime))";
+			meta = `jsonb_set(${meta}, '{title}', to_jsonb(href.title))`;
 			if (data.preview) {
 				meta = `jsonb_set(${meta}, '{preview}', to_jsonb(href.preview))`;
 			}
@@ -352,6 +371,7 @@ module.exports = class HrefService {
 
 	static collect = {
 		title: 'Collect hrefs',
+		$lock: true,
 		$action: 'read',
 		properties: {
 			ids: {
@@ -378,6 +398,15 @@ module.exports = class HrefService {
 				description: 'Include img tag',
 				type: 'boolean',
 				default: false
+			},
+			types: {
+				title: 'Types',
+				description: 'Defaults to all types',
+				type: 'array',
+				items: {
+					type: 'string'
+				},
+				default: []
 			}
 		}
 	};
@@ -486,6 +515,8 @@ module.exports = class HrefService {
 		};
 	}
 	static reinspect = {
+		title: 'Batch URL reinspection',
+		$lock: true,
 		$action: 'write',
 		properties: {
 			all: {

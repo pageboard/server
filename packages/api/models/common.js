@@ -142,7 +142,7 @@ exports.QueryBuilder = class CommonQueryBuilder extends QueryBuilder {
 		return super.select(list);
 	}
 	select(...args) {
-		if (args.length == 0) {
+		if (args.length == 0 || args.length == 1 && args[0] == null) {
 			const model = this.modelClass();
 			const table = this.tableRefFor(model);
 			args = model.columns.map(col => `${table}.${col}`);
@@ -193,13 +193,16 @@ exports.QueryBuilder = class CommonQueryBuilder extends QueryBuilder {
 			gt: '>',
 			gte: '>='
 		};
-		Object.keys(refs).forEach(function(k) {
-			const cond = refs[k];
+		for (const [k, cond] of Object.entries(refs)) {
 			const refk = ref(k);
 			if (cond == null) {
 				this.whereNull(refk);
 			} else if (Array.isArray(cond)) {
-				this.where(refk.castText(), 'IN', cond);
+				this.where(function () {
+					const noNulls = cond.filter(x => x !== null);
+					this.where(refk.castText(), 'IN', noNulls);
+					if (noNulls.length != cond.length) this.orWhereNull(refk);
+				});
 			} else if (typeof cond == "object") {
 				if (cond.op in comps) {
 					if (cond.val instanceof Date) {
@@ -259,7 +262,7 @@ exports.QueryBuilder = class CommonQueryBuilder extends QueryBuilder {
 					} else {
 						// ref is a json text or array, and it intersects any of the values
 						const val = typeof cond.val == "string" ? [cond.val] : cond.val;
-						this.whereRaw('?? \\?| ?', [refk, val]);
+						if (val != null) this.whereRaw('?? \\?| ?', [refk, val]);
 					}
 				} else if (cond.op == "in") {
 					if (cond.type == "string" && typeof cond.val == "string") {
@@ -268,7 +271,7 @@ exports.QueryBuilder = class CommonQueryBuilder extends QueryBuilder {
 					} else {
 						// ref is a json string, and it is in the values
 						const val = typeof cond.val == "string" ? [cond.val] : cond.val;
-						this.whereRaw('?? \\?& ?', [refk, val]);
+						if (val != null) this.whereRaw('?? \\?& ?', [refk, val]);
 					}
 				} else if (cond.range == "numeric") {
 					if (cond.names) {
@@ -305,7 +308,7 @@ exports.QueryBuilder = class CommonQueryBuilder extends QueryBuilder {
 			} else {
 				this.where(refk.castText(), cond);
 			}
-		}, this);
+		}
 		return this;
 	}
 	clone() {
@@ -376,15 +379,22 @@ function asPaths(obj, ret, pre, first, schema) {
 					}
 				}
 			} else if (schem.type == "boolean" && typeof val != "boolean") {
-				if (val == "false" || val == 0 || !val) val = false;
-				else val = true;
+				if (!val || val == "false") {
+					if (schem.default == false) {
+						val = [false, null];
+					} else {
+						val = false;
+					}
+				} else {
+					val = true;
+				}
 			} else if (["integer", "number"].includes(schem.type) && typeof val == "string" && (val.includes("~") || val.includes("⩽"))) {
 				val = numericRange(val, schem.type);
 			}
 			if (op) ret[cur] = {
-				op: op,
 				type: schem.type,
-				val: val
+				op,
+				val
 			};
 			else ret[cur] = val;
 		} else if (typeof val == "object") {
@@ -470,7 +480,7 @@ function convertFieldExpressionsToRaw(builder, model, json) {
 	const convertedJson = {};
 
 	for (const key of Object.keys(json)) {
-		let val = json[key];
+		let value = json[key];
 
 		if (key.indexOf(':') > -1) {
 			// 'col:attr' : ref('other:lol') is transformed to
@@ -482,22 +492,22 @@ function convertFieldExpressionsToRaw(builder, model, json) {
 				+ '}';
 			let valuePlaceholder = '?';
 
-			if (isKnexQueryBuilder(val) || isKnexRaw(val)) {
+			if (isKnexQueryBuilder(value) || isKnexRaw(value)) {
 				valuePlaceholder = 'to_jsonb(?)';
 			} else {
-				val = JSON.stringify(val);
+				value = JSON.stringify(value);
 			}
 
 			convertedJson[
 				parsed.column
 			] = knex.raw(`jsonb_set_recursive(??, '${jsonRefs}', ${valuePlaceholder})`, [
 				convertedJson[parsed.column] || parsed.column,
-				val
+				value
 			]);
 
 			delete model[key];
 		} else {
-			convertedJson[key] = val;
+			convertedJson[key] = value;
 		}
 	}
 

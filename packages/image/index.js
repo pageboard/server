@@ -78,7 +78,7 @@ module.exports = class ImageModule {
 			pipeline = this.sharp(url.substring(7));
 		} else {
 			pipeline = this.sharp();
-			const req = await this.app.inspector.request(url);
+			const req = await this.app.inspector.request(new URL(url));
 			req.res.pipe(pipeline);
 		}
 		return pipeline
@@ -142,6 +142,7 @@ module.exports = class ImageModule {
 	static upload = {
 		title: 'Process uploaded image',
 		required: ['path', 'mime'],
+		$lock: true,
 		properties: {
 			path: {
 				title: 'Path',

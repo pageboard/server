@@ -1,9 +1,10 @@
-const { promises: dns } = require.lazy('node:dns');
+const { promises: dns, setDefaultResultOrder } = require.lazy('node:dns');
 const { Deferred } = require.lazy('class-deferred');
 const Queue = require.lazy('./express-queue');
 
 // const localhost4 = "127.0.0.1";
 // const localhost6 = "::1";
+setDefaultResultOrder("ipv4first");
 
 const [
 	INIT,
@@ -155,6 +156,7 @@ module.exports = class Domains {
 	extendRequest(req, app) {
 		req.opts = app.opts;
 		const { res } = req;
+		if (!res.locals) res.locals = {};
 		req.call = (command, data) => {
 			const [mod, name] = command.split('.');
 			return app[mod][name](req, data);
@@ -162,6 +164,8 @@ module.exports = class Domains {
 		req.run = (command, data) => {
 			return app.api.run(req, command, data);
 		};
+
+		req.bundles = new Set();
 
 		req.locked = list => app.auth.locked(req, list);
 		req.tag = (...args) => app.cache.tag(...args)(req, res);
@@ -281,21 +285,21 @@ module.exports = class Domains {
 	async #resolvableHost(hostname, host) {
 		const rec = this.#ips[host.by];
 		const lookup = await dns.lookup(hostname, {
-			all: false
+			family: 4
 		});
 		if (lookup.address == hostname) {
 			throw new Error("hostname is an ip " + hostname);
 		}
 		const expected = rec['ip' + lookup.family];
+
 		if (lookup.address != expected) {
 			setTimeout(() => {
 				// allow checking again in a minute
 				host.reset();
 			}, 60000);
-			throw new HttpError.ServiceUnavailable(
-				Text`${hostname} ${lookup.family} ${lookup.address}
-				does not match ${expected}`
-			);
+			console.error(Text`${hostname} ${lookup.family} ${lookup.address}
+				does not match ${expected}`);
+			throw new HttpError.ServiceUnavailable('Host unknown');
 		}
 	}
 

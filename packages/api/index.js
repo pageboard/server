@@ -11,14 +11,14 @@ const jsonDoc = require.lazy('./lib/json-doc');
 const Href = require('./models/href');
 const Block = require('./models/block');
 
-const { mergeRecursive, mergeExpressions } = require('../../lib/utils');
+const { mergeRecursive, mergeExpressions } = require('../../src/utils');
 
 module.exports = class ApiModule {
 	static name = 'api';
 	static priority = -1;
 	static plugins = [
 		'user', 'site', 'archive', 'settings', 'page',
-		'block', 'href', 'form', 'query',	'reservation'
+		'block', 'href', 'form', 'query',	'reservation', 'translate'
 	].map(name => Path.join(__dirname, 'services', name));
 
 	#packager;
@@ -37,6 +37,7 @@ module.exports = class ApiModule {
 	}
 
 	apiRoutes(app, server) {
+		app.responseFilter.register(this);
 		const tenantsLen = Object.keys(app.opts.database.url).length - 1;
 		// api depends on site files, that tag is invalidated in cache install
 		server.get('/.api/*',
@@ -154,7 +155,7 @@ module.exports = class ApiModule {
 	}
 
 	send(res, obj) {
-		const req = res.req;
+		const { req } = res;
 		if (obj == null || typeof obj != "object") {
 			// eslint-disable-next-line no-console
 			console.trace("app.send expects an object, got", obj);
@@ -195,7 +196,7 @@ module.exports = class ApiModule {
 			delete obj.status;
 		}
 
-		obj = this.app.auth.filterResponse(req, obj, itemFn);
+		obj = this.app.responseFilter.run(req, obj);
 		if (obj.item && !obj.item.type) {
 			// 401 Unauthorized: missing or bad authentication
 			// 403 Forbidden: authenticated but not authorized
@@ -205,85 +206,81 @@ module.exports = class ApiModule {
 
 		if (obj.item || obj.items) {
 			const { bundles, bundleMap } = req.site.$pkg;
-			const usedTypes = new Set();
 
-			if (obj.item) fillTypes(obj.item, usedTypes);
-			if (obj.items) fillTypes(obj.items, usedTypes);
+			if (obj.item) fillTypes(obj.item, req.bundles);
+			if (obj.items) fillTypes(obj.items, req.bundles);
 
 			const usedRoots = new Set();
-			for (const type of usedTypes) {
+			for (const type of req.bundles) {
 				if (bundles[type]) {
 					usedRoots.add(type);
 				} else {
 					const rootSet = bundleMap.get(type);
+					if (!rootSet) {
+						console.warn("missing bundle for block type:", type);
+						continue;
+					}
 					// ignore elements without bundles, or belonging to multiple roots
 					if (rootSet.size != 1) continue;
 					usedRoots.add(Array.from(rootSet).at(0));
 				}
 			}
 			const metas = [];
-			for (const root of usedRoots) {
-				metas.push(bundles[root].meta);
-			}
 			if (obj.meta) {
-				metas.unshift(obj.meta);
+				console.warn("obj.meta is set", obj.meta);
+				metas.push(obj.meta);
+				delete obj.meta;
 			}
-
-			const meta = {
-				schemas: [],
-				scripts: [],
-				stylesheets: [],
-				resources: {}
-			};
-
-			for (const item of metas) {
-				for (const name in meta) {
-					if (item.group == "page" && ["scripts", "stylesheets"].includes(name)) {
-						// specificity: these are part of the element,
-						// and are loaded by document router
-						continue;
-					}
-					const dst = meta[name];
-					const src = item[name];
-					if (!src) continue;
-					if (Array.isArray(dst)) {
-						if (Array.isArray(src)) dst.push(...src);
-						else dst.push(src);
-					} else {
-						Object.assign(dst, src);
-					}
+			for (const root of usedRoots) {
+				const { meta } = bundles[root];
+				if (meta.dependencies) for (const dep of meta.dependencies) {
+					metas.push(bundles[dep].meta);
 				}
+				metas.push(meta);
 			}
-			for (const name in meta) if (Object.isEmpty(meta[name])) {
-				delete meta[name];
-			}
-			obj.meta = meta;
+			metas.sort(({ priority: a = 0 }, { priority: b = 0 }) => {
+				if (a == b) return 0;
+				else if (a > b) return 1;
+				else return -1;
+			});
+			obj.metas = metas.map(meta => {
+				const obj = {};
+				for (const key of ['schemas', 'scripts', 'stylesheets', 'resources', 'priority']) if (meta[key]) {
+					obj[key] = meta[key];
+				}
+				return obj;
+			});
 		}
 
 		res.json(obj);
 	}
-};
 
-function itemFn(schema, block) {
-	if (schema.upgrade) for (const [src, dst] of Object.entries(schema.upgrade)) {
-		const val = jsonPath.get(block, src);
-		if (val !== undefined) {
-			jsonPath.set(block, dst, val);
-			jsonPath.unSet(block, src);
+	filter(req, schema, block) {
+		if (schema.upgrade) for (const [src, dst] of Object.entries(schema.upgrade)) {
+			const val = jsonPath.get(block, src);
+			if (val !== undefined) {
+				jsonPath.set(block, dst, val);
+				jsonPath.unSet(block, src);
+			}
+		}
+		if (schema.templates) {
+			if (!block.expr) block.expr = {};
+			mergeExpressions(block.expr, schema.templates, block.data);
+			if (Object.isEmpty(block.expr)) block.expr = null;
 		}
 	}
-	if (schema.templates) {
-		if (!block.expr) block.expr = {};
-		mergeExpressions(block.expr, schema.templates, block.data);
-		if (Object.isEmpty(block.expr)) block.expr = null;
-	}
-}
+
+};
 
 function fillTypes(list, set) {
 	if (!list) return set;
 	if (!Array.isArray(list)) list = [list];
 	for (const row of list) {
 		if (row.type) set.add(row.type);
+		if (row.type == "binding" || row.type == "block_binding") {
+			findTypeBinding(row.data.fill, set);
+			findTypeBinding(row.data.attr, set);
+		}
 		if (row.parent) fillTypes(row.parent, set);
 		if (row.child) fillTypes(row.child, set);
 		if (row.parents) fillTypes(row.parents, set);
@@ -292,3 +289,13 @@ function fillTypes(list, set) {
 	return set;
 }
 
+
+function findTypeBinding(str, set) {
+	if (!str) return;
+	const { groups: {
+		type
+	} } = /^schema:[.\w]+:(?<type>\w+)\./m.exec(str) ?? {
+		groups: {}
+	};
+	if (type) set.add(type);
+}

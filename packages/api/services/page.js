@@ -10,34 +10,21 @@ module.exports = class PageService {
 			const isWebmaster = !req.locked(['webmaster']);
 			const forWebmaster = Boolean(query.nested);
 			delete query.nested;
+			let data;
 			if (isWebmaster && !forWebmaster) {
-				res.return({
+				data = {
 					item: {
 						type: 'write',
 						data: {}
 					},
-					site: site.data,
-					commons: app.opts.commons
-				});
+					site: site.data
+				};
 			} else {
-				const data = await req.run('page.get', query);
-				const resources = site.$pkg.bundles.write.meta.resources;
-				if (forWebmaster && resources.develop) {
-					data.meta = {
-						scripts: [resources.develop],
-						schemas: []
-					};
-					if (!Object.isEmpty(site.$pkg.bundles.user?.meta?.schemas)) {
-						data.meta.schemas.push(...site.$pkg.bundles.user.meta.schemas);
-					}
-					data.meta.resources = {
-						scripts: [resources.editor, resources.readScript],
-						stylesheets: [resources.readStyle]
-					};
-				}
-				data.commons = app.opts.commons;
-				res.return(data);
+				data = await req.run('page.get', query);
+				if (isWebmaster && forWebmaster) req.bundles.add('editor');
 			}
+			data.commons = app.opts.commons;
+			res.return(data);
 		});
 		server.get('/.api/pages', async (req, res) => {
 			const { query, site } = req;
@@ -90,21 +77,25 @@ module.exports = class PageService {
 		});
 	}
 
-	#QueryPage({ trx, call, site }, url) {
+	#QueryPage({ trx, site }, url, lang) {
 		return site.$relatedQuery('children', trx).alias('page')
 			.select()
 			.first()
 			// eager load children (in which there are standalones)
 			// and children of standalones
 			.withGraphFetched(`[
-				children(childrenFilter),
+				children(childrenFilter) as children,
 				children(standalonesFilter) as standalones .children(childrenFilter)
 			]`).modifiers({
 				childrenFilter(query) {
-					return query.select().where('page.standalone', false);
+					query.select().where('page.standalone', false);
+					if (lang) query.select(raw(
+						'translate_block_content(page, :lang) AS content', { lang }
+					));
+					return query;
 				},
-				standalonesFilter(query) {
-					return query.select().where('page.standalone', true);
+				standalonesFilter(q) {
+					return q.select().where('page.standalone', true);
 				}
 			})
 			.where(q => {
@@ -121,21 +112,32 @@ module.exports = class PageService {
 	}
 
 	async get(req, data) {
-		const { site } = req;
+		const { site, Href } = req;
 		const obj = {
 			status: 200,
 			site: site.data
 		};
 
-		let page = await this.#QueryPage(req, data.url);
+		let page;
+		try {
+			page = await this.#QueryPage(req, data.url, data.lang);
+		} catch (err) {
+			if (err.nativeError?.code == '22023') {
+				err.status = 400;
+				err.message = 'Unknown lang';
+				throw err;
+			} else {
+				throw err;
+			}
+		}
 		if (!page) {
 			obj.status = 404;
-		} else if (req.locked((page.lock ?? {}).read)) {
+		} else if (req.locked(page.lock)) {
 			obj.status = 401;
 		}
 		const wkp = /^\/\.well-known\/(\d{3})$/.exec(data.url);
 		if (obj.status != 200) {
-			page = await this.#QueryPage(req, `/.well-known/${obj.status}`);
+			page = await this.#QueryPage(req, `/.well-known/${obj.status}`, data.lang);
 			if (!page) return Object.assign(obj, {
 				item: { type: 'page' }
 			});
@@ -145,7 +147,8 @@ module.exports = class PageService {
 		const hrefs = await req.call('href.collect', {
 			ids: [page.id],
 			content: true,
-			asMap: true
+			asMap: true,
+			types: Href.mediaTypes
 		});
 		const links = await navigationLinks(req, data.url, page.data.prefix);
 		Object.assign(obj, {
@@ -160,18 +163,27 @@ module.exports = class PageService {
 		return obj;
 	}
 	static get = {
+		title: 'Get page',
+		$lock: true,
 		$action: 'read',
 		required: ['url'],
 		properties: {
 			url: {
 				type: 'string',
 				format: 'pathname'
+			},
+			lang: {
+				title: 'Translate to lang',
+				description: 'Language tag syntax',
+				type: 'string',
+				pattern: /^([a-zA-Z]+-?)+$/.source,
+				nullable: true
 			}
 		}
 	};
 
 	async search(req, data) {
-		const { site, trx } = req;
+		const { site, trx, Href } = req;
 		const drafts = data.drafts
 			? ''
 			: `AND (page.data->'nositemap' IS NULL OR (page.data->'nositemap')::BOOLEAN IS NOT TRUE)`;
@@ -188,10 +200,10 @@ module.exports = class PageService {
 		let sql = `
 			SELECT
 				page.id,
-				'site' || page.type AS type,
+				page.type,
 				page.data,
 				page.updated_at, (
-					SELECT string_agg(list.fragment, '<br>') FROM (
+					SELECT jsonb_agg(list.fragment) FROM (
 						SELECT fragment FROM (
 							SELECT ts_headline('unaccent', page.data->>'title', search.query) AS fragment, page.data->>'title' AS field
 							UNION
@@ -214,10 +226,10 @@ module.exports = class PageService {
 		if (data.content) sql += ` UNION ALL
 			SELECT
 				page.id,
-				'site' || page.type AS type,
+				page.type,
 				page.data,
 				page.updated_at, (
-					SELECT string_agg(list.fragment, '<br>') FROM (
+					SELECT jsonb_agg(list.fragment) FROM (
 						SELECT fragment FROM (
 							SELECT value AS fragment, jsonb_extract_path_text(block.content, key) AS field FROM jsonb_each_text(ts_headline('unaccent', block.content, search.query))
 						) AS headlines WHERE length(fragment) != length(field)
@@ -259,7 +271,9 @@ module.exports = class PageService {
 		const ids = obj.items.map(item => item.id);
 		if (ids.length > 0) {
 			const hrow = await req.call('href.collect', {
-				ids, asMap: true
+				ids,
+				asMap: true,
+				types: Href.mediaTypes
 			}).first();
 			obj.hrefs = hrow.hrefs;
 		}
@@ -268,7 +282,6 @@ module.exports = class PageService {
 	static search = {
 		title: 'Search pages',
 		$action: 'read',
-		external: true,
 		required: ['text'],
 		properties: {
 			text: {
@@ -329,7 +342,7 @@ module.exports = class PageService {
 	static all = {
 		title: 'Site map',
 		$action: 'read',
-		external: true,
+		$lock: true,
 		properties: {
 			parent: {
 				title: 'Root pathname',
@@ -448,7 +461,7 @@ module.exports = class PageService {
 		];
 		await applyRelate(req, changes.relate);
 		await Promise.all(pages.update.map(async child => {
-			if (!child.data.url || child.data.url.startsWith('/.')) return;
+			if (!child.data.url || child.data.url.startsWith('/.') || child.data.title == null) return;
 			try {
 				await req.run('href.save', {
 					url: child.data.url,
@@ -480,7 +493,9 @@ module.exports = class PageService {
 		return returning;
 	}
 	static save = {
-		$action: 'save',
+		title: 'Save page',
+		$lock: true,
+		$action: 'write',
 		properties: {
 			add: {
 				type: 'array',
@@ -521,7 +536,9 @@ module.exports = class PageService {
 		return obj.update[0];
 	}
 	static add = {
-		$action: 'add',
+		title: 'Add page',
+		$lock: true,
+		$action: 'write',
 		required: ['type', 'data'],
 		properties: {
 			type: {
@@ -561,7 +578,9 @@ module.exports = class PageService {
 		});
 	}
 	static del = {
-		$action: 'del',
+		title: 'Delete page',
+		$lock: true,
+		$action: 'write',
 		required: ['id'],
 		properties: {
 			id: {
@@ -572,10 +591,11 @@ module.exports = class PageService {
 		}
 	};
 
-	async robots(req) {
-		const { site } = req;
+	async robots(req, data) {
 		const lines = [];
-		if (site.data.env == "production") {
+		const { site } = req;
+		const { env = site.data.env } = data;
+		if (env == "production") {
 			lines.push(`Sitemap: ${new URL("/sitemap.txt", site.url)}`);
 			lines.push('User-agent: *');
 			const pages = await listPages(req, {
@@ -592,10 +612,35 @@ module.exports = class PageService {
 		return lines.join('\n');
 	}
 	static robots = {
-		$action: 'read'
+		title: 'Get robots.txt',
+		$lock: true,
+		$action: 'read',
+		properties: {
+			env: {
+				title: 'Environment',
+				type: 'string'
+			}
+		}
+	};
+
+	async relink(req) {
+		const pages = await req.run('page.all');
+		for (const page of pages.items) {
+			await req.run('href.add', {
+				url: page.data.url,
+				title: page.data.title
+			});
+		}
+		return {
+			count: pages.items.length
+		};
+	}
+	static relink = {
+		title: 'Reprovision all hrefs for pages',
+		$lock: true,
+		$action: 'write'
 	};
 };
-
 
 
 function redUrl(obj) {
@@ -720,14 +765,6 @@ function applyUpdate(req, list) {
 			if (block.id in blocksMap) {
 				block.updated_at = blocksMap[block.id];
 			}
-			if (block.lock) {
-				if (Object.isEmpty(block.lock?.read)) {
-					block.lock.read = null;
-				}
-				if (Object.isEmpty(block.lock?.write)) {
-					block.lock.write = null;
-				}
-			}
 			if (req.site.$pkg.pages.includes(block.type)) {
 				return updatePage(req, block, blocksMap);
 			} else if (!block.updated_at) {
@@ -825,7 +862,7 @@ async function updatePage({ site, trx, Block, Href }, page, sideEffects) {
 			raw("date_trunc('milliseconds', block.updated_at)"),
 			raw("date_trunc('milliseconds', ?::timestamptz)", [page.updated_at]),
 		)
-		.patchObject(page)
+		.patch(page)
 		.returning('block.id', 'block.updated_at')
 		.first();
 	if (!part) {

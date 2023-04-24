@@ -8,6 +8,8 @@ class Href extends common.Model {
 
 	static idColumn = '_id';
 
+	static mediaTypes = ['image', 'video', 'audio', 'svg', 'embed'];
+
 	static jsonSchema = {
 		type: 'object',
 		required: ['url', 'mime'],
@@ -78,7 +80,12 @@ class Href extends common.Model {
 					duration: {
 						nullable: true,
 						type: "string",
-						format: "time"
+						pattern: /^\d+:\d{2}:\d{2}$/.source
+					},
+					source: {
+						nullable: true,
+						type: "string",
+						format: "uri-reference"
 					}
 				}
 			}

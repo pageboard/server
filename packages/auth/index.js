@@ -15,11 +15,12 @@ module.exports = class AuthModule {
 	constructor(app, opts) {
 		this.app = app;
 		this.opts = {
-			maxAge: 60 * 60 * 24 * 31,
 			userProperty: 'user',
-			keysize: 2048,
-			...opts
+			keysize: 2048
 		};
+		if (opts.keysize > this.opts.keysize) {
+			this.opts.keysize = opts.keysize;
+		}
 	}
 
 	async apiRoutes(app, server) {
@@ -28,6 +29,7 @@ module.exports = class AuthModule {
 		);
 		Object.assign(this.opts, keys);
 		this.#lock = Upcache.lock(this.opts);
+		app.responseFilter.register(this);
 		server.use((req, res, next) => {
 			req.locks = [];
 			onHeaders(res, () => {
@@ -40,18 +42,31 @@ module.exports = class AuthModule {
 		});
 	}
 
-	cookie({ site, user }) {
+	cookie({ site, user }, { maxAge }) {
 		return {
 			value: this.#lock.sign({
 				id: user.id,
 				grants: user.grants
 			}, {
 				hostname: site.url.hostname,
+				maxAge,
 				...this.opts
 			}),
-			maxAge: this.opts.maxAge * 1000
+			maxAge: maxAge * 1000
 		};
 	}
+	static cookie = {
+		title: 'Create cookie',
+		$lock: true,
+		properties: {
+			maxAge: {
+				title: 'Max Age',
+				description: 'max age of cookie in seconds',
+				type: 'integer',
+				default: 60 * 60 * 24
+			}
+		}
+	};
 
 	async #keygen(keysPath) {
 		let keys;
@@ -114,13 +129,9 @@ module.exports = class AuthModule {
 		};
 	}
 
-	locked(req, list) {
+	locked(req, list, cannotEscalate = false) {
 		const { site, user } = req;
 		const { locks } = req;
-		if (list != null && !Array.isArray(list) && typeof list == "object" && list.read !== undefined) {
-			// backward compat, block.lock only cares about read access
-			list = list.read;
-		}
 		if (list == null) return false;
 		else if (typeof list == "string") list = [list];
 		else if (list === true) return true;
@@ -139,7 +150,7 @@ module.exports = class AuthModule {
 			if (lock.startsWith('id-')) {
 				if (`id-${user.id}` == lock) granted = true;
 				lock = 'id-:id';
-			} else if ((lockIndex > minLevel) || grants.includes(lock)) {
+			} else if ((lockIndex > minLevel) || !cannotEscalate && grants.includes(lock)) {
 				granted = true;
 			}
 			if (!locks.includes(lock)) locks.push(lock);
@@ -147,22 +158,6 @@ module.exports = class AuthModule {
 		return !granted;
 	}
 
-	filterResponse(req, obj, fn) {
-		const { item, items } = obj;
-		if (!item && !items) {
-			return this.filter(req, obj, fn);
-		}
-		if (item) {
-			obj.item = this.filter(req, item, fn);
-			if (!obj.item.type) delete obj.items;
-		}
-		if (obj.items) obj.items = obj.items.map(item => {
-			return this.filter(req, item, fn);
-		}).filter(item => {
-			return item && item.type;
-		});
-		return obj;
-	}
 
 	#grantsLevels(site) {
 		const grants = {};
@@ -183,39 +178,10 @@ module.exports = class AuthModule {
 		return grants;
 	}
 
-	filter(req, item, fn) {
-		if (!item.type) return item;
-		const { children, child, parents, parent, items } = item;
-		if (children) {
-			item.children = children.filter(item => {
-				return this.filter(req, item, fn);
-			});
-		}
-		if (items) {
-			item.items = items.filter(item => {
-				return this.filter(req, item, fn);
-			});
-		}
-		if (parents) {
-			item.parents = parents.filter(item => {
-				return this.filter(req, item, fn);
-			});
-		}
-		if (child) {
-			item.child = this.filter(req, child, fn);
-			if (item.child && !item.child.type) delete item.type;
-		}
-		if (parent) {
-			item.parent = this.filter(req, parent, fn);
-			if (item.parent && !item.parent.type) delete item.type;
-		}
-		// old types might not have schema
-		const schema = req.site.$schema(item.type) || {};
-		if (fn && schema) fn(schema, item);
-
+	filter(req, schema, item) {
 		let $lock = schema.$lock || {};
 		if (typeof $lock == "boolean" || typeof $lock == "string" || Array.isArray($lock)) $lock = { '*': $lock };
-		const lock = (item.lock || {}).read || [];
+		const lock = item.lock || [];
 
 		if (Object.keys($lock).length == 0 && lock.length == 0) return item;
 

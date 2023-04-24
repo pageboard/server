@@ -1,7 +1,7 @@
 module.exports = class Upgrader {
-	constructor(DomainBlock, { from, to, idMap }) {
+	constructor({ site, from, to, idMap }) {
 		this.idMap = Object.isEmpty(idMap) ? null : idMap;
-		this.DomainBlock = DomainBlock;
+		this.DomainBlock = site?.$modelClass;
 		this.reverseMap = {};
 		console.info("trying import from", from, "to", to);
 		if (from && to) {
@@ -82,7 +82,7 @@ module.exports = class Upgrader {
 		}
 	}
 	copyLock(block) {
-		const locks = block.lock && block.lock.read;
+		const locks = block.lock;
 		if (!locks) return;
 		locks.forEach((item, i) => {
 			item = item.split('-');

@@ -76,6 +76,8 @@ module.exports = class MailModule {
 		});
 	}
 	static report = {
+		title: 'Process report-to email',
+		$lock: true,
 		$action: 'write',
 		additionalProperties: true
 	};
@@ -126,6 +128,8 @@ module.exports = class MailModule {
 		return checks.some(ok => Boolean(ok));
 	}
 	static receive = {
+		title: 'Receive email',
+		$lock: true,
 		$action: 'write',
 		additionalProperties: true
 	};
@@ -153,6 +157,10 @@ module.exports = class MailModule {
 		if (req.site.id) {
 			data.headers["X-PM-Tag"] = req.site.id;
 		}
+		if (data.attachments) data.attachments = data.attachments.filter(obj => {
+			const url = new URL(obj.href, req.site.url);
+			return url.host == req.site.url.host;
+		});
 		Log.mail("mail.to", data);
 		return mailer.transport.sendMail(data).then(sentStatus => {
 			return {
@@ -165,6 +173,8 @@ module.exports = class MailModule {
 		});
 	}
 	static to = {
+		title: 'Send email to',
+		$lock: true,
 		$action: 'write',
 		required: ['subject', 'to', 'text'],
 		properties: {
@@ -193,6 +203,26 @@ module.exports = class MailModule {
 			html: {
 				title: 'HTML body',
 				type: 'string'
+			},
+			attachments: {
+				title: 'Attachments',
+				description: 'List of URL',
+				type: 'array',
+				items: {
+					type: 'object',
+					properties: {
+						filename: {
+							title: 'File name',
+							type: 'string'
+						},
+						href: {
+							title: 'url',
+							type: 'string',
+							format: 'uri-reference'
+						}
+					}
+				},
+				nullable: true
 			},
 			from: {
 				title: 'Sender',
@@ -298,7 +328,7 @@ module.exports = class MailModule {
 
 		list.push(Promise.all(data.to.map(to => {
 			if (to.indexOf('@') > 0) {
-				return req.run('settings.save', { email: to });
+				return req.run('settings.have', { email: to });
 			} else {
 				return req.run('settings.get', { id: to });
 			}
@@ -328,7 +358,6 @@ module.exports = class MailModule {
 		}
 		const emailUrl = new URL(emailPage.data.url, site.url);
 		try {
-			// TODO when all 0.7 are migrated, drop .mail extension
 			for (const [key, val] of Object.entries(data.body)) {
 				if (Array.isArray(val)) for (const sval of val) {
 					emailUrl.searchParams.append(key, sval);
@@ -351,11 +380,7 @@ module.exports = class MailModule {
 			mailOpts.subject = data.subject || mailObj.title;
 			mailOpts.html = mailObj.html;
 			mailOpts.text = mailObj.text;
-			// mailOpts.attachments = [{
-			// 	path: '/path/to/test.txt',
-			// 	filename: 'test.txt', // optional
-			// 	contentType: 'text/plain' // optional
-			// }];
+			mailOpts.attachments = mailObj.attachments;
 		} catch (err) {
 			if (err && err.response && err.response.statusCode) {
 				throw new HttpError[err.response.statusCode];
@@ -367,7 +392,6 @@ module.exports = class MailModule {
 	}
 	static send = {
 		title: 'Send email',
-		external: true,
 		$action: 'write',
 		required: ['url', 'to'],
 		properties: {
@@ -410,10 +434,14 @@ module.exports = class MailModule {
 				title: 'Mail page',
 				type: "string",
 				format: "pathname",
-				$helper: {
-					name: 'page',
-					type: 'mail'
-				}
+				$filter: {
+					name: 'helper',
+					helper: {
+						name: 'page',
+						type: 'mail'
+					}
+				},
+				$helper: 'href'
 			},
 			subject: {
 				title: 'Subject',
@@ -422,8 +450,9 @@ module.exports = class MailModule {
 				nullable: true
 			},
 			body: {
-				title: 'Body',
-				type: 'object'
+				title: 'Query',
+				type: 'object',
+				default: {}
 			}
 		}
 	};

@@ -2,7 +2,7 @@ const {
 	mergeRecursive,
 	mergeExpressions,
 	unflatten
-} = require('../../../lib/utils');
+} = require('../../../src/utils');
 
 module.exports = class FormService {
 	static name = 'form';
@@ -25,15 +25,15 @@ module.exports = class FormService {
 		const form = await run('block.get', {
 			id: data.id
 		});
+		if (locked(form.lock)) {
+			throw new HttpError.Unauthorized("Check user permissions");
+		}
 
 		const reqBody = data.body ?? {};
 
 		const method = form.data?.action?.method;
 		if (!method) {
 			throw new HttpError.BadRequest("Missing method");
-		}
-		if (locked(form.lock?.write)) {
-			throw new HttpError.Unauthorized("Check user permissions");
 		}
 
 		const formData = form.data?.action?.parameters ?? {};
@@ -46,17 +46,18 @@ module.exports = class FormService {
 			form.data?.action?.parameters ?? {},
 			form.expr?.action?.parameters ?? {},
 			{
-				$request: reqBody,
-				$query: data.query || {},
+				$request: reqBody ?? {},
+				$query: unflatten(data.query ?? {}),
 				$user: user
 			}
 		);
 
 		Log.api("form params", params, user, data.query);
 
-		// allow body keys as block.data
 		const body = {};
-		if (params.type && Array.isArray(params.type) == false && Object.keys(reqBody).length > 0) {
+
+		if (params.type && Array.isArray(params.type) == false && !(reqBody.data && reqBody.id) && Object.keys(reqBody).length > 0) {
+			// TODO remove this whole thing
 			const el = site.$schema(params.type);
 			if (!el) {
 				throw new HttpError.BadRequest("Unknown element type " + params.type);
@@ -84,7 +85,6 @@ module.exports = class FormService {
 				}
 			}
 		} else {
-			// this should be removed - only expressions should be used to achieve this
 			Object.assign(body, reqBody);
 		}
 		mergeRecursive(body, params);
@@ -92,6 +92,8 @@ module.exports = class FormService {
 		return run(method, body);
 	}
 	static submit = {
+		title: 'Form submit',
+		$lock: true,
 		$action: 'write',
 		required: ["id"],
 		properties: {

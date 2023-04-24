@@ -1,22 +1,27 @@
 const { nestie } = require.lazy('nestie');
 const { flattie } = require.lazy('flattie');
 const dget = require.lazy('dlv');
-const matchdom = require('matchdom');
+const {
+	Matchdom, TextPlugin, ArrayPlugin, OpsPlugin, NumPlugin, DatePlugin
+} = require('../lib/matchdom');
 const getSlug = require.lazy('speakingurl');
 
-matchdom.filters.slug = str => {
-	return getSlug(str, {
-		custom: {
-			"_": "-"
+const sharedMd = new Matchdom(TextPlugin, ArrayPlugin, OpsPlugin, NumPlugin, DatePlugin, {
+	formats: {
+		as: {
+			slug: (ctx, str) => getSlug(str, { custom: { "_": "-" } })
 		}
-	});
+	}
+});
+
+exports.fuse = (obj, data, scope) => {
+	return sharedMd.merge(obj, data, scope);
 };
 
-exports.fuse = matchdom;
 exports.mergeRecursive = require.lazy('lodash.merge');
 
 exports.unflatten = function(query) {
-	return nestie(query);
+	return nestie(query) ?? {};
 };
 
 exports.flatten = function (obj) {
@@ -27,22 +32,20 @@ exports.mergeExpressions = function mergeExpressions(data, expr, obj) {
 	// only actually fused expressions in expr go into data
 	const flatExpr = flattie(expr);
 	obj = Object.assign(obj);
+	let hit;
+	const md = new Matchdom(sharedMd, {
+		hooks: {
+			afterAll(ctx, val) {
+				hit = val != null;
+				return val;
+			}
+		}
+	});
 
 	for (const [key, val] of Object.entries(flatExpr)) {
 		if (!val || typeof val != "string") continue;
-		let hit = false;
-		let opt = false;
 		obj.$default = dget(data, key);
-		const fused = matchdom(val, obj, {
-			'||': val => {
-				if (!opt) hit = true;
-				return val;
-			},
-			opt: val => {
-				if (val === undefined) opt = true;
-				return val;
-			}
-		});
+		const fused = md.merge(val, obj);
 		if (hit) dset(data, key, fused);
 	}
 	return data;

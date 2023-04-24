@@ -40,6 +40,6 @@ jspm_packages
 /uploads
 /dumps
 /sites
+/lib
 
 yarn.lock
-*.ndjson

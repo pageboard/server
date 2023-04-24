@@ -1,5 +1,5 @@
 const assert = require('node:assert');
-const Pageboard = require('../lib/pageboard');
+const Pageboard = require('../src/pageboard');
 const { site } = require('./helpers/common');
 
 const app = new Pageboard();

@@ -1,6 +1,6 @@
 const { ref, raw } = require('objection');
 const Block = require('../models/block');
-const { unflatten, mergeRecursive } = require('../../../lib/utils');
+const { unflatten, mergeRecursive } = require('../../../src/utils');
 
 module.exports = class BlockService {
 	static name = 'block';
@@ -47,6 +47,7 @@ module.exports = class BlockService {
 		return q.first().throwIfNotFound();
 	}
 	static get = {
+		title: 'Get block',
 		$action: 'read',
 		required: ['id'],
 		properties: {
@@ -76,7 +77,7 @@ module.exports = class BlockService {
 	async search(req, data) {
 		// TODO data.id or data.parent.id or data.child.id must be set
 		// currently the check filterSub -> boolean is only partially applied
-		const { site, trx, Block } = req;
+		const { site, trx, Block, Href } = req;
 		let parents = data.parents;
 		if (parents) {
 			if (parents.type || parents.id || parents.standalone) {
@@ -106,7 +107,11 @@ module.exports = class BlockService {
 			}
 			if (Object.keys(data.parent).length) {
 				if (!data.parent.type) {
-					throw new HttpError.BadRequest("Missing parent.type");
+					if (parents.type && parents.type.length == 1) {
+						data.parent.type = parents.type[0];
+					} else {
+						throw new HttpError.BadRequest("Missing parent.type");
+					}
 				}
 				valid = true;
 				q.joinRelated('parents', { alias: 'parent' });
@@ -125,6 +130,13 @@ module.exports = class BlockService {
 		valid = filterSub(q, data) || valid;
 		if (!valid) {
 			throw new HttpError.BadRequest("Insufficient search parameters");
+		}
+		if (data.lang) {
+			q.select(raw(
+				'translate_block_content(block, :lang) AS content', {
+					lang: data.lang
+				}
+			));
 		}
 		if (parents) {
 			eagers.parents = {
@@ -176,6 +188,7 @@ module.exports = class BlockService {
 		});
 
 		const rows = await q;
+		for (const type of data.type) req.bundles.add(type);
 		const obj = {
 			items: rows,
 			offset: data.offset,
@@ -206,7 +219,8 @@ module.exports = class BlockService {
 				ids,
 				content: data.content,
 				asMap: true,
-				preview: data.preview
+				preview: data.preview,
+				types: Href.mediaTypes
 			}).first();
 			obj.hrefs = hrow.hrefs;
 		}
@@ -215,7 +229,6 @@ module.exports = class BlockService {
 	static search = {
 		title: 'Search blocks',
 		$action: 'read',
-		external: true,
 		required: ['type'],
 		properties: {
 			parent: {
@@ -259,6 +272,17 @@ module.exports = class BlockService {
 					multiple: true
 				}
 			},
+			preview: {
+				title: 'Preview',
+				description: 'Include preview tag',
+				type: 'boolean',
+				default: false
+			},
+			content: {
+				title: 'Content',
+				type: 'boolean',
+				default: false
+			},
 			text: {
 				title: 'Search text',
 				nullable: true,
@@ -269,11 +293,6 @@ module.exports = class BlockService {
 				title: 'Filter by data',
 				type: 'object',
 				nullable: true
-			},
-			content: {
-				title: 'Content',
-				type: 'boolean',
-				default: false
 			},
 			order: {
 				title: 'Sort by',
@@ -300,22 +319,18 @@ module.exports = class BlockService {
 				type: 'boolean',
 				default: false
 			},
-			preview: {
-				title: 'Preview',
-				description: 'Include preview tag',
-				type: 'boolean',
-				default: false
+			lang: {
+				title: 'Language',
+				description: '$query.lang in language tag syntax',
+				type: 'string',
+				pattern: /^([a-zA-Z]+-?)+$/.source,
+				nullable: true
 			},
 			parents: {
 				title: 'Parents',
 				type: 'object',
 				nullable: true,
 				properties: {
-					first: {
-						title: 'Single',
-						type: 'boolean',
-						default: false
-					},
 					id: {
 						title: 'Select by id',
 						anyOf: [{ /* because nullable does not have priority */
@@ -340,6 +355,16 @@ module.exports = class BlockService {
 							multiple: true
 						}
 					},
+					first: {
+						title: 'Single',
+						type: 'boolean',
+						default: false
+					},
+					content: {
+						title: 'Content',
+						type: 'boolean',
+						default: false
+					},
 					text: {
 						title: 'Search text',
 						nullable: true,
@@ -350,11 +375,6 @@ module.exports = class BlockService {
 						title: 'Filter by data',
 						type: 'object',
 						nullable: true
-					},
-					content: {
-						title: 'Content',
-						type: 'boolean',
-						default: false
 					},
 					order: {
 						title: 'Sort by',
@@ -383,11 +403,6 @@ module.exports = class BlockService {
 				type: 'object',
 				nullable: true,
 				properties: {
-					first: {
-						title: 'Single',
-						type: 'boolean',
-						default: false
-					},
 					id: {
 						title: 'Select by id',
 						anyOf: [{ /* because nullable does not have priority */
@@ -412,6 +427,16 @@ module.exports = class BlockService {
 							multiple: true
 						}
 					},
+					first: {
+						title: 'Single',
+						type: 'boolean',
+						default: false
+					},
+					content: {
+						title: 'Content',
+						type: 'boolean',
+						default: false
+					},
 					text: {
 						title: 'Search text',
 						nullable: true,
@@ -422,11 +447,6 @@ module.exports = class BlockService {
 						title: 'Filter by data',
 						type: 'object',
 						nullable: true
-					},
-					content: {
-						title: 'Content',
-						type: 'boolean',
-						default: false
 					},
 					order: {
 						title: 'Sort by',
@@ -455,6 +475,10 @@ module.exports = class BlockService {
 					}
 				}
 			}
+		},
+		templates: {
+			lang: '[$query.lang?]',
+			offset: '[$query.offset?]'
 		}
 	};
 
@@ -462,18 +486,14 @@ module.exports = class BlockService {
 		data.limit = 1;
 		data.offset = 0;
 		const obj = await this.search(req, data);
-		if (obj.items.length == 0) {
-			throw new HttpError.NotFound("Block not found");
-		}
-		return {
-			item: obj.items[0],
-			hrefs: obj.hrefs
-		};
+		const ret = { href: obj.hrefs };
+		if (obj.items.length == 0) ret.status = 404;
+		else ret.item = obj.items[0];
+		return ret;
 	}
 	static find = {
 		title: 'Find one block',
 		$action: 'read',
-		external: true,
 		required: ['type'],
 		get properties() {
 			const obj = { ...BlockService.search.properties };
@@ -494,7 +514,7 @@ module.exports = class BlockService {
 			data: mergeRecursive({}, src.data, data.data),
 			expr: mergeRecursive({}, src.expr, data.expr),
 			content: mergeRecursive({}, src.content),
-			locks: mergeRecursive({}, src.locks)
+			lock: mergeRecursive([], src.lock)
 		};
 
 
@@ -519,8 +539,7 @@ module.exports = class BlockService {
 	}
 	static clone = {
 		title: 'Clone a block',
-		$action: 'add',
-		external: true,
+		$action: 'write',
 		required: ['id'],
 		properties: {
 			id: {
@@ -592,8 +611,7 @@ module.exports = class BlockService {
 	}
 	static add = {
 		title: 'Add a block',
-		$action: 'add',
-		external: true,
+		$action: 'write',
 		required: ['type'],
 		properties: {
 			type: {
@@ -656,15 +674,8 @@ module.exports = class BlockService {
 		};
 		if (!Object.isEmpty(data.data)) obj.data = data.data;
 		if (!Object.isEmpty(data.content)) obj.content = data.content;
-		if (data.lock) {
-			if (Object.isEmpty(data.lock?.read)) {
-				data.lock.read = null;
-			}
-			if (Object.isEmpty(data.lock?.write)) {
-				data.lock.write = null;
-			}
-			obj.lock = data.lock;
-		}
+		if (!Object.isEmpty(data.lock)) obj.lock = data.lock;
+
 		await block.$query(req.trx).patchObject(obj);
 
 		if (parents.length == 0) return block;
@@ -687,8 +698,7 @@ module.exports = class BlockService {
 	}
 	static save = {
 		title: 'Modify a block',
-		$action: 'save',
-		external: true,
+		$action: 'write',
 		required: ['id', 'type'],
 		properties: {
 			id: {
@@ -733,8 +743,7 @@ module.exports = class BlockService {
 	}
 	static del = {
 		title: 'Delete a block',
-		$action: 'del',
-		external: true,
+		$action: 'write',
 		required: ['id', 'type'],
 		properties: {
 			id: {
@@ -765,7 +774,7 @@ module.exports = class BlockService {
 	static write = {
 		title: 'Write multiple blocks',
 		$action: 'write',
-		external: true,
+		$lock: true,
 		required: ['operations'],
 		properties: {
 			operations: {
@@ -847,7 +856,6 @@ module.exports = class BlockService {
 	static fill = {
 		title: 'Fill block content',
 		$action: 'write',
-		external: true,
 		required: ['id'],
 		properties: {
 			id: {
@@ -879,8 +887,6 @@ module.exports = class BlockService {
 	};
 };
 
-
-
 function whereSub(q, data, alias = 'block') {
 	let valid = false;
 	const types = (data.type || []).filter(t => t != 'site');
@@ -906,6 +912,7 @@ function whereSub(q, data, alias = 'block') {
 		q.whereObject({ data: data.data }, data.type, alias);
 	}
 	if (data.text) {
+		// whereText(q, data.text, alias);
 		valid = true;
 		q.from(raw("websearch_to_tsquery('unaccent', ?) AS query, ??", [data.text, alias]));
 		q.whereRaw(`query @@ ${alias}.tsv`);
@@ -913,13 +920,77 @@ function whereSub(q, data, alias = 'block') {
 	}
 	return valid;
 }
+/*
+function whereText(q, text, alias) {
+	const drafts = data.drafts
+		? ''
+		: `AND (page.data->'nositemap' IS NULL OR (page.data->'nositemap')::BOOLEAN IS NOT TRUE)`;
+
+	const types = data.type ?? site.$pkg.pages;
+
+	const results = await trx.raw(`SELECT json_build_object(
+			'count', count,
+			'rows', json_agg(
+				json_build_object(
+					'id', id,
+					'type', type,
+					'updated_at', updated_at,
+					'data', json_build_object(
+						'title', title,
+						'url', url,
+						'headlines', headlines,
+						'rank', rank
+					)
+				)
+			)) AS result FROM (
+			SELECT
+				id, type, title, url, updated_at, json_agg(DISTINCT headlines) AS headlines, sum(qrank) AS rank,
+				count(*) OVER() AS count
+			FROM (
+				SELECT
+					page.id,
+					page.type,
+					page.data->>'title' AS title,
+					page.data->>'url' AS url,
+					page.updated_at,
+					(SELECT string_agg(heads.value, '<br>') FROM (SELECT DISTINCT trim(value) AS value FROM jsonb_each_text(ts_headline('unaccent', block.content, search.query)) WHERE length(trim(value)) > 0) AS heads) AS headlines,
+					ts_rank(block.tsv, search.query) AS qrank
+				FROM
+					block AS site,
+					relation AS rs,
+					block,
+					relation AS rp,
+					block AS page,
+					(SELECT websearch_to_tsquery('unaccent', ?) AS query) AS search
+				WHERE
+					site.type = 'site' AND site.id = ?
+					AND rs.parent_id = site._id AND block._id = rs.child_id
+					AND block.type NOT IN ('site', 'user', 'fetch', 'template', 'api_form', 'query_form', 'priv', 'settings', ${site.$pkg.pages.map(_ => '?').join(',')})
+					AND rp.child_id = block._id AND page._id = rp.parent_id
+					${drafts}
+					AND page.type IN (${types.map(_ => '?').join(',')})
+					AND search.query @@ block.tsv
+			) AS results
+			GROUP BY id, type, title, url, updated_at ORDER BY rank DESC, updated_at DESC OFFSET ? LIMIT ?
+		) AS foo GROUP BY count`, [
+		data.text,
+		site.id,
+		...site.$pkg.pages,
+		...types,
+		data.offset,
+		data.limit
+	]);
+}
+*/
 
 function filterSub(q, data, alias) {
 	q.select();
 	const valid = whereSub(q, data, alias);
-
+	// TODO ORDER BY array_position(ARRAY['f', 'p', 'i', 'a']::varchar[], myfieldref)
+	// when myfield=[f, p, i, a]
+	// to keep same order
 	const orders = data.order || [];
-	orders.push("updated_at");
+	orders.push('created_at');
 	const seen = {};
 	for (const order of orders) {
 		const { col, dir } = parseOrder('block', order);

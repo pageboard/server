@@ -100,6 +100,7 @@ module.exports = class UploadModule {
 	}
 	static parse = {
 		title: 'Parse request',
+		$lock: true,
 		description: 'Returns a list of { name, title, path, mime, size }',
 		properties: {
 			files: {
@@ -130,7 +131,7 @@ module.exports = class UploadModule {
 		const image = await req.run('image.upload', {
 			path: data.path,
 			mime: mime.lookup(Path.extname(data.path))
-		});
+		}) ?? data;
 		const root = Path.join(this.opts.dir, req.site.id);
 		const pathname = Path.join(
 			"/.uploads",

@@ -21,6 +21,8 @@ module.exports = class UserService {
 		return this.#QueryUser(req, data);
 	}
 	static get = {
+		title: 'Get user',
+		$lock: true,
 		$action: 'read',
 		anyOf: [{
 			required: ['email']
@@ -54,7 +56,9 @@ module.exports = class UserService {
 		}).returning('*');
 	}
 	static add = {
-		$action: 'add',
+		title: 'Add user',
+		$lock: true,
+		$action: 'write',
 		required: ['email'],
 		properties: {
 			email: {
@@ -66,12 +70,51 @@ module.exports = class UserService {
 		}
 	};
 
+
+	async save({ trx, Block }, { id, data }) {
+		const user = await this.#QueryUser({ trx, Block }, { id });
+		await user.$query(trx).patchObject({ data });
+		return user;
+	}
+	static save = {
+		title: 'Save user',
+		$lock: true,
+		$action: 'write',
+		required: ['id', 'data'],
+		properties: {
+			id: {
+				type: 'string',
+				minLength: 1,
+				format: 'id'
+			},
+			data: {
+				type: 'object',
+				properties: {
+					name: {
+						title: 'Name',
+						type: 'string',
+						nullable: true,
+						format: 'singleline'
+					},
+					email: {
+						title: 'User email',
+						type: 'string',
+						format: 'email',
+						transform: ['trim', 'toLowerCase']
+					}
+				}
+			}
+		}
+	};
+
 	async del(req, data) {
 		return this.#QueryUser(req, data).del();
 	}
 	static del = {
 		...this.add,
-		$action: 'del'
+		title: 'Delete user',
+		$lock: true,
+		$action: 'write'
 	};
 };
 

@@ -115,6 +115,7 @@ module.exports = class ArchiveService {
 	static export = {
 		title: 'Export site',
 		$action: 'read',
+		$lock: true,
 		properties: {
 			file: {
 				title: 'File name',
@@ -140,7 +141,8 @@ module.exports = class ArchiveService {
 	}
 	static empty = {
 		title: 'Empty site',
-		$action: 'write'
+		$action: 'write',
+		$lock: true
 	};
 
 	async import(req, { file, empty, idMap, types = [] }) {
@@ -155,8 +157,19 @@ module.exports = class ArchiveService {
 
 		let upgrader;
 		const refs = new Map();
-		const beforeEach = async obj => {
-			if (!obj.id) {
+		const list = [];
+		const beforeEach = obj => {
+			if (obj.type == "site" || list.length == 0) {
+				const toVersion = site.data.server;
+				const fromVersion = obj.type == "site" && obj.data?.server || toVersion;
+
+				upgrader = new Upgrader({
+					site,
+					idMap,
+					from: fromVersion,
+					to: toVersion
+				});
+			} else if (!obj.id) {
 				if (obj.pathname) {
 					obj.pathname = obj.pathname.replace(
 						/\/uploads\/[^/]+\//,
@@ -164,15 +177,6 @@ module.exports = class ArchiveService {
 					);
 				}
 				return obj;
-			} else if (obj.type == "site") {
-				const toVersion = site.data.server;
-				const fromVersion = obj.data?.server ?? toVersion;
-
-				upgrader = new Upgrader(site.$modelClass, {
-					idMap,
-					from: fromVersion,
-					to: toVersion
-				});
 			}
 			return upgrader.beforeEach(obj);
 		};
@@ -240,19 +244,14 @@ module.exports = class ArchiveService {
 			}
 		};
 
-		const list = [];
-		fstream.on('data', async obj => {
-			list.push(await beforeEach(obj));
+		fstream.on('data', obj => {
+			list.push(beforeEach(obj));
 		});
 
 
 		await new Promise((resolve, reject) => {
-			fstream.on('error', (err) => {
-				reject(err);
-			});
-			fstream.on('finish', () => {
-				resolve();
-			});
+			fstream.on('error', reject);
+			fstream.on('finish', resolve);
 		});
 
 		for (let obj of list) {
@@ -271,6 +270,7 @@ module.exports = class ArchiveService {
 	static import = {
 		title: 'Import site',
 		$action: 'write',
+		$lock: true,
 		required: ['file'],
 		properties: {
 			file: {

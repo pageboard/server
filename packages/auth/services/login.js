@@ -9,8 +9,8 @@ module.exports = class LoginModule {
 	}
 	apiRoutes(app, server) {
 		otp.authenticator.options = {
-			step: 30, // do not change this value, we want third-party otp apps to work with us
-			window: [40, 1] // ten minutes-old tokens are still valid
+			// third-party TOTP apps expect steps of 30 seconds
+			step: 30
 		};
 		server.get("/.api/login", async (req, res) => {
 			const data = await req.run('login.grant', req.query);
@@ -58,12 +58,12 @@ module.exports = class LoginModule {
 			return "login.send requires a hostname. Use login.link";
 		}
 		const token = await this.#generate(req, data);
-		const settings = data.settings || {};
-		delete settings.grants;
-		await req.run('settings.save', {
-			email: data.email,
-			data: settings
+		const { item: settings } = await req.run('settings.have', {
+			email: data.email
 		});
+		if (data.settings) {
+			await req.run('settings.save', { id: settings.id, data: data.settings });
+		}
 		const mail = {
 			purpose: 'transactional',
 			from: {
@@ -95,7 +95,6 @@ module.exports = class LoginModule {
 	}
 	static send = {
 		title: 'Send token',
-		external: true,
 		$action: 'write',
 		required: ['email'],
 		properties: {
@@ -117,7 +116,7 @@ module.exports = class LoginModule {
 			}
 		}
 	};
-	async #verifyToken(req, { email, token }) {
+	async #verifyToken(req, { email, token, tokenMaxAge }) {
 		const { trx } = req;
 		const user = await req.run('user.get', { email });
 		const priv = await this.#userPriv(req, user);
@@ -129,6 +128,10 @@ module.exports = class LoginModule {
 			}
 		}
 		token = token.replaceAll(/\s/g, '');
+		otp.authenticator.options = {
+			window: [tokenMaxAge, 0],
+			step: otp.authenticator.options.step
+		};
 		const verified = otp.authenticator.check(token, priv.data.otp.secret);
 		await priv.$query(trx).patchObject({
 			type: priv.type,
@@ -146,10 +149,10 @@ module.exports = class LoginModule {
 		const { user = {} } = req;
 		const verified = await this.#verifyToken(req, data);
 		if (!verified) throw new HttpError.BadRequest("Bad token");
-		const settings = await req.run('settings.find', {
+		const { item: settings } = await req.run('settings.find', {
 			email: data.email
 		});
-		const grants = user?.grants ?? [];
+		const prevGrants = user?.grants ?? [];
 		req.user = Object.assign(user, {
 			id: settings.id,
 			grants: settings.data?.grants ?? []
@@ -160,17 +163,16 @@ module.exports = class LoginModule {
 			throw new HttpError.Forbidden("User has insufficient grants");
 		}
 		user.grants = locks;
-		req.granted = grants.join(',') != locks.join(',');
+		req.granted = prevGrants.join(',') != user.grants.join(',');
 		return {
 			item: settings,
 			cookies: {
-				bearer: req.call('auth.cookie')
+				bearer: await req.run('auth.cookie', data)
 			}
 		};
 	}
 	static grant = {
 		title: 'Grant',
-		external: true,
 		description: 'Sets cookie with grants',
 		$action: 'write',
 		required: ['email', 'token'],
@@ -194,6 +196,18 @@ module.exports = class LoginModule {
 					name: 'schema',
 					path: 'settings.properties.grants.items'
 				}
+			},
+			maxAge: {
+				title: 'Max Age',
+				description: 'max age of cookie in seconds',
+				type: 'integer',
+				default: 60 * 60 * 24 * 30
+			},
+			tokenMaxAge: {
+				title: 'Token Max Age',
+				description: 'in steps of 30 seconds',
+				type: 'integer',
+				default: 20
 			}
 		}
 	};
@@ -210,6 +224,7 @@ module.exports = class LoginModule {
 		title: 'Internal login link',
 		$action: 'write',
 		required: ['email', 'grant'],
+		$lock: true,
 		properties: {
 			email: {
 				title: 'Email',
@@ -240,7 +255,6 @@ module.exports = class LoginModule {
 	}
 	static clear = {
 		title: 'Logout',
-		external: true,
 		description: 'Clear cookie',
 		$action: 'write'
 	};
@@ -253,17 +267,19 @@ module.exports = class LoginModule {
 		const uri = otp.authenticator.keyuri(
 			user.data.email, this.app.name, priv.data.otp.secret
 		);
-		if (data.qr) {
-			return qrcode.toString(uri, {
-				type: 'terminal',
+		const item = {
+			type: 'otp',
+			data: { uri }
+		};
+		if (!this.app.opts.cli) {
+			item.data.uri = await qrcode.toDataURL(uri, {
 				errorCorrectionLevel: 'L'
 			});
-		} else {
-			return uri;
 		}
+		return { item };
 	}
 	static key = {
-		title: 'Private Key URI',
+		title: 'Get user otp key',
 		$action: 'read',
 		required: ['email'],
 		properties: {
@@ -271,11 +287,6 @@ module.exports = class LoginModule {
 				title: 'Email',
 				type: 'string',
 				format: 'email'
-			},
-			qr: {
-				title: 'QR Code',
-				type: 'boolean',
-				default: false
 			}
 		}
 	};

@@ -19,7 +19,7 @@ function fixSchema(schema) {
 					}
 					break;
 				case "string":
-					if (schema.format) {
+					if (schema.format || schema.pattern) {
 						schema.coerce = true;
 					}
 					break;
@@ -54,9 +54,10 @@ module.exports = class Validation {
 		formats: {
 			singleline: /^[^\n\r]*$/,
 			pathname: /^(\/[\w.-]*)+$/,
+			'hex-color': /^(#[0-9A-Fa-f]{6}([0-9A-Fa-f]{2})?|\w+)$/,
 			page: /^((\/[a-zA-Z0-9-]*)+)$|^(\/\.well-known\/\d{3})$/,
 			id: /^[A-Za-z0-9]+$/,
-			name: /^\w+$/, // this should be the "type" format
+			name: /^\w*$/, // this should be the "type" format
 			grant: /^[a-z0-9-]+$/ // this should be the name format !
 		},
 		serialize(schema) {
@@ -227,7 +228,7 @@ module.exports = class Validation {
 
 // NB: this is mostly objection code, do not refactor
 function jsonSchemaWithoutRequired(jsonSchema) {
-	const subSchemaProps = ['anyOf', 'oneOf', 'allOf', 'not', 'then', 'else'];
+	const subSchemaProps = ['anyOf', 'oneOf', 'allOf', 'not', 'then', 'else', 'properties'];
 	const discriminatorRequired = {};
 	if (jsonSchema.discriminator && jsonSchema.discriminator.propertyName) {
 		discriminatorRequired.required = [jsonSchema.discriminator.propertyName];
@@ -260,6 +261,10 @@ function subSchemaWithoutRequired(jsonSchema, prop) {
 			} else {
 				return {};
 			}
+		} else if (prop == "properties" && jsonSchema.type == "object") {
+			return {
+				[prop]: jsonSchemaPropertiesWithoutRequired(jsonSchema[prop])
+			};
 		} else {
 			return {
 				[prop]: jsonSchemaWithoutRequired(jsonSchema[prop]),
@@ -270,8 +275,18 @@ function subSchemaWithoutRequired(jsonSchema, prop) {
 	}
 }
 
+function jsonSchemaPropertiesWithoutRequired(jsonSchemaProperties) {
+	const schema = {};
+	for (const [key, sub] of Object.entries(jsonSchemaProperties)) {
+		schema[key] = jsonSchemaWithoutRequired(sub);
+	}
+	return schema;
+}
+
 function jsonSchemaArrayWithoutRequired(jsonSchemaArray) {
-	return jsonSchemaArray.map(jsonSchemaWithoutRequired).filter(obj => !Object.isEmpty(obj));
+	return jsonSchemaArray
+		.map(jsonSchemaWithoutRequired)
+		.filter(obj => !Object.isEmpty(obj));
 }
 
 function omit(obj, keys) {

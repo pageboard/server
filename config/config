@@ -42,7 +42,7 @@ apiKey = "xxx"
 # csp = "https://pageboard.report-uri.com/r/d/csp/wizard"
 # xpp = "https://pageboard.report-uri.com/r/d/xss/enforce"
 
-[commons.csp]
+[commons.csp.script]
 google_translate = "https://translate-pa.googleapis.com 'sha256-76OsbIVmiCTptsUpu/BXWWeJx8ontCdRh7CORy11khQ=' 'sha256-76OsbIVmiCTptsUpu/BXWWeJx8ontCdRh7CORy11khQ='"
 
 [upstreams]

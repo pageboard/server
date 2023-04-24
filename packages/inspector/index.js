@@ -39,7 +39,7 @@ module.exports = class InspectorModule {
 			});
 		if (obj.icon == "data:/,") delete obj.icon;
 		if (result.url) obj.pathname = (new URL(result.url)).pathname;
-		['width', 'height', 'duration', 'size', 'thumbnail', 'description']
+		['width', 'height', 'duration', 'size', 'thumbnail', 'description', 'source']
 			.forEach(key => {
 				if (result[key] !== undefined) obj.meta[key] = result[key];
 			});
