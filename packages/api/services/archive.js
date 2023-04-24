@@ -158,7 +158,7 @@ module.exports = class ArchiveService {
 		let upgrader;
 		const refs = new Map();
 		const list = [];
-		const beforeEach = obj => {
+		const beforeEachStandalone = obj => {
 			if (obj.type == "site" || list.length == 0) {
 				const toVersion = site.data.server;
 				const fromVersion = obj.type == "site" && obj.data?.server || toVersion;
@@ -180,7 +180,7 @@ module.exports = class ArchiveService {
 			}
 			return upgrader.beforeEach(obj);
 		};
-		const afterEach = async obj => {
+		const afterEachStandalone = async obj => {
 			if (types.includes(obj.type)) return;
 			if (!obj.id) {
 				counts.hrefs++;
@@ -188,7 +188,6 @@ module.exports = class ArchiveService {
 			} else if (obj.type == "site") {
 				if (empty) await req.run('archive.empty');
 			} else if (obj.type == "user") {
-				await upgrader.afterEach(obj);
 				try {
 					const user = await site.$modelClass.query(trx).where('type', 'user')
 						.whereJsonText('data:email', obj.data.email).select('_id', 'id')
@@ -202,7 +201,6 @@ module.exports = class ArchiveService {
 				}
 				counts.users += 1;
 			} else {
-				await upgrader.afterEach(obj);
 				if (obj.parents) {
 					// e.g. settings < user
 					obj.parents = obj.parents.map(id => {
@@ -245,7 +243,7 @@ module.exports = class ArchiveService {
 		};
 
 		fstream.on('data', obj => {
-			list.push(beforeEach(obj));
+			list.push(beforeEachStandalone(obj));
 		});
 
 
@@ -257,7 +255,7 @@ module.exports = class ArchiveService {
 		for (let obj of list) {
 			try {
 				obj = await upgrader.process(obj);
-				await afterEach(obj);
+				await afterEachStandalone(obj);
 			} catch (err) {
 				err.message = (err.message ?? "") +
 					`\nwhile processing ${obj.type} ${obj.id}`;
