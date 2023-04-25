@@ -173,25 +173,25 @@ module.exports = class SettingsService {
 	};
 
 	async have(req, { email }) {
-		try {
-			return await req.run('settings.find', { email });
-		} catch (err) {
-			if (err.statusCode != 404) throw err;
-			const user = await req.run('user.add', { email });
-			const block = {
-				type: 'settings',
-				parents: [user]
-			};
-			const { site, trx } = req;
-			await site.$beforeInsert.call(block); // prepopulate block.id
-			block.lock = { read: [`id-${block.id}`] };
-			const settings = await site.$relatedQuery('children', trx)
-				.insertGraph(block, {
-					relate: ['parents']
-				});
-			delete settings.parents;
-			return { item: settings };
-		}
+		// TODO custom data ?
+		const res = await req.run('settings.find', { email });
+		if (res.item) return res;
+		if (res.status != 404) throw new HttpError[res.status]();
+		const user = await req.run('user.add', { email });
+		const block = {
+			type: 'settings',
+			parents: [user]
+		};
+		const { site, trx } = req;
+		await site.$beforeInsert.call(block); // prepopulate block.id
+		block.lock = [`id-${block.id}`];
+		const settings = await site.$relatedQuery('children', trx)
+			.insertGraph(block, {
+				relate: ['parents']
+			});
+		delete settings.parents;
+		settings.parent = user;
+		return { item: settings };
 	}
 
 	static have = {
