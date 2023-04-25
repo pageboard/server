@@ -297,62 +297,55 @@ module.exports = class MailModule {
 		if (!mailer) {
 			throw new Error("Unknown mailer purpose " + purpose);
 		}
-
-		const list = [req.run('block.find', {
+		const { item: emailPage } = await req.run('block.find', {
 			type: 'mail',
 			data: { url: data.url }
-		})];
+		});
+		if (!emailPage) throw new HttpError.NotFound("email page missing");
+
 		const mailOpts = {
 			purpose: purpose
 		};
+
 		if (data.from) {
+			let fromId;
 			if (data.from.indexOf('@') > 0) {
-				list.push(req.run('settings.find', { email: data.from }));
+				fromId = (await req.run('settings.find', { email: data.from })).item.id;
 			} else {
-				list.push(req.run('settings.get', { id: data.from }));
+				fromId = (await req.run('settings.get', { id: data.from })).item.id;
 			}
+			mailOpts.from = {
+				title: site.data.title,
+				address: `${site.id}.${fromId}@${mailer.domain}`
+			};
 		}
 		if (data.replyTo) {
 			if (data.replyTo.indexOf('@') > 0) {
-				mailOpts.replyTo = AddressParser(data.replyTo);
+				mailOpts.replyTo = AddressParser(data.replyTo)[0];
 			} else {
-				list.push(req.run('settings.get', {
+				mailOpts.replyTo = (await req.run('settings.get', {
 					id: data.replyTo
-				}).then(settings => {
-					mailOpts.replyTo = {
-						address: settings.parent.data.email
-					};
-				}));
+				})).item?.parent?.data?.email;
 			}
 		}
 
-		list.push(Promise.all(data.to.map(to => {
-			if (to.indexOf('@') > 0) {
-				return req.run('settings.have', { email: to });
-			} else {
-				return req.run('settings.get', { id: to });
-			}
-		})));
-
-		const results = await Promise.allSettled(list);
-		const rows = results.map(item => {
-			if (item.status == "rejected") throw item.reason;
-			return item.value;
-		});
-		const emailPage = rows[0].item;
-		if (data.from) mailOpts.from = {
-			name: site.data.title,
-			address: `${site.id}.${rows[1].id}@${mailer.domain}`
-		};
 		const domains = {};
-		mailOpts.to = rows.slice(-1).pop().map(settings => {
-			const email = settings.parent.data.email;
+		mailOpts.to = await Promise.all(data.to.map(async to => {
+			let res;
+			if (to.indexOf('@') > 0) {
+				res = await req.run('settings.have', { email: to });
+			} else {
+				res = await req.run('settings.get', { id: to });
+			}
+			const email = res.item?.parent?.data?.email;
+			if (!email) throw new HttpError.NotFound("recipient not found: " + to);
 			const parsedAddress = AddressParser(email)[0];
 			domains[parsedAddress.address.split('@').pop()] = true;
 			return {
 				address: email
 			};
-		});
+		}));
+
 		if (purpose == "transactional" && (Object.keys(domains).length > 2 || mailOpts.to.length > 10)) {
 			throw new Error("Transactional mail allowed for at most two different recipients domains and ten recipients");
 		}
