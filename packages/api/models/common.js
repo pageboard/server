@@ -325,6 +325,10 @@ function asPaths(obj, ret, pre, first, schema) {
 	Object.keys(obj).forEach(str => {
 		let val = obj[str];
 		const [key, op] = str.split(':');
+		if (op != null) {
+			delete obj[str];
+			obj[key] = val;
+		}
 		const schem = props[key] || {};
 		let cur;
 		if (pre) {
