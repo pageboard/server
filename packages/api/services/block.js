@@ -1,6 +1,6 @@
-const { ref, raw } = require('objection');
+const { ref, raw, val: toval } = require('objection');
 const Block = require('../models/block');
-const { unflatten, mergeRecursive } = require('../../../src/utils');
+const { unflatten, mergeRecursive, dget } = require('../../../src/utils');
 
 module.exports = class BlockService {
 	static name = 'block';
@@ -986,9 +986,6 @@ function whereText(q, text, alias) {
 function filterSub(q, data, alias) {
 	q.select();
 	const valid = whereSub(q, data, alias);
-	// TODO ORDER BY array_position(ARRAY['f', 'p', 'i', 'a']::varchar[], myfieldref)
-	// when myfield=[f, p, i, a]
-	// to keep same order
 	const orders = data.order || [];
 	orders.push('created_at');
 	const seen = {};
@@ -996,7 +993,16 @@ function filterSub(q, data, alias) {
 		const { col, dir } = parseOrder('block', order);
 		if (seen[col.expression]) continue;
 		seen[col.expression] = true;
-		q.orderBy(col, dir);
+		const val = dget(data, order);
+		if (Array.isArray(val)) {
+			q.orderByRaw(raw(
+				'array_position(??, ?) ' + dir,
+				toval(val).asArray().castTo('text[]'),
+				ref(col).castText()
+			));
+		} else {
+			q.orderBy(col, dir);
+		}
 	}
 	if (data.offset < 0) {
 		data.limit += data.offset;

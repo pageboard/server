@@ -14,6 +14,9 @@ const sharedMd = new Matchdom(TextPlugin, ArrayPlugin, OpsPlugin, NumPlugin, Dat
 	}
 });
 
+exports.dget = dget;
+exports.dset = dset;
+
 exports.fuse = (obj, data, scope) => {
 	return sharedMd.merge(obj, data, scope);
 };
