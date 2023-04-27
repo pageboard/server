@@ -182,12 +182,12 @@ module.exports = class HrefService {
 		try {
 			return await req.run('href.find', data);
 		} catch(err) {
-			const item = await this.#blindAdd(req, data);
+			const item = await this.#add(req, data);
 			return { item };
 		}
 	}
 
-	async #blindAdd(req, data) {
+	async #add(req, data) {
 		const { site, trx, Href } = req;
 		let local = false;
 		const siteUrl = site.url ?? new URL(`https://${site.id}.localhost.localdomain`);
@@ -202,7 +202,7 @@ module.exports = class HrefService {
 			// consider it's a page
 			try {
 				const { item } = await req.run('block.find', {
-					type: site.$pkg.pages,
+					type: site.$pkg.standalones,
 					data: {
 						url: pageUrl.pathname
 					}
@@ -210,7 +210,7 @@ module.exports = class HrefService {
 				result = {
 					mime: 'text/html; charset=utf-8',
 					type: 'link',
-					title: item.data && item.data.title || "",
+					title: item.data?.title ?? item.content?.title,
 					site: null,
 					pathname: pageUrl.pathname,
 					url: pageUrl.pathname + pageUrl.search
@@ -269,7 +269,8 @@ module.exports = class HrefService {
 			.returning(Href.columns);
 	}
 	static save = {
-		title: 'Change URL title',
+		title: 'Change href title',
+		description: 'This avoids reinspecting the full url',
 		$action: 'write',
 		required: ['url', 'title'],
 		properties: {

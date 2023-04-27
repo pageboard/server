@@ -164,7 +164,7 @@ class Block extends Model {
 	};
 
 	static initSite(block, pkg) {
-		const { eltsMap, groups, tag } = pkg;
+		const { eltsMap, groups, tag, standalones } = pkg;
 		if (!block.id) {
 			throw new Error("missing block.id\n" + JSON.stringify(block));
 		}
@@ -264,9 +264,11 @@ class Block extends Model {
 
 			#pkg = {
 				bundles: {},
+				standalones: Array.from(standalones),
 				pages: groups.page ?? [],
 				tag
 			};
+
 			get $pkg() {
 				return this.#pkg;
 			}
@@ -284,6 +286,31 @@ class Block extends Model {
 					delete json.data;
 				}
 				return jsonSchema;
+			}
+			async $afterUpdate({ patch, old }, queryContext) {
+				const url = this.data?.url ?? old?.data?.url;
+				if (!url || url.startsWith('/.')) return;
+				const title = this.data?.title ?? this.content?.title;
+				if (title == null) try {
+					await queryContext.transaction.req.run('href.del', { url });
+				} catch (ex) {
+					// miss
+				} else try {
+					await queryContext.transaction.req.run('href.save', {
+						url,
+						title
+					});
+				} catch (ex) {
+					// forgiving - lots of href are missing
+					await queryContext.transaction.req.run('href.add', { url });
+				}
+			}
+			async $afterInsert(queryContext) {
+				const { url } = this.data ?? {};
+				if (!url || url.startsWith('/.')) return;
+				const title = this.data?.title ?? this.content?.title;
+				if (title == null) return;
+				await queryContext.transaction.req.run('href.add', { url });
 			}
 		}
 
