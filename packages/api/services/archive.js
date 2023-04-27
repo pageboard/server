@@ -134,17 +134,6 @@ module.exports = class ArchiveService {
 		}
 	};
 
-	async empty({ site, trx }) {
-		await site.$relatedQuery('children', trx)
-			.select(trx.raw('recursive_delete(block._id, TRUE)'));
-		await site.$relatedQuery('hrefs', trx).delete();
-	}
-	static empty = {
-		title: 'Empty site',
-		$action: 'write',
-		$lock: true
-	};
-
 	async import(req, { file, empty, idMap, types = [] }) {
 		const { site, trx } = req;
 		const counts = {
@@ -186,7 +175,7 @@ module.exports = class ArchiveService {
 				counts.hrefs++;
 				return site.$relatedQuery('hrefs', trx).insert(obj).onConflict(['_parent_id', 'url']).ignore();
 			} else if (obj.type == "site") {
-				if (empty) await req.run('archive.empty');
+				if (empty) await req.run('site.empty', { id: req.site.id });
 			} else if (obj.type == "user") {
 				try {
 					const user = await site.$modelClass.query(trx).where('type', 'user')
