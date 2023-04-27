@@ -703,13 +703,13 @@ function applyUnrelate({ site, trx }, obj) {
 	}));
 }
 
-function applyRemove({ site, trx }, list, recursive) {
+function applyRemove(req, list, recursive) {
 	if (!list.length) return;
-	const q = site.$relatedQuery('children', trx).whereIn('block.id', list);
+	const q = req.site.$relatedQuery('children', req.trx).whereIn('block.id', list);
 	if (!recursive) {
-		return q.whereNot('standalone', true);
+		return q.whereNot('standalone', true).delete();
 	} else {
-		return q.select(raw('recursive_delete(block._id, FALSE) AS count'));
+		return req.run('block.del', { id: list });
 	}
 }
 
