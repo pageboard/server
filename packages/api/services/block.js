@@ -611,6 +611,7 @@ module.exports = class BlockService {
 	}
 	static add = {
 		title: 'Add a block',
+		description: 'Standalone block type only',
 		$action: 'write',
 		required: ['type'],
 		properties: {
@@ -698,6 +699,7 @@ module.exports = class BlockService {
 	}
 	static save = {
 		title: 'Modify a block',
+		description: 'Standalone block type only',
 		$action: 'write',
 		required: ['id', 'type'],
 		properties: {
@@ -736,20 +738,33 @@ module.exports = class BlockService {
 	};
 
 	async del({ site, trx }, data) {
-		return site.$relatedQuery('children', trx)
+		const types = data.type ? [data.type] : site.$pkg.standalones;
+		const list = Array.isArray(data.id) ? data.id : [data.id];
+		await site.$relatedQuery('hrefs', trx).delete()
+			.where('href.url', site.$relatedQuery('children', trx)
+				.whereIn('block.id', list)
+				.whereIn('block.type', types)
+				.select(ref('block.data:url').castText())
+			);
+		await site.$relatedQuery('children', trx)
 			.select(raw('recursive_delete(block._id, FALSE) AS count'))
-			.where('block.id', data.id)
-			.where('block.type', data.type).first().throwIfNotFound();
+			.whereIn('block.id', list)
+			.whereIn('block.type', types);
 	}
 	static del = {
-		title: 'Delete a block',
+		title: 'Delete blocks',
+		description: 'Recursive delete of standalone blocks',
 		$action: 'write',
-		required: ['id', 'type'],
+		required: ['id'],
 		properties: {
 			id: {
-				title: 'id',
-				type: 'string',
-				format: 'id'
+				title: 'ids',
+				type: 'array',
+				minItems: 1,
+				items: {
+					type: 'string',
+					format: 'id'
+				}
 			},
 			type: {
 				title: 'type',

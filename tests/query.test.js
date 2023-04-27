@@ -13,7 +13,7 @@ suite('query', function () {
 		try {
 			await app.run('site.add', site);
 		} catch (err) {
-			await app.run('archive.empty', null, site.id);
+			await app.run('site.empty', { id: site.id });
 		}
 	});
 

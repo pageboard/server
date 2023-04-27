@@ -125,6 +125,7 @@ module.exports = class ApiModule {
 			hadTrx = true;
 		} else {
 			req.trx = await transaction.start(app.database.tenant(locals.tenant));
+			req.trx.req = req; // models hooks can call api
 		}
 		Object.assign(req, { Block, Href });
 

@@ -227,6 +227,28 @@ module.exports = class SiteService {
 		}
 	};
 
+	async empty({ trx, Block }, { id }) {
+		const site = await Block.query(trx).where('type', 'site')
+			.where('id', id)
+			.first().throwIfNotFound();
+		await site.$relatedQuery('children', trx)
+			.select(trx.raw('recursive_delete(block._id, TRUE)'));
+		await site.$relatedQuery('hrefs', trx).delete();
+	}
+	static empty = {
+		title: 'Empty site',
+		$action: 'write',
+		$lock: true,
+		required: ['id'],
+		properties: {
+			id: {
+				title: 'ID',
+				type: 'string',
+				format: 'id'
+			}
+		}
+	};
+
 	async gc({ trx }) {
 		// deletes all blocks that belong to no site
 		const ret = await trx.raw(`DELETE FROM block

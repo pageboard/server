@@ -460,36 +460,6 @@ module.exports = class PageService {
 			...await applyUpdate(req, changes.update)
 		];
 		await applyRelate(req, changes.relate);
-		await Promise.all(pages.update.map(async child => {
-			if (!child.data.url || child.data.url.startsWith('/.') || child.data.title == null) return;
-			try {
-				await req.run('href.save', {
-					url: child.data.url,
-					title: child.data.title
-				});
-			} catch (err) {
-				if (err.statusCode == 404) try {
-					await req.run('href.add', {
-						url: child.data.url
-					});
-				} catch (err) {
-					console.error(err);
-				} else {
-					console.error(err);
-				}
-			}
-		}));
-		await Promise.all(pages.add.map(async child => {
-			if (!child.data.url || child.data.url.startsWith('/.')) return;
-			// problem: added pages are not saved here
-			try {
-				await req.run('href.add', {
-					url: child.data.url
-				});
-			} catch (err) {
-				console.error(err);
-			}
-		}));
 		return returning;
 	}
 	static save = {
@@ -733,13 +703,13 @@ function applyUnrelate({ site, trx }, obj) {
 	}));
 }
 
-function applyRemove({ site, trx }, list, recursive) {
+function applyRemove(req, list, recursive) {
 	if (!list.length) return;
-	const q = site.$relatedQuery('children', trx).whereIn('block.id', list);
+	const q = req.site.$relatedQuery('children', req.trx).whereIn('block.id', list);
 	if (!recursive) {
-		return q.whereNot('standalone', true);
+		return q.whereNot('standalone', true).delete();
 	} else {
-		return q.select(raw('recursive_delete(block._id, FALSE) AS count'));
+		return req.run('block.del', { id: list });
 	}
 }
 

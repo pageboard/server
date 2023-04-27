@@ -139,7 +139,6 @@ module.exports = class Packager {
 			)
 		));
 		// clear up some space
-		delete pkg.standalones;
 		delete pkg.eltsMap;
 		delete pkg.bundles;
 		delete pkg.aliases;
