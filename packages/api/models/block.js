@@ -312,6 +312,11 @@ class Block extends Model {
 				if (title == null) return;
 				await queryContext.transaction.req.run('href.add', { url });
 			}
+			async $afterDelete(queryContext) {
+				const { url } = this.data ?? {};
+				if (!url || url.startsWith('/.')) return;
+				await queryContext.transaction.req.run('href.del', { url });
+			}
 		}
 
 		const site = new DomainBlock();
