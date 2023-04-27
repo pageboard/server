@@ -358,10 +358,14 @@ function findHrefs(schema, list, root, array) {
 		if (array) path = root;
 		else if (root) path = `${root}.${key}`;
 		else path = key;
-		const helper = prop.$helper;
-		if (helper == "href" || helper?.name == "href") {
-			let types = helper.filter && helper.filter.type || [];
+		const { $helper, $filter } = prop;
+		if ($helper == "href" || $helper?.name == "href") {
+			let types = $helper.filter?.type ?? [];
 			if (!Array.isArray(types)) types = [types];
+			if (types.length == 0) {
+				if ($filter.helper == "pageUrl") types.push('link');
+				else console.warn("href helper has no types", $helper);
+			}
 			list.push({ path, types, array });
 		} else if (prop.type == "array") {
 			findHrefs({properties: {items: prop.items}}, list, path, true);
