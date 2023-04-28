@@ -455,12 +455,8 @@ module.exports = class HrefService {
 		const hrefs = site.$hrefs;
 		const fhrefs = {};
 		for (const [type, list] of Object.entries(hrefs)) {
-			if (data.type && type != data.type) continue;
-			const flist = list.filter(desc => {
-				return !data.types.length || desc.types.some(type => {
-					return data.types.includes(type);
-				});
-			});
+			if (data.block != type) continue;
+			const flist = list.filter(desc => desc.types.includes(data.href));
 			if (site.$pkg.pages.includes(type)) flist.push({
 				path: 'url',
 				types: ['link']
@@ -468,10 +464,10 @@ module.exports = class HrefService {
 			if (flist.length) fhrefs[type] = flist;
 		}
 		if (Object.keys(fhrefs).length === 0) {
-			throw new Error(`No types selected: ${data.types.join(',')}`);
+			throw new HttpError.BadRequest(`No href types matching: ${data.block}/${data.href}`);
 		}
 
-		const rows = site.$modelClass.query(trx).select().from(
+		const rows = await site.$modelClass.query(trx).select().from(
 			site.$relatedQuery('children', trx).select('block._id')
 				.whereIn('block.type', Object.keys(fhrefs))
 				.leftOuterJoin('href', function () {
@@ -499,11 +495,14 @@ module.exports = class HrefService {
 		).join('block', 'block._id', 'sub._id')
 			.where('sub.count', 0);
 		const urls = [];
+		let ignored = 0;
 		for (const row of rows) {
 			for (const desc of fhrefs[row.type]) {
 				const url = jsonPath.get(row.data, desc.path);
 				if (url && !urls.includes(url) && !url.startsWith('/.well-known/')) {
 					urls.push(url);
+				} else {
+					ignored++;
 				}
 			}
 		}
@@ -511,32 +510,27 @@ module.exports = class HrefService {
 			return req.run('href.add', { url });
 		}));
 		return {
-			missings: rows.length,
+			ignored,
+			blocks: rows.length,
 			added: list.length
 		};
 	}
 	static reinspect = {
-		title: 'Batch URL reinspection',
+		title: 'Batch reinspection',
 		$lock: true,
 		$action: 'write',
+		required: ['block', 'href'],
 		properties: {
-			all: {
-				title: 'All',
-				type: 'boolean',
-				default: false
+			block: {
+				title: 'Block type',
+				type: 'string',
+				format: 'name'
 			},
-			type: {
-				title: 'Type',
-				nullable: true,
-				type: 'string'
-			},
-			types: {
-				title: 'Href Types',
-				default: [],
-				type: 'array',
-				items: {
-					type: 'string'
-				}
+			href: {
+				title: 'Href type',
+				description: 'link, image, video, file, embed, audio, archive',
+				type: 'string',
+				format: 'name'
 			}
 		}
 	};

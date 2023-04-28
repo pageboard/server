@@ -54,7 +54,7 @@ module.exports = class GitModule {
 			}]
 		};
 		try {
-			const changed = await req.run('git.install', getRefs(payload));
+			const changed = await req.run('git.decide', getRefs(payload));
 			if (!changed) return;
 			await req.run('site.save', site);
 			mail.subject = `Pageboard deployed ${site.id} at version ${site.data.version}`;
@@ -75,7 +75,7 @@ module.exports = class GitModule {
 		}
 	}
 
-	async install(req, data) {
+	async decide(req, data) {
 		// site.data.module: url[#<commit-ish> | #semver:<range>]
 		// site.data.version: commit-ish
 		const { site } = req;
@@ -118,14 +118,13 @@ module.exports = class GitModule {
 			}
 		}
 		if (version != site.data.version) {
-			await req.run('site.save', site);
 			return true;
 		} else {
 			return false;
 		}
 	}
-	static install = {
-		title: 'Install from git deploy',
+	static decide = {
+		title: 'Decide deployment',
 		$lock: true,
 		$action: 'write',
 		properties: {
