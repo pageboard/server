@@ -58,7 +58,8 @@ module.exports = class Validation {
 			page: /^((\/[a-zA-Z0-9-]*)+)$|^(\/\.well-known\/\d{3})$/,
 			id: /^[A-Za-z0-9]+$/,
 			name: /^\w*$/, // this should be the "type" format
-			grant: /^[a-z0-9-]+$/ // this should be the name format !
+			grant: /^[a-z0-9-]+$/, // this should be the name format !
+			lang: /^([a-zA-Z]+-?)+$/
 		},
 		serialize(schema) {
 			return schema.$id;
