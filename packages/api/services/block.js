@@ -107,7 +107,7 @@ module.exports = class BlockService {
 			}
 			if (Object.keys(data.parent).length) {
 				if (!data.parent.type) {
-					if (parents.type && parents.type.length == 1) {
+					if (parents?.type?.length == 1) {
 						data.parent.type = parents.type[0];
 					} else {
 						throw new HttpError.BadRequest("Missing parent.type");
