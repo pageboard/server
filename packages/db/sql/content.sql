@@ -136,6 +136,8 @@ BEGIN
 						'text', (CASE WHEN (_lang = cur_lang) THEN _text ELSE '' END)
 					)
 				) RETURNING block._id INTO cur_id;
+				-- relate content to its site
+				INSERT INTO relation (child_id, parent_id) VALUES (cur_id, _site._id);
 				cur_ids := array_append(cur_ids, cur_id);
 			END LOOP;
 		END IF;
@@ -155,9 +157,10 @@ BEGIN
 		DELETE FROM relation WHERE child_id = ANY(cur_ids) AND parent_id = block_id;
 		-- delete orphaned content
 		DELETE FROM block WHERE _id = ANY(cur_ids) AND NOT EXISTS (
-			SELECT FROM relation WHERE child_id = block._id
+			SELECT FROM relation WHERE child_id = block._id AND parent_id != _site._id
 		);
 	END LOOP;
 	RETURN _obj;
 END
 $$ LANGUAGE plpgsql;
+
