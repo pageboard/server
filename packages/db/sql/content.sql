@@ -41,7 +41,6 @@ BEGIN
 		FROM block WHERE type='language' AND data @@ FORMAT('$.lang == %s', NEW.data->'lang')::jsonpath;
 
 	NEW.tsv := to_tsvector(_tsconfig::regconfig, NEW.data->>'text');
-	RAISE NOTICE 'change tsv %', _tsconfig;
 	RETURN NEW;
 END
 $$ LANGUAGE plpgsql;
@@ -72,12 +71,9 @@ DECLARE
 	cur_id INTEGER;
 	cur_lang TEXT;
 	cur_ids INTEGER[];
-	block_type TEXT;
 	_name TEXT;
 	_text TEXT;
 BEGIN
-	SELECT type INTO block_type FROM block WHERE _id = block_id;
-
 	-- int[text][] map of old block contents
 	SELECT jsonb_object_agg(name, ids) INTO content_ids
 	FROM (
@@ -89,24 +85,31 @@ BEGIN
 	FOR _name, _text IN
 		SELECT * FROM jsonb_each_text(_obj)
 	LOOP
+		IF _text IS NULL OR _text = '' THEN
+			-- will unlink
+			CONTINUE;
+		END IF;
 		-- find if some content already exists for a block in that site
 		IF _site IS NULL THEN
 			_site := block_site(block_id);
 		END IF;
-		SELECT block_site.child_id INTO cur_id
-		FROM relation AS block_site, relation AS content_block, block AS content
-			WHERE block_site.parent_id = _site._id
-			AND content_block.parent_id = block_site.child_id
+		SELECT other._id INTO cur_id
+		FROM block, relation AS block_site,
+		block AS other,
+		relation AS content_block, block AS content
+			WHERE block._id = block_id
+			AND block_site.parent_id = _site._id
+			AND other._id = block_site.child_id AND other.type = block.type
+			AND content_block.parent_id = other._id
 			AND content._id = content_block.child_id
 			AND content.type = 'content'
 			AND content.data @@ FORMAT(
-				'$.lang == %s && $.type == %s && $.name == %s && $.text == %s',
+				'$.lang == %s && $.name == %s && $.text == %s',
 				to_json(_lang),
-				to_json(block_type),
 				to_json(_name),
 				to_json(_text)
 			)::jsonpath;
-
+		cur_ids := ARRAY[]::INTEGER[];
 		IF cur_id IS NOT NULL THEN
 			-- some content is found
 			IF cur_id = block_id THEN
@@ -118,11 +121,11 @@ BEGIN
 				SELECT array_agg(content._id) INTO cur_ids
 				FROM relation AS r, block AS content
 					WHERE r.parent_id = cur_id AND content._id = r.child_id
-					AND content.type = 'content';
+					AND content.type = 'content'
+					AND content.data @@ FORMAT('$.name == %s', to_json(_name))::jsonpath;
 			END IF;
 		ELSE
 			-- need to add new content in every language
-			cur_ids := ARRAY[]::INTEGER[];
 			FOR cur_lang IN
 				SELECT * FROM jsonb_array_elements_text(_site.data['languages'])
 			LOOP
@@ -130,7 +133,6 @@ BEGIN
 					replace(gen_random_uuid()::text, '-', ''),
 					'content',
 					jsonb_build_object(
-						'type', block_type,
 						'name', _name,
 						'lang', cur_lang,
 						'text', (CASE WHEN (_lang = cur_lang) THEN _text ELSE '' END)
