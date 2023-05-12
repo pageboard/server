@@ -89,8 +89,8 @@ module.exports = class PageService {
 			]`).modifiers({
 				childrenFilter(query) {
 					query.select().where('page.standalone', false);
-					if (lang) query.select(raw(
-						'translate_block_content(page, :lang) AS content', { lang }
+					query.select(raw(
+						'block_get_content(page._id, :lang) AS content', { lang }
 					));
 					return query;
 				},
@@ -117,19 +117,13 @@ module.exports = class PageService {
 			status: 200,
 			site: site.data
 		};
-
-		let page;
-		try {
-			page = await this.#QueryPage(req, data.url, data.lang);
-		} catch (err) {
-			if (err.nativeError?.code == '22023') {
-				err.status = 400;
-				err.message = 'Unknown lang';
-				throw err;
-			} else {
-				throw err;
-			}
+		if (!data.lang) {
+			data.lang = site.data.languages[0];
+		} else if (site.data.languages.includes(data.lang) == false) {
+			throw new HttpError.BadRequest("Unknown language");
 		}
+
+		let page = await this.#QueryPage(req, data.url, data.lang);
 		if (!page) {
 			obj.status = 404;
 		} else if (req.locked(page.lock)) {
@@ -713,57 +707,75 @@ function applyRemove(req, list, recursive) {
 	}
 }
 
-function applyAdd({ site, trx }, list) {
+async function applyAdd({ site, trx, Block }, list) {
 	if (!list.length) return [];
 	// this relates site to inserted children
-	return site.$relatedQuery('children', trx)
-		.insert(list).returning('*').then(rows => {
-			return rows.map(row => {
-				return {
-					id: row.id,
-					updated_at: row.updated_at
-				};
-			});
-		});
+	const contents = list.map(item => {
+		const { content } = item;
+		delete item.content;
+		return content;
+	});
+	const lang = site.data.languages[0];
+	const rows = await site.$relatedQuery('children', trx)
+		.insert(list).returning('*');
+	return Promise.all(rows.map(async (row, i) => {
+		await Block.query(trx).select(raw(
+			'block_set_content(:block_id, :lang, :content)',
+			row._id,
+			lang,
+			contents[i]
+		));
+		return {
+			id: row.id,
+			updated_at: row.updated_at
+		};
+	}));
 }
 
-function applyUpdate(req, list) {
+async function applyUpdate(req, list) {
 	const blocksMap = {};
 	const updates = [];
-	return list.reduce((p, block) => {
-		return p.then(() => {
-			if (block.id in blocksMap) {
-				block.updated_at = blocksMap[block.id];
-			}
-			if (req.site.$pkg.pages.includes(block.type)) {
-				return updatePage(req, block, blocksMap);
-			} else if (!block.updated_at) {
-				throw new HttpError.BadRequest(`Block is missing 'updated_at' ${block.id}`);
+	const { site, trx, Block } = req;
+
+	for await (const block of list) {
+		if (block.id in blocksMap) {
+			block.updated_at = blocksMap[block.id];
+		}
+		if (site.$pkg.pages.includes(block.type)) {
+			updates.push(await updatePage(req, block, blocksMap));
+		} else if (!block.updated_at) {
+			throw new HttpError.BadRequest(`Block is missing 'updated_at' ${block.id}`);
+		} else {
+			// simpler path
+			const { content } = block;
+			delete block.content;
+			// await
+			const part = await site.$relatedQuery('children', trx)
+				.where('block.id', block.id)
+				.where('block.type', block.type)
+				.where(
+					raw("date_trunc('milliseconds', block.updated_at)"),
+					raw("date_trunc('milliseconds', ?::timestamptz)", [block.updated_at]),
+				)
+				.patch(block)
+				.returning('id', 'updated_at')
+				.first();
+			if (!part) {
+				throw new HttpError.Conflict(
+					`${block.type}:${block.id} last update mismatch ${block.updated_at}`
+				);
 			} else {
-				// simpler path
-				return req.site.$relatedQuery('children', req.trx)
-					.where('block.id', block.id)
-					.where('block.type', block.type)
-					.where(
-						raw("date_trunc('milliseconds', block.updated_at)"),
-						raw("date_trunc('milliseconds', ?::timestamptz)", [block.updated_at]),
-					)
-					.patch(block)
-					.returning('id', 'updated_at')
-					.first()
-					.then(part => {
-						if (!part) {
-							throw new HttpError.Conflict(`${block.type}:${block.id} last update mismatch ${block.updated_at}`);
-						}
-						return part;
-					});
+				await Block.query(trx).select(raw(
+					'block_set_content(:block_id, :lang, :content)',
+					block._id,
+					site.data.languages[0],
+					content
+				));
+				updates.push(part);
 			}
-		}).then(update => {
-			updates.push(update);
-		});
-	}, Promise.resolve()).then(() => {
-		return updates;
-	});
+		}
+	}
+	return updates;
 }
 
 async function updatePage({ site, trx, Block, Href }, page, sideEffects) {
@@ -771,7 +783,7 @@ async function updatePage({ site, trx, Block, Href }, page, sideEffects) {
 	const dbPage = await site.$relatedQuery('children', trx)
 		.where('block.id', page.id)
 		.whereIn('block.type', page.type ? [page.type] : site.$pkg.pages)
-		.select(ref('block.data:url').as('url'))
+		.select('_id', ref('block.data:url').as('url'))
 		.first().throwIfNotFound();
 
 	const hrefs = site.$hrefs;
@@ -826,6 +838,8 @@ async function updatePage({ site, trx, Block, Href }, page, sideEffects) {
 			if (oldUrl == null) this.orWhereNull('url');
 			else this.orWhere('url', oldUrl);
 		}).delete();
+	const { content } = page;
+	delete page.content;
 	const part = await site.$relatedQuery('children', trx)
 		.where('block.id', page.id)
 		.where(
@@ -839,6 +853,13 @@ async function updatePage({ site, trx, Block, Href }, page, sideEffects) {
 		throw new HttpError.Conflict(
 			`${page.type}:${page.id} last update mismatch ${page.updated_at}`
 		);
+	} else {
+		await Block.query(trx).select(raw(
+			'block_set_content(:block_id, :lang, :content)',
+			dbPage._id,
+			site.data.languages[0],
+			content
+		));
 	}
 	return part;
 }

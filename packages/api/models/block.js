@@ -324,16 +324,6 @@ class Block extends Model {
 		Object.assign(site, block);
 		return site;
 	}
-
-	$formatDatabaseJson(json) {
-		if (json.content != null) json.content = Object.entries(json.content);
-		return super.$formatDatabaseJson(json);
-	}
-
-	$parseDatabaseJson(json) {
-		if (Array.isArray(json.content)) json.content = Object.fromEntries(json.content);
-		return super.$parseDatabaseJson(json);
-	}
 }
 
 module.exports = Block;

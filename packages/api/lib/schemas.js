@@ -23,6 +23,16 @@ exports.site = {
 			type: "string",
 			pattern: /^\d+\.\d+$/.source
 		},
+		languages: {
+			title: 'Languages',
+			description: 'Defaults to the first entry',
+			type: 'array',
+			items: {
+				type: 'string',
+				format: 'lang'
+			},
+			minItems: 1
+		},
 		env: {
 			title: 'Environment',
 			anyOf: [{

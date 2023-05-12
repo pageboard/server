@@ -131,13 +131,13 @@ module.exports = class BlockService {
 		if (!valid) {
 			throw new HttpError.BadRequest("Insufficient search parameters");
 		}
-		if (data.lang) {
-			q.select(raw(
-				'translate_block_content(block, :lang) AS content', {
-					lang: data.lang
-				}
-			));
-		}
+
+		q.select(raw(
+			'block_get_content(block._id, :lang) AS content', {
+				lang: data.lang
+			}
+		));
+
 		if (parents) {
 			eagers.parents = {
 				$modify: ['parentsFilter']
@@ -674,10 +674,17 @@ module.exports = class BlockService {
 			type: block.type
 		};
 		if (!Object.isEmpty(data.data)) obj.data = data.data;
-		if (!Object.isEmpty(data.content)) obj.content = data.content;
 		if (!Object.isEmpty(data.lock)) obj.lock = data.lock;
 
 		await block.$query(req.trx).patchObject(obj);
+		if (!Object.isEmpty(data.content)) {
+			await Block.query(req.trx).select(raw(
+				'block_set_content(:block_id, :lang, :content)',
+				block._id,
+				req.site.data.languages[0],
+				data.content
+			));
+		}
 
 		if (parents.length == 0) return block;
 
@@ -862,10 +869,13 @@ module.exports = class BlockService {
 			.map(item => `<div block-id="${item.id}"></div>`)
 			.join('');
 		await block.$relatedQuery('children', trx).relate(newItems);
-		await block.$query(trx).patchObject({
-			type: block.type,
-			content: block.content
-		});
+
+		await Block.query(trx).select(raw(
+			'block_set_content(:block_id, :lang, :content)',
+			block._id,
+			site.data.languages[0],
+			block.content
+		));
 		return block;
 	}
 	static fill = {
