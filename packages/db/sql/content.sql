@@ -74,6 +74,7 @@ DECLARE
 	_name TEXT;
 	_text TEXT;
 BEGIN
+	_site := block_site(block_id);
 	-- int[text][] map of old block contents
 	SELECT jsonb_object_agg(name, ids) INTO content_ids
 	FROM (
@@ -90,9 +91,6 @@ BEGIN
 			CONTINUE;
 		END IF;
 		-- find if some content already exists for a block in that site
-		IF _site IS NULL THEN
-			_site := block_site(block_id);
-		END IF;
 		SELECT other._id INTO cur_id
 		FROM block, relation AS block_site,
 		block AS other,
