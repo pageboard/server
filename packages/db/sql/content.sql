@@ -67,16 +67,19 @@ $$ LANGUAGE plpgsql;
 CREATE OR REPLACE FUNCTION block_set_content(block_id INTEGER, _lang TEXT, _obj JSONB) RETURNS JSONB AS $$
 DECLARE
 	_site block;
-	content_ids JSONB;
+	content_names JSONB;
+	block_ids INTEGER[];
+	content_ids INTEGER[];
+	content_langs TEXT[];
 	cur_id INTEGER;
 	cur_lang TEXT;
-	cur_ids INTEGER[];
 	_name TEXT;
 	_text TEXT;
 BEGIN
 	_site := block_site(block_id);
 	-- int[text][] map of old block contents
-	SELECT jsonb_object_agg(name, ids) INTO content_ids
+	SELECT jsonb_object_agg(name, ids)
+	INTO content_names
 	FROM (
 		SELECT block.data->>'name' AS name, jsonb_agg(block._id) AS ids
 		FROM relation AS r, block
@@ -89,9 +92,13 @@ BEGIN
 		IF _text IS NULL OR _text = '' THEN
 			-- will unlink
 			CONTINUE;
+		ELSE
+			-- remaining content_names will be unlinked from block_id
+			content_names := content_names - _name;
 		END IF;
-		-- find if some content already exists for a block in that site
-		SELECT other._id INTO cur_id
+
+		-- list all block._id that have a matching content text for that name/lang
+		SELECT array_agg(other._id) INTO block_ids
 		FROM block, relation AS block_site,
 		block AS other,
 		relation AS content_block, block AS content
@@ -107,56 +114,80 @@ BEGIN
 				to_json(_name),
 				to_json(_text)
 			)::jsonpath;
-		cur_ids := ARRAY[]::INTEGER[];
-		IF cur_id IS NOT NULL THEN
-			-- some content is found
-			IF cur_id = block_id THEN
-				-- itself, nothing to do, will not unlink that content
-				content_ids := content_ids - _name;
-				CONTINUE;
-			ELSE
-				-- list of ids to link to block
-				SELECT array_agg(content._id) INTO cur_ids
+
+		-- get initial content (id, lang) situation on one of the blocks
+		content_ids := ARRAY[]::INTEGER[];
+		content_langs := ARRAY[]::TEXT[];
+		IF array_length(block_ids, 1) > 0 THEN
+			SELECT array_agg(content._id), array_agg(content.data->>'lang')
+				INTO content_ids, content_langs
 				FROM relation AS r, block AS content
-					WHERE r.parent_id = cur_id AND content._id = r.child_id
-					AND content.type = 'content'
-					AND content.data @@ FORMAT('$.name == %s', to_json(_name))::jsonpath;
-			END IF;
-		ELSE
-			-- need to add new content in every language
-			FOR cur_lang IN
-				SELECT * FROM jsonb_array_elements_text(_site.data['languages'])
-			LOOP
-				INSERT INTO block (id, type, data) VALUES (
-					replace(gen_random_uuid()::text, '-', ''),
-					'content',
-					jsonb_build_object(
-						'name', _name,
-						'lang', cur_lang,
-						'text', (CASE WHEN (_lang = cur_lang) THEN _text ELSE '' END)
-					)
-				) RETURNING block._id INTO cur_id;
-				-- relate content to its site
-				INSERT INTO relation (child_id, parent_id) VALUES (cur_id, _site._id);
-				cur_ids := array_append(cur_ids, cur_id);
-			END LOOP;
+				WHERE r.parent_id = block_ids[1] AND content._id = r.child_id
+				AND content.type = 'content'
+				AND content.data @@ FORMAT('$.name == %s', to_json(_name))::jsonpath;
 		END IF;
-		-- relate block to its new contents cur_ids
-		INSERT INTO relation (child_id, parent_id) (
-			SELECT unnest(cur_ids) AS child_id, block_id AS parent_id
+
+		-- ensure current block_id is part of block_ids
+		IF NOT block_id = ANY(block_ids) THEN
+			INSERT INTO relation (child_id, parent_id) (
+				SELECT unnest(content_ids) AS child_id, block_id AS parent_id
+			);
+			blocks_ids := array_append(block_ids, block_id);
+		END IF;
+
+		-- assume the db is in a valid state
+		-- that is, each block has the same number of (name, lang) content childs
+		-- which could be zero, or the right number of lang, but all blocks are equal
+		-- 1. create the missing (name, lang) contents, if any
+		-- 2. link all blocks to them
+
+		-- for each lang, ensure we have content, for all blocks
+		FOR cur_lang IN
+			SELECT * FROM jsonb_array_elements_text(_site.data['languages'])
+		LOOP
+			cur_pos := array_position(content_langs, cur_lang);
+			IF cur_pos > 0 THEN
+				content_ids[cur_pos] := NULL;
+				content_langs[cur_pos] := NULL;
+				CONTINUE;
+			END IF;
+			-- missing, create content
+			INSERT INTO block (id, type, data) VALUES (
+				replace(gen_random_uuid()::text, '-', ''),
+				'content',
+				jsonb_build_object(
+					'name', _name,
+					'lang', cur_lang,
+					'text', (CASE WHEN (_lang = cur_lang) THEN _text ELSE '' END)
+				)
+			) RETURNING block._id INTO cur_id;
+			INSERT INTO relation (child_id, parent_id) VALUES (cur_id, _site._id);
+			-- link content to all blocks
+			INSERT INTO relation (child_id, parent_id) (
+				SELECT cur_id AS child_id, unnest(block_ids) AS parent_id
+			);
+		END LOOP;
+
+		-- remaining content_ids must be removed from all blocks
+		DELETE FROM block WHERE _id	IN (
+			SELECT unnest(content_ids)
 		);
 	END LOOP;
 
 	FOR _name IN
-		SELECT jsonb_object_keys(content_ids)
+		SELECT jsonb_object_keys(content_names)
 	LOOP
 		-- convert jsonb to int[]
-		SELECT array_agg(value)::int[] INTO cur_ids
-			FROM jsonb_array_elements(content_ids[_name]);
+		SELECT array_agg(value)::int[] INTO content_ids
+			FROM jsonb_array_elements(content_names[_name]);
 		-- unrelate
-		DELETE FROM relation WHERE child_id = ANY(cur_ids) AND parent_id = block_id;
+		DELETE FROM relation WHERE parent_id = block_id AND child_id IN (
+			SELECT unnest(content_ids)
+		);
 		-- delete orphaned content
-		DELETE FROM block WHERE _id = ANY(cur_ids) AND NOT EXISTS (
+		DELETE FROM block WHERE _id IN (
+			SELECT unnest(content_ids)
+		) AND NOT EXISTS (
 			SELECT FROM relation WHERE child_id = block._id AND parent_id != _site._id
 		);
 	END LOOP;
