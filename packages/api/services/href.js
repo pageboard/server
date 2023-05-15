@@ -222,7 +222,7 @@ module.exports = class HrefService {
 				throw err;
 			}
 		} else {
-			result = await this.#inspect(req, { url: data.url, local });
+			result = await this.inspect(req, { url: data.url, local });
 		}
 		if (!local && result.url != data.url) {
 			result.canonical = result.url;
@@ -535,7 +535,7 @@ module.exports = class HrefService {
 		}
 	};
 
-	async #inspect({ site }, { url, local }) {
+	async inspect({ site }, { url, local }) {
 		let fileUrl = url;
 		if (local === undefined) {
 			local = url.startsWith(`/.uploads/`);
@@ -554,6 +554,22 @@ module.exports = class HrefService {
 		}
 		return obj;
 	}
+	static inspect = {
+		title: 'Inspect',
+		$lock: true,
+		$action: 'read',
+		required: ['url'],
+		properties: {
+			url: {
+				title: 'URL',
+				type: 'string'
+			},
+			local: {
+				title: 'Is local',
+				type: 'boolean'
+			}
+		}
+	};
 };
 
 
