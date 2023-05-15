@@ -36,6 +36,7 @@ module.exports = class SiteService {
 		if (!site.data.languages || site.data.languages.length == 0) {
 			site.data.languages = [site.data.lang || 'en'];
 		}
+		return site;
 	}
 	static get = {
 		title: 'Get site',
