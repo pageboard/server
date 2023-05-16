@@ -78,7 +78,7 @@ DECLARE
 BEGIN
 	_site := block_site(block_id);
 	-- int[text][] map of old block contents
-	SELECT jsonb_object_agg(name, ids)
+	SELECT COALESCE(jsonb_object_agg(name, ids), '{}'::jsonb)
 	INTO content_names
 	FROM (
 		SELECT block.data->>'name' AS name, jsonb_agg(block._id) AS ids
@@ -98,7 +98,7 @@ BEGIN
 		END IF;
 
 		-- list all block._id that have a matching content text for that name/lang
-		SELECT array_agg(other._id) INTO block_ids
+		SELECT COALESCE(array_agg(other._id), ARRAY[]::INTEGER[]) INTO block_ids
 		FROM block, relation AS block_site,
 		block AS other,
 		relation AS content_block, block AS content
@@ -119,7 +119,9 @@ BEGIN
 		content_ids := ARRAY[]::INTEGER[];
 		content_langs := ARRAY[]::TEXT[];
 		IF array_length(block_ids, 1) > 0 THEN
-			SELECT array_agg(content._id), array_agg(content.data->>'lang')
+			SELECT
+				COALESCE(array_agg(content._id), content_ids),
+				COALESCE(array_agg(content.data->>'lang'), content_langs)
 				INTO content_ids, content_langs
 				FROM relation AS r, block AS content
 				WHERE r.parent_id = block_ids[1] AND content._id = r.child_id
@@ -132,7 +134,7 @@ BEGIN
 			INSERT INTO relation (child_id, parent_id) (
 				SELECT unnest(content_ids) AS child_id, block_id AS parent_id
 			);
-			blocks_ids := array_append(block_ids, block_id);
+			block_ids := array_append(block_ids, block_id);
 		END IF;
 
 		-- assume the db is in a valid state
