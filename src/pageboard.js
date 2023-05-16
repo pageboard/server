@@ -102,7 +102,7 @@ module.exports = class Pageboard {
 		}
 		if (opts.cli == null) opts.cli = !opts.server?.start;
 
-		const upstream = opts.upstreams[opts.version];
+		const upstream = opts.upstreams[opts.upstream ?? opts.version];
 		if (upstream) opts.server.port = upstream.split(':').pop();
 
 		opts.installer.timeout = parseInt(opts.installer.timeout);
