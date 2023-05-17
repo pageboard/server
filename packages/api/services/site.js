@@ -154,6 +154,12 @@ module.exports = class SiteService {
 	async save(req, data) {
 		const { site } = req;
 		const dbSite = await this.get(req, data);
+		const dbLanguages = dbSite.data.languages?.slice() ?? [];
+		const languages = data.languages ?? [];
+		if (languages.join(' ') != dbLanguages.join(' ')) {
+			await req.run('translate.initialize');
+		}
+
 		mergeRecursive(dbSite.data, data.data);
 		if (site && site.url) {
 			dbSite.url = site.url;
