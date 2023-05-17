@@ -75,7 +75,7 @@ module.exports = class LoginModule {
 		};
 		const tokenStr = token.toString();
 		const prefix = site.data.title ? site.data.title + ' - ' : '';
-		if (site.data.languages[0] == "fr") {
+		if (site.data.lang == "fr" || site.data.languages?.[0] == "fr") {
 			mail.subject = `${prefix}code de vérification: ${tokenStr}`;
 			mail.text = Text`
 				${tokenStr}

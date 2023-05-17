@@ -32,11 +32,7 @@ module.exports = class SiteService {
 	}
 
 	async get(req, data) {
-		const site = await this.#QuerySite(req, data).throwIfNotFound().select();
-		if (!site.data.languages || site.data.languages.length == 0) {
-			site.data.languages = [site.data.lang || 'en'];
-		}
-		return site;
+		return this.#QuerySite(req, data).throwIfNotFound().select();
 	}
 	static get = {
 		title: 'Get site',

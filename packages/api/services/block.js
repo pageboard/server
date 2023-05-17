@@ -679,11 +679,12 @@ module.exports = class BlockService {
 		await block.$query(req.trx).patchObject(obj);
 		if (!Object.isEmpty(data.content)) {
 			await Block.query(req.trx).select(raw(
-				'block_set_content(:block_id, :lang, :content)',
-				block._id,
-				req.site.data.languages[0],
-				data.content
-			));
+				'block_set_content(:block_id, :content, :lang)', {
+					block_id: block._id,
+					content: data.content,
+					lang: req.site.data.languages?.[0]
+				})
+			);
 		}
 
 		if (parents.length == 0) return block;
@@ -871,11 +872,12 @@ module.exports = class BlockService {
 		await block.$relatedQuery('children', trx).relate(newItems);
 
 		await Block.query(trx).select(raw(
-			'block_set_content(:block_id, :lang, :content)',
-			block._id,
-			site.data.languages[0],
-			block.content
-		));
+			'block_set_content(:block_id, :content, :lang)', {
+				block_id: block._id,
+				lang: site.data.languages?.[0],
+				content: block.content
+			})
+		);
 		return block;
 	}
 	static fill = {

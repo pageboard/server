@@ -117,9 +117,7 @@ module.exports = class PageService {
 			status: 200,
 			site: site.data
 		};
-		if (!data.lang) {
-			data.lang = site.data.languages[0];
-		} else if (site.data.languages.includes(data.lang) == false) {
+		if (data.lang && site.data.languages && site.data.languages.includes(data.lang) == false) {
 			throw new HttpError.BadRequest("Unknown language");
 		}
 
@@ -715,16 +713,16 @@ async function applyAdd({ site, trx, Block }, list) {
 		delete item.content;
 		return content;
 	});
-	const lang = site.data.languages[0];
 	const rows = await site.$relatedQuery('children', trx)
 		.insert(list).returning('*');
 	return Promise.all(rows.map(async (row, i) => {
 		await Block.query(trx).select(raw(
-			'block_set_content(:block_id, :lang, :content)',
-			row._id,
-			lang,
-			contents[i]
-		));
+			'block_set_content(:block_id, :content, :lang)', {
+				block_id: row._id,
+				content: contents[i],
+				lang: site.data.languages?.[0]
+			})
+		);
 		return {
 			id: row.id,
 			updated_at: row.updated_at
@@ -766,11 +764,12 @@ async function applyUpdate(req, list) {
 				);
 			} else {
 				await Block.query(trx).select(raw(
-					'block_set_content(:block_id, :lang, :content)',
-					block._id,
-					site.data.languages[0],
-					content
-				));
+					'block_set_content(:block_id, :content, :lang)', {
+						block_id: block._id,
+						lang: site.data.languages?.[0],
+						content
+					})
+				);
 				updates.push(part);
 			}
 		}
@@ -855,11 +854,12 @@ async function updatePage({ site, trx, Block, Href }, page, sideEffects) {
 		);
 	} else {
 		await Block.query(trx).select(raw(
-			'block_set_content(:block_id, :lang, :content)',
-			dbPage._id,
-			site.data.languages[0],
-			content
-		));
+			'block_set_content(:block_id, :content, :lang)', {
+				block_id: dbPage._id,
+				lang: site.data.languages?.[0],
+				content
+			})
+		);
 	}
 	return part;
 }

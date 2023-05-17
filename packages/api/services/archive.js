@@ -1,5 +1,6 @@
 const { createReadStream, createWriteStream } = require('node:fs');
 const Path = require('node:path');
+const { raw } = require('objection');
 const { Deferred } = require.lazy('class-deferred');
 const ndjson = require.lazy('ndjson');
 const Upgrader = require.lazy('../upgrades');
@@ -27,6 +28,7 @@ module.exports = class ArchiveService {
 	async export(req, { file, ids = [] }) {
 		const { site, trx, res } = req;
 		const { id } = site;
+		const lang = site.data.languages?.[0];
 		const filepath = file ?? `${id}-${fileStamp()}.ndjson`;
 		const counts = {
 			users: 0,
@@ -57,7 +59,7 @@ module.exports = class ArchiveService {
 
 		const modifiers = {
 			blocks(q) {
-				q.where('standalone', false).select();
+				q.where('standalone', false).whereNot('type', 'content').select();
 			},
 			standalones(q) {
 				q.where('standalone', true).select();
@@ -81,6 +83,7 @@ module.exports = class ArchiveService {
 			})
 			.whereNotExists(countParents)
 			.select()
+			.select(raw('block_get_content(block._id, :lang) AS content', { lang }))
 			.withGraphFetched(`[
 				parents(users),
 				children(standalones) as standalones . children(blocks),
