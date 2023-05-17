@@ -55,7 +55,7 @@ CREATE OR REPLACE TRIGGER content_tsv_trigger_insert BEFORE INSERT ON block FOR 
 CREATE OR REPLACE TRIGGER content_tsv_trigger_update_text BEFORE UPDATE OF data ON block FOR EACH ROW WHEN (NEW.type = 'content' AND NEW.data['text'] != OLD.data['text']) EXECUTE FUNCTION content_tsv_func();
 CREATE OR REPLACE TRIGGER block_tsv_trigger_update_content BEFORE UPDATE OF content ON block FOR EACH ROW WHEN (NEW.type != 'content') EXECUTE FUNCTION content_tsv_func();
 
-CREATE OR REPLACE FUNCTION block_get_content(block_id INTEGER, _lang TEXT) RETURNS JSONB AS $$
+CREATE OR REPLACE FUNCTION block_get_content(block_id INTEGER, _lang TEXT DEFAULT NULL) RETURNS JSONB AS $$
 DECLARE
 	_obj JSONB;
 BEGIN
@@ -75,7 +75,11 @@ BEGIN
 END
 $$ LANGUAGE plpgsql;
 
-CREATE OR REPLACE FUNCTION block_set_content(block_id INTEGER, _lang TEXT, _obj JSONB) RETURNS JSONB AS $$
+CREATE OR REPLACE FUNCTION block_set_content(
+	block_id INTEGER, _obj JSONB, _lang TEXT DEFAULT NULL)
+	RETURNS JSONB
+	LANGUAGE 'plpgsql'
+AS $BODY$
 DECLARE
 	_site block;
 	content_names JSONB;
@@ -83,10 +87,15 @@ DECLARE
 	content_ids INTEGER[];
 	content_langs TEXT[];
 	cur_id INTEGER;
+	cur_pos INTEGER;
 	cur_lang TEXT;
 	_name TEXT;
 	_text TEXT;
 BEGIN
+	IF _lang IS NULL THEN
+		UPDATE block SET content = _obj WHERE _id = block_id;
+		RETURN _obj;
+	END IF;
 	_site := block_site(block_id);
 	-- int[text][] map of old block contents
 	SELECT COALESCE(jsonb_object_agg(name, ids), '{}'::jsonb)
@@ -206,5 +215,5 @@ BEGIN
 	END LOOP;
 	RETURN _obj;
 END
-$$ LANGUAGE plpgsql;
+$BODY$;
 
