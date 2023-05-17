@@ -37,29 +37,40 @@ DECLARE
 	_tsconfig regconfig;
 	_site block;
 BEGIN
-	SELECT data->>'tsconfig' INTO _tsconfig
-		FROM block WHERE type='language' AND data @@ FORMAT('$.lang == %s', NEW.data->'lang')::jsonpath;
-
-	NEW.tsv := to_tsvector(_tsconfig::regconfig, NEW.data->>'text');
+	IF NEW.type = 'content' THEN
+		SELECT COALESCE(data->>'tsconfig', 'unaccent')
+			INTO _tsconfig
+			FROM block
+			WHERE type='language'
+			AND data @@ FORMAT('$.lang == %s', NEW.data->'lang')::jsonpath;
+		NEW.tsv := to_tsvector(_tsconfig::regconfig, NEW.data->>'text');
+	ELSE
+		NEW.tsv := to_tsvector('unaccent', NEW.content);
+	END IF;
 	RETURN NEW;
 END
 $$ LANGUAGE plpgsql;
 
-CREATE OR REPLACE TRIGGER content_tsv_trigger_insert BEFORE INSERT ON block FOR EACH ROW WHEN (NEW.type = 'content') EXECUTE FUNCTION content_tsv_func();
-CREATE OR REPLACE TRIGGER content_tsv_trigger_update BEFORE UPDATE OF data ON block FOR EACH ROW WHEN (NEW.type = 'content' AND NEW.data['text'] != OLD.data['text']) EXECUTE FUNCTION content_tsv_func();
-
+CREATE OR REPLACE TRIGGER content_tsv_trigger_insert BEFORE INSERT ON block FOR EACH ROW EXECUTE FUNCTION content_tsv_func();
+CREATE OR REPLACE TRIGGER content_tsv_trigger_update_text BEFORE UPDATE OF data ON block FOR EACH ROW WHEN (NEW.type = 'content' AND NEW.data['text'] != OLD.data['text']) EXECUTE FUNCTION content_tsv_func();
+CREATE OR REPLACE TRIGGER block_tsv_trigger_update_content BEFORE UPDATE OF content ON block FOR EACH ROW WHEN (NEW.type != 'content') EXECUTE FUNCTION content_tsv_func();
 
 CREATE OR REPLACE FUNCTION block_get_content(block_id INTEGER, _lang TEXT) RETURNS JSONB AS $$
 DECLARE
 	_obj JSONB;
 BEGIN
-	SELECT jsonb_object(array_agg(content.name), array_agg(content.text)) INTO _obj
-	FROM (
-		SELECT block.data->>'name' AS name, block.data->>'text' AS text
-		FROM relation AS r, block
-		WHERE r.parent_id = block_id AND block._id = r.child_id
-		AND block.type = 'content' AND block.data @@ FORMAT('$.lang == %s', to_json(_lang))::jsonpath
-	) AS content;
+	IF _lang IS NULL THEN
+		SELECT content INTO _obj FROM block WHERE _id = block_id;
+	ELSE
+		SELECT jsonb_object(array_agg(content.name), array_agg(content.text))
+		INTO _obj
+		FROM (
+			SELECT block.data->>'name' AS name, block.data->>'text' AS text
+			FROM relation AS r, block
+			WHERE r.parent_id = block_id AND block._id = r.child_id
+			AND block.type = 'content' AND block.data @@ FORMAT('$.lang == %s', to_json(_lang))::jsonpath
+		) AS content;
+	END IF;
 	RETURN _obj;
 END
 $$ LANGUAGE plpgsql;
