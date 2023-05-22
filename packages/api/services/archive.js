@@ -215,12 +215,7 @@ module.exports = class ArchiveService {
 					for (const child of obj.children) {
 						const rchild = await site.$relatedQuery('children', trx)
 							.insert(child).returning('_id');
-						if (lang) await Block.query(trx).where('_id', rchild._id).patch({
-							type: child.type,
-							content: raw('block_set_content(block._id, block.content, :lang)', {
-								lang
-							})
-						});
+						if (lang) await Block.setLanguageContent(trx, rchild, lang);
 						children.push(rchild._id);
 						siteChildren.push(rchild._id);
 					}
@@ -240,12 +235,7 @@ module.exports = class ArchiveService {
 				}
 				const row = await site.$relatedQuery('children', trx)
 					.insert(obj).returning('*');
-				if (lang) await Block.query(trx).where('_id', row._id).patch({
-					type: obj.type,
-					content: raw('block_set_content(block._id, block.content, :lang)', {
-						lang
-					})
-				});
+				if (lang) await Block.setLanguageContent(trx, row, lang);
 				if (children.length) {
 					await Block.relatedQuery('children', trx).for(row._id).relate(children);
 				}

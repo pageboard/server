@@ -718,7 +718,7 @@ async function applyAdd({ site, trx, Block }, list) {
 	const rows = await site.$relatedQuery('children', trx)
 		.insert(list).returning('id', 'updated_at', '_id');
 	return Promise.all(rows.map(async (row, i) => {
-		await Block.setLanguage(trx, row, lang);
+		await Block.setLanguageContent(trx, row, lang);
 		return {
 			id: row.id,
 			updated_at: row.updated_at
@@ -757,7 +757,7 @@ async function applyUpdate(req, list) {
 					`${block.type}:${block.id} last update mismatch ${block.updated_at}`
 				);
 			} else {
-				await Block.setLanguage(trx, row, lang);
+				await Block.setLanguageContent(trx, row, lang);
 				delete row._id;
 				updates.push(row);
 			}
@@ -841,7 +841,7 @@ async function updatePage({ site, trx, Block, Href }, page, sideEffects) {
 			`${page.type}:${page.id} last update mismatch ${page.updated_at}`
 		);
 	} else {
-		await Block.setLanguage(trx, row, lang);
+		await Block.setLanguageContent(trx, row, lang);
 		delete row._id;
 	}
 	return row;

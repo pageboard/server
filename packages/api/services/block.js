@@ -78,6 +78,9 @@ module.exports = class BlockService {
 		// TODO data.id or data.parent.id or data.child.id must be set
 		// currently the check filterSub -> boolean is only partially applied
 		const { site, trx, Block, Href } = req;
+		if (data.lang == null && site.data.languages?.length > 0) {
+			data.lang = site.data.languages[0];
+		}
 		let parents = data.parents;
 		if (parents) {
 			if (parents.type || parents.id || parents.standalone) {
@@ -134,7 +137,7 @@ module.exports = class BlockService {
 
 		q.select(raw(
 			'block_get_content(block._id, :lang) AS content', {
-				lang: data.lang
+				lang: data.lang ?? null
 			}
 		));
 
@@ -675,16 +678,12 @@ module.exports = class BlockService {
 		};
 		if (!Object.isEmpty(data.data)) obj.data = data.data;
 		if (!Object.isEmpty(data.lock)) obj.lock = data.lock;
-
+		if (!Object.isEmpty(data.content)) obj.content = data.content;
 		await block.$query(req.trx).patchObject(obj);
-		if (!Object.isEmpty(data.content)) {
-			await Block.query(req.trx).select(raw(
-				'block_set_content(:block_id, :content, :lang)', {
-					block_id: block._id,
-					content: data.content,
-					lang: req.site.data.languages?.[0]
-				})
-			);
+
+		if (data.content !== undefined) {
+			const lang = req.site.data.languages?.[0] ?? null;
+			await Block.setLanguageContent(req.trx, block, lang);
 		}
 
 		if (parents.length == 0) return block;
@@ -870,14 +869,8 @@ module.exports = class BlockService {
 			.map(item => `<div block-id="${item.id}"></div>`)
 			.join('');
 		await block.$relatedQuery('children', trx).relate(newItems);
-
-		await Block.query(trx).select(raw(
-			'block_set_content(:block_id, :content, :lang)', {
-				block_id: block._id,
-				lang: site.data.languages?.[0],
-				content: block.content
-			})
-		);
+		const lang = site.data.languages?.[0] ?? null;
+		await Block.setLanguageContent(trx, block, lang, true);
 		return block;
 	}
 	static fill = {
