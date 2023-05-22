@@ -138,7 +138,7 @@ module.exports = class ArchiveService {
 	};
 
 	async import(req, { file, empty, idMap, types = [] }) {
-		const { site, trx } = req;
+		const { site, trx, Block } = req;
 		const counts = {
 			users: 0,
 			blocks: 0,
@@ -150,6 +150,7 @@ module.exports = class ArchiveService {
 		let upgrader;
 		const refs = new Map();
 		const list = [];
+		const lang = site.data.lang ? null : site.data.languages?.[0];
 		const beforeEachStandalone = obj => {
 			if (obj.type == "site" || list.length == 0) {
 				const toVersion = site.data.server;
@@ -193,27 +194,39 @@ module.exports = class ArchiveService {
 				}
 				counts.users += 1;
 			} else {
+				const parents = [];
 				if (obj.parents) {
 					// e.g. settings < user
-					obj.parents = obj.parents.map(id => {
+					for (const id of obj.parents) {
 						const kid = refs.get(id);
 						if (!kid) {
 							throw new HttpError.BadRequest(
 								`Missing parent id: ${upgrader.reverseMap[id] ?? id}`
 							);
 						}
-						return { "#dbRef": kid };
-					});
+						parents.push(kid);
+					}
+					delete obj.parents;
 				}
+				const children = [];
+				const siteChildren = [];
 				if (obj.children) {
 					// ensure non-standalone children are related to site
 					for (const child of obj.children) {
-						if (!child.parents) child.parents = [];
-						child.parents.push({ "#dbRef": site._id });
+						const rchild = await site.$relatedQuery('children', trx)
+							.insert(child).returning('_id');
+						if (lang) await Block.query(trx).where('_id', rchild._id).patch({
+							type: child.type,
+							content: raw('block_set_content(block._id, block.content, :lang)', {
+								lang
+							})
+						});
+						children.push(rchild._id);
+						siteChildren.push(rchild._id);
 					}
+					delete obj.children;
 				}
 				if (obj.standalones) {
-					if (!obj.children) obj.children = [];
 					for (const id of obj.standalones) {
 						const kid = refs.get(id);
 						if (!kid) {
@@ -221,14 +234,27 @@ module.exports = class ArchiveService {
 								`Missing child id: ${upgrader.reverseMap[id] ?? id}`
 							);
 						}
-						obj.children.push({ "#dbRef": kid });
+						children.push(kid);
 					}
 					delete obj.standalones;
 				}
 				const row = await site.$relatedQuery('children', trx)
-					.insertGraph(obj, {
-						allowRefs: true
-					}).returning('_id');
+					.insert(obj).returning('*');
+				if (lang) await Block.query(trx).where('_id', row._id).patch({
+					type: obj.type,
+					content: raw('block_set_content(block._id, block.content, :lang)', {
+						lang
+					})
+				});
+				if (children.length) {
+					await Block.relatedQuery('children', trx).for(row._id).relate(children);
+				}
+				if (parents.length) {
+					await Block.relatedQuery('parents', trx).for(row._id).relate(parents);
+				}
+				if (siteChildren.length) {
+					await Block.relatedQuery('parents', trx).for(site._id).relate(siteChildren);
+				}
 				counts.blocks += 1;
 				refs.set(obj.id, row._id);
 			}
