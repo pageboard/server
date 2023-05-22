@@ -15,33 +15,41 @@ class Block extends Model {
 		$id: '/api/blocks',
 		properties: {
 			id: {
+				title: 'ID',
 				type: 'string',
 				format: 'id'
 			},
 			type: {
+				title: 'Type',
 				type: 'string',
 				format: 'name'
 			},
 			data: {
+				title: 'Datas',
 				type: 'object'
 			},
 			expr: {
+				title: 'Expressions',
 				type: 'object',
 				nullable: true
 			},
 			content: {
+				title: 'Contents',
 				type: 'object',
 				additionalProperties: { type: 'string' }
 			},
 			standalone: { // a standalone block can have 0 or multiple parents
+				title: 'Standalone',
 				type: 'boolean',
 				default: false
 			},
 			updated_at: {
+				title: 'Last Update',
 				format: 'date-time',
 				type: 'string'
 			},
 			lock: {
+				title: 'Locks',
 				type: 'array',
 				nullable: true,
 				items: {
