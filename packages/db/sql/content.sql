@@ -1,14 +1,27 @@
 DROP TRIGGER block_tsv_trigger ON block;
 DROP FUNCTION block_tsv_update();
 
-CREATE OR REPLACE FUNCTION block_site(block_id INTEGER) RETURNS SETOF block AS $$
+CREATE OR REPLACE FUNCTION block_site(
+	block_id INTEGER
+) RETURNS SETOF block
+	PARALLEL SAFE
+	LANGUAGE plpgsql
+AS $BODY$
 BEGIN
 	RETURN QUERY SELECT block.* FROM relation, block WHERE relation.child_id = block_id AND block._id = relation.parent_id AND block.type = 'site' LIMIT 1;
 	RETURN;
 END
-$$ LANGUAGE plpgsql;
+$BODY$;
 
-CREATE OR REPLACE FUNCTION block_find(_site_id INTEGER, _type TEXT, _path TEXT, _value TEXT) RETURNS block AS $$
+CREATE OR REPLACE FUNCTION block_find(
+	_site_id INTEGER,
+	_type TEXT,
+	_path TEXT,
+	_value TEXT
+) RETURNS block
+	PARALLEL SAFE
+	LANGUAGE plpgsql
+AS $BODY$
 DECLARE
 	_block block;
 BEGIN
@@ -19,9 +32,14 @@ BEGIN
 		RETURN NULL;
 	END IF;
 END
-$$ LANGUAGE plpgsql;
+$BODY$;
 
-CREATE OR REPLACE FUNCTION block_insert(_type TEXT, data JSONB) RETURNS block AS $$
+CREATE OR REPLACE FUNCTION block_insert(
+	_type TEXT,
+	data JSONB
+) RETURNS block
+	 LANGUAGE plpgsql
+AS $BODY$
 DECLARE
 	_block block;
 BEGIN
@@ -30,9 +48,11 @@ BEGIN
 	) RETURNING block.* INTO _block;
 	RETURN _block;
 END
-$$ LANGUAGE plpgsql;
+$BODY$;
 
-CREATE OR REPLACE FUNCTION content_tsv_func() RETURNS trigger AS $$
+CREATE OR REPLACE FUNCTION content_tsv_func() RETURNS trigger
+	LANGUAGE plpgsql
+AS $BODY$
 DECLARE
 	_tsconfig regconfig;
 	_site block;
@@ -49,13 +69,19 @@ BEGIN
 	END IF;
 	RETURN NEW;
 END
-$$ LANGUAGE plpgsql;
+$BODY$;
 
 CREATE OR REPLACE TRIGGER content_tsv_trigger_insert BEFORE INSERT ON block FOR EACH ROW EXECUTE FUNCTION content_tsv_func();
 CREATE OR REPLACE TRIGGER content_tsv_trigger_update_text BEFORE UPDATE OF data ON block FOR EACH ROW WHEN (NEW.type = 'content' AND NEW.data['text'] != OLD.data['text']) EXECUTE FUNCTION content_tsv_func();
 CREATE OR REPLACE TRIGGER block_tsv_trigger_update_content BEFORE UPDATE OF content ON block FOR EACH ROW WHEN (NEW.type != 'content') EXECUTE FUNCTION content_tsv_func();
 
-CREATE OR REPLACE FUNCTION block_get_content(block_id INTEGER, _lang TEXT DEFAULT NULL) RETURNS JSONB AS $$
+CREATE OR REPLACE FUNCTION block_get_content(
+	block_id INTEGER,
+	_lang TEXT DEFAULT NULL
+) RETURNS JSONB
+	LANGUAGE plpgsql
+	PARALLEL SAFE
+AS $BODY$
 DECLARE
 	_obj JSONB;
 BEGIN
@@ -73,11 +99,13 @@ BEGIN
 	END IF;
 	RETURN _obj;
 END
-$$ LANGUAGE plpgsql;
+$BODY$;
 
 CREATE OR REPLACE FUNCTION block_set_content(
-	block_id INTEGER, _obj JSONB, _lang TEXT DEFAULT NULL)
-	RETURNS JSONB
+	block_id INTEGER,
+	_obj JSONB,
+	_lang TEXT DEFAULT NULL
+) RETURNS JSONB
 	LANGUAGE 'plpgsql'
 AS $BODY$
 DECLARE
@@ -93,7 +121,6 @@ DECLARE
 	_text TEXT;
 BEGIN
 	IF _lang IS NULL THEN
-		UPDATE block SET content = _obj WHERE _id = block_id;
 		RETURN _obj;
 	END IF;
 	_site := block_site(block_id);
@@ -213,7 +240,7 @@ BEGIN
 			SELECT FROM relation WHERE child_id = block._id AND parent_id != _site._id
 		);
 	END LOOP;
-	RETURN _obj;
+	RETURN '{}'::jsonb;
 END
 $BODY$;
 
