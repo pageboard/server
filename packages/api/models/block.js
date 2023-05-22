@@ -287,6 +287,7 @@ class Block extends Model {
 				return copy;
 			}
 			$beforeValidate(jsonSchema, json) {
+				super.$beforeValidate(jsonSchema, json);
 				const props = this.$schema(json.type)?.properties ?? {};
 				if (props.content?.type == 'null' && json.content) {
 					delete json.content;
@@ -296,35 +297,41 @@ class Block extends Model {
 				}
 				return jsonSchema;
 			}
-			async $afterUpdate({ patch, old }, queryContext) {
+			async $afterUpdate({ patch, old }, context) {
+				await super.$afterUpdate(context);
 				const url = this.data?.url ?? old?.data?.url;
 				if (!url || url.startsWith('/.')) return;
 				const title = this.data?.title ?? this.content?.title;
+				const { req } = context.transaction;
 				if (title == null) try {
-					await queryContext.transaction.req.run('href.del', { url });
+					await req.run('href.del', { url });
 				} catch (ex) {
 					// miss
 				} else try {
-					await queryContext.transaction.req.run('href.save', {
+					await req.run('href.save', {
 						url,
 						title
 					});
 				} catch (ex) {
 					// forgiving - lots of href are missing
-					await queryContext.transaction.req.run('href.add', { url });
+					await req.run('href.add', { url });
 				}
 			}
-			async $afterInsert(queryContext) {
+			async $afterInsert(context) {
+				await super.$afterInsert(context);
 				const { url } = this.data ?? {};
 				if (!url || url.startsWith('/.')) return;
 				const title = this.data?.title ?? this.content?.title;
 				if (title == null) return;
-				await queryContext.transaction.req.run('href.add', { url });
+				const { req } = context.transaction;
+				await req.run('href.add', { url });
 			}
-			async $afterDelete(queryContext) {
+			async $afterDelete(context) {
+				await super.$afterDelete(context);
 				const { url } = this.data ?? {};
 				if (!url || url.startsWith('/.')) return;
-				await queryContext.transaction.req.run('href.del', { url });
+				const { req } = context.transaction;
+				await req.run('href.del', { url });
 			}
 		}
 
