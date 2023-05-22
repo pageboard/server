@@ -205,12 +205,11 @@ module.exports = class SiteService {
 		}
 	};
 
-	async del({ trx, Block }, data) {
-		const row = await Block.query(trx).where('type', 'site')
-			.select('_id', trx.raw('recursive_delete(_id, TRUE) AS blocks'))
-			.where('id', data.id)
-			.first().throwIfNotFound();
-		return { blocks: row.blocks };
+	async del(req, data) {
+		const ret = await this.empty(req, data);
+		await this.#QuerySite(req, data).delete();
+		ret.site = 1;
+		return ret;
 	}
 	static del = {
 		title: 'Delete a site',
@@ -226,13 +225,12 @@ module.exports = class SiteService {
 		}
 	};
 
-	async empty({ trx, Block }, { id }) {
-		const site = await Block.query(trx).where('type', 'site')
-			.where('id', id)
-			.first().throwIfNotFound();
-		await site.$relatedQuery('children', trx)
-			.select(trx.raw('recursive_delete(block._id, TRUE)'));
-		await site.$relatedQuery('hrefs', trx).delete();
+	async empty(req, data) {
+		const site = await this.#QuerySite(req, data);
+		const ret = {};
+		ret.blocks = await site.$relatedQuery('children', req.trx).delete();
+		ret.hrefs = await site.$relatedQuery('hrefs', req.trx).delete();
+		return ret;
 	}
 	static empty = {
 		title: 'Empty site',
