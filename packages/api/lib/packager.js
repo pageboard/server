@@ -246,7 +246,7 @@ module.exports = class Packager {
 		// when listing dependencies, do not include elements from other bundles
 		// -> other bundles are known
 		bundleSet.add(root.name);
-		const contents = this.Block.normalizeContents(el.contents);
+		const contents = this.Block.normalizeContentSpec(el.contents);
 		if (contents) for (const content of contents) {
 			if (!content.nodes) continue;
 			for (const word of content.nodes.split(/\W+/).filter(Boolean)) {

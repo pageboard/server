@@ -90,7 +90,7 @@ class Block extends Model {
 		}
 	}
 
-	static normalizeContents(contents) {
+	static normalizeContentSpec(contents) {
 		if (!contents) return;
 		if (contents === true) return [];
 		if (typeof contents == "string") contents = {
@@ -207,7 +207,7 @@ class Block extends Model {
 				type: 'null'
 			};
 
-			const normContents = Block.normalizeContents(contents);
+			const normContents = Block.normalizeContentSpec(contents);
 
 			const contentSchema = contents ? {
 				type: 'object',
