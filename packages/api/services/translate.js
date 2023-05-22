@@ -1,4 +1,4 @@
-const { ref, val, raw } = require('objection');
+const { ref, val, raw, fn } = require('objection');
 
 module.exports = class TranslateService {
 	static name = 'translate';
@@ -7,21 +7,106 @@ module.exports = class TranslateService {
 		this.opts = opts;
 	}
 
-	async initialize({ site, trx }) {
-		const lang = site.data.languages?.[0];
-		if (!lang) throw new HttpError.BadRequest("Missing site.data.languages");
-		await site.$relatedQuery('children', trx)
-			.whereNot('block.type', 'content')
-			.select(raw(
-				`block_set_content(
-					block._id, block_get_content(block._id, :lang), :lang
-				)`, { lang }
-			));
+	async initialize({ site, trx, Block }, { source, target }) {
+		if (source == null && target == null) {
+			throw new HttpError.BadRequest('source and target cannot be both null');
+		}
+		await Block.query(trx).with('blocks', ['_id'],
+			site.$relatedQuery('children', trx).whereNot('block.type', 'content'),
+		).select(raw(
+			`block_set_content(
+				_id, block_get_content(_id, :source), :target
+			)`, {
+				source,
+				target
+			}
+		)).from('blocks');
 	}
 	static initialize = {
 		title: 'Initialize site languages',
 		$lock: true,
-		$action: 'write'
+		$action: 'write',
+		properties: {
+			source: {
+				title: 'Source language',
+				description: 'null to migrate from monolingual',
+				type: 'string',
+				format: 'lang',
+				nullable: true
+			},
+			target: {
+				title: 'Target language',
+				description: 'null to migrate to monolingual',
+				type: 'string',
+				format: 'lang',
+				nullable: true
+			}
+		}
+	};
+
+	async list({ site, trx }, data) {
+		const lang = site.data.languages?.[0];
+		if (!lang) throw new HttpError.BadRequest("Missing site.data.languages");
+
+		const items = await site.$relatedQuery('children', trx)
+			.select(
+				'target.id', 'target.data', 'target.type',
+				ref('source.data:text').castText().as('source')
+			)
+			.joinRelated('[parents, children as source, children as target]')
+			.where('parents.id', data.parent)
+			.where('source.type', 'content')
+			.where(ref('source.data:lang').castText(), lang)
+			.where('target.type', 'content')
+			.where(ref('target.data:name'), ref('source.data:name'))
+			.where(ref('target.data:lang').castText(), data.lang)
+			.where(q => {
+				if (data.valid) {
+					q.whereNot(fn.coalesce(ref('target.data:text').castText(), ''), '');
+					q.orWhere('source.updated_at', '<', ref('target.updated_at'));
+				} else {
+					q.where(fn.coalesce(ref('target.data:text').castText(), ''), '');
+					q.orWhere('source.updated_at', '>=', ref('target.updated_at'));
+				}
+			})
+			.limit(data.limit)
+			.offset(data.offset);
+		return { items };
+	}
+	static list = {
+		title: 'List translations',
+		$action: 'read',
+		required: ['lang', 'parent'],
+		properties: {
+			lang: {
+				title: 'Language',
+				type: 'string',
+				format: 'lang'
+			},
+			parent: {
+				title: 'Parent',
+				type: 'string',
+				format: 'id'
+			},
+			limit: {
+				title: 'Limit',
+				type: 'integer',
+				minimum: 0,
+				maximum: 1000,
+				default: 10
+			},
+			offset: {
+				title: 'Offset',
+				type: 'integer',
+				default: 0
+			},
+			valid: {
+				title: 'Valid',
+				description: 'List valid translations',
+				type: 'boolean',
+				default: false
+			}
+		}
 	};
 
 	async fill({ site, trx, Block }, data) {
@@ -29,24 +114,27 @@ module.exports = class TranslateService {
 		if (!lang) throw new HttpError.BadRequest("Missing site.data.languages");
 		const languages = await Block.query(trx).select()
 			.where('type', 'language')
-			.whereIn('data:lang', site.data.language);
+			.whereIn(ref('data:lang').castText(), site.data.languages);
 		const source = languages.find(item => item.data.lang == lang);
 		if (!source) throw new HttpError.BadRequest("Missing source language: " + lang);
 		const target = languages.find(item => item.data.lang == data.lang);
 		if (!target) throw new HttpError.BadRequest("Missing target language: " + data.lang);
 
-		const rows = await site.$relatedQuery('children', trx)
+		const items = await site.$relatedQuery('children', trx)
 			.select(
-				'source.data:text AS text',
-				'target._id AS target_id'
+				ref('target._id').as('target_id'),
+				ref('source.data:text').castText().as('source')
 			)
 			.joinRelated('[parents, children as source, children as target]')
 			.where('parents.id', data.parent)
 			.where('source.type', 'content')
-			.where('source.data:lang', lang)
+			.where(ref('source.data:lang').castText(), lang)
 			.where('target.type', 'content')
-			.whereNull('target.data:text')
-			.limit(10);
+			.where(ref('target.data:name'), ref('source.data:name'))
+			.where(ref('target.data:lang').castText(), data.lang)
+			.where(fn.coalesce(ref('target.data:text').castText(), ''), '')
+			.limit(data.limit)
+			.offset(data.offset);
 
 		const body = new URLSearchParams({
 			tag_handling: 'html',
@@ -54,7 +142,7 @@ module.exports = class TranslateService {
 			source_lang: source.data.translation,
 			target_lang: target.data.translation
 		});
-		for (const row of rows) body.append('text', row.text);
+		for (const row of items) body.append('text', row.source);
 
 		const res = await fetch(this.opts.url, {
 			method: 'post',
@@ -71,16 +159,17 @@ module.exports = class TranslateService {
 		for (let i = 0; i < obj.translations.length; i++) {
 			const target = obj.translations[i].text;
 			await site.$relatedQuery('children', trx)
-				.where('block._id', rows[i].target_id)
+				.where('block._id', items[i].target_id)
 				.patch({
 					type: 'content',
 					'data:text': val(target).castJson()
 				});
 		}
+		return { count: items.length };
 	}
 
 	static fill = {
-		title: 'Fill',
+		title: 'Fill translations',
 		$action: 'write',
 		required: ['lang', 'parent'],
 		properties: {
@@ -93,6 +182,18 @@ module.exports = class TranslateService {
 				title: 'Parent',
 				type: 'string',
 				format: 'id'
+			},
+			limit: {
+				title: 'Limit',
+				type: 'integer',
+				minimum: 0,
+				maximum: 1000,
+				default: 10
+			},
+			offset: {
+				title: 'Offset',
+				type: 'integer',
+				default: 0
 			}
 		}
 	};
