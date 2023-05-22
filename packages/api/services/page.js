@@ -79,7 +79,7 @@ module.exports = class PageService {
 
 	#QueryPage({ trx, site }, url, lang) {
 		if (lang === undefined) {
-			lang = site.data.languages?.[0];
+			lang = site.data.languages?.[0] ?? null;
 		}
 		return site.$relatedQuery('children', trx).alias('page')
 			.select().select(raw(
