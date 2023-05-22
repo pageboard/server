@@ -200,27 +200,23 @@ module.exports = class HrefService {
 		let result;
 		if (local && !pageUrl.pathname.startsWith('/.')) {
 			// consider it's a page
-			try {
-				const { item } = await req.run('block.find', {
-					type: site.$pkg.standalones,
-					data: {
-						url: pageUrl.pathname
-					}
-				});
-				result = {
-					mime: 'text/html; charset=utf-8',
-					type: 'link',
-					title: item.data?.title ?? item.content?.title,
-					site: null,
-					pathname: pageUrl.pathname,
-					url: pageUrl.pathname + pageUrl.search
-				};
-			} catch (err) {
-				if (err.statusCode == 404) {
-					console.error("reinspect cannot find block", data);
+			const { item } = await req.run('block.find', {
+				type: site.$pkg.standalones,
+				data: {
+					url: pageUrl.pathname
 				}
-				throw err;
+			});
+			if (!item) {
+				throw new HttpError.NotFound("inspect cannot find block: " + pageUrl.pathname);
 			}
+			result = {
+				mime: 'text/html; charset=utf-8',
+				type: 'link',
+				title: item.data?.title ?? item.content?.title,
+				site: null,
+				pathname: pageUrl.pathname,
+				url: pageUrl.pathname + pageUrl.search
+			};
 		} else {
 			result = await this.inspect(req, { url: data.url, local });
 		}
