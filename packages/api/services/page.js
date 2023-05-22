@@ -828,13 +828,13 @@ async function updatePage({ site, trx, Block, Href }, page, sideEffects) {
 			else this.orWhere('url', oldUrl);
 		}).delete();
 	const row = await site.$relatedQuery('children', trx)
-		.where('id', page.id)
+		.where('block.id', page.id)
 		.where(
-			raw("date_trunc('milliseconds', updated_at)"),
+			raw("date_trunc('milliseconds', block.updated_at)"),
 			raw("date_trunc('milliseconds', ?::timestamptz)", [page.updated_at]),
 		)
 		.patch(page)
-		.returning('id', 'updated_at', '_id')
+		.returning('block.id', 'block.updated_at', 'block._id')
 		.first();
 	if (!row) {
 		throw new HttpError.Conflict(
