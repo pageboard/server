@@ -151,11 +151,13 @@ module.exports = class SiteService {
 	async save(req, data) {
 		const { site } = req;
 		const dbSite = await this.get(req, data);
-		const dbLanguages = dbSite.data.languages?.slice() ?? [];
-		const languages = data.languages ?? [];
-		if (languages.join(' ') != dbLanguages.join(' ')) {
-			await req.run('translate.initialize');
-		}
+		const languagesChanged = data.data.languages !== undefined &&
+			(data.data.languages ?? []).join(' ')
+			!=
+			(dbSite.data.languages?.slice() ?? []).join(' ')
+			;
+		const toMulti = dbSite.data.lang && data.data.languages?.length > 0;
+		const toMono = !dbSite.data.lang && data.data.lang;
 
 		mergeRecursive(dbSite.data, data.data);
 		if (site && site.url) {
@@ -167,6 +169,13 @@ module.exports = class SiteService {
 			type: runSite.type,
 			data: copy
 		});
+		runSite.data = copy;
+		if (languagesChanged || toMulti || toMono) {
+			req.site = runSite;
+			const source = toMulti ? null : runSite.data.languages?.[0];
+			const target = toMono ? null : runSite.data.languages?.[0];
+			await req.run('translate.initialize', { source, target });
+		}
 		return runSite;
 	}
 	static save = {
