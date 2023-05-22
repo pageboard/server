@@ -1,4 +1,5 @@
 const { mergeRecursive } = require('../../../src/utils');
+const schemas = require.lazy('../lib/schemas');
 
 module.exports = class SiteService {
 	static name = 'site';
@@ -143,11 +144,7 @@ module.exports = class SiteService {
 				type: 'string',
 				format: 'id'
 			},
-			data: {
-				title: 'Data',
-				type: 'object',
-				default: {}
-			}
+			data: schemas.site
 		}
 	};
 
@@ -183,11 +180,7 @@ module.exports = class SiteService {
 				type: 'string',
 				format: 'id'
 			},
-			data: {
-				title: 'Data',
-				type: 'object',
-				default: {}
-			}
+			data: schemas.site
 		}
 	};
 
