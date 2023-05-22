@@ -78,8 +78,13 @@ module.exports = class PageService {
 	}
 
 	#QueryPage({ trx, site }, url, lang) {
+		if (lang === undefined) {
+			lang = site.data.languages?.[0];
+		}
 		return site.$relatedQuery('children', trx).alias('page')
-			.select()
+			.select().select(raw(
+				'block_get_content(page._id, :lang) AS content', { lang }
+			))
 			.first()
 			// eager load children (in which there are standalones)
 			// and children of standalones
@@ -87,15 +92,17 @@ module.exports = class PageService {
 				children(childrenFilter) as children,
 				children(standalonesFilter) as standalones .children(childrenFilter)
 			]`).modifiers({
-				childrenFilter(query) {
-					query.select().where('page.standalone', false);
-					query.select(raw(
+				childrenFilter(q) {
+					q.select().where('page.standalone', false);
+					q.select(raw(
 						'block_get_content(page._id, :lang) AS content', { lang }
 					));
-					return query;
+					return q;
 				},
 				standalonesFilter(q) {
-					return q.select().where('page.standalone', true);
+					return q.select().select(raw(
+						'block_get_content(page._id, :lang) AS content', { lang }
+					)).where('page.standalone', true);
 				}
 			})
 			.where(q => {
@@ -707,22 +714,11 @@ function applyRemove(req, list, recursive) {
 
 async function applyAdd({ site, trx, Block }, list) {
 	if (!list.length) return [];
-	// this relates site to inserted children
-	const contents = list.map(item => {
-		const { content } = item;
-		delete item.content;
-		return content;
-	});
+	const lang = site.data.languages?.[0] ?? null;
 	const rows = await site.$relatedQuery('children', trx)
-		.insert(list).returning('*');
+		.insert(list).returning('id', 'updated_at', '_id');
 	return Promise.all(rows.map(async (row, i) => {
-		await Block.query(trx).select(raw(
-			'block_set_content(:block_id, :content, :lang)', {
-				block_id: row._id,
-				content: contents[i],
-				lang: site.data.languages?.[0]
-			})
-		);
+		await Block.setLanguage(trx, row, lang);
 		return {
 			id: row.id,
 			updated_at: row.updated_at
@@ -734,6 +730,7 @@ async function applyUpdate(req, list) {
 	const blocksMap = {};
 	const updates = [];
 	const { site, trx, Block } = req;
+	const lang = site.data.languages?.[0] ?? null;
 
 	for await (const block of list) {
 		if (block.id in blocksMap) {
@@ -745,10 +742,7 @@ async function applyUpdate(req, list) {
 			throw new HttpError.BadRequest(`Block is missing 'updated_at' ${block.id}`);
 		} else {
 			// simpler path
-			const { content } = block;
-			delete block.content;
-			// await
-			const part = await site.$relatedQuery('children', trx)
+			const row = await site.$relatedQuery('children', trx)
 				.where('block.id', block.id)
 				.where('block.type', block.type)
 				.where(
@@ -756,21 +750,16 @@ async function applyUpdate(req, list) {
 					raw("date_trunc('milliseconds', ?::timestamptz)", [block.updated_at]),
 				)
 				.patch(block)
-				.returning('id', 'updated_at')
+				.returning('id', 'updated_at', '_id')
 				.first();
-			if (!part) {
+			if (!row) {
 				throw new HttpError.Conflict(
 					`${block.type}:${block.id} last update mismatch ${block.updated_at}`
 				);
 			} else {
-				await Block.query(trx).select(raw(
-					'block_set_content(:block_id, :content, :lang)', {
-						block_id: block._id,
-						lang: site.data.languages?.[0],
-						content
-					})
-				);
-				updates.push(part);
+				await Block.setLanguage(trx, row, lang);
+				delete row._id;
+				updates.push(row);
 			}
 		}
 	}
@@ -779,6 +768,7 @@ async function applyUpdate(req, list) {
 
 async function updatePage({ site, trx, Block, Href }, page, sideEffects) {
 	if (!sideEffects) sideEffects = {};
+	const lang = site.data.languages?.[0] ?? null;
 	const dbPage = await site.$relatedQuery('children', trx)
 		.where('block.id', page.id)
 		.whereIn('block.type', page.type ? [page.type] : site.$pkg.pages)
@@ -837,31 +827,24 @@ async function updatePage({ site, trx, Block, Href }, page, sideEffects) {
 			if (oldUrl == null) this.orWhereNull('url');
 			else this.orWhere('url', oldUrl);
 		}).delete();
-	const { content } = page;
-	delete page.content;
-	const part = await site.$relatedQuery('children', trx)
-		.where('block.id', page.id)
+	const row = await site.$relatedQuery('children', trx)
+		.where('id', page.id)
 		.where(
-			raw("date_trunc('milliseconds', block.updated_at)"),
+			raw("date_trunc('milliseconds', updated_at)"),
 			raw("date_trunc('milliseconds', ?::timestamptz)", [page.updated_at]),
 		)
 		.patch(page)
-		.returning('block.id', 'block.updated_at')
+		.returning('id', 'updated_at', '_id')
 		.first();
-	if (!part) {
+	if (!row) {
 		throw new HttpError.Conflict(
 			`${page.type}:${page.id} last update mismatch ${page.updated_at}`
 		);
 	} else {
-		await Block.query(trx).select(raw(
-			'block_set_content(:block_id, :content, :lang)', {
-				block_id: dbPage._id,
-				lang: site.data.languages?.[0],
-				content
-			})
-		);
+		await Block.setLanguage(trx, row, lang);
+		delete row._id;
 	}
-	return part;
+	return row;
 }
 
 async function applyRelate({ site, trx }, obj) {
