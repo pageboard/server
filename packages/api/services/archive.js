@@ -243,7 +243,7 @@ module.exports = class ArchiveService {
 					await Block.relatedQuery('parents', trx).for(row._id).relate(parents);
 				}
 				if (siteChildren.length) {
-					await Block.relatedQuery('parents', trx).for(site._id).relate(siteChildren);
+					await Block.relatedQuery('children', trx).for(site._id).relate(siteChildren);
 				}
 				counts.blocks += 1;
 				refs.set(obj.id, row._id);
