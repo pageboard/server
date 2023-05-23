@@ -33,6 +33,7 @@ module.exports = class Packager {
 	}
 	async run(site, pkg) {
 		const { elements = [], directories = [] } = pkg || {};
+		const { Block } = this;
 		if (!site) console.warn("no site in packager.run");
 		const id = site ? site.id : null;
 		Log.imports("installing", id, elements, directories);
@@ -61,6 +62,7 @@ module.exports = class Packager {
 		for (const name of names) {
 			const el = { ...elts[name] }; // drop proxy
 			el.name = name;
+			el.contents = Block.normalizeContentSpec(el.contents);
 			if (el.alias) {
 				aliases[name] = el.alias;
 			} else if (el.standalone && !Object.isEmpty(el.properties) && el.$lock !== true) {
@@ -246,8 +248,7 @@ module.exports = class Packager {
 		// when listing dependencies, do not include elements from other bundles
 		// -> other bundles are known
 		bundleSet.add(root.name);
-		const contents = this.Block.normalizeContentSpec(el.contents);
-		if (contents) for (const content of contents) {
+		if (el.contents) for (const content of el.contents) {
 			if (!content.nodes) continue;
 			for (const word of content.nodes.split(/\W+/).filter(Boolean)) {
 				if (word == root.group) {

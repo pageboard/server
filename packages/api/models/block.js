@@ -237,12 +237,10 @@ class Block extends Model {
 				type: 'null'
 			};
 
-			const normContents = Block.normalizeContentSpec(contents);
-
 			const contentSchema = contents ? {
 				type: 'object',
-				properties: contentsNames(normContents),
-				additionalProperties: normContents.length == 0 ? true : false
+				properties: contentsNames(contents),
+				additionalProperties: contents.length == 0 ? true : false
 			} : {
 				type: 'null'
 			};
