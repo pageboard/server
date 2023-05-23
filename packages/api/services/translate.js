@@ -1,11 +1,29 @@
-const { ref, val, raw, fn } = require('objection');
+const { ref, val, raw, fn } = require.lazy('objection');
 
 module.exports = class TranslateService {
 	static name = 'translate';
 
 	constructor(app, opts) {
+		this.app = app;
 		this.opts = opts;
 	}
+
+	async apiRoutes(app) {
+		app.languages = await app.run('translate.languages');
+	}
+
+	async languages({ Block, trx }) {
+		const items = await Block.query(trx).select().where('type', 'language');
+		const obj = {};
+		for (const item of items) {
+			obj[item.data.lang] = item.data;
+		}
+		return obj;
+	}
+	static languages = {
+		title: 'Initialize languages',
+		$lock: true
+	};
 
 	async initialize({ site, trx, Block }, { source, target }) {
 		if (source == null && target == null) {
@@ -112,12 +130,9 @@ module.exports = class TranslateService {
 	async fill({ site, trx, Block }, data) {
 		const lang = site.data.languages?.[0];
 		if (!lang) throw new HttpError.BadRequest("Missing site.data.languages");
-		const languages = await Block.query(trx).select()
-			.where('type', 'language')
-			.whereIn(ref('data:lang').castText(), site.data.languages);
-		const source = languages.find(item => item.data.lang == lang);
+		const source = this.app.languages[lang];
 		if (!source) throw new HttpError.BadRequest("Missing source language: " + lang);
-		const target = languages.find(item => item.data.lang == data.lang);
+		const target = this.app.languages[data.lang];
 		if (!target) throw new HttpError.BadRequest("Missing target language: " + data.lang);
 
 		const items = await site.$relatedQuery('children', trx)
