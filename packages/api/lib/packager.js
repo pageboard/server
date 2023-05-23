@@ -58,6 +58,7 @@ module.exports = class Packager {
 		const groups = {};
 		const bundles = {};
 		const aliases = {};
+		const textblocks = new Set();
 		const standalones = new Set();
 		for (const name of names) {
 			const el = { ...elts[name] }; // drop proxy
@@ -68,6 +69,11 @@ module.exports = class Packager {
 			} else if (el.standalone && !Object.isEmpty(el.properties) && el.$lock !== true) {
 				// e.g. "write", "user", "private"
 				standalones.add(name);
+			}
+			if (!el.expressions && el.contents && el.contents.some(item => {
+				return ['inline*', 'text*'].includes(item.nodes);
+			})) {
+				textblocks.add(name);
 			}
 			eltsMap[name] = el;
 			if (!bundleMap.has(name)) {
@@ -106,15 +112,11 @@ module.exports = class Packager {
 				delete el.intl;
 			}
 		}
-
-
-		pkg.eltsMap = eltsMap;
+		Object.assign(pkg, {
+			eltsMap, groups, aliases, bundles, standalones, textblocks
+		});
 		if (!pkg.eltsMap.site) pkg.eltsMap.site = schemas.site;
-		pkg.groups = groups;
-		pkg.aliases = aliases;
-		pkg.bundles = bundles;
-		pkg.standalones = standalones;
-		return this.Block.initSite(site, pkg);
+		return Block.initSite(site, pkg);
 	}
 
 	async makeBundles(site, pkg) {

@@ -195,7 +195,7 @@ class Block extends Model {
 	};
 
 	static initSite(block, pkg) {
-		const { eltsMap, groups, tag, standalones } = pkg;
+		const { eltsMap, groups, tag, standalones, textblocks } = pkg;
 		if (!block.id) {
 			throw new Error("missing block.id\n" + JSON.stringify(block));
 		}
@@ -295,6 +295,7 @@ class Block extends Model {
 				bundles: {},
 				standalones: Array.from(standalones),
 				pages: groups.page ?? [],
+				textblocks,
 				tag
 			};
 
