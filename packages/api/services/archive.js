@@ -209,7 +209,6 @@ module.exports = class ArchiveService {
 					delete obj.parents;
 				}
 				const children = [];
-				const siteChildren = [];
 				if (obj.children) {
 					// ensure non-standalone children are related to site
 					for (const child of obj.children) {
@@ -217,7 +216,6 @@ module.exports = class ArchiveService {
 							.insert(child).returning('_id');
 						if (lang) await Block.setLanguageContent(trx, rchild, lang);
 						children.push(rchild._id);
-						siteChildren.push(rchild._id);
 					}
 					delete obj.children;
 				}
@@ -241,9 +239,6 @@ module.exports = class ArchiveService {
 				}
 				if (parents.length) {
 					await Block.relatedQuery('parents', trx).for(row._id).relate(parents);
-				}
-				if (siteChildren.length) {
-					await Block.relatedQuery('children', trx).for(site._id).relate(siteChildren);
 				}
 				counts.blocks += 1;
 				refs.set(obj.id, row._id);
