@@ -244,3 +244,24 @@ BEGIN
 END
 $BODY$;
 
+
+CREATE OR REPLACE FUNCTION jsonb_headlines (
+	config regconfig,
+	doc JSONB,
+	query tsquery
+) RETURNS TEXT[]
+	LANGUAGE 'plpgsql'
+AS $BODY$
+DECLARE
+	headlines TEXT[];
+BEGIN
+	SELECT array_agg(list.fragment) INTO headlines FROM (
+		SELECT fragment FROM (
+			SELECT value AS fragment, jsonb_extract_path_text(doc, key) AS field
+				FROM jsonb_each_text(ts_headline(config, doc, query))
+		) AS headlines WHERE length(fragment) != length(field)
+	) AS list WHERE length(trim(list.fragment)) > 0;
+	RETURN headlines;
+END
+$BODY$;
+
