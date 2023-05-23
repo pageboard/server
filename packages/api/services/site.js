@@ -204,7 +204,7 @@ module.exports = class SiteService {
 	}
 	static all = {
 		title: 'List all sites',
-		$action: 'write',
+		$action: 'read',
 		$lock: true,
 		properties: {
 			text: {
