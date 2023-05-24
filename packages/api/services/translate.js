@@ -25,20 +25,18 @@ module.exports = class TranslateService {
 		$lock: true
 	};
 
-	async initialize({ site, trx, Block }, { source, target }) {
+	async initialize({ site, trx }, { source, target }) {
 		if (source == null && target == null) {
 			throw new HttpError.BadRequest('source and target cannot be both null');
 		}
-		await Block.query(trx).with('blocks', ['_id'],
-			site.$relatedQuery('children', trx).whereNot('block.type', 'content'),
-		).select(raw(
-			`block_set_content(
-				_id, block_get_content(_id, :source), :target
+		await site.$relatedQuery('children', trx)
+			.whereNot('block.type', 'content')
+			.select(raw(`block_set_content(
+				block._id, block_get_content(block._id, :source), :target
 			)`, {
 				source,
 				target
-			}
-		)).from('blocks');
+			}));
 	}
 	static initialize = {
 		title: 'Initialize site languages',
@@ -154,8 +152,8 @@ module.exports = class TranslateService {
 		const body = new URLSearchParams({
 			tag_handling: 'html',
 			preserve_formatting: 1,
-			source_lang: source.data.translation,
-			target_lang: target.data.translation
+			source_lang: source.translation,
+			target_lang: target.translation
 		});
 		for (const row of items) body.append('text', row.source);
 
