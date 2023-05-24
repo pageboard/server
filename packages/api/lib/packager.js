@@ -254,7 +254,7 @@ module.exports = class Packager {
 			if (!content.nodes) continue;
 			for (const word of content.nodes.split(/\W+/).filter(Boolean)) {
 				if (word == root.group) {
-					console.warn("contents contains root group", root.group, el.name, contents);
+					console.warn("contents contains root group", root.group, el.name);
 					continue;
 				}
 				if (word == "text") continue;
