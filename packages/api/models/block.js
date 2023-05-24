@@ -295,7 +295,7 @@ class Block extends Model {
 				bundles: {},
 				standalones: Array.from(standalones),
 				pages: groups.page ?? [],
-				textblocks,
+				textblocks: Array.from(textblocks),
 				tag
 			};
 
