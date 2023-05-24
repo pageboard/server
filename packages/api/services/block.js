@@ -138,7 +138,6 @@ module.exports = class BlockService {
 			q.whereObject(data.child, data.child.type, 'child');
 		} else if (data.text) {
 			const language = this.app.languages[data.lang] ?? { tsconfig: 'unaccent' };
-			const copy = q.clone();
 			q.with('search', Block.query(trx)
 				.select(ref('websearch_to_tsquery').as('query'))
 				.from(raw(`websearch_to_tsquery(:tsconfig, :text)`, {
@@ -147,37 +146,33 @@ module.exports = class BlockService {
 				}))
 			);
 			if (data.lang && language.lang) {
-				q.with('doc', copy
-					.select('block._id')
-					.select(fn.sum(raw('ts_rank("child:contents".tsv, search.query)')).as('rank'))
-					.select(raw(
-						`array_remove(array_agg(content_get_headline(:tsconfig, "child:contents".data->>'text', search.query)), NULL) AS headlines`, language
-					))
-					.groupBy('block._id')
-					.joinRelated('children as child.children as contents')
-					.whereIn('child.type', site.$pkg.textblocks)
-					.where('child:contents.type', 'content')
-					.where(ref('data:lang').from('child:contents').castText(), data.lang)
-					.join('search', 'child:contents.tsv', '@@', 'search.query')
+				q.with('contents', Block.query(trx)
+					.joinRelated('children')
+					.where('children.type', 'content')
+					.where(ref('children.data:lang').castText(), data.lang)
+					.select(
+						'children._id', 'children.tsv',
+						ref('children.data:text').castText().as('text')
+					)
 				);
 			} else {
 				q.with('contents', Block.query(trx)
-					.select('_id', 'value AS text')
+					.select('_id', 'tsv', 'value AS text')
 					.from(raw('block, jsonb_each_text(block.content)'))
 				);
-				q.with('doc', copy
-					.select('block._id')
-					.select(fn.sum(raw('ts_rank(child.tsv, search.query)')).as('rank'))
-					.select(raw(
-						`array_remove(array_agg(content_get_headline('unaccent', contents.text, search.query)), NULL) AS headlines`
-					))
-					.groupBy('block._id')
-					.joinRelated('children as child')
-					.whereIn('child.type', site.$pkg.textblocks)
-					.join('contents', 'child._id', 'contents._id')
-					.join('search', 'child.tsv', '@@', 'search.query')
-				);
 			}
+			q.with('doc', Block.query(trx)
+				.select('block._id')
+				.select(fn.sum(raw('ts_rank(contents.tsv, search.query)')).as('rank'))
+				.select(raw(
+					`array_remove(array_agg(content_get_headline(:tsconfig, contents.text, search.query)), NULL) AS headlines`, language
+				))
+				.groupBy('block._id')
+				.joinRelated('children as child')
+				.whereIn('child.type', site.$pkg.textblocks)
+				.join('contents', 'child._id', 'contents._id')
+				.join('search', 'contents.tsv', '@@', 'search.query')
+			);
 			q.join('doc', 'block._id', 'doc._id')
 				.select('headlines')
 				.select('rank').orderBy('rank', 'desc');
