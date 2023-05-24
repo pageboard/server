@@ -265,3 +265,19 @@ BEGIN
 END
 $BODY$;
 
+CREATE OR REPLACE FUNCTION content_get_headline (
+	config regconfig,
+	doc text,
+	query tsquery
+) RETURNS TEXT
+	LANGUAGE 'plpgsql'
+AS $BODY$
+DECLARE
+	headline TEXT;
+BEGIN
+	SELECT trimmed INTO headline FROM (
+		SELECT trim(ts_headline) AS trimmed, ts_headline AS text FROM ts_headline(config, doc, query)
+	) AS row WHERE length(row.trimmed) > 0 AND length(row.text) != length(doc);
+	RETURN headline;
+END
+$BODY$;

@@ -182,101 +182,15 @@ module.exports = class PageService {
 	};
 
 	async search(req, data) {
-		const { site, trx, Href } = req;
-		const drafts = data.drafts
-			? ''
-			: `AND (page.data->'nositemap' IS NULL OR (page.data->'nositemap')::BOOLEAN IS NOT TRUE)`;
-
-		const types = data.type ?? site.$pkg.pages;
-		if (data.offset < 0) {
-			data.limit += data.offset;
-			data.offset = 0;
-			if (data.limit < 0) {
-				throw new HttpError.BadRequest("limit cannot be negative");
-			}
-		}
-
-		let sql = `
-			SELECT
-				page.id,
-				page.type,
-				page.data,
-				page.updated_at, (
-					SELECT jsonb_agg(list.fragment) FROM (
-						SELECT fragment FROM (
-							SELECT ts_headline('unaccent', page.data->>'title', search.query) AS fragment, page.data->>'title' AS field
-							UNION
-							SELECT ts_headline('unaccent', page.data->>'description', search.query) AS fragment, page.data->>'description' AS field
-						) AS headlines WHERE length(fragment) != length(field)
-					) AS list WHERE length(trim(list.fragment)) > 0
-				) AS headlines,
-				ts_rank(page.tsv, search.query) AS rank
-			FROM
-				block AS site,
-				relation AS rs,
-				block AS page,
-				(SELECT websearch_to_tsquery('unaccent', :text) AS query) AS search
-			WHERE
-				site.type = 'site' AND site.id = :site
-				AND rs.parent_id = site._id AND page._id = rs.child_id
-				${drafts}
-				AND page.type = ANY(:types)
-				AND search.query @@ page.tsv`;
-		if (data.content) sql += ` UNION ALL
-			SELECT
-				page.id,
-				page.type,
-				page.data,
-				page.updated_at, (
-					SELECT jsonb_agg(list.fragment) FROM (
-						SELECT fragment FROM (
-							SELECT value AS fragment, jsonb_extract_path_text(block.content, key) AS field FROM jsonb_each_text(ts_headline('unaccent', block.content, search.query))
-						) AS headlines WHERE length(fragment) != length(field)
-					) AS list WHERE length(trim(list.fragment)) > 0
-				) AS headlines,
-				ts_rank(block.tsv, search.query) AS rank
-			FROM
-				block AS site,
-				relation AS rs,
-				block,
-				relation AS rp,
-				block AS page,
-				(SELECT websearch_to_tsquery('unaccent', :text) AS query) AS search
-			WHERE
-				site.type = 'site' AND site.id = :site
-				AND rs.parent_id = site._id AND block._id = rs.child_id
-				AND block.type != ALL(:noTypes)
-				AND rp.child_id = block._id AND page._id = rp.parent_id
-				${drafts}
-				AND page.type = ANY(:types)
-				AND search.query @@ block.tsv`;
-
-		const vars = {
-			text: data.text,
-			site: site.id,
-			noTypes: ['site', 'user', 'fetch', 'template', 'api_form', 'query_form', 'priv', 'settings', ...site.$pkg.pages],
-			types,
-			offset: data.offset,
-			limit: data.limit
-		};
-		const count = await trx.raw(`SELECT count(*) AS count FROM (${sql}) AS it`, vars);
-		const result = await trx.raw(`(${sql}) ORDER BY rank DESC, updated_at DESC LIMIT :limit OFFSET :offset`, vars);
-		const obj = {
+		return req.run('block.search', {
+			type: 'page',
+			data: {
+				nositemap: !data.draft
+			},
 			offset: data.offset,
 			limit: data.limit,
-			items: result.rows,
-			total: parseInt(count.rows[0].count)
-		};
-		const ids = obj.items.map(item => item.id);
-		if (ids.length > 0) {
-			const hrow = await req.call('href.collect', {
-				ids,
-				asMap: true,
-				types: Href.mediaTypes
-			}).first();
-			obj.hrefs = hrow.hrefs;
-		}
-		return obj;
+			text: data.text
+		});
 	}
 	static search = {
 		title: 'Search pages',
@@ -289,7 +203,6 @@ module.exports = class PageService {
 				format: 'singleline'
 			},
 			content: {
-				title: 'Search content',
 				type: 'boolean'
 			},
 			limit: {
@@ -310,7 +223,7 @@ module.exports = class PageService {
 				default: false
 			},
 			type: {
-				title: 'Types',
+				// kept for compatibility
 				type: 'array',
 				items: {
 					type: 'string',

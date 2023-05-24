@@ -1,9 +1,13 @@
-const { ref, raw, val: toval } = require('objection');
+const { ref, raw, val: toval, fn } = require('objection');
 const Block = require('../models/block');
 const { unflatten, mergeRecursive, dget } = require('../../../src/utils');
 
 module.exports = class BlockService {
 	static name = 'block';
+
+	constructor(app) {
+		this.app = app;
+	}
 
 	apiRoutes(app, server) {
 		server.get("/.api/block", async (req, res) => {
@@ -92,6 +96,7 @@ module.exports = class BlockService {
 		const children = data.children;
 		let valid = false;
 		const q = site.$relatedQuery('children', trx);
+
 		if (data.parent) {
 			const parentList = data.parent.parents;
 			if (parentList && Array.isArray(parentList)) {
@@ -121,12 +126,61 @@ module.exports = class BlockService {
 				q.whereObject(data.parent, data.parent.type, 'parent');
 			}
 		}
+
 		if (data.child && Object.keys(data.child).length) {
+			if (data.text) {
+				throw new HttpError.BadRequest("Cannot join by child and search by text");
+			}
 			if (!data.child.type) {
 				throw new HttpError.BadRequest("Missing child.type");
 			}
 			q.joinRelated('children', { alias: 'child' });
 			q.whereObject(data.child, data.child.type, 'child');
+		} else if (data.text) {
+			const language = this.app.languages[data.lang] ?? { tsconfig: 'unaccent' };
+			const copy = q.clone();
+			q.with('search', Block.query(trx)
+				.select(ref('websearch_to_tsquery').as('query'))
+				.from(raw(`websearch_to_tsquery(:tsconfig, :text)`, {
+					text: data.text,
+					tsconfig: language.tsconfig
+				}))
+			);
+			if (data.lang && language.lang) {
+				q.with('doc', copy
+					.select('block._id')
+					.select(fn.sum(raw('ts_rank("child:contents".tsv, search.query)')).as('rank'))
+					.select(raw(
+						`array_remove(array_agg(content_get_headline(:tsconfig, "child:contents".data->>'text', search.query)), NULL) AS headlines`, language
+					))
+					.groupBy('block._id')
+					.joinRelated('children as child.children as contents')
+					.whereIn('child.type', site.$pkg.textblocks)
+					.where('child:contents.type', 'content')
+					.where(ref('data:lang').from('child:contents').castText(), data.lang)
+					.join('search', 'child:contents.tsv', '@@', 'search.query')
+				);
+			} else {
+				q.with('contents', Block.query(trx)
+					.select('_id', 'value AS text')
+					.from(raw('block, jsonb_each_text(block.content)'))
+				);
+				q.with('doc', copy
+					.select('block._id')
+					.select(fn.sum(raw('ts_rank(child.tsv, search.query)')).as('rank'))
+					.select(raw(
+						`array_remove(array_agg(content_get_headline('unaccent', contents.text, search.query)), NULL) AS headlines`
+					))
+					.groupBy('block._id')
+					.joinRelated('children as child')
+					.whereIn('child.type', site.$pkg.textblocks)
+					.join('contents', 'child._id', 'contents._id')
+					.join('search', 'child.tsv', '@@', 'search.query')
+				);
+			}
+			q.join('doc', 'block._id', 'doc._id')
+				.select('headlines')
+				.select('rank').orderBy('rank', 'desc');
 		}
 		const eagers = {};
 
@@ -287,7 +341,7 @@ module.exports = class BlockService {
 				default: false
 			},
 			text: {
-				title: 'Search text',
+				title: 'Text search',
 				nullable: true,
 				type: "string",
 				format: "singleline"
@@ -368,12 +422,6 @@ module.exports = class BlockService {
 						type: 'boolean',
 						default: false
 					},
-					text: {
-						title: 'Search text',
-						nullable: true,
-						type: "string",
-						format: "singleline"
-					},
 					data: {
 						title: 'Filter by data',
 						type: 'object',
@@ -439,12 +487,6 @@ module.exports = class BlockService {
 						title: 'Content',
 						type: 'boolean',
 						default: false
-					},
-					text: {
-						title: 'Search text',
-						nullable: true,
-						type: "string",
-						format: "singleline"
 					},
 					data: {
 						title: 'Filter by data',
@@ -931,77 +973,8 @@ function whereSub(q, data, alias = 'block') {
 		valid = true;
 		q.whereObject({ data: data.data }, data.type, alias);
 	}
-	if (data.text) {
-		// whereText(q, data.text, alias);
-		valid = true;
-		q.from(raw("websearch_to_tsquery('unaccent', ?) AS query, ??", [data.text, alias]));
-		q.whereRaw(`query @@ ${alias}.tsv`);
-		q.orderByRaw(`ts_rank(${alias}.tsv, query) DESC`);
-	}
 	return valid;
 }
-/*
-function whereText(q, text, alias) {
-	const drafts = data.drafts
-		? ''
-		: `AND (page.data->'nositemap' IS NULL OR (page.data->'nositemap')::BOOLEAN IS NOT TRUE)`;
-
-	const types = data.type ?? site.$pkg.pages;
-
-	const results = await trx.raw(`SELECT json_build_object(
-			'count', count,
-			'rows', json_agg(
-				json_build_object(
-					'id', id,
-					'type', type,
-					'updated_at', updated_at,
-					'data', json_build_object(
-						'title', title,
-						'url', url,
-						'headlines', headlines,
-						'rank', rank
-					)
-				)
-			)) AS result FROM (
-			SELECT
-				id, type, title, url, updated_at, json_agg(DISTINCT headlines) AS headlines, sum(qrank) AS rank,
-				count(*) OVER() AS count
-			FROM (
-				SELECT
-					page.id,
-					page.type,
-					page.data->>'title' AS title,
-					page.data->>'url' AS url,
-					page.updated_at,
-					(SELECT string_agg(heads.value, '<br>') FROM (SELECT DISTINCT trim(value) AS value FROM jsonb_each_text(ts_headline('unaccent', block.content, search.query)) WHERE length(trim(value)) > 0) AS heads) AS headlines,
-					ts_rank(block.tsv, search.query) AS qrank
-				FROM
-					block AS site,
-					relation AS rs,
-					block,
-					relation AS rp,
-					block AS page,
-					(SELECT websearch_to_tsquery('unaccent', ?) AS query) AS search
-				WHERE
-					site.type = 'site' AND site.id = ?
-					AND rs.parent_id = site._id AND block._id = rs.child_id
-					AND block.type NOT IN ('site', 'user', 'fetch', 'template', 'api_form', 'query_form', 'priv', 'settings', ${site.$pkg.pages.map(_ => '?').join(',')})
-					AND rp.child_id = block._id AND page._id = rp.parent_id
-					${drafts}
-					AND page.type IN (${types.map(_ => '?').join(',')})
-					AND search.query @@ block.tsv
-			) AS results
-			GROUP BY id, type, title, url, updated_at ORDER BY rank DESC, updated_at DESC OFFSET ? LIMIT ?
-		) AS foo GROUP BY count`, [
-		data.text,
-		site.id,
-		...site.$pkg.pages,
-		...types,
-		data.offset,
-		data.limit
-	]);
-}
-*/
 
 function filterSub(q, data, alias) {
 	q.select();
