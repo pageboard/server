@@ -27,9 +27,11 @@ module.exports = class DatabaseModule {
 			this.#scheduleTenantCopy(app);
 		}
 	}
-	tenant(tenant = 'current') {
+	tenant(tenant) {
+		if (!tenant) tenant = this.opts.tenant;
 		const url = this.opts.url[tenant];
 		if (!url) throw new Error(`No database configured`);
+		console.info("database tenant:", tenant, url);
 		let tknex;
 		if (tenants.has(tenant)) {
 			tknex = tenants.get(tenant);
