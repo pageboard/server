@@ -235,7 +235,7 @@ module.exports = class BlockService {
 				}
 			},
 			childrenFilter(query) {
-				query.select().where('standalone', false);
+				query.select().where('standalone', false).whereNot('type', 'content');
 			}
 		});
 
