@@ -65,7 +65,7 @@ module.exports = class TranslateService {
 		if (!lang) throw new HttpError.BadRequest("Missing site.data.languages");
 
 		const items = await site.$relatedQuery('children', trx)
-			.select(
+			.distinct(
 				'target.id', 'target.data', 'target.type',
 				ref('source.data:text').castText().as('source')
 			)
@@ -134,7 +134,7 @@ module.exports = class TranslateService {
 		if (!target) throw new HttpError.BadRequest("Missing target language: " + data.lang);
 
 		const items = await site.$relatedQuery('children', trx)
-			.select(
+			.distinct(
 				ref('target._id').as('target_id'),
 				ref('source.data:text').castText().as('source')
 			)
