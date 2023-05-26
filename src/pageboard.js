@@ -136,11 +136,15 @@ module.exports = class Pageboard {
 		};
 		this.domains.extendRequest(req, this);
 		if (site) {
-			req.site = await this.install(
-				await this.api.run(req, 'site.get', {
-					id: site
-				})
-			);
+			let siteInst = this.domains.siteById[site];
+			if (!siteInst) {
+				siteInst = this.domains.siteById[site] = await this.install(
+					await this.api.run(req, 'site.get', {
+						id: site
+					})
+				);
+			}
+			req.site = siteInst;
 		}
 		return this.api.run(req, command, data);
 	}

@@ -168,6 +168,8 @@ CREATE INDEX block_url_index ON block(((data->'url')::text));
 
 CREATE UNIQUE INDEX block_user_site_index ON block USING btree (id) WHERE type::text = ANY (ARRAY['site'::text, 'user'::text]);
 CREATE INDEX block_id_index ON block USING btree (id);
+CREATE INDEX block_data_idx ON block USING gin (data);
+CREATE INDEX block__id_type_idx ON block USING btree (_id, type);
 CREATE INDEX block_type_index ON block USING btree (type);
 CREATE INDEX block_updated_at_idx ON block USING btree (updated_at DESC);
 

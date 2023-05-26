@@ -111,6 +111,7 @@ AS $BODY$
 DECLARE
 	_site block;
 	content_names JSONB;
+	block_type TEXT;
 	block_ids INTEGER[];
 	content_ids INTEGER[];
 	content_langs TEXT[];
@@ -143,16 +144,14 @@ BEGIN
 			-- remaining content_names will be unlinked from block_id
 			content_names := content_names - _name;
 		END IF;
-
+		SELECT type INTO block_type FROM block WHERE _id = block_id;
 		-- list all block._id that have a matching content text for that name/lang
-		SELECT COALESCE(array_agg(other._id), ARRAY[]::INTEGER[]) INTO block_ids
-		FROM block, relation AS block_site,
-		block AS other,
+		SELECT COALESCE(array_agg(block._id), ARRAY[]::INTEGER[]) INTO block_ids
+		FROM relation AS block_site, block,
 		relation AS content_block, block AS content
-			WHERE block._id = block_id
-			AND block_site.parent_id = _site._id
-			AND other._id = block_site.child_id AND other.type = block.type
-			AND content_block.parent_id = other._id
+			WHERE block_site.parent_id = _site._id
+			AND (block._id = block_site.child_id AND block.type = block_type)
+			AND content_block.parent_id = block._id
 			AND content._id = content_block.child_id
 			AND content.type = 'content'
 			AND content.data @@ FORMAT(
