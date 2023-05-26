@@ -317,9 +317,7 @@ module.exports = class ReservationService {
 					} else if (data.paid === false) {
 						q.whereNot(ref('data:payment.due'), ref('data:payment.paid'));
 					}
-					q.where(trx.raw('jsonb_array_length(:attendees:) > 0', {
-						attendees: ref('data:attendees')
-					}));
+					q.where(trx.raw(`jsonb_array_length(coalesce(data['attendees'], '[]'::jsonb)) > 0`));
 					q.where('type', 'event_reservation').select();
 				},
 				settings(q) {
@@ -330,7 +328,9 @@ module.exports = class ReservationService {
 				}
 			});
 		eventDate.parent = eventDate.parent[0];
-		for (const item of eventDate.children) {
+		const { children: items } = eventDate;
+		delete eventDate.children;
+		for (const item of items) {
 			// bad test data could ruin everything
 			if (!item.settings || !item.settings.length) {
 				console.warn("no settings event date item", data.id, item.id);
@@ -344,7 +344,7 @@ module.exports = class ReservationService {
 			}
 			delete item.settings.user;
 		}
-		return { item: eventDate };
+		return { item: eventDate, items };
 	}
 	static search = {
 		title: 'Search reservations',
