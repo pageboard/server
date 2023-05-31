@@ -11,11 +11,11 @@ module.exports = class ReservationService {
 				"reservation.attendees must not be empty"
 			);
 		}
-		const [settings, { item: eventDate }] = await Promise.all([
-			req.run('settings.save', { email }),
+		const [{ item: settings }, { item: eventDate }] = await Promise.all([
+			req.run('settings.have', { email }),
 			req.run('block.find', {
 				type: 'event_date',
-				id: data.event_date,
+				id: data.date,
 				parents: {
 					type: 'event',
 					first: true
@@ -34,7 +34,7 @@ module.exports = class ReservationService {
 			type: 'event_reservation',
 			parent: { parents }
 		});
-		if (obj.items.length == 1) {
+		if (obj.items.length > 0) {
 			throw new HttpError.Conflict(
 				"User already has a reservation for this date"
 			);
@@ -48,6 +48,7 @@ module.exports = class ReservationService {
 		if (Number.isNaN(total)) {
 			throw new HttpError.BadRequest("At least one seat must be reserved");
 		}
+		reservation.payment ??= {};
 
 		if (reservation.seats > 0) {
 			const maxSeats = eventDate.data.seats || eventDate.parent.data.seats || 0;
@@ -79,9 +80,9 @@ module.exports = class ReservationService {
 	static add = {
 		title: 'Add reservation',
 		$action: 'write',
-		required: ['event_date', 'reservation', 'email'],
+		required: ['date', 'reservation', 'email'],
 		properties: {
-			event_date: {
+			date: {
 				title: 'Event Date',
 				type: 'string',
 				format: 'id'
@@ -181,6 +182,8 @@ module.exports = class ReservationService {
 		if (Number.isNaN(total)) {
 			throw new HttpError.BadRequest("At least one seat must be reserved");
 		}
+
+		reservation.payment ??= {};
 
 		if (reservation.seats > 0) {
 			const maxSeats = eventDate.data.seats || eventDate.parent.data.seats || 0;
