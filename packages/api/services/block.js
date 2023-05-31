@@ -115,7 +115,7 @@ module.exports = class BlockService {
 			}
 			if (Object.keys(data.parent).length) {
 				if (!data.parent.type) {
-					if (parents.type && parents.type.length == 1) {
+					if (parents?.type?.length == 1) {
 						data.parent.type = parents.type[0];
 					} else {
 						throw new HttpError.BadRequest("Missing parent.type");
@@ -132,7 +132,11 @@ module.exports = class BlockService {
 				throw new HttpError.BadRequest("Cannot join by child and search by text");
 			}
 			if (!data.child.type) {
-				throw new HttpError.BadRequest("Missing child.type");
+				if (children?.type?.length == 1) {
+					data.child.type = children.type[0];
+				} else {
+					throw new HttpError.BadRequest("Missing child.type");
+				}
 			}
 			q.joinRelated('children', { alias: 'child' });
 			q.whereObject(data.child, data.child.type, 'child');
