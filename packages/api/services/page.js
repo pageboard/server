@@ -864,7 +864,7 @@ async function applyRelate({ site, trx }, obj) {
 				})) list.push(id);
 				return list;
 			}, []);
-			throw HttpError(404, "Unknown blocks", { blocks: missing });
+			throw new HttpError.NotFound("Unknown blocks: " + missing.join(', '));
 		}
 		return parent.$relatedQuery('children', trx).relate(unrelateds);
 	}));
