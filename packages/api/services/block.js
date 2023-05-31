@@ -120,7 +120,11 @@ module.exports = class BlockService {
 		}
 		if (data.child && Object.keys(data.child).length) {
 			if (!data.child.type) {
-				throw new HttpError.BadRequest("Missing child.type");
+				if (children?.type?.length == 1) {
+					data.child.type = children.type[0];
+				} else {
+					throw new HttpError.BadRequest("Missing child.type");
+				}
 			}
 			q.joinRelated('children', { alias: 'child' });
 			q.whereObject(data.child, data.child.type, 'child');
