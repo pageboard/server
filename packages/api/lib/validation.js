@@ -12,17 +12,16 @@ function fixSchema(schema) {
 			if (schema.properties && schema.type == null) {
 				schema.type = 'object';
 			}
-			switch (schema.type) {
-				case "object":
-					if (schema.additionalProperties == null) {
-						schema.additionalProperties = !schema.properties;
-					}
-					break;
-				case "string":
-					if (schema.format || schema.pattern) {
-						schema.coerce = true;
-					}
-					break;
+			if (schema.type == "object") {
+				if (schema.additionalProperties == null) {
+					schema.additionalProperties = !schema.properties;
+				}
+			} else if (schema.type == "string") {
+				if (schema.format || schema.pattern) {
+					schema.coerce = true;
+				}
+			} else if ('const' in schema) {
+				schema.coerce = true;
 			}
 		}
 	});
@@ -169,13 +168,21 @@ module.exports = class Validation {
 		ajv.addKeyword({
 			keyword: 'coerce',
 			modifying: true,
-			type: 'string',
+			schemaType: 'boolean',
 			errors: false,
 			validate: function (schema, data, parentSchema, dataCxt) {
 				if (data == null) return true;
 				const parent = dataCxt.parentData;
 				const name = dataCxt.parentDataProperty;
 				const format = parentSchema.format;
+				if ('const' in parentSchema && typeof parentSchema.const == "number") {
+					// coerce numbers
+					if (data != null && typeof data == "string") {
+						const num = Number(data);
+						if (!Number.isNaN(num)) parent[name] = num;
+						return true;
+					}
+				}
 				if (parentSchema.type == "string" && data === "") {
 					if (parentSchema.default !== undefined) {
 						parent[name] = parentSchema.default;
