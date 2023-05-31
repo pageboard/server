@@ -79,16 +79,20 @@ module.exports = class LoginModule {
 			mail.subject = `${prefix}code de vérification: ${tokenStr}`;
 			mail.text = Text`
 				${tokenStr}
+
 				Ce message est envoyé depuis
 				${site.url.href}
-				et peut être ignoré.`;
+
+				Si vous n'avez pas demandé ce code, vous pouvez ignorer ce message.`;
 		} else {
 			mail.subject = `${prefix}verification token: ${tokenStr}`;
 			mail.text = Text`
 				${tokenStr}
+
 				This message is sent from
 				${site.url.href}
-				and can be ignored.`;
+
+				If you didn't ask this code, you can ignore this message.`;
 		}
 		await req.run('mail.to', mail);
 		return {};
