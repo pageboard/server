@@ -5,8 +5,8 @@ module.exports = class ReservationService {
 
 	async add(req, data) {
 		const { user } = req;
-		const { reservation, email } = data;
-		if (!reservation.attendees || reservation.attendees.length == 0) {
+		const { date: event_date_id, email, ...reservation } = data;
+		if (!reservation.attendees?.length) {
 			throw new HttpError.BadRequest(
 				"reservation.attendees must not be empty"
 			);
@@ -15,7 +15,7 @@ module.exports = class ReservationService {
 			req.run('settings.have', { email }),
 			req.run('block.find', {
 				type: 'event_date',
-				id: data.date,
+				id: event_date_id,
 				parents: {
 					type: 'event',
 					first: true
@@ -25,19 +25,22 @@ module.exports = class ReservationService {
 		if (user.id !== settings.id) {
 			throw new HttpError.Unauthorized("Wrong user");
 		}
+		if (!eventDate) {
+			throw new HttpError.NotFound("Event date not found");
+		}
 		const parents = [
 			{ type: 'settings', id: settings.id },
-			{ type: 'event_date', id: eventDate.id }
+			{ type: 'event_date', id: event_date_id }
 		];
 		// because search data.parents is for eager join, not relation
-		const obj = await req.run('block.search', {
+		const obj = await req.run('block.find', {
 			type: 'event_reservation',
 			parent: { parents }
 		});
-		if (obj.items.length > 0) {
-			throw new HttpError.Conflict(
-				"User already has a reservation for this date"
-			);
+		if (obj.item) {
+			obj.status = 409;
+			obj.statusText = "User already has a reservation for this date";
+			return obj;
 		}
 		if (reservation.attendees) {
 			reservation.seats = reservation.attendees.length;
@@ -80,7 +83,7 @@ module.exports = class ReservationService {
 	static add = {
 		title: 'Add reservation',
 		$action: 'write',
-		required: ['date', 'reservation', 'email'],
+		required: ['date', 'email'],
 		properties: {
 			date: {
 				title: 'Event Date',
@@ -92,75 +95,70 @@ module.exports = class ReservationService {
 				type: 'string',
 				format: 'email'
 			},
-			reservation: {
-				title: 'Reservation',
+			payment: {
+				title: 'Payment',
 				type: 'object',
 				properties: {
-					payment: {
-						title: 'Payment',
-						type: 'object',
-						properties: {
-							method: {
-								title: 'Payment method',
-								type: 'string'
-							}
-						}
-					},
-					attendees: {
-						title: 'Attendees',
-						type: 'array',
-						items: {
-							type: 'object',
-							additionalProperties: true,
-							properties: {
-								name: {
-									title: 'Name',
-									type: 'string'
-								}
-							}
-						},
-						nullable: true
-					},
-					contact: {
-						title: 'Contact',
-						type: 'object',
-						additionalProperties: true,
-						properties: {
-							name: {
-								title: 'Name',
-								type: 'string'
-							},
-							phone: {
-								title: 'Phone',
-								type: 'string',
-								pattern: /^(\(\d+\))? *\d+([ .-]?\d+)*$/.source
-							}
-						}
-					},
-					comment: {
-						title: 'Comment',
+					method: {
+						title: 'Payment method',
 						type: 'string'
 					}
+				},
+				nullable: true
+			},
+			attendees: {
+				title: 'Attendees',
+				type: 'array',
+				items: {
+					type: 'object',
+					additionalProperties: true,
+					properties: {
+						name: {
+							title: 'Name',
+							type: 'string'
+						}
+					}
+				},
+				nullable: true
+			},
+			contact: {
+				title: 'Contact',
+				type: 'object',
+				additionalProperties: true,
+				nullable: true,
+				properties: {
+					name: {
+						title: 'Name',
+						type: 'string'
+					},
+					phone: {
+						title: 'Phone',
+						type: 'string',
+						pattern: /^(\(\d+\))? *\d+([ .-]?\d+)*$/.source
+					}
 				}
+			},
+			comment: {
+				title: 'Comment',
+				type: 'string',
+				nullable: true
 			}
 		}
 	};
 
 	async save(req, data) {
-		const { reservation } = data;
-		if (!reservation.attendees || reservation.attendees.length == 0) {
+		const { id, ...reservation } = data;
+		if (!reservation.attendees?.length) {
 			throw new HttpError.BadRequest(
 				"reservation.attendees must not be empty"
 			);
 		}
 		const { item: eventDate } = await req.run('block.find', {
 			child: {
-				type: 'event_reservation',
-				id: data.id
+				id
 			},
 			children: {
 				type: 'event_reservation',
-				id: data.id,
 				first: true
 			},
 			type: 'event_date',
@@ -212,15 +210,14 @@ module.exports = class ReservationService {
 	static save = {
 		title: 'Save reservation',
 		$action: 'write',
-		required: ['id', 'reservation'],
-		properties: {
+		required: ['id'],
+		properties: Object.assign({
 			id: {
 				title: 'Reservation id',
 				type: 'string',
 				format: 'id'
-			},
-			reservation: this.add.properties.reservation
-		}
+			}
+		}, this.add.properties)
 	};
 
 	async del({ user, call, trx }, data) {
