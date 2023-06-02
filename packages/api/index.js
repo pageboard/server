@@ -147,7 +147,7 @@ module.exports = class ApiModule {
 		} finally {
 			if (req.trx && req.trx.isCompleted()) {
 				if (hadTrx) {
-					req.trx = transaction.start(app.database.tenant(locals.tenant));
+					req.trx = await transaction.start(app.database.tenant(locals.tenant));
 				} else {
 					delete req.trx;
 				}

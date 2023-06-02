@@ -115,7 +115,7 @@ module.exports = class BlockService {
 			}
 			if (Object.keys(data.parent).length) {
 				if (!data.parent.type) {
-					if (parents.type && parents.type.length == 1) {
+					if (parents?.type?.length == 1) {
 						data.parent.type = parents.type[0];
 					} else {
 						throw new HttpError.BadRequest("Missing parent.type");
@@ -132,7 +132,11 @@ module.exports = class BlockService {
 				throw new HttpError.BadRequest("Cannot join by child and search by text");
 			}
 			if (!data.child.type) {
-				throw new HttpError.BadRequest("Missing child.type");
+				if (children?.type?.length == 1) {
+					data.child.type = children.type[0];
+				} else {
+					throw new HttpError.BadRequest("Missing child.type");
+				}
 			}
 			q.joinRelated('children', { alias: 'child' });
 			q.whereObject(data.child, data.child.type, 'child');
@@ -166,7 +170,7 @@ module.exports = class BlockService {
 			const qdoc = Block.query(trx).select('block._id')
 				.select(fn.sum(raw('ts_rank(contents.tsv, search.query)')).as('rank'))
 				.select(raw(
-					`array_remove(array_agg(content_get_headline(:tsconfig, contents.text, search.query)), NULL) AS headlines`, language
+					`array_remove(array_agg(DISTINCT content_get_headline(:tsconfig, contents.text, search.query)), NULL) AS headlines`, language
 				))
 				.groupBy('block._id');
 			if (data.content) {

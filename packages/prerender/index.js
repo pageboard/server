@@ -113,7 +113,7 @@ module.exports = class PrerenderModule {
 			});
 			if (invalid) {
 				const redUrl = new URL(pathname, site.url);
-				redUrl.searchParams = new URLSearchParams(query);
+				for (const key in query) redUrl.searchParams.append(key, query[key]);
 				return res.redirect(redUrl);
 			}
 		}

@@ -5,17 +5,17 @@ module.exports = class ReservationService {
 
 	async add(req, data) {
 		const { user } = req;
-		const { reservation, email } = data;
-		if (!reservation.attendees || reservation.attendees.length == 0) {
+		const { date: event_date_id, email, ...reservation } = data;
+		if (!reservation.attendees?.length) {
 			throw new HttpError.BadRequest(
 				"reservation.attendees must not be empty"
 			);
 		}
-		const [settings, { item: eventDate }] = await Promise.all([
-			req.run('settings.save', { email }),
+		const [{ item: settings }, { item: eventDate }] = await Promise.all([
+			req.run('settings.have', { email }),
 			req.run('block.find', {
 				type: 'event_date',
-				id: data.event_date,
+				id: event_date_id,
 				parents: {
 					type: 'event',
 					first: true
@@ -25,19 +25,22 @@ module.exports = class ReservationService {
 		if (user.id !== settings.id) {
 			throw new HttpError.Unauthorized("Wrong user");
 		}
+		if (!eventDate) {
+			throw new HttpError.NotFound("Event date not found");
+		}
 		const parents = [
 			{ type: 'settings', id: settings.id },
-			{ type: 'event_date', id: eventDate.id }
+			{ type: 'event_date', id: event_date_id }
 		];
 		// because search data.parents is for eager join, not relation
-		const obj = await req.run('block.search', {
+		const obj = await req.run('block.find', {
 			type: 'event_reservation',
 			parent: { parents }
 		});
-		if (obj.items.length == 1) {
-			throw new HttpError.Conflict(
-				"User already has a reservation for this date"
-			);
+		if (obj.item) {
+			obj.status = 409;
+			obj.statusText = "User already has a reservation for this date";
+			return obj;
 		}
 		if (reservation.attendees) {
 			reservation.seats = reservation.attendees.length;
@@ -48,6 +51,7 @@ module.exports = class ReservationService {
 		if (Number.isNaN(total)) {
 			throw new HttpError.BadRequest("At least one seat must be reserved");
 		}
+		reservation.payment ??= {};
 
 		if (reservation.seats > 0) {
 			const maxSeats = eventDate.data.seats || eventDate.parent.data.seats || 0;
@@ -79,9 +83,9 @@ module.exports = class ReservationService {
 	static add = {
 		title: 'Add reservation',
 		$action: 'write',
-		required: ['event_date', 'reservation', 'email'],
+		required: ['date', 'email'],
 		properties: {
-			event_date: {
+			date: {
 				title: 'Event Date',
 				type: 'string',
 				format: 'id'
@@ -91,75 +95,70 @@ module.exports = class ReservationService {
 				type: 'string',
 				format: 'email'
 			},
-			reservation: {
-				title: 'Reservation',
+			payment: {
+				title: 'Payment',
 				type: 'object',
 				properties: {
-					payment: {
-						title: 'Payment',
-						type: 'object',
-						properties: {
-							method: {
-								title: 'Payment method',
-								type: 'string'
-							}
-						}
-					},
-					attendees: {
-						title: 'Attendees',
-						type: 'array',
-						items: {
-							type: 'object',
-							additionalProperties: true,
-							properties: {
-								name: {
-									title: 'Name',
-									type: 'string'
-								}
-							}
-						},
-						nullable: true
-					},
-					contact: {
-						title: 'Contact',
-						type: 'object',
-						additionalProperties: true,
-						properties: {
-							name: {
-								title: 'Name',
-								type: 'string'
-							},
-							phone: {
-								title: 'Phone',
-								type: 'string',
-								pattern: /^(\(\d+\))? *\d+([ .-]?\d+)*$/.source
-							}
-						}
-					},
-					comment: {
-						title: 'Comment',
+					method: {
+						title: 'Payment method',
 						type: 'string'
 					}
+				},
+				nullable: true
+			},
+			attendees: {
+				title: 'Attendees',
+				type: 'array',
+				items: {
+					type: 'object',
+					additionalProperties: true,
+					properties: {
+						name: {
+							title: 'Name',
+							type: 'string'
+						}
+					}
+				},
+				nullable: true
+			},
+			contact: {
+				title: 'Contact',
+				type: 'object',
+				additionalProperties: true,
+				nullable: true,
+				properties: {
+					name: {
+						title: 'Name',
+						type: 'string'
+					},
+					phone: {
+						title: 'Phone',
+						type: 'string',
+						pattern: /^(\(\d+\))? *\d+([ .-]?\d+)*$/.source
+					}
 				}
+			},
+			comment: {
+				title: 'Comment',
+				type: 'string',
+				nullable: true
 			}
 		}
 	};
 
 	async save(req, data) {
-		const { reservation } = data;
-		if (!reservation.attendees || reservation.attendees.length == 0) {
+		const { id, ...reservation } = data;
+		if (!reservation.attendees?.length) {
 			throw new HttpError.BadRequest(
 				"reservation.attendees must not be empty"
 			);
 		}
 		const { item: eventDate } = await req.run('block.find', {
 			child: {
-				type: 'event_reservation',
-				id: data.id
+				id
 			},
 			children: {
 				type: 'event_reservation',
-				id: data.id,
 				first: true
 			},
 			type: 'event_date',
@@ -181,6 +180,8 @@ module.exports = class ReservationService {
 		if (Number.isNaN(total)) {
 			throw new HttpError.BadRequest("At least one seat must be reserved");
 		}
+
+		reservation.payment ??= {};
 
 		if (reservation.seats > 0) {
 			const maxSeats = eventDate.data.seats || eventDate.parent.data.seats || 0;
@@ -209,15 +210,14 @@ module.exports = class ReservationService {
 	static save = {
 		title: 'Save reservation',
 		$action: 'write',
-		required: ['id', 'reservation'],
-		properties: {
+		required: ['id'],
+		properties: Object.assign({
 			id: {
 				title: 'Reservation id',
 				type: 'string',
 				format: 'id'
-			},
-			reservation: this.add.properties.reservation
-		}
+			}
+		}, this.add.properties)
 	};
 
 	async del({ user, call, trx }, data) {
@@ -317,9 +317,7 @@ module.exports = class ReservationService {
 					} else if (data.paid === false) {
 						q.whereNot(ref('data:payment.due'), ref('data:payment.paid'));
 					}
-					q.where(trx.raw('jsonb_array_length(:attendees:) > 0', {
-						attendees: ref('data:attendees')
-					}));
+					q.where(trx.raw(`jsonb_array_length(coalesce(data['attendees'], '[]'::jsonb)) > 0`));
 					q.where('type', 'event_reservation').select();
 				},
 				settings(q) {
@@ -330,7 +328,9 @@ module.exports = class ReservationService {
 				}
 			});
 		eventDate.parent = eventDate.parent[0];
-		for (const item of eventDate.children) {
+		const { children: items } = eventDate;
+		delete eventDate.children;
+		for (const item of items) {
 			// bad test data could ruin everything
 			if (!item.settings || !item.settings.length) {
 				console.warn("no settings event date item", data.id, item.id);
@@ -344,7 +344,7 @@ module.exports = class ReservationService {
 			}
 			delete item.settings.user;
 		}
-		return { item: eventDate };
+		return { item: eventDate, items };
 	}
 	static search = {
 		title: 'Search reservations',

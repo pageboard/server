@@ -1,14 +1,26 @@
 module.exports = function(page, settings, req, res) {
+	settings.track = async function() {
+		const { Page } = window;
+		if (!Page) {
+			const err = new Error("blank site");
+			err.statusCode = 501;
+			throw err;
+		}
+		try {
+			if (document.hidden) {
+				await Page.patch();
+			} else {
+				console.error("page is visible");
+				await Page.paint();
+			}
+		} catch (err) {
+			console.error(err.toString(), err.stack);
+		}
+	};
 	page.on('idle', async () => {
 		const obj = await page.evaluate(async () => {
-			const { Page } = window;
-			if (!Page) {
-				const err = new Error("blank site");
-				err.statusCode = 501;
-				throw err;
-			}
+			const { Page: state } = window;
 			try {
-				const state = await Page.patch();
 				if (state.constructor.serialize) {
 					return state.constructor.serialize(state);
 				} else return {

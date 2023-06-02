@@ -368,6 +368,7 @@ module.exports = class MailModule {
 				signal: controller.signal
 			});
 			clearTimeout(toId);
+			if (!response.ok) throw new HttpError.BadRequest(response.statusText);
 
 			const mailObj = await response.json();
 			mailOpts.subject = data.subject || mailObj.title;
