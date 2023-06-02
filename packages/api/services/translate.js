@@ -66,7 +66,7 @@ module.exports = class TranslateService {
 
 		const items = await site.$relatedQuery('children', trx)
 			.distinct(
-				'target.id', 'target.data', 'target.type',
+				'target.id', 'target.data', 'target.type', 'target._id',
 				ref('source.data:text').castText().as('source')
 			)
 			.joinRelated('[parents, children as source, children as target]')
@@ -86,7 +86,8 @@ module.exports = class TranslateService {
 				}
 			})
 			.limit(data.limit)
-			.offset(data.offset);
+			.offset(data.offset)
+			.orderBy('target._id');
 		return { items };
 	}
 	static list = {
@@ -147,7 +148,8 @@ module.exports = class TranslateService {
 			.where(ref('target.data:lang').castText(), data.lang)
 			.where(fn.coalesce(ref('target.data:text').castText(), ''), '')
 			.limit(data.limit)
-			.offset(data.offset);
+			.offset(data.offset)
+			.orderBy('target._id');
 
 		const body = new URLSearchParams({
 			tag_handling: 'html',
