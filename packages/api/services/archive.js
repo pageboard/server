@@ -28,7 +28,7 @@ module.exports = class ArchiveService {
 	async export(req, { file, ids = [] }) {
 		const { site, trx, res } = req;
 		const { id } = site;
-		const lang = site.data.lang ? null : site.data.languages?.[0];
+		const lang = site.data.lang ? null : (site.data.languages?.[0] ?? null);
 		const filepath = file ?? `${id}-${fileStamp()}.ndjson`;
 		const counts = {
 			users: 0,
@@ -150,7 +150,7 @@ module.exports = class ArchiveService {
 		let upgrader;
 		const refs = new Map();
 		const list = [];
-		const lang = site.data.lang ? null : site.data.languages?.[0];
+		const lang = site.data.lang ? null : (site.data.languages?.[0] ?? null);
 		const beforeEachStandalone = obj => {
 			if (obj.type == "site" || list.length == 0) {
 				const toVersion = site.data.server;
