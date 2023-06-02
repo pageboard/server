@@ -55,7 +55,7 @@ module.exports = class LoginModule {
 	async send(req, data) {
 		const { site } = req;
 		if (!site.url) {
-			return "login.send requires a hostname. Use login.link";
+			throw new HttpError.BadRequest("login.send requires a hostname. Use login.link");
 		}
 		const token = await this.#generate(req, data);
 		const { item: settings } = await req.run('settings.have', {
