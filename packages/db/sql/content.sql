@@ -120,10 +120,10 @@ BEGIN
 END
 $BODY$;
 
-CREATE OR REPLACE PROCEDURE block_insert_content(
+CREATE OR REPLACE FUNCTION block_insert_content(
 	_block block,
 	_site block
-)
+) RETURNS VOID
 	LANGUAGE 'plpgsql'
 AS $BODY$
 DECLARE
@@ -242,7 +242,7 @@ BEGIN
 	IF _block.type != 'content' THEN
 		SELECT * INTO _site FROM block WHERE _id = NEW.parent_id AND type = 'site';
 		IF _site._id IS NOT NULL THEN
-			CALL block_insert_content(_block, _site);
+			PERFORM block_insert_content(_block, _site);
 		END IF;
 	END IF;
 	RETURN NEW;
@@ -251,11 +251,11 @@ $BODY$;
 
 CREATE OR REPLACE TRIGGER content_lang_trigger_insert AFTER INSERT ON relation FOR EACH ROW EXECUTE FUNCTION content_lang_insert_func();
 
-CREATE OR REPLACE PROCEDURE block_delete_content(
+CREATE OR REPLACE FUNCTION block_delete_content(
 	_block block,
 	_site block,
 	keep_names TEXT[]
-)
+) RETURNS VOID
 	LANGUAGE 'plpgsql'
 AS $BODY$
 DECLARE
@@ -285,7 +285,7 @@ CREATE OR REPLACE FUNCTION content_lang_delete_func() RETURNS trigger
 	LANGUAGE plpgsql
 AS $BODY$
 BEGIN
-	CALL block_delete_content(OLD._id, OLD.content, block_get_languages(OLD._id));
+	PERFORM block_delete_content(OLD._id, OLD.content, block_get_languages(OLD._id));
 	RETURN OLD;
 END
 $BODY$;
@@ -301,8 +301,8 @@ DECLARE
 BEGIN
 	_site := block_site(NEW._id);
 	keep_names := ARRAY(SELECT jsonb_object_keys(NEW.content));
-	CALL block_delete_content(OLD, _site, keep_names);
-	CALL block_insert_content(NEW, _site);
+	PERFORM block_delete_content(OLD, _site, keep_names);
+	PERFORM block_insert_content(NEW, _site);
 	RETURN NEW;
 END
 $BODY$;
