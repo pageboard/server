@@ -93,7 +93,9 @@ module.exports = class PageService {
 				children(standalonesFilter) as standalones .children(childrenFilter)
 			]`).modifiers({
 				childrenFilter(q) {
-					q.select().where('page.standalone', false);
+					q.select()
+						.where('page.standalone', false)
+						.whereNot('page.type', 'content');
 					q.select(raw(
 						'block_get_content(page._id, :lang) AS content', { lang }
 					));
@@ -102,7 +104,7 @@ module.exports = class PageService {
 				standalonesFilter(q) {
 					return q.select().select(raw(
 						'block_get_content(page._id, :lang) AS content', { lang }
-					)).where('page.standalone', true);
+					)).where('page.standalone', true).whereNot('page.type', 'content');
 				}
 			})
 			.where(q => {
@@ -627,11 +629,9 @@ function applyRemove(req, list, recursive) {
 
 async function applyAdd({ site, trx, Block }, list) {
 	if (!list.length) return [];
-	const lang = site.data.languages?.[0] ?? null;
 	const rows = await site.$relatedQuery('children', trx)
 		.insert(list).returning('id', 'updated_at', '_id');
 	return Promise.all(rows.map(async (row, i) => {
-		await Block.setLanguageContent(trx, row, lang);
 		return {
 			id: row.id,
 			updated_at: row.updated_at
@@ -663,15 +663,13 @@ async function applyUpdate(req, list) {
 					raw("date_trunc('milliseconds', ?::timestamptz)", [block.updated_at]),
 				)
 				.patch(block)
-				.returning('id', 'updated_at', '_id')
+				.returning('id', 'updated_at')
 				.first();
 			if (!row) {
 				throw new HttpError.Conflict(
 					`${block.type}:${block.id} last update mismatch ${block.updated_at}`
 				);
 			} else {
-				await Block.setLanguageContent(trx, row, lang);
-				delete row._id;
 				updates.push(row);
 			}
 		}
@@ -747,15 +745,12 @@ async function updatePage({ site, trx, Block, Href }, page, sideEffects) {
 			raw("date_trunc('milliseconds', ?::timestamptz)", [page.updated_at]),
 		)
 		.patch(page)
-		.returning('block.id', 'block.updated_at', 'block._id')
+		.returning('block.id', 'block.updated_at')
 		.first();
 	if (!row) {
 		throw new HttpError.Conflict(
 			`${page.type}:${page.id} last update mismatch ${page.updated_at}`
 		);
-	} else {
-		await Block.setLanguageContent(trx, row, lang);
-		delete row._id;
 	}
 	return row;
 }

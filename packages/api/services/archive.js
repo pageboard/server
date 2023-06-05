@@ -214,7 +214,6 @@ module.exports = class ArchiveService {
 					for (const child of obj.children) {
 						const rchild = await site.$relatedQuery('children', trx)
 							.insert(child).returning('_id');
-						if (lang) await Block.setLanguageContent(trx, rchild, lang);
 						children.push(rchild._id);
 					}
 					delete obj.children;
@@ -233,7 +232,6 @@ module.exports = class ArchiveService {
 				}
 				const row = await site.$relatedQuery('children', trx)
 					.insert(obj).returning('*');
-				if (lang) await Block.setLanguageContent(trx, row, lang);
 				if (children.length) {
 					await Block.relatedQuery('children', trx).for(row._id).relate(children);
 				}

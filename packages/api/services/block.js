@@ -724,15 +724,11 @@ module.exports = class BlockService {
 		const obj = {
 			type: block.type
 		};
+
 		if (!Object.isEmpty(data.data)) obj.data = data.data;
 		if (!Object.isEmpty(data.lock)) obj.lock = data.lock;
 		if (!Object.isEmpty(data.content)) obj.content = data.content;
 		await block.$query(req.trx).patchObject(obj);
-
-		if (data.content !== undefined) {
-			const lang = req.site.data.languages?.[0] ?? null;
-			await Block.setLanguageContent(req.trx, block, lang);
-		}
 
 		if (parents.length == 0) return block;
 
@@ -917,8 +913,8 @@ module.exports = class BlockService {
 			.map(item => `<div block-id="${item.id}"></div>`)
 			.join('');
 		await block.$relatedQuery('children', trx).relate(newItems);
-		const lang = site.data.languages?.[0] ?? null;
-		await Block.setLanguageContent(trx, block, lang, true);
+		// safe with content update trigger
+		await block.$query(trx).patch({ content: block.content });
 		return block;
 	}
 	static fill = {

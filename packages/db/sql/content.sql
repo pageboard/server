@@ -1,5 +1,5 @@
-DROP TRIGGER block_tsv_trigger ON block;
-DROP FUNCTION block_tsv_update();
+DROP TRIGGER IF EXISTS block_tsv_trigger ON block;
+DROP FUNCTION IF EXISTS block_tsv_update();
 
 CREATE OR REPLACE FUNCTION block_site(
 	block_id INTEGER
@@ -75,6 +75,8 @@ CREATE OR REPLACE TRIGGER content_tsv_trigger_insert BEFORE INSERT ON block FOR 
 CREATE OR REPLACE TRIGGER content_tsv_trigger_update_text BEFORE UPDATE OF data ON block FOR EACH ROW WHEN (NEW.type = 'content' AND NEW.data['text'] != OLD.data['text']) EXECUTE FUNCTION content_tsv_func();
 CREATE OR REPLACE TRIGGER block_tsv_trigger_update_content BEFORE UPDATE OF content ON block FOR EACH ROW WHEN (NEW.type != 'content') EXECUTE FUNCTION content_tsv_func();
 
+CREATE INDEX block_content_name_lang ON block((data['name']::text), (data['lang']::text)) WHERE type='content';
+
 CREATE OR REPLACE FUNCTION block_get_content(
 	block_id INTEGER,
 	_lang TEXT DEFAULT NULL
@@ -94,25 +96,41 @@ BEGIN
 			SELECT block.data->>'name' AS name, block.data->>'text' AS text
 			FROM relation AS r, block
 			WHERE r.parent_id = block_id AND block._id = r.child_id
-			AND block.type = 'content' AND block.data @@ FORMAT('$.lang == %s', to_json(_lang))::jsonpath
+			AND block.type = 'content' AND block.data->>'lang' = _lang
 		) AS content;
 	END IF;
 	RETURN _obj;
 END
 $BODY$;
 
-CREATE OR REPLACE FUNCTION block_set_content(
-	block_id INTEGER,
-	_obj JSONB,
-	_lang TEXT DEFAULT NULL
-) RETURNS JSONB
+CREATE OR REPLACE FUNCTION content_get_headline (
+	config regconfig,
+	doc text,
+	query tsquery
+) RETURNS TEXT
 	LANGUAGE 'plpgsql'
 AS $BODY$
 DECLARE
-	_site block;
-	content_names JSONB;
-	block_type TEXT;
+	headline TEXT;
+BEGIN
+	SELECT trimmed INTO headline FROM (
+		SELECT trim(ts_headline) AS trimmed, ts_headline AS text FROM ts_headline(config, doc, query)
+	) AS row WHERE length(row.trimmed) > 0 AND length(row.text) != length(doc);
+	RETURN headline;
+END
+$BODY$;
+
+CREATE OR REPLACE PROCEDURE block_insert_content(
+	_block block,
+	_site block
+)
+	LANGUAGE 'plpgsql'
+AS $BODY$
+DECLARE
+	languages JSONB;
+	_lang TEXT;
 	block_ids INTEGER[];
+
 	content_ids INTEGER[];
 	content_langs TEXT[];
 	cur_id INTEGER;
@@ -121,45 +139,33 @@ DECLARE
 	_name TEXT;
 	_text TEXT;
 BEGIN
-	IF _lang IS NULL THEN
-		RETURN _obj;
+	languages := _site.data['languages'];
+	IF COALESCE(jsonb_array_length(languages), 0) = 0 THEN
+		RETURN;
 	END IF;
-	_site := block_site(block_id);
-	-- int[text][] map of old block contents
-	SELECT COALESCE(jsonb_object_agg(name, ids), '{}'::jsonb)
-	INTO content_names
-	FROM (
-		SELECT block.data->>'name' AS name, jsonb_agg(block._id) AS ids
-		FROM relation AS r, block
-		WHERE r.parent_id = block_id AND block._id = r.child_id AND block.type = 'content' GROUP BY name
-	) AS content;
+	_lang := languages->>0;
 
 	FOR _name, _text IN
-		SELECT * FROM jsonb_each_text(_obj)
+		SELECT * FROM jsonb_each_text(_block.content)
 	LOOP
 		IF _text IS NULL OR _text = '' THEN
-			-- will unlink
+			-- ignore
 			CONTINUE;
-		ELSE
-			-- remaining content_names will be unlinked from block_id
-			content_names := content_names - _name;
 		END IF;
-		SELECT type INTO block_type FROM block WHERE _id = block_id;
+
 		-- list all block._id that have a matching content text for that name/lang
-		SELECT COALESCE(array_agg(block._id), ARRAY[]::INTEGER[]) INTO block_ids
+		SELECT COALESCE(array_agg(block._id), ARRAY[]::INTEGER[])
+		INTO block_ids
 		FROM relation AS block_site, block,
 		relation AS content_block, block AS content
 			WHERE block_site.parent_id = _site._id
-			AND (block._id = block_site.child_id AND block.type = block_type)
+			AND (block._id = block_site.child_id AND block.type = _block.type)
 			AND content_block.parent_id = block._id
 			AND content._id = content_block.child_id
 			AND content.type = 'content'
-			AND content.data @@ FORMAT(
-				'$.lang == %s && $.name == %s && $.text == %s',
-				to_json(_lang),
-				to_json(_name),
-				to_json(_text)
-			)::jsonpath;
+			AND content.data->>'name' = _name
+			AND content.data->>'lang' = _lang
+			AND content.data->>'text' = _text;
 
 		-- get initial content (id, lang) situation on one of the blocks
 		content_ids := ARRAY[]::INTEGER[];
@@ -172,15 +178,15 @@ BEGIN
 				FROM relation AS r, block AS content
 				WHERE r.parent_id = block_ids[1] AND content._id = r.child_id
 				AND content.type = 'content'
-				AND content.data @@ FORMAT('$.name == %s', to_json(_name))::jsonpath;
+				AND content.data->>'name' = _name;
 		END IF;
 
 		-- ensure current block_id is part of block_ids
-		IF NOT block_id = ANY(block_ids) THEN
+		IF _block._id != ALL(block_ids) THEN
 			INSERT INTO relation (child_id, parent_id) (
-				SELECT unnest(content_ids) AS child_id, block_id AS parent_id
+				SELECT unnest(content_ids) AS child_id, _block._id AS parent_id
 			);
-			block_ids := array_append(block_ids, block_id);
+			block_ids := array_append(block_ids, _block._id);
 		END IF;
 
 		-- assume the db is in a valid state
@@ -191,7 +197,7 @@ BEGIN
 
 		-- for each lang, ensure we have content, for all blocks
 		FOR cur_lang IN
-			SELECT * FROM jsonb_array_elements_text(_site.data['languages'])
+			SELECT * FROM jsonb_array_elements_text(languages)
 		LOOP
 			cur_pos := array_position(content_langs, cur_lang);
 			IF cur_pos > 0 THEN
@@ -221,62 +227,84 @@ BEGIN
 			SELECT unnest(content_ids)
 		);
 	END LOOP;
-
-	FOR _name IN
-		SELECT jsonb_object_keys(content_names)
-	LOOP
-		-- convert jsonb to int[]
-		SELECT array_agg(value)::int[] INTO content_ids
-			FROM jsonb_array_elements(content_names[_name]);
-		-- unrelate
-		DELETE FROM relation WHERE parent_id = block_id AND child_id IN (
-			SELECT unnest(content_ids)
-		);
-		-- delete orphaned content
-		DELETE FROM block WHERE _id IN (
-			SELECT unnest(content_ids)
-		) AND NOT EXISTS (
-			SELECT FROM relation WHERE child_id = block._id AND parent_id != _site._id
-		);
-	END LOOP;
-	RETURN '{}'::jsonb;
+	_block.content := '{}'::JSONB;
 END
 $BODY$;
 
+CREATE OR REPLACE FUNCTION content_lang_insert_func() RETURNS trigger
+	LANGUAGE plpgsql
+AS $BODY$
+DECLARE
+	_site block;
+	_block block;
+BEGIN
+	SELECT * INTO _block FROM block WHERE _id = NEW.child_id;
+	IF _block.type != 'content' THEN
+		SELECT * INTO _site FROM block WHERE _id = NEW.parent_id AND type = 'site';
+		IF _site._id IS NOT NULL THEN
+			CALL block_insert_content(_block, _site);
+		END IF;
+	END IF;
+	RETURN NEW;
+END
+$BODY$;
 
-CREATE OR REPLACE FUNCTION jsonb_headlines (
-	config regconfig,
-	doc JSONB,
-	query tsquery
-) RETURNS TEXT[]
+CREATE OR REPLACE TRIGGER content_lang_trigger_insert AFTER INSERT ON relation FOR EACH ROW EXECUTE FUNCTION content_lang_insert_func();
+
+CREATE OR REPLACE PROCEDURE block_delete_content(
+	_block block,
+	_site block,
+	keep_names TEXT[]
+)
 	LANGUAGE 'plpgsql'
 AS $BODY$
 DECLARE
-	headlines TEXT[];
+	languages JSONB;
 BEGIN
-	SELECT array_agg(list.fragment) INTO headlines FROM (
-		SELECT fragment FROM (
-			SELECT value AS fragment, jsonb_extract_path_text(doc, key) AS field
-				FROM jsonb_each_text(ts_headline(config, doc, query))
-		) AS headlines WHERE length(fragment) != length(field)
-	) AS list WHERE length(trim(list.fragment)) > 0;
-	RETURN headlines;
+	languages := _site.data['languages'];
+	IF COALESCE(jsonb_array_length(languages), 0) = 0 THEN
+		RETURN;
+	END IF;
+
+	WITH contents AS (
+		SELECT content._id
+		FROM relation AS r, block AS content
+		WHERE r.parent_id = _block._id AND content._id = r.child_id
+		AND content.type = 'content'
+		AND content.data->>'name' != ALL(keep_names)
+	), counts AS (
+		SELECT contents._id, count(relation.*) AS n
+		FROM contents, relation WHERE relation.child_id = contents._id AND relation.parent_id != _site._id AND relation.parent_id != _block._id GROUP BY contents._id
+	)
+	DELETE FROM block USING counts WHERE block._id = counts._id AND counts.n = 0;
 END
 $BODY$;
 
-CREATE OR REPLACE FUNCTION content_get_headline (
-	config regconfig,
-	doc text,
-	query tsquery
-) RETURNS TEXT
-	LANGUAGE 'plpgsql'
+
+CREATE OR REPLACE FUNCTION content_lang_delete_func() RETURNS trigger
+	LANGUAGE plpgsql
 AS $BODY$
-DECLARE
-	headline TEXT;
 BEGIN
-	SELECT trimmed INTO headline FROM (
-		SELECT trim(ts_headline) AS trimmed, ts_headline AS text FROM ts_headline(config, doc, query)
-	) AS row WHERE length(row.trimmed) > 0 AND length(row.text) != length(doc);
-	RETURN headline;
+	CALL block_delete_content(OLD._id, OLD.content, block_get_languages(OLD._id));
+	RETURN OLD;
 END
 $BODY$;
+
+CREATE OR REPLACE TRIGGER content_lang_trigger_delete BEFORE DELETE ON block FOR EACH ROW WHEN (COALESCE(OLD.content, '{}'::jsonb) != '{}'::jsonb) EXECUTE FUNCTION content_lang_delete_func();
+
+CREATE OR REPLACE FUNCTION content_lang_update_func() RETURNS trigger
+	LANGUAGE plpgsql
+AS $BODY$
+DECLARE
+	_site block;
+	keep_names TEXT[];
+BEGIN
+	_site := block_site(NEW._id);
+	keep_names := ARRAY(SELECT jsonb_object_keys(NEW.content));
+	CALL block_delete_content(OLD, _site, keep_names);
+	CALL block_insert_content(NEW, _site);
+	RETURN NEW;
+END
+$BODY$;
+
+CREATE OR REPLACE TRIGGER content_lang_trigger_update AFTER UPDATE OF content ON block FOR EACH ROW EXECUTE FUNCTION content_lang_update_func();

@@ -98,28 +98,6 @@ class Block extends Model {
 		}
 	}
 
-	static async setLanguageContent(trx, row, lang, newContent) {
-		if (lang == null && !newContent) return row;
-		const rawContent = newContent ?
-			trx.raw('block_set_content(block._id, :content::jsonb, :lang)', {
-				lang,
-				content: row.content
-			})
-			:
-			trx.raw('block_set_content(block._id, block.content, :lang)', {
-				lang
-			});
-		const { updated_at } = await Block.query(trx)
-			.where('_id', row._id)
-			.first()
-			.patch({
-				type: row.type,
-				content: rawContent
-			}).returning('updated_at');
-		row.updated_at = updated_at;
-		return row;
-	}
-
 	static normalizeContentSpec(contents) {
 		if (!contents) return;
 		if (contents === true) return [];
