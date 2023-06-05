@@ -26,38 +26,13 @@ module.exports = class TranslateService {
 	};
 
 	async initialize({ site, trx }, { source, target }) {
-		if (source == null && target == null) {
-			throw new HttpError.BadRequest('source and target cannot be both null');
-		}
-		await site.$relatedQuery('children', trx)
-			.whereNot('block.type', 'content')
-			.select(raw(`block_set_content(
-				block._id, block_get_content(block._id, :source), :target
-			)`, {
-				source,
-				target
-			}));
+		const { rows } = await trx.raw(`SELECT count(block_insert_content(b, s)) AS blocks FROM block b, relation r, block s WHERE r.parent_id = :site AND b._id = r.child_id AND b.type != 'content' AND s._id = :site`, { site: site._id });
+		return rows[0];
 	}
 	static initialize = {
 		title: 'Initialize site languages',
 		$lock: true,
-		$action: 'write',
-		properties: {
-			source: {
-				title: 'Source language',
-				description: 'null to migrate from monolingual',
-				type: 'string',
-				format: 'lang',
-				nullable: true
-			},
-			target: {
-				title: 'Target language',
-				description: 'null to migrate to monolingual',
-				type: 'string',
-				format: 'lang',
-				nullable: true
-			}
-		}
+		$action: 'write'
 	};
 
 	async list({ site, trx }, data) {
