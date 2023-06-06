@@ -11,7 +11,6 @@ class Block extends Model {
 
 	static jsonSchema = {
 		type: 'object',
-		required: ['type'],
 		$id: '/api/blocks',
 		properties: {
 			id: {
