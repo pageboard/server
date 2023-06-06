@@ -645,8 +645,7 @@ async function applyAdd({ site, trx, Block }, list) {
 async function applyUpdate(req, list) {
 	const blocksMap = {};
 	const updates = [];
-	const { site, trx, Block } = req;
-	const lang = site.data.languages?.[0] ?? null;
+	const { site, trx } = req;
 
 	for await (const block of list) {
 		if (block.id in blocksMap) {
@@ -682,7 +681,6 @@ async function applyUpdate(req, list) {
 
 async function updatePage({ site, trx, Block, Href }, page, sideEffects) {
 	if (!sideEffects) sideEffects = {};
-	const lang = site.data.languages?.[0] ?? null;
 	const dbPage = await site.$relatedQuery('children', trx)
 		.where('block.id', page.id)
 		.whereIn('block.type', page.type ? [page.type] : site.$pkg.pages)
