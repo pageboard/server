@@ -67,9 +67,9 @@ BEGIN
 END
 $BODY$;
 
-CREATE OR REPLACE TRIGGER content_tsv_trigger_insert BEFORE INSERT ON block FOR EACH ROW EXECUTE FUNCTION content_tsv_func();
-CREATE OR REPLACE TRIGGER content_tsv_trigger_update_text BEFORE UPDATE OF data ON block FOR EACH ROW WHEN (NEW.type = 'content' AND NEW.data['text'] != OLD.data['text']) EXECUTE FUNCTION content_tsv_func();
-CREATE OR REPLACE TRIGGER block_tsv_trigger_update_content BEFORE UPDATE OF content ON block FOR EACH ROW WHEN (NEW.type != 'content') EXECUTE FUNCTION content_tsv_func();
+CREATE OR REPLACE TRIGGER content_tsv_trigger_insert AFTER INSERT ON block FOR EACH ROW EXECUTE FUNCTION content_tsv_func();
+CREATE OR REPLACE TRIGGER content_tsv_trigger_update_text AFTER UPDATE OF data ON block FOR EACH ROW WHEN (NEW.type = 'content' AND NEW.data['text'] != OLD.data['text']) EXECUTE FUNCTION content_tsv_func();
+CREATE OR REPLACE TRIGGER block_tsv_trigger_update_content AFTER UPDATE OF content ON block FOR EACH ROW WHEN (NEW.type != 'content') EXECUTE FUNCTION content_tsv_func();
 
 CREATE INDEX IF NOT EXISTS block_content_name_lang ON block(
 	(data->>'name'),
@@ -289,6 +289,9 @@ BEGIN
 	keep_names := ARRAY(SELECT jsonb_object_keys(NEW.content));
 	PERFORM block_delete_content(OLD, _site, keep_names);
 	NEW.content := block_insert_content(NEW, _site);
+	IF NEW.content = '{}'::jsonb THEN
+		NEW.tsv = NULL;
+	END IF;
 	RETURN NEW;
 END
 $BODY$;

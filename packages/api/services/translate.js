@@ -1,4 +1,4 @@
-const { ref, val, raw, fn } = require.lazy('objection');
+const { ref, val, fn } = require.lazy('objection');
 
 module.exports = class TranslateService {
 	static name = 'translate';
@@ -26,9 +26,11 @@ module.exports = class TranslateService {
 	};
 
 	async initialize({ site, trx, Block }) {
+		const lang = site.data.languages?.[0];
+		if (!lang) throw new HttpError.BadRequest("Missing site.data.languages");
 		const blocks = await Block.relatedQuery('children', trx).for(site)
 			.patch({
-				content: ref('content')
+				content: fn('block_get_content', ref('_id'), lang)
 			})
 			.whereNot('type', 'content');
 		return { blocks };
@@ -43,22 +45,32 @@ module.exports = class TranslateService {
 		const lang = site.data.languages?.[0];
 		if (!lang) throw new HttpError.BadRequest("Missing site.data.languages");
 
-		const items = await site.$relatedQuery('children', trx)
+		const q = site.$relatedQuery('children', trx)
 			.distinct(
 				'target.id', 'target.data', 'target.type', 'target._id',
 				ref('source.data:text').castText().as('source')
-			)
-			.joinRelated('[parents, children as source, children as target]')
-			.where('parents.id', data.parent)
+			);
+		if (data.children) {
+			q.joinRelated('[parents, children as source, children as target]')
+				.where('parents.id', data.id);
+		} else {
+			q.joinRelated('[children as source, children as target]')
+				.where('block.id', data.id);
+		}
+		q.whereIn('block.type', site.$pkg.textblocks)
 			.where('source.type', 'content')
 			.where(ref('source.data:lang').castText(), lang)
 			.where('target.type', 'content')
 			.where(ref('target.data:name'), ref('source.data:name'))
 			.where(ref('target.data:lang').castText(), data.lang)
+			.whereNot(q => {
+				q.where(fn('starts_with', ref('source.data:text').castText(), '"<'));
+				q.where(fn('regexp_count', ref('source.data:text').castText(), '>\\w'), 0);
+			})
 			.where(q => {
 				if (data.valid) {
 					q.whereNot(fn.coalesce(ref('target.data:text').castText(), ''), '');
-					q.orWhere('source.updated_at', '<', ref('target.updated_at'));
+					q.where('source.updated_at', '<', ref('target.updated_at'));
 				} else {
 					q.where(fn.coalesce(ref('target.data:text').castText(), ''), '');
 					q.orWhere('source.updated_at', '>=', ref('target.updated_at'));
@@ -67,22 +79,28 @@ module.exports = class TranslateService {
 			.limit(data.limit)
 			.offset(data.offset)
 			.orderBy('target._id');
+		const items = await q;
 		return { items };
 	}
 	static list = {
 		title: 'List translations',
 		$action: 'read',
-		required: ['lang', 'parent'],
+		required: ['lang', 'id'],
 		properties: {
 			lang: {
 				title: 'Language',
 				type: 'string',
 				format: 'lang'
 			},
-			parent: {
-				title: 'Parent',
+			id: {
+				title: 'ID',
 				type: 'string',
 				format: 'id'
+			},
+			children: {
+				title: 'Children',
+				type: 'boolean',
+				default: false
 			},
 			limit: {
 				title: 'Limit',
@@ -105,7 +123,7 @@ module.exports = class TranslateService {
 		}
 	};
 
-	async fill({ site, trx, Block }, data) {
+	async fill({ site, trx }, data) {
 		const lang = site.data.languages?.[0];
 		if (!lang) throw new HttpError.BadRequest("Missing site.data.languages");
 		const source = this.app.languages[lang];
@@ -113,13 +131,19 @@ module.exports = class TranslateService {
 		const target = this.app.languages[data.lang];
 		if (!target) throw new HttpError.BadRequest("Missing target language: " + data.lang);
 
-		const items = await site.$relatedQuery('children', trx)
+		const q = site.$relatedQuery('children', trx)
 			.distinct(
 				ref('target._id').as('target_id'),
 				ref('source.data:text').castText().as('source')
-			)
-			.joinRelated('[parents, children as source, children as target]')
-			.where('parents.id', data.parent)
+			);
+		if (data.children) {
+			q.joinRelated('[parents, children as source, children as target]')
+				.where('parents.id', data.id);
+		} else {
+			q.joinRelated('[children as source, children as target]')
+				.where('block.id', data.id);
+		}
+		q.whereIn('block.type', site.$pkg.textblocks)
 			.where('source.type', 'content')
 			.where(ref('source.data:lang').castText(), lang)
 			.where('target.type', 'content')
@@ -129,6 +153,9 @@ module.exports = class TranslateService {
 			.limit(data.limit)
 			.offset(data.offset)
 			.orderBy('target._id');
+		const items = await q;
+
+		if (items.length == 0) return { status: 404, count: 0 };
 
 		const body = new URLSearchParams({
 			tag_handling: 'html',
@@ -165,17 +192,22 @@ module.exports = class TranslateService {
 	static fill = {
 		title: 'Fill translations',
 		$action: 'write',
-		required: ['lang', 'parent'],
+		required: ['lang', 'id'],
 		properties: {
 			lang: {
 				title: 'Language',
 				type: 'string',
 				format: 'lang'
 			},
-			parent: {
-				title: 'Parent',
+			id: {
+				title: 'ID',
 				type: 'string',
 				format: 'id'
+			},
+			children: {
+				title: 'Children',
+				type: 'boolean',
+				default: false
 			},
 			limit: {
 				title: 'Limit',
