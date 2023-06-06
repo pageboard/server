@@ -166,10 +166,9 @@ module.exports = class PageService {
 				format: 'pathname'
 			},
 			lang: {
-				title: 'Translate to lang',
-				description: 'Language tag syntax',
+				title: 'Translate to site lang',
 				type: 'string',
-				pattern: /^([a-zA-Z]+-?)+$/.source,
+				format: 'lang',
 				nullable: true
 			}
 		}

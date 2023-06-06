@@ -32,6 +32,7 @@ module.exports = class BlockService {
 		if (data.type) {
 			q.where('block.type', data.type);
 		}
+		q.lang(data.lang ?? site.data.languages?.[0]);
 		const eagers = {};
 		if (data.parents) {
 			eagers.parents = {
@@ -74,6 +75,12 @@ module.exports = class BlockService {
 				title: 'with children',
 				type: 'boolean',
 				default: false
+			},
+			lang: {
+				title: 'Select site language',
+				type: 'string',
+				format: 'lang',
+				nullable: true
 			}
 		}
 	};
@@ -379,10 +386,9 @@ module.exports = class BlockService {
 				default: false
 			},
 			lang: {
-				title: 'Language',
-				description: '$query.lang in language tag syntax',
+				title: 'Select site language',
 				type: 'string',
-				pattern: /^([a-zA-Z]+-?)+$/.source,
+				format: 'lang',
 				nullable: true
 			},
 			parents: {
