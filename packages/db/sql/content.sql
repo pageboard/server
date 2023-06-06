@@ -1,16 +1,18 @@
 DROP TRIGGER IF EXISTS block_tsv_trigger ON block;
 DROP FUNCTION IF EXISTS block_tsv_update();
 
+CREATE TYPE type_site_lang AS (
+	_id INTEGER,
+	languages JSONB
+);
+
 CREATE OR REPLACE FUNCTION block_site(
 	block_id INTEGER
-) RETURNS SETOF block
-	PARALLEL SAFE
-	LANGUAGE plpgsql
+) RETURNS type_site_lang
+	STABLE
+	LANGUAGE sql
 AS $BODY$
-BEGIN
-	RETURN QUERY SELECT block.* FROM relation, block WHERE relation.child_id = block_id AND block._id = relation.parent_id AND block.type = 'site' LIMIT 1;
-	RETURN;
-END
+	SELECT block._id, block.data['languages'] FROM relation, block WHERE relation.child_id = block_id AND block._id = relation.parent_id AND block.type = 'site' LIMIT 1;
 $BODY$;
 
 CREATE OR REPLACE FUNCTION block_find(
@@ -38,16 +40,11 @@ CREATE OR REPLACE FUNCTION block_insert(
 	_type TEXT,
 	data JSONB
 ) RETURNS block
-	 LANGUAGE plpgsql
+	 LANGUAGE sql
 AS $BODY$
-DECLARE
-	_block block;
-BEGIN
-	INSERT INTO block (id, standalone, type, data) VALUES (
-		replace(gen_random_uuid()::text, '-', ''), TRUE, _type, data
-	) RETURNING block.* INTO _block;
-	RETURN _block;
-END
+INSERT INTO block (id, standalone, type, data) VALUES (
+	replace(gen_random_uuid()::text, '-', ''), TRUE, _type, data
+) RETURNING block.*;
 $BODY$;
 
 CREATE OR REPLACE FUNCTION content_tsv_func() RETURNS trigger
@@ -55,7 +52,6 @@ CREATE OR REPLACE FUNCTION content_tsv_func() RETURNS trigger
 AS $BODY$
 DECLARE
 	_tsconfig regconfig;
-	_site block;
 BEGIN
 	IF NEW.type = 'content' THEN
 		SELECT COALESCE(data->>'tsconfig', 'unaccent')
@@ -75,32 +71,26 @@ CREATE OR REPLACE TRIGGER content_tsv_trigger_insert BEFORE INSERT ON block FOR 
 CREATE OR REPLACE TRIGGER content_tsv_trigger_update_text BEFORE UPDATE OF data ON block FOR EACH ROW WHEN (NEW.type = 'content' AND NEW.data['text'] != OLD.data['text']) EXECUTE FUNCTION content_tsv_func();
 CREATE OR REPLACE TRIGGER block_tsv_trigger_update_content BEFORE UPDATE OF content ON block FOR EACH ROW WHEN (NEW.type != 'content') EXECUTE FUNCTION content_tsv_func();
 
-CREATE INDEX block_content_name_lang ON block((data['name']::text), (data['lang']::text)) WHERE type='content';
+CREATE INDEX IF NOT EXISTS block_content_name_lang ON block(
+	(data->>'name'),
+	(data->>'lang')
+) WHERE type='content';
 
 CREATE OR REPLACE FUNCTION block_get_content(
 	block_id INTEGER,
-	_lang TEXT DEFAULT NULL
+	_lang TEXT
 ) RETURNS JSONB
-	LANGUAGE plpgsql
+	LANGUAGE sql
 	PARALLEL SAFE
+	STABLE
 AS $BODY$
-DECLARE
-	_obj JSONB;
-BEGIN
-	IF _lang IS NULL THEN
-		SELECT content INTO _obj FROM block WHERE _id = block_id;
-	ELSE
-		SELECT jsonb_object(array_agg(content.name), array_agg(content.text))
-		INTO _obj
-		FROM (
-			SELECT block.data->>'name' AS name, block.data->>'text' AS text
-			FROM relation AS r, block
-			WHERE r.parent_id = block_id AND block._id = r.child_id
-			AND block.type = 'content' AND block.data->>'lang' = _lang
-		) AS content;
-	END IF;
-	RETURN _obj;
-END
+SELECT jsonb_object(array_agg(content.name), array_agg(content.text))
+	FROM (
+		SELECT block.data->>'name' AS name, block.data->>'text' AS text
+		FROM relation AS r, block
+		WHERE r.parent_id = block_id AND block._id = r.child_id
+		AND block.type = 'content' AND block.data->>'lang' = _lang
+	) AS content;
 $BODY$;
 
 CREATE OR REPLACE FUNCTION content_get_headline (
@@ -122,8 +112,8 @@ $BODY$;
 
 CREATE OR REPLACE FUNCTION block_insert_content(
 	_block block,
-	_site block
-) RETURNS VOID
+	_site type_site_lang
+) RETURNS JSONB
 	LANGUAGE 'plpgsql'
 AS $BODY$
 DECLARE
@@ -138,10 +128,11 @@ DECLARE
 	cur_lang TEXT;
 	_name TEXT;
 	_text TEXT;
+	is_trivial BOOLEAN;
 BEGIN
-	languages := _site.data['languages'];
+	languages := _site.languages;
 	IF COALESCE(jsonb_array_length(languages), 0) = 0 THEN
-		RETURN;
+		RETURN _block.content;
 	END IF;
 	_lang := languages->>0;
 
@@ -196,6 +187,7 @@ BEGIN
 		-- 2. link all blocks to them
 
 		-- for each lang, ensure we have content, for all blocks
+		is_trivial := starts_with(_text, '"<') AND regexp_count(_text, '>\w') = 0;
 		FOR cur_lang IN
 			SELECT * FROM jsonb_array_elements_text(languages)
 		LOOP
@@ -212,7 +204,7 @@ BEGIN
 				jsonb_build_object(
 					'name', _name,
 					'lang', cur_lang,
-					'text', (CASE WHEN (_lang = cur_lang) THEN _text ELSE '' END)
+					'text', (CASE WHEN (_lang = cur_lang OR is_trivial) THEN _text ELSE '' END)
 				)
 			) RETURNING block._id INTO cur_id;
 			INSERT INTO relation (child_id, parent_id) VALUES (cur_id, _site._id);
@@ -227,7 +219,7 @@ BEGIN
 			SELECT unnest(content_ids)
 		);
 	END LOOP;
-	_block.content := '{}'::JSONB;
+	RETURN '{}'::jsonb;
 END
 $BODY$;
 
@@ -235,16 +227,10 @@ CREATE OR REPLACE FUNCTION content_lang_insert_func() RETURNS trigger
 	LANGUAGE plpgsql
 AS $BODY$
 DECLARE
-	_site block;
+	_site type_site_lang;
 	_block block;
 BEGIN
-	SELECT * INTO _block FROM block WHERE _id = NEW.child_id;
-	IF _block.type != 'content' THEN
-		SELECT * INTO _site FROM block WHERE _id = NEW.parent_id AND type = 'site';
-		IF _site._id IS NOT NULL THEN
-			PERFORM block_insert_content(_block, _site);
-		END IF;
-	END IF;
+	UPDATE block SET content = content WHERE _id = NEW.child_id AND type != 'content' AND COALESCE(content, '{}'::jsonb) != '{}'::jsonb;
 	RETURN NEW;
 END
 $BODY$;
@@ -253,16 +239,13 @@ CREATE OR REPLACE TRIGGER content_lang_trigger_insert AFTER INSERT ON relation F
 
 CREATE OR REPLACE FUNCTION block_delete_content(
 	_block block,
-	_site block,
-	keep_names TEXT[]
+	_site type_site_lang,
+	keep_names TEXT[] DEFAULT ARRAY[]::TEXT[]
 ) RETURNS VOID
 	LANGUAGE 'plpgsql'
 AS $BODY$
-DECLARE
-	languages JSONB;
 BEGIN
-	languages := _site.data['languages'];
-	IF COALESCE(jsonb_array_length(languages), 0) = 0 THEN
+	IF COALESCE(jsonb_array_length(_site.languages), 0) = 0 THEN
 		RETURN;
 	END IF;
 
@@ -284,8 +267,11 @@ $BODY$;
 CREATE OR REPLACE FUNCTION content_lang_delete_func() RETURNS trigger
 	LANGUAGE plpgsql
 AS $BODY$
+DECLARE
+	_site type_site_lang;
 BEGIN
-	PERFORM block_delete_content(OLD._id, OLD.content, block_get_languages(OLD._id));
+	_site := block_site(OLD._id);
+	PERFORM block_delete_content(OLD, _site);
 	RETURN OLD;
 END
 $BODY$;
@@ -296,15 +282,15 @@ CREATE OR REPLACE FUNCTION content_lang_update_func() RETURNS trigger
 	LANGUAGE plpgsql
 AS $BODY$
 DECLARE
-	_site block;
+	_site type_site_lang;
 	keep_names TEXT[];
 BEGIN
 	_site := block_site(NEW._id);
 	keep_names := ARRAY(SELECT jsonb_object_keys(NEW.content));
 	PERFORM block_delete_content(OLD, _site, keep_names);
-	PERFORM block_insert_content(NEW, _site);
+	NEW.content := block_insert_content(NEW, _site);
 	RETURN NEW;
 END
 $BODY$;
 
-CREATE OR REPLACE TRIGGER content_lang_trigger_update AFTER UPDATE OF content ON block FOR EACH ROW EXECUTE FUNCTION content_lang_update_func();
+CREATE OR REPLACE TRIGGER content_lang_trigger_update BEFORE UPDATE OF content ON block FOR EACH ROW EXECUTE FUNCTION content_lang_update_func();
