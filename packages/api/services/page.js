@@ -81,11 +81,7 @@ module.exports = class PageService {
 		if (lang === undefined) {
 			lang = site.data.languages?.[0] ?? null;
 		}
-		const q = site.$relatedQuery('children', trx).alias('page').select();
-		if (lang != null) q.select(raw(
-			'block_get_content(page._id, :lang) AS content', { lang }
-		));
-		return q.first()
+		return site.$relatedQuery('children', trx).select().lang(lang).first()
 			// eager load children (in which there are standalones)
 			// and children of standalones
 			.withGraphFetched(`[
@@ -93,34 +89,27 @@ module.exports = class PageService {
 				children(standalonesFilter) as standalones .children(childrenFilter)
 			]`).modifiers({
 				childrenFilter(q) {
-					q.select()
-						.where('page.standalone', false)
-						.whereNot('page.type', 'content');
-					if (lang != null) q.select(raw(
-						'block_get_content(page._id, :lang) AS content', { lang }
-					));
-					return q;
+					q.select().lang(lang)
+						.where('block.standalone', false)
+						.whereNot('block.type', 'content');
 				},
 				standalonesFilter(q) {
-					q.select()
-						.where('page.standalone', true)
-						.whereNot('page.type', 'content');
-					if (lang != null) q.select(raw(
-						'block_get_content(page._id, :lang) AS content', { lang }
-					));
+					q.select().lang(lang)
+						.where('block.standalone', true)
+						.whereNot('block.type', 'content');
 				}
 			})
 			.where(q => {
-				q.whereJsonText("page.data:url", url);
-				q.where(fn.coalesce(ref("page.data:prefix").castBool(), false), false);
+				q.whereJsonText("block.data:url", url);
+				q.where(fn.coalesce(ref("block.data:prefix").castBool(), false), false);
 				q.orWhere(
 					// matching pages have url ending with /
-					fn('starts_with', val(url), ref('page.data:url').castText())
+					fn('starts_with', val(url), ref('block.data:url').castText())
 				);
-				q.where(ref("page.data:prefix").castBool(), true);
+				q.where(ref("block.data:prefix").castBool(), true);
 			})
-			.orderBy(fn.coalesce(ref("page.data:prefix").castBool(), false), "asc")
-			.whereIn('page.type', site.$pkg.pages);
+			.orderBy(fn.coalesce(ref("block.data:prefix").castBool(), false), "asc")
+			.whereIn('block.type', site.$pkg.pages);
 	}
 
 	async get(req, data) {

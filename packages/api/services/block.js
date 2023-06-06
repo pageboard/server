@@ -85,15 +85,15 @@ module.exports = class BlockService {
 		if (data.lang == null && site.data.languages?.length > 0) {
 			data.lang = site.data.languages[0];
 		}
-		let parents = data.parents;
+		let { parents } = data;
 		if (parents) {
 			if (parents.type || parents.id || parents.standalone) {
-				// ok
+				parents.lang = data.lang;
 			} else {
 				parents = null;
 			}
 		}
-		const children = data.children;
+		const { children } = data;
 		let valid = false;
 		const q = site.$relatedQuery('children', trx);
 
@@ -126,6 +126,8 @@ module.exports = class BlockService {
 				q.whereObject(data.parent, data.parent.type, 'parent');
 			}
 		}
+
+		if (data.lang && children) children.lang = data.lang;
 
 		if (data.child && Object.keys(data.child).length) {
 			if (data.text) {
@@ -193,13 +195,6 @@ module.exports = class BlockService {
 		valid = filterSub(q, data) || valid;
 		if (!valid) {
 			throw new HttpError.BadRequest("Insufficient search parameters");
-		}
-		if (data.lang != null) {
-			q.select(raw(
-				'block_get_content(block._id, :lang) AS content', {
-					lang: data.lang
-				}
-			));
 		}
 
 		if (parents) {
@@ -980,7 +975,7 @@ function whereSub(q, data, alias = 'block') {
 }
 
 function filterSub(q, data, alias) {
-	q.select();
+	q.select().lang(data.lang);
 	const valid = whereSub(q, data, alias);
 	const orders = data.order || [];
 	orders.push('created_at');

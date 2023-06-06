@@ -1,6 +1,5 @@
 const { createReadStream, createWriteStream } = require('node:fs');
 const Path = require('node:path');
-const { raw } = require('objection');
 const { Deferred } = require.lazy('class-deferred');
 const ndjson = require.lazy('ndjson');
 const Upgrader = require.lazy('../upgrades');
@@ -59,13 +58,13 @@ module.exports = class ArchiveService {
 
 		const modifiers = {
 			blocks(q) {
-				q.where('standalone', false).whereNot('type', 'content').select();
+				q.where('standalone', false).whereNot('type', 'content').select().lang(lang);
 			},
 			standalones(q) {
-				q.where('standalone', true).select();
+				q.where('standalone', true).select().lang(lang);
 			},
 			users(q) {
-				q.where('type', 'user').select();
+				q.where('type', 'user').select().lang(lang);
 			}
 		};
 
@@ -82,10 +81,7 @@ module.exports = class ArchiveService {
 				q.where('standalone', true).orWhere('type', 'settings');
 			})
 			.whereNotExists(countParents)
-			.select();
-		if (lang != null) {
-			q.select(raw('block_get_content(block._id, :lang) AS content', { lang }));
-		}
+			.select().lang(lang);
 		const blocks = await q.withGraphFetched(`[
 				parents(users),
 				children(standalones) as standalones . children(blocks),
@@ -152,7 +148,6 @@ module.exports = class ArchiveService {
 		let upgrader;
 		const refs = new Map();
 		const list = [];
-		const lang = site.data.lang ? null : (site.data.languages?.[0] ?? null);
 		const beforeEachStandalone = obj => {
 			if (obj.type == "site" || list.length == 0) {
 				const toVersion = site.data.server;

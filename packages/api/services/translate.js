@@ -41,34 +41,34 @@ module.exports = class TranslateService {
 		$action: 'write'
 	};
 
-	async list({ site, trx }, data) {
-		const lang = site.data.languages?.[0];
-		if (!lang) throw new HttpError.BadRequest("Missing site.data.languages");
+	async list({ site, trx }, { children, id, lang, limit, offset, valid }) {
+		const sourceLang = site.data.languages?.[0];
+		if (!sourceLang) throw new HttpError.BadRequest("Missing site.data.languages");
 
 		const q = site.$relatedQuery('children', trx)
 			.distinct(
 				'target.id', 'target.data', 'target.type', 'target._id',
 				ref('source.data:text').castText().as('source')
 			);
-		if (data.children) {
+		if (children) {
 			q.joinRelated('[parents, children as source, children as target]')
-				.where('parents.id', data.id);
+				.where('parents.id', id);
 		} else {
 			q.joinRelated('[children as source, children as target]')
-				.where('block.id', data.id);
+				.where('block.id', id);
 		}
 		q.whereIn('block.type', site.$pkg.textblocks)
 			.where('source.type', 'content')
-			.where(ref('source.data:lang').castText(), lang)
+			.where(ref('source.data:lang').castText(), sourceLang)
 			.where('target.type', 'content')
 			.where(ref('target.data:name'), ref('source.data:name'))
-			.where(ref('target.data:lang').castText(), data.lang)
+			.where(ref('target.data:lang').castText(), lang)
 			.whereNot(q => {
 				q.where(fn('starts_with', ref('source.data:text').castText(), '"<'));
 				q.where(fn('regexp_count', ref('source.data:text').castText(), '>\\w'), 0);
 			})
 			.where(q => {
-				if (data.valid) {
+				if (valid) {
 					q.whereNot(fn.coalesce(ref('target.data:text').castText(), ''), '');
 					q.where('source.updated_at', '<', ref('target.updated_at'));
 				} else {
@@ -76,11 +76,11 @@ module.exports = class TranslateService {
 					q.orWhere('source.updated_at', '>=', ref('target.updated_at'));
 				}
 			})
-			.limit(data.limit)
-			.offset(data.offset)
-			.orderBy('target._id');
+			.limit(limit)
+			.offset(offset)
+			.orderBy('target._id', valid ? 'desc' : 'asc');
 		const items = await q;
-		return { items };
+		return { items, limit, offset };
 	}
 	static list = {
 		title: 'List translations',

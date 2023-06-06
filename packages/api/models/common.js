@@ -1,4 +1,4 @@
-const { ref, val, raw, Model, QueryBuilder } = require('objection');
+const { ref, val, raw, fn, Model, QueryBuilder } = require('objection');
 const Duration = require('iso8601-duration');
 const Path = require('node:path');
 
@@ -148,6 +148,12 @@ exports.QueryBuilder = class CommonQueryBuilder extends QueryBuilder {
 			args = model.columns.map(col => `${table}.${col}`);
 		}
 		return super.select(args);
+	}
+	lang(lang) {
+		if (lang != null) {
+			this.select(fn('block_get_content', ref('_id'), lang).as('content'));
+		}
+		return this;
 	}
 	patchObjectOperationFactory(factory) {
 		this._patchObjectOperationFactory = factory;
