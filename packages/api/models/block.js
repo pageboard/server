@@ -11,7 +11,6 @@ class Block extends Model {
 
 	static jsonSchema = {
 		type: 'object',
-		required: ['type'],
 		$id: '/api/blocks',
 		properties: {
 			id: {
@@ -96,28 +95,6 @@ class Block extends Model {
 		if (!this.id) {
 			this.id = await Block.genId();
 		}
-	}
-
-	static async setLanguageContent(trx, row, lang, newContent) {
-		if (lang == null && !newContent) return row;
-		const rawContent = newContent ?
-			trx.raw('block_set_content(block._id, :content::jsonb, :lang)', {
-				lang,
-				content: row.content
-			})
-			:
-			trx.raw('block_set_content(block._id, block.content, :lang)', {
-				lang
-			});
-		const { updated_at } = await Block.query(trx)
-			.where('_id', row._id)
-			.first()
-			.patch({
-				type: row.type,
-				content: rawContent
-			}).returning('updated_at');
-		row.updated_at = updated_at;
-		return row;
 	}
 
 	static normalizeContentSpec(contents) {

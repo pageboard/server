@@ -81,11 +81,7 @@ module.exports = class PageService {
 		if (lang === undefined) {
 			lang = site.data.languages?.[0] ?? null;
 		}
-		return site.$relatedQuery('children', trx).alias('page')
-			.select().select(raw(
-				'block_get_content(page._id, :lang) AS content', { lang }
-			))
-			.first()
+		return site.$relatedQuery('children', trx).select().lang(lang).first()
 			// eager load children (in which there are standalones)
 			// and children of standalones
 			.withGraphFetched(`[
@@ -93,29 +89,27 @@ module.exports = class PageService {
 				children(standalonesFilter) as standalones .children(childrenFilter)
 			]`).modifiers({
 				childrenFilter(q) {
-					q.select().where('page.standalone', false);
-					q.select(raw(
-						'block_get_content(page._id, :lang) AS content', { lang }
-					));
-					return q;
+					q.select().lang(lang)
+						.where('block.standalone', false)
+						.whereNot('block.type', 'content');
 				},
 				standalonesFilter(q) {
-					return q.select().select(raw(
-						'block_get_content(page._id, :lang) AS content', { lang }
-					)).where('page.standalone', true);
+					q.select().lang(lang)
+						.where('block.standalone', true)
+						.whereNot('block.type', 'content');
 				}
 			})
 			.where(q => {
-				q.whereJsonText("page.data:url", url);
-				q.where(fn.coalesce(ref("page.data:prefix").castBool(), false), false);
+				q.whereJsonText("block.data:url", url);
+				q.where(fn.coalesce(ref("block.data:prefix").castBool(), false), false);
 				q.orWhere(
 					// matching pages have url ending with /
-					fn('starts_with', val(url), ref('page.data:url').castText())
+					fn('starts_with', val(url), ref('block.data:url').castText())
 				);
-				q.where(ref("page.data:prefix").castBool(), true);
+				q.where(ref("block.data:prefix").castBool(), true);
 			})
-			.orderBy(fn.coalesce(ref("page.data:prefix").castBool(), false), "asc")
-			.whereIn('page.type', site.$pkg.pages);
+			.orderBy(fn.coalesce(ref("block.data:prefix").castBool(), false), "asc")
+			.whereIn('block.type', site.$pkg.pages);
 	}
 
 	async get(req, data) {
@@ -172,10 +166,9 @@ module.exports = class PageService {
 				format: 'pathname'
 			},
 			lang: {
-				title: 'Translate to lang',
-				description: 'Language tag syntax',
+				title: 'Translate to site lang',
 				type: 'string',
-				pattern: /^([a-zA-Z]+-?)+$/.source,
+				format: 'lang',
 				nullable: true
 			}
 		}
@@ -627,11 +620,9 @@ function applyRemove(req, list, recursive) {
 
 async function applyAdd({ site, trx, Block }, list) {
 	if (!list.length) return [];
-	const lang = site.data.languages?.[0] ?? null;
 	const rows = await site.$relatedQuery('children', trx)
 		.insert(list).returning('id', 'updated_at', '_id');
 	return Promise.all(rows.map(async (row, i) => {
-		await Block.setLanguageContent(trx, row, lang);
 		return {
 			id: row.id,
 			updated_at: row.updated_at
@@ -642,8 +633,7 @@ async function applyAdd({ site, trx, Block }, list) {
 async function applyUpdate(req, list) {
 	const blocksMap = {};
 	const updates = [];
-	const { site, trx, Block } = req;
-	const lang = site.data.languages?.[0] ?? null;
+	const { site, trx } = req;
 
 	for await (const block of list) {
 		if (block.id in blocksMap) {
@@ -663,15 +653,13 @@ async function applyUpdate(req, list) {
 					raw("date_trunc('milliseconds', ?::timestamptz)", [block.updated_at]),
 				)
 				.patch(block)
-				.returning('id', 'updated_at', '_id')
+				.returning('id', 'updated_at')
 				.first();
 			if (!row) {
 				throw new HttpError.Conflict(
 					`${block.type}:${block.id} last update mismatch ${block.updated_at}`
 				);
 			} else {
-				await Block.setLanguageContent(trx, row, lang);
-				delete row._id;
 				updates.push(row);
 			}
 		}
@@ -681,7 +669,6 @@ async function applyUpdate(req, list) {
 
 async function updatePage({ site, trx, Block, Href }, page, sideEffects) {
 	if (!sideEffects) sideEffects = {};
-	const lang = site.data.languages?.[0] ?? null;
 	const dbPage = await site.$relatedQuery('children', trx)
 		.where('block.id', page.id)
 		.whereIn('block.type', page.type ? [page.type] : site.$pkg.pages)
@@ -747,15 +734,12 @@ async function updatePage({ site, trx, Block, Href }, page, sideEffects) {
 			raw("date_trunc('milliseconds', ?::timestamptz)", [page.updated_at]),
 		)
 		.patch(page)
-		.returning('block.id', 'block.updated_at', 'block._id')
+		.returning('block.id', 'block.updated_at')
 		.first();
 	if (!row) {
 		throw new HttpError.Conflict(
 			`${page.type}:${page.id} last update mismatch ${page.updated_at}`
 		);
-	} else {
-		await Block.setLanguageContent(trx, row, lang);
-		delete row._id;
 	}
 	return row;
 }

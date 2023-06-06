@@ -32,6 +32,7 @@ module.exports = class BlockService {
 		if (data.type) {
 			q.where('block.type', data.type);
 		}
+		q.lang(data.lang ?? site.data.languages?.[0]);
 		const eagers = {};
 		if (data.parents) {
 			eagers.parents = {
@@ -74,6 +75,12 @@ module.exports = class BlockService {
 				title: 'with children',
 				type: 'boolean',
 				default: false
+			},
+			lang: {
+				title: 'Select site language',
+				type: 'string',
+				format: 'lang',
+				nullable: true
 			}
 		}
 	};
@@ -85,15 +92,15 @@ module.exports = class BlockService {
 		if (data.lang == null && site.data.languages?.length > 0) {
 			data.lang = site.data.languages[0];
 		}
-		let parents = data.parents;
+		let { parents } = data;
 		if (parents) {
 			if (parents.type || parents.id || parents.standalone) {
-				// ok
+				parents.lang = data.lang;
 			} else {
 				parents = null;
 			}
 		}
-		const children = data.children;
+		const { children } = data;
 		let valid = false;
 		const q = site.$relatedQuery('children', trx);
 
@@ -126,6 +133,8 @@ module.exports = class BlockService {
 				q.whereObject(data.parent, data.parent.type, 'parent');
 			}
 		}
+
+		if (data.lang && children) children.lang = data.lang;
 
 		if (data.child && Object.keys(data.child).length) {
 			if (data.text) {
@@ -194,12 +203,6 @@ module.exports = class BlockService {
 		if (!valid) {
 			throw new HttpError.BadRequest("Insufficient search parameters");
 		}
-
-		q.select(raw(
-			'block_get_content(block._id, :lang) AS content', {
-				lang: data.lang ?? null
-			}
-		));
 
 		if (parents) {
 			eagers.parents = {
@@ -383,10 +386,9 @@ module.exports = class BlockService {
 				default: false
 			},
 			lang: {
-				title: 'Language',
-				description: '$query.lang in language tag syntax',
+				title: 'Select site language',
 				type: 'string',
-				pattern: /^([a-zA-Z]+-?)+$/.source,
+				format: 'lang',
 				nullable: true
 			},
 			parents: {
@@ -724,15 +726,11 @@ module.exports = class BlockService {
 		const obj = {
 			type: block.type
 		};
+
 		if (!Object.isEmpty(data.data)) obj.data = data.data;
 		if (!Object.isEmpty(data.lock)) obj.lock = data.lock;
 		if (!Object.isEmpty(data.content)) obj.content = data.content;
 		await block.$query(req.trx).patchObject(obj);
-
-		if (data.content !== undefined) {
-			const lang = req.site.data.languages?.[0] ?? null;
-			await Block.setLanguageContent(req.trx, block, lang);
-		}
 
 		if (parents.length == 0) return block;
 
@@ -917,8 +915,8 @@ module.exports = class BlockService {
 			.map(item => `<div block-id="${item.id}"></div>`)
 			.join('');
 		await block.$relatedQuery('children', trx).relate(newItems);
-		const lang = site.data.languages?.[0] ?? null;
-		await Block.setLanguageContent(trx, block, lang, true);
+		// safe with content update trigger
+		await block.$query(trx).patch({ content: block.content });
 		return block;
 	}
 	static fill = {
@@ -983,7 +981,7 @@ function whereSub(q, data, alias = 'block') {
 }
 
 function filterSub(q, data, alias) {
-	q.select();
+	q.select().lang(data.lang);
 	const valid = whereSub(q, data, alias);
 	const orders = data.order || [];
 	orders.push('created_at');

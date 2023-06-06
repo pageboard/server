@@ -172,9 +172,7 @@ module.exports = class SiteService {
 		runSite.data = copy;
 		if (languagesChanged || toMulti || toMono) {
 			req.site = runSite;
-			const source = toMulti ? null : runSite.data.languages?.[0];
-			const target = toMono ? null : runSite.data.languages?.[0];
-			await req.run('translate.initialize', { source, target });
+			await req.run('translate.initialize');
 		}
 		return runSite;
 	}
