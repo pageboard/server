@@ -187,7 +187,7 @@ BEGIN
 		-- 2. link all blocks to them
 
 		-- for each lang, ensure we have content, for all blocks
-		is_trivial := starts_with(_text, '"<') AND regexp_count(_text, '>\w') = 0;
+		is_trivial := starts_with(_text, '<') AND regexp_count(_text, '>\w') = 0;
 		FOR cur_lang IN
 			SELECT * FROM jsonb_array_elements_text(languages)
 		LOOP
