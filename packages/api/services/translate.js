@@ -25,9 +25,13 @@ module.exports = class TranslateService {
 		$lock: true
 	};
 
-	async initialize({ site, trx }, { source, target }) {
-		const { rows } = await trx.raw(`SELECT count(block_insert_content(b, s)) AS blocks FROM block b, relation r, block s WHERE r.parent_id = :site AND b._id = r.child_id AND b.type != 'content' AND s._id = :site`, { site: site._id });
-		return rows[0];
+	async initialize({ site, trx, Block }) {
+		const blocks = await Block.relatedQuery('children', trx).for(site)
+			.patch({
+				content: ref('content')
+			})
+			.whereNot('type', 'content');
+		return { blocks };
 	}
 	static initialize = {
 		title: 'Initialize site languages',
