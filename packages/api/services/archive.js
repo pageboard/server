@@ -73,7 +73,7 @@ module.exports = class ArchiveService {
 			.whereNot('parents.id', site.id)
 			.whereNot('parents.type', 'user');
 
-		const blocks = await site.$relatedQuery('children', trx)
+		const q = site.$relatedQuery('children', trx)
 			.modify(q => {
 				if (ids.length > 0) q.whereIn('block.id', ids);
 			})
@@ -82,9 +82,11 @@ module.exports = class ArchiveService {
 				q.where('standalone', true).orWhere('type', 'settings');
 			})
 			.whereNotExists(countParents)
-			.select()
-			.select(raw('block_get_content(block._id, :lang) AS content', { lang }))
-			.withGraphFetched(`[
+			.select();
+		if (lang != null) {
+			q.select(raw('block_get_content(block._id, :lang) AS content', { lang }));
+		}
+		const blocks = await q.withGraphFetched(`[
 				parents(users),
 				children(standalones) as standalones . children(blocks),
 				children(blocks)

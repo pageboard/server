@@ -194,12 +194,13 @@ module.exports = class BlockService {
 		if (!valid) {
 			throw new HttpError.BadRequest("Insufficient search parameters");
 		}
-
-		q.select(raw(
-			'block_get_content(block._id, :lang) AS content', {
-				lang: data.lang ?? null
-			}
-		));
+		if (data.lang != null) {
+			q.select(raw(
+				'block_get_content(block._id, :lang) AS content', {
+					lang: data.lang
+				}
+			));
+		}
 
 		if (parents) {
 			eagers.parents = {

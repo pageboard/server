@@ -81,11 +81,11 @@ module.exports = class PageService {
 		if (lang === undefined) {
 			lang = site.data.languages?.[0] ?? null;
 		}
-		return site.$relatedQuery('children', trx).alias('page')
-			.select().select(raw(
-				'block_get_content(page._id, :lang) AS content', { lang }
-			))
-			.first()
+		const q = site.$relatedQuery('children', trx).alias('page').select();
+		if (lang != null) q.select(raw(
+			'block_get_content(page._id, :lang) AS content', { lang }
+		));
+		return q.first()
 			// eager load children (in which there are standalones)
 			// and children of standalones
 			.withGraphFetched(`[
@@ -96,15 +96,18 @@ module.exports = class PageService {
 					q.select()
 						.where('page.standalone', false)
 						.whereNot('page.type', 'content');
-					q.select(raw(
+					if (lang != null) q.select(raw(
 						'block_get_content(page._id, :lang) AS content', { lang }
 					));
 					return q;
 				},
 				standalonesFilter(q) {
-					return q.select().select(raw(
+					q.select()
+						.where('page.standalone', true)
+						.whereNot('page.type', 'content');
+					if (lang != null) q.select(raw(
 						'block_get_content(page._id, :lang) AS content', { lang }
-					)).where('page.standalone', true).whereNot('page.type', 'content');
+					));
 				}
 			})
 			.where(q => {
