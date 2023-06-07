@@ -151,7 +151,13 @@ exports.QueryBuilder = class CommonQueryBuilder extends QueryBuilder {
 	}
 	lang(lang) {
 		if (lang != null) {
-			this.select(fn('block_get_content', ref('_id'), lang).as('content'));
+			const model = this.modelClass();
+			const table = this.tableRefFor(model);
+			this.select(fn(
+				'block_get_content',
+				ref('_id').from(table),
+				lang
+			).as('content'));
 		}
 		return this;
 	}
