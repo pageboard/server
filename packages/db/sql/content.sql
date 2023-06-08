@@ -140,10 +140,16 @@ BEGIN
 		SELECT * FROM jsonb_each_text(_block.content)
 	LOOP
 		IF _text IS NULL OR _text = '' THEN
-			-- ignore
+			-- unlink those named contents
+			DELETE FROM relation WHERE id IN (
+				SELECT r.id FROM relation AS r, block as content
+				WHERE r.parent_id = _block._id
+				AND content._id = r.child_id
+				AND content.type = 'content'
+				AND content.data->>'name' = _name
+			);
 			CONTINUE;
 		END IF;
-
 		-- list all block._id that have a matching content text for that name/lang
 		SELECT COALESCE(array_agg(block._id), ARRAY[]::INTEGER[])
 		INTO block_ids
