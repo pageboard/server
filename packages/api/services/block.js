@@ -130,7 +130,10 @@ module.exports = class BlockService {
 				}
 				valid = true;
 				q.joinRelated('parents', { alias: 'parent' });
+				const pc = data.parent.content; // whereObject fails otherwise
+				delete data.parent.content;
 				q.whereObject(data.parent, data.parent.type, 'parent');
+				data.parent.content = pc;
 			}
 		}
 
@@ -249,7 +252,7 @@ module.exports = class BlockService {
 				}
 			},
 			childrenFilter(query) {
-				query.select().where('standalone', false).whereNot('type', 'content');
+				query.select().lang(data.lang).where('standalone', false).whereNot('type', 'content');
 			}
 		});
 
@@ -260,6 +263,11 @@ module.exports = class BlockService {
 			offset: data.offset,
 			limit: data.limit
 		};
+		if (data.parent) obj.item = (await this.find(req, {
+			...data.parent,
+			type: [data.parent.type],
+			lang: data.lang
+		})).item;
 
 		const ids = [];
 		for (const row of rows) {
@@ -297,18 +305,6 @@ module.exports = class BlockService {
 		$action: 'read',
 		required: ['type'],
 		properties: {
-			parent: {
-				title: 'Select by parent',
-				description: 'search blocks only having these parents',
-				type: "object",
-				nullable: true
-			},
-			child: {
-				title: 'Select by child',
-				description: 'search blocks only having these children',
-				type: 'object',
-				nullable: true
-			},
 			id: {
 				title: 'Select by id',
 				anyOf: [{ /* because nullable does not have priority */
@@ -345,7 +341,7 @@ module.exports = class BlockService {
 				default: false
 			},
 			content: {
-				title: 'Content',
+				title: 'Include content',
 				type: 'boolean',
 				default: false
 			},
@@ -356,7 +352,7 @@ module.exports = class BlockService {
 				format: "singleline"
 			},
 			data: {
-				title: 'Filter by data',
+				title: 'Select by data',
 				type: 'object',
 				nullable: true
 			},
@@ -386,13 +382,82 @@ module.exports = class BlockService {
 				default: false
 			},
 			lang: {
-				title: 'Select site language',
+				title: 'Select language',
 				type: 'string',
 				format: 'lang',
 				nullable: true
 			},
+			parent: {
+				title: 'Filter by parent',
+				type: "object",
+				nullable: true,
+				properties: {
+					id: {
+						title: 'Select by id',
+						anyOf: [{ /* because nullable does not have priority */
+							type: 'null'
+						}, {
+							type: "string",
+							format: 'id'
+						}]
+					},
+					type: {
+						title: 'Select by type',
+						nullable: true,
+						type: 'string',
+						format: 'name',
+						$filter: {
+							name: 'element',
+							standalone: true,
+							contentless: true
+						}
+					},
+					content: {
+						title: 'Include content',
+						type: 'boolean',
+						default: false
+					},
+					data: {
+						title: 'Select by data',
+						type: 'object',
+						nullable: true
+					}
+				}
+			},
+			child: {
+				title: 'Filter by child',
+				type: "object",
+				nullable: true,
+				properties: {
+					id: {
+						title: 'Select by id',
+						anyOf: [{ /* because nullable does not have priority */
+							type: 'null'
+						}, {
+							type: "string",
+							format: 'id'
+						}]
+					},
+					type: {
+						title: 'Select by type',
+						nullable: true,
+						type: 'string',
+						format: 'name',
+						$filter: {
+							name: 'element',
+							standalone: true,
+							contentless: true
+						}
+					},
+					data: {
+						title: 'Select by data',
+						type: 'object',
+						nullable: true
+					}
+				}
+			},
 			parents: {
-				title: 'Parents',
+				title: 'Fetch parents',
 				type: 'object',
 				nullable: true,
 				properties: {
@@ -426,12 +491,12 @@ module.exports = class BlockService {
 						default: false
 					},
 					content: {
-						title: 'Content',
+						title: 'Include content',
 						type: 'boolean',
 						default: false
 					},
 					data: {
-						title: 'Filter by data',
+						title: 'Select by data',
 						type: 'object',
 						nullable: true
 					},
@@ -492,12 +557,12 @@ module.exports = class BlockService {
 						default: false
 					},
 					content: {
-						title: 'Content',
+						title: 'Include content',
 						type: 'boolean',
 						default: false
 					},
 					data: {
-						title: 'Filter by data',
+						title: 'Select by data',
 						type: 'object',
 						nullable: true
 					},
