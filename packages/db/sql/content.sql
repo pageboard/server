@@ -95,7 +95,7 @@ $BODY$;
 
 CREATE OR REPLACE FUNCTION content_get_headline (
 	config regconfig,
-	doc text,
+	doc TEXT,
 	query tsquery
 ) RETURNS TEXT
 	LANGUAGE 'plpgsql'
@@ -108,6 +108,22 @@ BEGIN
 	) AS row WHERE length(row.trimmed) > 0 AND length(row.text) != length(doc);
 	RETURN headline;
 END
+$BODY$;
+
+CREATE OR REPLACE FUNCTION content_delete_orphans (
+	site_id INTEGER
+) RETURNS VOID
+	LANGUAGE 'sql'
+AS $BODY$
+	WITH counts AS (
+		SELECT block._id, count(*) OVER (PARTITION BY t.parent_id) AS count
+		FROM block, relation AS s, relation AS t
+		WHERE s.parent_id = site_id
+		AND block._id = s.child_id
+		AND block.type = 'content'
+		AND t.child_id = block._id
+		AND t.parent_id != site_id
+	) DELETE FROM block WHERE _id IN (SELECT _id FROM counts WHERE count = 0);
 $BODY$;
 
 CREATE OR REPLACE FUNCTION block_insert_content(
@@ -140,10 +156,16 @@ BEGIN
 		SELECT * FROM jsonb_each_text(_block.content)
 	LOOP
 		IF _text IS NULL OR _text = '' THEN
-			-- ignore
+			-- unlink those named contents
+			DELETE FROM relation WHERE id IN (
+				SELECT r.id FROM relation AS r, block as content
+				WHERE r.parent_id = _block._id
+				AND content._id = r.child_id
+				AND content.type = 'content'
+				AND content.data->>'name' = _name
+			);
 			CONTINUE;
 		END IF;
-
 		-- list all block._id that have a matching content text for that name/lang
 		SELECT COALESCE(array_agg(block._id), ARRAY[]::INTEGER[])
 		INTO block_ids
