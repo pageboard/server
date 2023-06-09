@@ -213,7 +213,8 @@ BEGIN
 			SELECT * FROM jsonb_array_elements_text(languages)
 		LOOP
 			cur_pos := array_position(content_langs, cur_lang);
-			IF cur_pos > 0 THEN
+			IF cur_pos IS NOT NULL THEN
+				-- a content of matches, nothing to do
 				content_ids[cur_pos] := NULL;
 				content_langs[cur_pos] := NULL;
 				CONTINUE;
