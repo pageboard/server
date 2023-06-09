@@ -277,6 +277,15 @@ BEGIN
 		WHERE r.parent_id = _block._id AND content._id = r.child_id
 		AND content.type = 'content'
 		AND content.data->>'name' != ALL(keep_names)
+	)
+	DELETE FROM relation USING contents WHERE parent_id = _block._id AND child_id = contents._id;
+
+	WITH contents AS (
+		SELECT content._id
+		FROM relation AS r, block AS content
+		WHERE r.parent_id = _block._id AND content._id = r.child_id
+		AND content.type = 'content'
+		AND content.data->>'name' != ALL(keep_names)
 	), counts AS (
 		SELECT contents._id, count(relation.*) AS n
 		FROM contents, relation WHERE relation.child_id = contents._id AND relation.parent_id != _site._id AND relation.parent_id != _block._id GROUP BY contents._id
