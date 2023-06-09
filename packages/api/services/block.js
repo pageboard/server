@@ -190,7 +190,8 @@ module.exports = class BlockService {
 					.join('search', 'contents.tsv', '@@', 'search.query');
 			} else {
 				qdoc.joinRelated('children as child')
-					.whereIn('child.type', site.$pkg.textblocks)
+					.whereNot('child.type', 'content')
+					// .whereIn('child.type', site.$pkg.textblocks)
 					.join('contents', 'child._id', 'contents._id')
 					.join('search', 'contents.tsv', '@@', 'search.query');
 			}

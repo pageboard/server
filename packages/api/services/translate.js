@@ -57,7 +57,8 @@ module.exports = class TranslateService {
 			q.joinRelated('[children as source, children as target]')
 				.where('block.id', id);
 		}
-		q.whereIn('block.type', site.$pkg.textblocks)
+		q.whereNot('block.type', 'content')
+			// .whereIn('block.type', site.$pkg.textblocks)
 			.where('source.type', 'content')
 			.where(ref('source.data:lang').castText(), sourceLang)
 			.where('target.type', 'content')
@@ -143,7 +144,8 @@ module.exports = class TranslateService {
 			q.joinRelated('[children as source, children as target]')
 				.where('block.id', data.id);
 		}
-		q.whereIn('block.type', site.$pkg.textblocks)
+		q.whereNot('block.type', 'content')
+			// .whereIn('block.type', site.$pkg.textblocks) FIXME paragraphs are inplace
 			.where('source.type', 'content')
 			.where(ref('source.data:lang').castText(), lang)
 			.where('target.type', 'content')
