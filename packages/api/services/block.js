@@ -337,12 +337,12 @@ module.exports = class BlockService {
 			},
 			preview: {
 				title: 'Preview',
-				description: 'Include preview tag',
+				description: 'With preview',
 				type: 'boolean',
 				default: false
 			},
 			content: {
-				title: 'Include content',
+				title: 'With content',
 				type: 'boolean',
 				default: false
 			},
@@ -414,7 +414,7 @@ module.exports = class BlockService {
 						}
 					},
 					content: {
-						title: 'Include content',
+						title: 'With content',
 						type: 'boolean',
 						default: false
 					},
@@ -492,7 +492,7 @@ module.exports = class BlockService {
 						default: false
 					},
 					content: {
-						title: 'Include content',
+						title: 'With content',
 						type: 'boolean',
 						default: false
 					},
@@ -558,7 +558,7 @@ module.exports = class BlockService {
 						default: false
 					},
 					content: {
-						title: 'Include content',
+						title: 'With content',
 						type: 'boolean',
 						default: false
 					},
