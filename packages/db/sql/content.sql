@@ -314,10 +314,19 @@ CREATE OR REPLACE FUNCTION content_lang_update_func() RETURNS trigger
 AS $BODY$
 DECLARE
 	_site type_site_lang;
+	_key TEXT;
+	_val JSONB;
 	keep_names TEXT[];
 BEGIN
 	_site := block_site(NEW._id);
-	keep_names := ARRAY(SELECT jsonb_object_keys(NEW.content));
+	keep_names := ARRAY[]::TEXT[];
+	FOR _key, _val IN
+		SELECT * FROM jsonb_each(NEW.content)
+	LOOP
+		IF _val = OLD.content[_key] THEN
+			keep_names := array_append(keep_names, _key);
+		END IF;
+	END LOOP;
 	PERFORM block_delete_content(OLD, _site, keep_names);
 	NEW.content := block_insert_content(NEW, _site);
 	IF NEW.content = '{}'::jsonb THEN
