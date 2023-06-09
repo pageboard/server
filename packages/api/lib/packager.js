@@ -71,7 +71,7 @@ module.exports = class Packager {
 				standalones.add(name);
 			}
 			if (!el.expressions && el.contents && el.contents.some(item => {
-				return ['inline*', 'text*'].includes(item.nodes);
+				return ['inline*', 'text*', 'mail_inline*'].includes(item.nodes);
 			})) {
 				textblocks.add(name);
 			}

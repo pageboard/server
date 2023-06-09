@@ -190,7 +190,8 @@ module.exports = class BlockService {
 					.join('search', 'contents.tsv', '@@', 'search.query');
 			} else {
 				qdoc.joinRelated('children as child')
-					.whereIn('child.type', site.$pkg.textblocks)
+					.whereNot('child.type', 'content')
+					// .whereIn('child.type', site.$pkg.textblocks)
 					.join('contents', 'child._id', 'contents._id')
 					.join('search', 'contents.tsv', '@@', 'search.query');
 			}
@@ -336,12 +337,12 @@ module.exports = class BlockService {
 			},
 			preview: {
 				title: 'Preview',
-				description: 'Include preview tag',
+				description: 'With preview',
 				type: 'boolean',
 				default: false
 			},
 			content: {
-				title: 'Include content',
+				title: 'With content',
 				type: 'boolean',
 				default: false
 			},
@@ -413,7 +414,7 @@ module.exports = class BlockService {
 						}
 					},
 					content: {
-						title: 'Include content',
+						title: 'With content',
 						type: 'boolean',
 						default: false
 					},
@@ -491,7 +492,7 @@ module.exports = class BlockService {
 						default: false
 					},
 					content: {
-						title: 'Include content',
+						title: 'With content',
 						type: 'boolean',
 						default: false
 					},
@@ -557,7 +558,7 @@ module.exports = class BlockService {
 						default: false
 					},
 					content: {
-						title: 'Include content',
+						title: 'With content',
 						type: 'boolean',
 						default: false
 					},

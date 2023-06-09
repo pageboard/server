@@ -53,23 +53,19 @@ AS $BODY$
 DECLARE
 	_tsconfig regconfig;
 BEGIN
-	IF NEW.type = 'content' THEN
-		SELECT COALESCE(data->>'tsconfig', 'unaccent')
-			INTO _tsconfig
-			FROM block
-			WHERE type='language'
-			AND data @@ FORMAT('$.lang == %s', NEW.data->'lang')::jsonpath;
-		NEW.tsv := to_tsvector(_tsconfig::regconfig, NEW.data->>'text');
-	ELSE
-		NEW.tsv := to_tsvector('unaccent', NEW.content);
-	END IF;
+	SELECT COALESCE(data->>'tsconfig', 'unaccent')
+		INTO _tsconfig
+		FROM block
+		WHERE type='language'
+		AND data @@ FORMAT('$.lang == %s', NEW.data->'lang')::jsonpath;
+	NEW.tsv := to_tsvector(_tsconfig::regconfig, NEW.data->>'text');
 	RETURN NEW;
 END
 $BODY$;
 
-CREATE OR REPLACE TRIGGER content_tsv_trigger_insert AFTER INSERT ON block FOR EACH ROW EXECUTE FUNCTION content_tsv_func();
-CREATE OR REPLACE TRIGGER content_tsv_trigger_update_text AFTER UPDATE OF data ON block FOR EACH ROW WHEN (NEW.type = 'content' AND NEW.data['text'] != OLD.data['text']) EXECUTE FUNCTION content_tsv_func();
-CREATE OR REPLACE TRIGGER block_tsv_trigger_update_content AFTER UPDATE OF content ON block FOR EACH ROW WHEN (NEW.type != 'content') EXECUTE FUNCTION content_tsv_func();
+CREATE OR REPLACE TRIGGER content_tsv_trigger_insert BEFORE INSERT ON block FOR EACH ROW  WHEN (NEW.type = 'content') EXECUTE FUNCTION content_tsv_func();
+CREATE OR REPLACE TRIGGER content_tsv_trigger_update_text BEFORE UPDATE OF data ON block FOR EACH ROW WHEN (NEW.type = 'content' AND NEW.data['text'] != OLD.data['text']) EXECUTE FUNCTION content_tsv_func();
+
 
 CREATE INDEX IF NOT EXISTS block_content_name_lang ON block(
 	(data->>'name'),
@@ -313,9 +309,11 @@ BEGIN
 	NEW.content := block_insert_content(NEW, _site);
 	IF NEW.content = '{}'::jsonb THEN
 		NEW.tsv = NULL;
+	ELSE
+		NEW.tsv = to_tsvector('unaccent', NEW.content);
 	END IF;
 	RETURN NEW;
 END
 $BODY$;
 
-CREATE OR REPLACE TRIGGER content_lang_trigger_update BEFORE UPDATE OF content ON block FOR EACH ROW EXECUTE FUNCTION content_lang_update_func();
+CREATE OR REPLACE TRIGGER content_lang_trigger_update BEFORE UPDATE OF content ON block FOR EACH ROW WHEN (NEW.type != 'content') EXECUTE FUNCTION content_lang_update_func();
