@@ -41,7 +41,7 @@ module.exports = class TranslateService {
 		$action: 'write'
 	};
 
-	async list({ site, trx }, { children, id, lang, limit, offset, valid }) {
+	async list({ site, trx }, { self, id, lang, limit, offset, valid }) {
 		const sourceLang = site.data.languages?.[0];
 		if (!sourceLang) throw new HttpError.BadRequest("Missing site.data.languages");
 
@@ -50,7 +50,7 @@ module.exports = class TranslateService {
 				'target.id', 'target.data', 'target.type', 'target._id',
 				ref('source.data:text').castText().as('source')
 			);
-		if (children) {
+		if (!self) {
 			q.joinRelated('[parents, children as source, children as target]')
 				.where('parents.id', id);
 		} else {
@@ -94,12 +94,12 @@ module.exports = class TranslateService {
 				format: 'lang'
 			},
 			id: {
-				title: 'ID',
+				title: 'ID of parent block',
 				type: 'string',
 				format: 'id'
 			},
-			children: {
-				title: 'Children',
+			self: {
+				title: 'Only parent',
 				type: 'boolean',
 				default: false
 			},
@@ -107,7 +107,7 @@ module.exports = class TranslateService {
 				title: 'Limit',
 				type: 'integer',
 				minimum: 0,
-				maximum: 1000,
+				maximum: 100,
 				default: 10
 			},
 			offset: {
@@ -137,7 +137,7 @@ module.exports = class TranslateService {
 				ref('target._id').as('target_id'),
 				ref('source.data:text').castText().as('source')
 			);
-		if (data.children) {
+		if (!data.self) {
 			q.joinRelated('[parents, children as source, children as target]')
 				.where('parents.id', data.id);
 		} else {
@@ -202,12 +202,12 @@ module.exports = class TranslateService {
 				format: 'lang'
 			},
 			id: {
-				title: 'ID',
+				title: 'ID of parent block',
 				type: 'string',
 				format: 'id'
 			},
-			children: {
-				title: 'Children',
+			self: {
+				title: 'Only parent',
 				type: 'boolean',
 				default: false
 			},
@@ -215,7 +215,7 @@ module.exports = class TranslateService {
 				title: 'Limit',
 				type: 'integer',
 				minimum: 0,
-				maximum: 1000,
+				maximum: 100,
 				default: 10
 			},
 			offset: {
