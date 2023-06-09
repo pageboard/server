@@ -108,18 +108,21 @@ $BODY$;
 
 CREATE OR REPLACE FUNCTION content_delete_orphans (
 	site_id INTEGER
-) RETURNS VOID
+) RETURNS INTEGER
 	LANGUAGE 'sql'
 AS $BODY$
 	WITH counts AS (
-		SELECT block._id, count(*) OVER (PARTITION BY t.parent_id) AS count
-		FROM block, relation AS s, relation AS t
+		SELECT block._id, count(*)
+		FROM relation AS s, block LEFT OUTER JOIN relation AS t
+		ON t.child_id = block._id
 		WHERE s.parent_id = site_id
 		AND block._id = s.child_id
 		AND block.type = 'content'
-		AND t.child_id = block._id
-		AND t.parent_id != site_id
-	) DELETE FROM block WHERE _id IN (SELECT _id FROM counts WHERE count = 0);
+		GROUP BY block._id
+	),
+	dels AS (
+		DELETE FROM block WHERE _id IN (SELECT _id FROM counts WHERE count = 1) RETURNING _id
+	) SELECT count(*) FROM dels;
 $BODY$;
 
 CREATE OR REPLACE FUNCTION block_insert_content(
