@@ -135,7 +135,7 @@ module.exports = class BlockService {
 				q.joinRelated('parents', { alias: 'parent' });
 				const pc = data.parent.content; // whereObject fails otherwise
 				delete data.parent.content;
-				q.whereObject(data.parent, data.parent.type, 'parent');
+				whereSub(q, data.parent, 'parent');
 				data.parent.content = pc;
 			}
 		}
