@@ -5,7 +5,7 @@ module.exports = class UserService {
 		if (!data.id && !data.email) {
 			throw new HttpError.BadRequest("Missing id or email");
 		}
-		return Block.query(trx).alias('user').select()
+		return Block.query(trx).alias('user').columns()
 			.first().throwIfNotFound()
 			.where('user.type', 'user')
 			.where(q => {

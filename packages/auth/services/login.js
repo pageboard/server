@@ -27,7 +27,7 @@ module.exports = class LoginModule {
 		try {
 			return await user.$relatedQuery('children', trx).alias('privs')
 				.where('privs.type', 'priv')
-				.first().throwIfNotFound().select();
+				.first().throwIfNotFound().columns();
 		} catch (err) {
 			if (err.statusCode != 404) throw err;
 			return user.$relatedQuery('children', trx).insert({

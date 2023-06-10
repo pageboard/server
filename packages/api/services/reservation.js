@@ -227,7 +227,7 @@ module.exports = class ReservationService {
 		}).withGraphFetched('[parents(parentsFilter)]').modifiers({
 			parentsFilter(q) {
 				q.whereIn('block.type', ['event_date', 'settings'])
-					.select()
+					.columns()
 					.orderBy('block.type');
 			}
 		});
@@ -301,7 +301,7 @@ module.exports = class ReservationService {
 		const eventDate = await site.$relatedQuery('children', trx)
 			.where('block.type', 'event_date')
 			.where('block.id', data.id)
-			.select().first().throwIfNotFound()
+			.columns().first().throwIfNotFound()
 			.withGraphFetched(`[
 			parents(event) as parent,
 			children(reservations) as children
@@ -309,7 +309,7 @@ module.exports = class ReservationService {
 			.parents(user) as user
 		]`).modifiers({
 				event(q) {
-					q.where('type', 'event').select();
+					q.where('type', 'event').columns();
 				},
 				reservations(q) {
 					if (data.paid === true) {
@@ -318,10 +318,10 @@ module.exports = class ReservationService {
 						q.whereNot(ref('data:payment.due'), ref('data:payment.paid'));
 					}
 					q.where(trx.raw(`jsonb_array_length(coalesce(data['attendees'], '[]'::jsonb)) > 0`));
-					q.where('type', 'event_reservation').select();
+					q.where('type', 'event_reservation').columns();
 				},
 				settings(q) {
-					q.where('type', 'settings').select();
+					q.where('type', 'settings').columns();
 				},
 				user(q) {
 					q.where('type', 'user').select(ref('data:email').as('email'));

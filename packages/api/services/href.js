@@ -36,7 +36,7 @@ module.exports = class HrefService {
 	}
 
 	async find({ Href, site, trx }, data) {
-		const item = await Href.query(trx).select()
+		const item = await Href.query(trx).columns()
 			.whereSite(site.id)
 			.where('href.url', data.url).first().throwIfNotFound();
 		return { item };
@@ -56,7 +56,7 @@ module.exports = class HrefService {
 	async search(req, data) {
 		const { Href, site, trx } = req;
 		// TODO use .page() and/or .resultSize() see objection doc
-		const q = Href.query(trx).select().whereSite(site.id);
+		const q = Href.query(trx).columns().whereSite(site.id);
 
 		if (data.type) {
 			q.whereIn('href.type', data.type);
@@ -361,7 +361,7 @@ module.exports = class HrefService {
 				${meta}
 			) AS hrefs`));
 		} else {
-			q.select();
+			q.columns();
 		}
 		return q;
 	}
@@ -463,7 +463,7 @@ module.exports = class HrefService {
 			throw new HttpError.BadRequest(`No href types matching: ${data.block}/${data.href}`);
 		}
 
-		const rows = await site.$modelClass.query(trx).select().from(
+		const rows = await site.$modelClass.query(trx).columns().from(
 			site.$relatedQuery('children', trx).select('block._id')
 				.whereIn('block.type', Object.keys(fhrefs))
 				.leftOuterJoin('href', function () {

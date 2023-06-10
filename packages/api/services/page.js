@@ -81,7 +81,7 @@ module.exports = class PageService {
 		if (lang === undefined) {
 			lang = site.data.languages?.[0] ?? null;
 		}
-		return site.$relatedQuery('children', trx).select().lang(lang).first()
+		return site.$relatedQuery('children', trx).columns({ lang }).first()
 			// eager load children (in which there are standalones)
 			// and children of standalones
 			.withGraphFetched(`[
@@ -89,12 +89,12 @@ module.exports = class PageService {
 				children(standalonesFilter) as standalones .children(childrenFilter)
 			]`).modifiers({
 				childrenFilter(q) {
-					q.select().lang(lang)
+					q.columns({ lang })
 						.where('block.standalone', false)
 						.whereNot('block.type', 'content');
 				},
 				standalonesFilter(q) {
-					q.select().lang(lang)
+					q.columns({ lang })
 						.where('block.standalone', true)
 						.whereNot('block.type', 'content');
 				}

@@ -13,7 +13,7 @@ module.exports = class TranslateService {
 	}
 
 	async languages({ Block, trx }) {
-		const items = await Block.query(trx).select().where('type', 'language');
+		const items = await Block.query(trx).columns().where('type', 'language');
 		const obj = {};
 		for (const item of items) {
 			obj[item.data.lang] = item.data;

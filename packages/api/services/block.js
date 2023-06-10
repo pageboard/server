@@ -27,12 +27,14 @@ module.exports = class BlockService {
 	}
 
 	get({ site, trx }, data) {
-		const q = site.$relatedQuery('children', trx).select()
+		const q = site.$relatedQuery('children', trx)
+			.columns({
+				lang: data.lang ?? site.data.languages?.[0]
+			})
 			.where('block.id', data.id);
 		if (data.type) {
 			q.where('block.type', data.type);
 		}
-		q.lang(data.lang ?? site.data.languages?.[0]);
 		const eagers = {};
 		if (data.parents) {
 			eagers.parents = {
@@ -133,7 +135,7 @@ module.exports = class BlockService {
 				q.joinRelated('parents', { alias: 'parent' });
 				const pc = data.parent.content; // whereObject fails otherwise
 				delete data.parent.content;
-				q.whereObject(data.parent, data.parent.type, 'parent');
+				whereSub(q, data.parent, 'parent');
 				data.parent.content = pc;
 			}
 		}
@@ -260,7 +262,9 @@ module.exports = class BlockService {
 				}
 			},
 			childrenFilter(query) {
-				query.select().lang(data.lang).where('standalone', false).whereNot('type', 'content');
+				query.columns({ lang: data.lang })
+					.where('standalone', false)
+					.whereNot('type', 'content');
 			}
 		});
 
@@ -1028,7 +1032,7 @@ module.exports = class BlockService {
 
 function whereSub(q, data, alias = 'block') {
 	let valid = false;
-	const types = (data.type || []).filter(t => t != 'site');
+	const types = typeof data.type == "string" && [data.type] || data.type || [];
 	if (types.length) {
 		valid = true;
 		q.whereIn(`${alias}.type`, types);
@@ -1053,9 +1057,9 @@ function whereSub(q, data, alias = 'block') {
 	return valid;
 }
 
-function filterSub(q, data, alias) {
-	q.select().lang(data.lang);
-	const valid = whereSub(q, data, alias);
+function filterSub(q, data, table) {
+	q.columns({ table, lang: data.lang });
+	const valid = whereSub(q, data, table);
 	const orders = data.order || [];
 	orders.push('created_at');
 	const seen = {};

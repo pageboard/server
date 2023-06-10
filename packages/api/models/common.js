@@ -141,25 +141,21 @@ exports.QueryBuilder = class CommonQueryBuilder extends QueryBuilder {
 		});
 		return super.select(list);
 	}
-	select(...args) {
-		if (args.length == 0 || args.length == 1 && args[0] == null) {
-			const model = this.modelClass();
-			const table = this.tableRefFor(model);
-			args = model.columns.map(col => `${table}.${col}`);
-		}
-		return super.select(args);
-	}
-	lang(lang) {
-		if (lang != null) {
-			const model = this.modelClass();
-			const table = this.tableRefFor(model);
-			this.select(fn(
-				'block_get_content',
-				ref('_id').from(table),
-				lang
-			).as('content'));
-		}
-		return this;
+	columns({ table, lang } = {}) {
+		const model = this.modelClass();
+		if (!table) table = this.tableRefFor(model);
+		const cols = model.columns.map(col => {
+			if (col == 'content' && lang) {
+				return fn(
+					'block_get_content',
+					ref('_id').from(table),
+					lang
+				).as('content');
+			} else {
+				return `${table}.${col}`;
+			}
+		});
+		return super.select(cols);
 	}
 	patchObjectOperationFactory(factory) {
 		this._patchObjectOperationFactory = factory;

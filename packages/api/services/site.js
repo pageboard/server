@@ -33,7 +33,7 @@ module.exports = class SiteService {
 	}
 
 	async get(req, data) {
-		return this.#QuerySite(req, data).throwIfNotFound().select();
+		return this.#QuerySite(req, data).throwIfNotFound().columns();
 	}
 	static get = {
 		title: 'Get site',
@@ -60,7 +60,7 @@ module.exports = class SiteService {
 
 	async search({ trx, Block }, data) {
 		const q = Block.query(trx).alias('site')
-			.select().where('site.type', 'site')
+			.columns().where('site.type', 'site')
 			.joinRelated('children', { alias: 'settings' })
 			.where('settings.type', 'settings');
 		if (data.grants) q.where(builder => {
@@ -156,6 +156,8 @@ module.exports = class SiteService {
 			!=
 			(dbSite.data.languages?.slice() ?? []).join(' ')
 			;
+		// FIXME be more explicit about it
+		// this is bound to fail
 		const toMulti = dbSite.data.lang && data.data.languages?.length > 0;
 		const toMono = !dbSite.data.lang && data.data.lang;
 
@@ -192,7 +194,7 @@ module.exports = class SiteService {
 	};
 
 	all({ trx, Block }, { text }) {
-		const q = Block.query(trx).where('type', 'site').select();
+		const q = Block.query(trx).where('type', 'site').columns();
 		if (text !== undefined) {
 			q.from(Block.raw("websearch_to_tsquery('unaccent', ?) AS query, block", [text]));
 			q.whereRaw(`query @@ block.tsv`);
