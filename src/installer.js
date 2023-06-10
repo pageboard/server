@@ -339,8 +339,8 @@ async function getDependencies(rootPkg, name, list, deps) {
 	}
 	if (pkg.pageboard && pkg.pageboard.server) {
 		rootPkg.server = pkg.pageboard.server;
-	} else if (pkg.name == "@pageboard/site" && !rootPkg.server) {
-		rootPkg.server = pkg.version.split('.').slice(0, 2).join('.');
+	} else if (!rootPkg.server) {
+		rootPkg.server = this.app.version;
 	}
 	return Promise.all(Object.keys(pkg.dependencies || {}).map(name => {
 		return getDependencies(rootPkg, name, list, deps);
