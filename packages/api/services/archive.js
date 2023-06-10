@@ -58,13 +58,13 @@ module.exports = class ArchiveService {
 
 		const modifiers = {
 			blocks(q) {
-				q.where('standalone', false).whereNot('type', 'content').select().lang(lang);
+				q.where('standalone', false).whereNot('type', 'content').columns({ lang });
 			},
 			standalones(q) {
-				q.where('standalone', true).select().lang(lang);
+				q.where('standalone', true).columns({ lang });
 			},
 			users(q) {
-				q.where('type', 'user').select().lang(lang);
+				q.where('type', 'user').columns({ lang });
 			}
 		};
 
@@ -81,7 +81,7 @@ module.exports = class ArchiveService {
 				q.where('standalone', true).orWhere('type', 'settings');
 			})
 			.whereNotExists(countParents)
-			.select().lang(lang);
+			.columns({ lang });
 		const blocks = await q.withGraphFetched(`[
 				parents(users),
 				children(standalones) as standalones . children(blocks),
