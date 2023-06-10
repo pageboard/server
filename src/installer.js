@@ -132,6 +132,7 @@ module.exports = class Installer {
 
 			const npkg = await this.#getPkg(pkg.dir);
 			if (!npkg.name) throw new Error("Installed module has no package name");
+			npkg.server = pkg.server ?? this.app.version;
 			const result = await runPostinstall(npkg, this.opts);
 			if (result) Log.install(result);
 			if (npkg.server !== pkg.server) await writePkg(npkg);
@@ -339,8 +340,6 @@ async function getDependencies(rootPkg, name, list, deps) {
 	}
 	if (pkg.pageboard && pkg.pageboard.server) {
 		rootPkg.server = pkg.pageboard.server;
-	} else if (!rootPkg.server) {
-		rootPkg.server = this.app.version;
 	}
 	return Promise.all(Object.keys(pkg.dependencies || {}).map(name => {
 		return getDependencies(rootPkg, name, list, deps);
