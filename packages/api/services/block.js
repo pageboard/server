@@ -106,6 +106,7 @@ module.exports = class BlockService {
 
 		if (data.parent) {
 			const parentList = data.parent.parents;
+			// WTF is that ? is it used somewhere ?
 			if (parentList && Array.isArray(parentList)) {
 				if (parentList.length) {
 					valid = true;
@@ -179,6 +180,12 @@ module.exports = class BlockService {
 				);
 			}
 
+			// FIXME
+			// there are two types of search
+			// block search where one wants to find blocks by their direct content
+			// (e.g. inventory_item)
+			// children block search where one wants to find blocks by their direct content and by their non-standalone children direct contents
+
 			const qdoc = Block.query(trx).select('block._id')
 				.select(fn.sum(raw('ts_rank(contents.tsv, search.query)')).as('rank'))
 				.select(raw(
@@ -191,7 +198,7 @@ module.exports = class BlockService {
 			} else {
 				qdoc.joinRelated('children as child')
 					.whereNot('child.type', 'content')
-					// .whereIn('child.type', site.$pkg.textblocks)
+					.whereIn('child.type', site.$pkg.textblocks)
 					.join('contents', 'child._id', 'contents._id')
 					.join('search', 'contents.tsv', '@@', 'search.query');
 			}
