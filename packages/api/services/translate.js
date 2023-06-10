@@ -65,7 +65,7 @@ module.exports = class TranslateService {
 			.where(ref('target.data:name'), ref('source.data:name'))
 			.where(ref('target.data:lang').castText(), lang)
 			.whereNot(q => {
-				q.where(fn('starts_with', ref('source.data:text').castText(), '"<'));
+				q.where(fn('starts_with', ref('source.data:text').castText(), '<'));
 				q.where(fn('regexp_count', ref('source.data:text').castText(), '>\\w'), 0);
 			})
 			.where(q => {
