@@ -261,36 +261,32 @@ CREATE OR REPLACE TRIGGER content_lang_trigger_insert AFTER INSERT ON relation F
 
 CREATE OR REPLACE FUNCTION block_delete_content(
 	_block block,
-	_site type_site_lang,
-	keep_names TEXT[] DEFAULT ARRAY[]::TEXT[]
+	_site type_site_lang
 ) RETURNS VOID
 	LANGUAGE 'plpgsql'
 AS $BODY$
+DECLARE
+	content_ids INTEGER[];
+	rel_ids INTEGER[];
 BEGIN
 	IF COALESCE(jsonb_array_length(_site.languages), 0) = 0 THEN
 		RETURN;
 	END IF;
 
-	WITH contents AS (
-		SELECT content._id
+	SELECT array_agg(r.id), array_agg(content._id)
+		INTO rel_ids, content_ids
 		FROM relation AS r, block AS content
 		WHERE r.parent_id = _block._id AND content._id = r.child_id
-		AND content.type = 'content'
-		AND content.data->>'name' != ALL(keep_names)
-	)
-	DELETE FROM relation USING contents WHERE parent_id = _block._id AND child_id = contents._id;
+		AND content.type = 'content';
+	DELETE FROM relation WHERE id IN (SELECT unnest(rel_ids));
 
-	WITH contents AS (
-		SELECT content._id
-		FROM relation AS r, block AS content
-		WHERE r.parent_id = _block._id AND content._id = r.child_id
-		AND content.type = 'content'
-		AND content.data->>'name' != ALL(keep_names)
-	), counts AS (
-		SELECT contents._id, count(relation.*) AS n
-		FROM contents, relation WHERE relation.child_id = contents._id AND relation.parent_id != _site._id AND relation.parent_id != _block._id GROUP BY contents._id
-	)
-	DELETE FROM block USING counts WHERE block._id = counts._id AND counts.n = 0;
+
+	WITH counts AS (
+		SELECT child_id AS _id, count(*) AS n
+		FROM relation WHERE child_id IN (
+			SELECT unnest(content_ids)
+		) GROUP BY child_id
+	) DELETE FROM block USING counts WHERE block._id = counts._id AND counts.n = 1;
 END
 $BODY$;
 
@@ -314,20 +310,9 @@ CREATE OR REPLACE FUNCTION content_lang_update_func() RETURNS trigger
 AS $BODY$
 DECLARE
 	_site type_site_lang;
-	_key TEXT;
-	_val JSONB;
-	keep_names TEXT[];
 BEGIN
 	_site := block_site(NEW._id);
-	keep_names := ARRAY[]::TEXT[];
-	FOR _key, _val IN
-		SELECT * FROM jsonb_each(NEW.content)
-	LOOP
-		IF _val = OLD.content[_key] THEN
-			keep_names := array_append(keep_names, _key);
-		END IF;
-	END LOOP;
-	PERFORM block_delete_content(OLD, _site, keep_names);
+	PERFORM block_delete_content(OLD, _site);
 	NEW.content := block_insert_content(NEW, _site);
 	IF NEW.content = '{}'::jsonb THEN
 		NEW.tsv = NULL;
