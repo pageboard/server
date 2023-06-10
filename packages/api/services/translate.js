@@ -58,14 +58,14 @@ module.exports = class TranslateService {
 				.where('block.id', id);
 		}
 		q.whereNot('block.type', 'content')
-			// .whereIn('block.type', site.$pkg.textblocks)
+			.whereIn('block.type', site.$pkg.textblocks)
 			.where('source.type', 'content')
 			.where(ref('source.data:lang').castText(), sourceLang)
 			.where('target.type', 'content')
 			.where(ref('target.data:name'), ref('source.data:name'))
 			.where(ref('target.data:lang').castText(), lang)
 			.whereNot(q => {
-				q.where(fn('starts_with', ref('source.data:text').castText(), '"<'));
+				q.where(fn('starts_with', ref('source.data:text').castText(), '<'));
 				q.where(fn('regexp_count', ref('source.data:text').castText(), '>\\w'), 0);
 			})
 			.where(q => {
@@ -145,7 +145,7 @@ module.exports = class TranslateService {
 				.where('block.id', data.id);
 		}
 		q.whereNot('block.type', 'content')
-			// .whereIn('block.type', site.$pkg.textblocks) FIXME paragraphs are inplace
+			.whereIn('block.type', site.$pkg.textblocks)
 			.where('source.type', 'content')
 			.where(ref('source.data:lang').castText(), lang)
 			.where('target.type', 'content')
