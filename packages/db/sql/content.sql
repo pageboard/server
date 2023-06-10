@@ -106,7 +106,7 @@ BEGIN
 END
 $BODY$;
 
-CREATE OR REPLACE FUNCTION content_delete_orphans (
+CREATE OR REPLACE FUNCTION block_delete_orphans (
 	site_id INTEGER
 ) RETURNS INTEGER
 	LANGUAGE 'sql'
@@ -117,7 +117,7 @@ AS $BODY$
 		ON t.child_id = block._id
 		WHERE s.parent_id = site_id
 		AND block._id = s.child_id
-		AND block.type = 'content'
+		AND block.standalone IS FALSE
 		GROUP BY block._id
 	),
 	dels AS (
