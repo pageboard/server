@@ -793,9 +793,6 @@ module.exports = class BlockService {
 	};
 
 	async save(req, data) {
-		const parents = data.parents ?? [];
-		delete data.parents;
-
 		const block = await this.get(req, data).forUpdate();
 		if (!block) {
 			throw new Error(`Block not found for update ${data.id}`);
@@ -807,25 +804,7 @@ module.exports = class BlockService {
 		if (!Object.isEmpty(data.data)) obj.data = data.data;
 		if (!Object.isEmpty(data.lock)) obj.lock = data.lock;
 		if (!Object.isEmpty(data.content)) obj.content = data.content;
-		await block.$query(req.trx).patchObject(obj);
-
-		if (parents.length == 0) return block;
-
-		await block.$relatedQuery('parents', req.trx)
-			.whereIn('block.type', parents.map(item => item.type))
-			.unrelate();
-
-		const newParents = parents.filter(item => item.id != null)
-			.map(item => [item.id, item.type]);
-
-		if (newParents.length) {
-			const ids = await req.site.$relatedQuery('children', req.trx)
-				.whereIn(['block.id', 'block.type'], newParents);
-			if (ids.length) {
-				await block.$relatedQuery('parents', req.trx).relate(ids);
-			}
-		}
-		return block;
+		return block.$query(req.trx).patchObject(obj);
 	}
 	static save = {
 		title: 'Modify a block',
@@ -862,8 +841,7 @@ module.exports = class BlockService {
 				type: 'object',
 				nullable: true
 			},
-			lock: Block.jsonSchema.properties.lock,
-			parents: BlockService.add.properties.parents
+			lock: Block.jsonSchema.properties.lock
 		}
 	};
 
