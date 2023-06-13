@@ -435,6 +435,13 @@ module.exports = class BlockService {
 						title: 'Select by data',
 						type: 'object',
 						nullable: true
+					},
+					parents: {
+						// internal api
+						type: 'array',
+						items: {
+							type: 'object'
+						}
 					}
 				}
 			},
