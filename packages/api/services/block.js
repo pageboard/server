@@ -813,7 +813,8 @@ module.exports = class BlockService {
 		if (!Object.isEmpty(data.data)) obj.data = data.data;
 		if (!Object.isEmpty(data.lock)) obj.lock = data.lock;
 		if (!Object.isEmpty(data.content)) obj.content = data.content;
-		return block.$query(req.trx).patchObject(obj);
+		await block.$query(req.trx).patchObject(obj);
+		return { count: 1 };
 	}
 	static save = {
 		title: 'Modify a block',
