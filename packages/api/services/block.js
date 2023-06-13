@@ -352,18 +352,18 @@ module.exports = class BlockService {
 				title: 'Preview',
 				description: 'With preview',
 				type: 'boolean',
-				default: false
+				nullable: true
 			},
 			content: {
 				title: 'With content',
 				type: 'boolean',
-				default: false
+				nullable: true
 			},
 			text: {
 				title: 'Text search',
-				nullable: true,
 				type: "string",
-				format: "singleline"
+				format: "singleline",
+				nullable: true
 			},
 			data: {
 				title: 'Select by data',
@@ -429,7 +429,7 @@ module.exports = class BlockService {
 					content: {
 						title: 'With content',
 						type: 'boolean',
-						default: false
+						nullable: true
 					},
 					data: {
 						title: 'Select by data',
@@ -502,12 +502,12 @@ module.exports = class BlockService {
 					first: {
 						title: 'Single',
 						type: 'boolean',
-						default: false
+						nullable: true
 					},
 					content: {
 						title: 'With content',
 						type: 'boolean',
-						default: false
+						nullable: true
 					},
 					data: {
 						title: 'Select by data',
