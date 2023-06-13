@@ -137,6 +137,8 @@ module.exports = class BlockService {
 				delete data.parent.content;
 				whereSub(q, data.parent, 'parent');
 				data.parent.content = pc;
+			} else {
+				delete data.parent;
 			}
 		}
 
@@ -275,7 +277,7 @@ module.exports = class BlockService {
 			offset: data.offset,
 			limit: data.limit
 		};
-		if (data.parent) obj.item = (await this.find(req, {
+		if (data.parent?.type) obj.item = (await this.find(req, {
 			...data.parent,
 			type: [data.parent.type],
 			lang: data.lang
