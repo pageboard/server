@@ -137,6 +137,8 @@ module.exports = class BlockService {
 				delete data.parent.content;
 				whereSub(q, data.parent, 'parent');
 				data.parent.content = pc;
+			} else {
+				delete data.parent;
 			}
 		}
 
@@ -275,7 +277,7 @@ module.exports = class BlockService {
 			offset: data.offset,
 			limit: data.limit
 		};
-		if (data.parent) obj.item = (await this.find(req, {
+		if (data.parent?.type) obj.item = (await this.find(req, {
 			...data.parent,
 			type: [data.parent.type],
 			lang: data.lang
@@ -350,18 +352,18 @@ module.exports = class BlockService {
 				title: 'Preview',
 				description: 'With preview',
 				type: 'boolean',
-				default: false
+				nullable: true
 			},
 			content: {
 				title: 'With content',
 				type: 'boolean',
-				default: false
+				nullable: true
 			},
 			text: {
 				title: 'Text search',
-				nullable: true,
 				type: "string",
-				format: "singleline"
+				format: "singleline",
+				nullable: true
 			},
 			data: {
 				title: 'Select by data',
@@ -427,12 +429,19 @@ module.exports = class BlockService {
 					content: {
 						title: 'With content',
 						type: 'boolean',
-						default: false
+						nullable: true
 					},
 					data: {
 						title: 'Select by data',
 						type: 'object',
 						nullable: true
+					},
+					parents: {
+						// internal api
+						type: 'array',
+						items: {
+							type: 'object'
+						}
 					}
 				}
 			},
@@ -500,12 +509,12 @@ module.exports = class BlockService {
 					first: {
 						title: 'Single',
 						type: 'boolean',
-						default: false
+						nullable: true
 					},
 					content: {
 						title: 'With content',
 						type: 'boolean',
-						default: false
+						nullable: true
 					},
 					data: {
 						title: 'Select by data',
@@ -971,7 +980,10 @@ module.exports = class BlockService {
 			.join('');
 		await block.$relatedQuery('children', trx).relate(newItems);
 		// safe with content update trigger
-		await block.$query(trx).patch({ content: block.content });
+		await block.$query(trx).patch({
+			type: block.type,
+			content: block.content
+		});
 		return block;
 	}
 	static fill = {
