@@ -971,7 +971,10 @@ module.exports = class BlockService {
 			.join('');
 		await block.$relatedQuery('children', trx).relate(newItems);
 		// safe with content update trigger
-		await block.$query(trx).patch({ content: block.content });
+		await block.$query(trx).patch({
+			type: block.type,
+			content: block.content
+		});
 		return block;
 	}
 	static fill = {
