@@ -77,11 +77,17 @@ module.exports = class TranslateService {
 					q.orWhere('source.updated_at', '>=', ref('target.updated_at'));
 				}
 			})
-			.limit(limit)
-			.offset(offset)
 			.orderBy('target._id', valid ? 'desc' : 'asc');
-		const items = await q;
-		return { items, limit, offset };
+		const [items, count] = await Promise.all([
+			q.limit(limit).offset(offset),
+			q.resultSize()
+		]);
+		return {
+			items,
+			limit,
+			offset,
+			count
+		};
 	}
 	static list = {
 		title: 'List translations',
@@ -152,12 +158,13 @@ module.exports = class TranslateService {
 			.where(ref('target.data:name'), ref('source.data:name'))
 			.where(ref('target.data:lang').castText(), data.lang)
 			.where(fn.coalesce(ref('target.data:text').castText(), ''), '')
-			.limit(data.limit)
-			.offset(data.offset)
 			.orderBy('target._id');
-		const items = await q;
+		const [items, count] = await Promise.all([
+			q.limit(data.limit).offset(data.offset),
+			q.resultSize()
+		]);
 
-		if (items.length == 0) return { status: 404, count: 0 };
+		if (count == 0) return { status: 404, count };
 
 		const body = new URLSearchParams({
 			tag_handling: 'html',
@@ -188,7 +195,7 @@ module.exports = class TranslateService {
 					'data:text': val(target).castJson()
 				});
 		}
-		return { count: items.length };
+		return { count };
 	}
 
 	static fill = {

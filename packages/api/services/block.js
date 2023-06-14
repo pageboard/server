@@ -226,25 +226,19 @@ module.exports = class BlockService {
 		}
 
 		if (children) {
-			if (children.count) {
-				const qchildren = { ...children };
-				delete qchildren.count;
-				delete qchildren.limit;
-				delete qchildren.offset;
-				const qc = site.$relatedQuery('children', trx).alias('children');
-				whereSub(qc, qchildren, 'children');
-				qc.joinRelated('parents', { alias: 'parents' })
-					.where('parents._id', ref('block._id'));
-				q.select(Block.query(trx).count().from(qc.as('sub')).as('itemsCount'));
-			} else {
-				eagers.items = {
-					$relation: 'children',
-					$modify: ['itemsFilter']
-				};
-			}
-		}
-		if (data.count) {
-			// TODO
+			eagers.items = {
+				$relation: 'children',
+				$modify: ['itemsFilter']
+			};
+			const qc = site.$relatedQuery('children', trx).alias('children');
+			whereSub(qc, children, 'children');
+			qc.joinRelated('parents', { alias: 'parents' })
+				.where('parents._id', ref('block._id'));
+			q.select(
+				Block.query(trx).count().from(
+					qc.as('sub')
+				).as('count')
+			);
 		}
 		if (data.content) {
 			eagers.items = {
@@ -270,10 +264,14 @@ module.exports = class BlockService {
 			}
 		});
 
-		const rows = await q;
+		const [rows, count] = await Promise.all([
+			q,
+			q.clone().clear('limit').clear('offset').resultSize()
+		]);
 		for (const type of data.type) req.bundles.add(type);
 		const obj = {
 			items: rows,
+			count,
 			offset: data.offset,
 			limit: data.limit
 		};
@@ -389,11 +387,6 @@ module.exports = class BlockService {
 				title: 'Offset',
 				type: 'integer',
 				default: 0
-			},
-			count: {
-				title: 'Count',
-				type: 'boolean',
-				default: false
 			},
 			lang: {
 				title: 'Select language',
@@ -544,7 +537,7 @@ module.exports = class BlockService {
 				}
 			},
 			children: {
-				title: 'Children',
+				title: 'Fetch children',
 				type: 'object',
 				nullable: true,
 				properties: {
@@ -606,11 +599,6 @@ module.exports = class BlockService {
 						title: 'Offset',
 						type: 'integer',
 						default: 0
-					},
-					count: {
-						title: 'Count',
-						type: 'boolean',
-						default: false
 					}
 				}
 			}
