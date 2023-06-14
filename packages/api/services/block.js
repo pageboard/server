@@ -241,7 +241,7 @@ module.exports = class BlockService {
 			);
 		}
 		if (data.content) {
-			eagers.items = {
+			eagers.children = {
 				$relation: 'children',
 				$modify: ['childrenFilter']
 			};
