@@ -801,8 +801,9 @@ module.exports = class BlockService {
 		if (!Object.isEmpty(data.data)) obj.data = data.data;
 		if (!Object.isEmpty(data.lock)) obj.lock = data.lock;
 		if (!Object.isEmpty(data.content)) obj.content = data.content;
-		await block.$query(req.trx).patchObject(obj);
-		return { count: 1 };
+		return {
+			item: await block.$query(req.trx).patchObject(obj).returning('*')
+		};
 	}
 	static save = {
 		title: 'Modify a block',
@@ -852,10 +853,11 @@ module.exports = class BlockService {
 				.whereIn('block.type', types)
 				.select(ref('block.data:url').castText())
 			);
-		await site.$relatedQuery('children', trx)
+		const { count } = site.$relatedQuery('children', trx)
 			.select(raw('recursive_delete(block._id, FALSE) AS count'))
 			.whereIn('block.id', list)
 			.whereIn('block.type', types);
+		return { count };
 	}
 	static del = {
 		title: 'Delete blocks',
