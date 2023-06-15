@@ -178,7 +178,7 @@ module.exports = class PageService {
 		return req.run('block.search', {
 			type: 'page',
 			data: {
-				nositemap: !data.draft
+				nositemap: data.draft ? undefined : false
 			},
 			offset: data.offset,
 			limit: data.limit,
