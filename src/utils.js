@@ -39,7 +39,7 @@ exports.mergeExpressions = function mergeExpressions(data, expr, obj) {
 	const md = new Matchdom(sharedMd, {
 		hooks: {
 			afterAll(ctx, val) {
-				if (val === undefined) miss = true;
+				if (val == null) miss = true;
 				return val;
 			}
 		}
@@ -48,6 +48,7 @@ exports.mergeExpressions = function mergeExpressions(data, expr, obj) {
 	for (const [key, val] of Object.entries(flatExpr)) {
 		if (!val || typeof val != "string") continue;
 		obj.$default = dget(data, key);
+		miss = false;
 		const fused = md.merge(val, obj);
 		if (!miss) dset(data, key, fused);
 	}
