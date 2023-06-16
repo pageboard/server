@@ -226,6 +226,7 @@ BEGIN
 				jsonb_build_object(
 					'name', _name,
 					'lang', cur_lang,
+					'valid', (CASE WHEN (_lang = cur_lang OR is_trivial) THEN true ELSE false END),
 					'text', (CASE WHEN (_lang = cur_lang OR is_trivial) THEN _text ELSE '' END)
 				)
 			) RETURNING block._id INTO cur_id;
