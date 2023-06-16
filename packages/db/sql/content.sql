@@ -67,12 +67,12 @@ CREATE OR REPLACE TRIGGER content_tsv_trigger_insert BEFORE INSERT ON block FOR 
 CREATE OR REPLACE TRIGGER content_tsv_trigger_update_text BEFORE UPDATE OF data ON block FOR EACH ROW WHEN (NEW.type = 'content' AND NEW.data['text'] != OLD.data['text']) EXECUTE FUNCTION content_tsv_func();
 
 
-CREATE INDEX IF NOT EXISTS block_content_name_lang ON block(
+CREATE INDEX IF NOT EXISTS block_content_name_lang ON block (
 	(data->>'name'),
 	(data->>'lang')
 ) WHERE type='content';
 
-CREATE OR REPLACE FUNCTION block_get_content(
+CREATE OR REPLACE FUNCTION block_get_content (
 	block_id INTEGER,
 	_lang TEXT
 ) RETURNS JSONB
