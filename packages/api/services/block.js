@@ -29,7 +29,8 @@ module.exports = class BlockService {
 	get({ site, trx }, data) {
 		const q = site.$relatedQuery('children', trx)
 			.columns({
-				lang: data.lang ?? site.data.languages?.[0]
+				lang: data.lang ?? site.data.languages?.[0],
+				content: true
 			})
 			.where('block.id', data.id);
 		if (data.type) {
@@ -257,7 +258,7 @@ module.exports = class BlockService {
 				}
 			},
 			childrenFilter(query) {
-				query.columns({ lang: data.lang })
+				query.columns({ lang: data.lang, content: true })
 					.where('standalone', false)
 					.whereNot('type', 'content');
 			}
@@ -268,17 +269,6 @@ module.exports = class BlockService {
 			q.clone().clear('limit').clear('offset').resultSize()
 		]);
 		for (const type of data.type) req.bundles.add(type);
-		const obj = {
-			items: rows,
-			count,
-			offset: data.offset,
-			limit: data.limit
-		};
-		if (data.parent?.type) obj.item = (await this.find(req, {
-			...data.parent,
-			type: [data.parent.type],
-			lang: data.lang
-		})).item;
 
 		const ids = [];
 		for (const row of rows) {
@@ -295,10 +285,19 @@ module.exports = class BlockService {
 				}
 				delete row.items;
 			}
-			if (!data.content) {
-				delete row.content;
-			}
 		}
+
+		const obj = {
+			items: rows,
+			count,
+			offset: data.offset,
+			limit: data.limit
+		};
+		if (data.parent?.type) obj.item = (await this.find(req, {
+			...data.parent,
+			type: [data.parent.type],
+			lang: data.lang
+		})).item;
 		if (ids.length) {
 			const hrow = await req.call('href.collect', {
 				ids,
@@ -1038,7 +1037,7 @@ function whereSub(q, data, alias = 'block') {
 }
 
 function filterSub(q, data, table) {
-	q.columns({ table, lang: data.lang });
+	q.columns({ table, lang: data.lang, content: data.content });
 	const valid = whereSub(q, data, table);
 	const orders = data.order || [];
 	orders.push('created_at');

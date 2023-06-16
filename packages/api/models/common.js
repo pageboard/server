@@ -141,20 +141,25 @@ exports.QueryBuilder = class CommonQueryBuilder extends QueryBuilder {
 		});
 		return super.select(list);
 	}
-	columns({ table, lang } = {}) {
+	columns({ table, lang, content } = {}) {
 		const model = this.modelClass();
 		if (!table) table = this.tableRefFor(model);
-		const cols = model.columns.map(col => {
-			if (col == 'content' && lang) {
-				return fn(
-					'block_get_content',
-					ref('_id').from(table),
-					lang
-				).as('content');
-			} else {
-				return `${table}.${col}`;
+		const cols = [];
+		for (const col of model.columns) {
+			const rcol = ref(col).from(table);
+			if (col == 'content') {
+				if (!content) continue;
+				if (lang) {
+					cols.push(fn(
+						'block_get_content',
+						ref('_id').from(table),
+						lang
+					).as('content'));
+					continue;
+				}
 			}
-		});
+			cols.push(rcol);
+		}
 		return super.select(cols);
 	}
 	patchObjectOperationFactory(factory) {
