@@ -80,13 +80,21 @@ CREATE OR REPLACE FUNCTION block_get_content (
 	PARALLEL SAFE
 	STABLE
 AS $BODY$
-SELECT jsonb_object(array_agg(content.name), array_agg(content.text))
+SELECT rows.content FROM (
+	SELECT
+		jsonb_object(array_agg(contents.name), array_agg(contents.text)) AS content,
+		bool_and(contents.valid) AS valid
 	FROM (
-		SELECT block.data->>'name' AS name, block.data->>'text' AS text
+		SELECT
+			block.data->>'name' AS name,
+			block.data->>'text' AS text,
+			block.data['valid']::boolean AS valid
 		FROM relation AS r, block
 		WHERE r.parent_id = block_id AND block._id = r.child_id
 		AND block.type = 'content' AND block.data->>'lang' = _lang
-	) AS content;
+	) AS contents
+) AS rows
+WHERE rows.valid IS TRUE;
 $BODY$;
 
 CREATE OR REPLACE FUNCTION content_get_headline (
