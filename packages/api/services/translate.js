@@ -1,4 +1,4 @@
-const { ref, val, fn } = require.lazy('objection');
+const { ref, val, fn, raw } = require.lazy('objection');
 
 module.exports = class TranslateService {
 	static name = 'translate';
@@ -30,7 +30,10 @@ module.exports = class TranslateService {
 		if (!lang) throw new HttpError.BadRequest("Missing site.data.languages");
 		const blocks = await Block.relatedQuery('children', trx).for(site)
 			.patch({
-				content: fn('block_get_content', ref('_id'), lang)
+				content: raw(`(block_get_content(:id:, :lang)).content`, {
+					id: ref('_id'),
+					lang
+				})
 			})
 			.whereNot('type', 'content');
 		return { blocks };

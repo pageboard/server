@@ -6,6 +6,11 @@ CREATE TYPE type_site_lang AS (
 	languages JSONB
 );
 
+CREATE TYPE type_content_translated AS (
+	content JSONB,
+	translated BOOLEAN
+);
+
 CREATE OR REPLACE FUNCTION block_site(
 	block_id INTEGER
 ) RETURNS type_site_lang
@@ -75,26 +80,23 @@ CREATE INDEX IF NOT EXISTS block_content_name_lang ON block (
 CREATE OR REPLACE FUNCTION block_get_content (
 	block_id INTEGER,
 	_lang TEXT
-) RETURNS JSONB
+) RETURNS type_content_translated
 	LANGUAGE sql
 	PARALLEL SAFE
 	STABLE
 AS $BODY$
-SELECT rows.content FROM (
+SELECT
+	jsonb_object(array_agg(contents.name), array_agg(contents.text)) AS content,
+	COALESCE(bool_and(contents.valid), false) AS translated
+FROM (
 	SELECT
-		jsonb_object(array_agg(contents.name), array_agg(contents.text)) AS content,
-		bool_and(contents.valid) AS valid
-	FROM (
-		SELECT
-			block.data->>'name' AS name,
-			block.data->>'text' AS text,
-			block.data['valid']::boolean AS valid
-		FROM relation AS r, block
-		WHERE r.parent_id = block_id AND block._id = r.child_id
-		AND block.type = 'content' AND block.data->>'lang' = _lang
-	) AS contents
-) AS rows
-WHERE rows.valid IS TRUE;
+		block.data->>'name' AS name,
+		block.data->>'text' AS text,
+		block.data['valid']::boolean AS valid
+	FROM relation AS r, block
+	WHERE r.parent_id = block_id AND block._id = r.child_id
+	AND block.type = 'content' AND block.data->>'lang' = _lang
+) AS contents
 $BODY$;
 
 CREATE OR REPLACE FUNCTION content_get_headline (

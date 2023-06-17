@@ -150,11 +150,12 @@ exports.QueryBuilder = class CommonQueryBuilder extends QueryBuilder {
 			if (col == 'content') {
 				if (!content) continue;
 				if (lang) {
-					cols.push(fn(
-						'block_get_content',
-						ref('_id').from(table),
-						lang
-					).as('content'));
+					cols.push(
+						raw(`(block_get_content(:id:, :lang)).*`, {
+							id: ref('_id').from(table),
+							lang
+						})
+					);
 					continue;
 				}
 			}
