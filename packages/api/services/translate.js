@@ -12,6 +12,29 @@ module.exports = class TranslateService {
 		app.languages = await app.run('translate.languages');
 	}
 
+	lang({ site }, { lang } = {}) {
+		if (!site.data.languages?.length) {
+			if (lang && lang != site.data.lang) {
+				throw new HttpError.BadRequest("Unsupported lang");
+			}
+			return {
+				tsconfig: 'unaccent'
+			};
+		}
+		if (!lang) {
+			lang = site.data.languages?.[0];
+		} else if (!site.data.languages.includes(lang)) {
+			throw new HttpError.BadRequest("Unsupported lang");
+		}
+		const language = this.app.languages[lang];
+		if (!language) throw new HttpError.BadRequest("Unknown language");
+		return language;
+	}
+	static lang = {
+		title: 'Get language',
+		$lock: true
+	};
+
 	async languages({ Block, trx }) {
 		const items = await Block.query(trx).columns().where('type', 'language');
 		const obj = {};

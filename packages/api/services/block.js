@@ -26,10 +26,11 @@ module.exports = class BlockService {
 		});
 	}
 
-	get({ site, trx }, data) {
-		const q = site.$relatedQuery('children', trx)
+	get(req, data) {
+		const { lang } = req.call('translate.lang', data);
+		const q = req.site.$relatedQuery('children', req.trx)
 			.columns({
-				lang: data.lang ?? site.data.languages?.[0],
+				lang,
 				content: true
 			})
 			.where('block.id', data.id);
@@ -92,13 +93,11 @@ module.exports = class BlockService {
 		// TODO data.id or data.parent.id or data.child.id must be set
 		// currently the check filterSub -> boolean is only partially applied
 		const { site, trx, Block, Href } = req;
-		if (data.lang == null && site.data.languages?.length > 0) {
-			data.lang = site.data.languages[0];
-		}
+		const language = req.call('translate.lang', data);
 		let { parents } = data;
 		if (parents) {
 			if (parents.type || parents.id || parents.standalone) {
-				parents.lang = data.lang;
+				parents.lang = language.lang;
 			} else {
 				parents = null;
 			}
@@ -143,7 +142,9 @@ module.exports = class BlockService {
 			}
 		}
 
-		if (data.lang && children) children.lang = data.lang;
+		if (language.lang && children) {
+			children.lang = language.lang;
+		}
 
 		if (data.child && Object.keys(data.child).length) {
 			if (data.text) {
@@ -159,8 +160,6 @@ module.exports = class BlockService {
 			q.joinRelated('children', { alias: 'child' });
 			q.whereObject(data.child, data.child.type, 'child');
 		} else if (data.text) {
-			const language = this.app.languages[data.lang] ?? { tsconfig: 'unaccent' };
-
 			q.with('search', Block.query(trx)
 				.select(ref('websearch_to_tsquery').as('query'))
 				.from(raw(`websearch_to_tsquery(:tsconfig, :text)`, {
@@ -168,7 +167,7 @@ module.exports = class BlockService {
 					tsconfig: language.tsconfig
 				}))
 			);
-			if (data.lang && language.lang) {
+			if (language.lang) {
 				q.with('contents', Block.query(trx)
 					.select(
 						'block._id', 'children.tsv',
@@ -176,7 +175,7 @@ module.exports = class BlockService {
 					)
 					.joinRelated('children')
 					.where('children.type', 'content')
-					.where(ref('children.data:lang').castText(), data.lang)
+					.where(ref('children.data:lang').castText(), language.lang)
 				);
 			} else {
 				q.with('contents', Block.query(trx)
@@ -214,7 +213,7 @@ module.exports = class BlockService {
 		}
 		const eagers = {};
 
-		valid = filterSub(q, data) || valid;
+		valid = filterSub(q, data, language) || valid;
 		if (!valid) {
 			throw new HttpError.BadRequest("Insufficient search parameters");
 		}
@@ -248,17 +247,17 @@ module.exports = class BlockService {
 		}
 		if (!Object.isEmpty(eagers)) q.withGraphFetched(eagers).modifiers({
 			parentsFilter(query) {
-				filterSub(query, parents);
+				filterSub(query, parents, language);
 			},
 			itemsFilter(query) {
-				filterSub(query, children);
+				filterSub(query, children, language);
 				if (!children.type) {
 					// FIXME this is for backward compatibility
 					query.where('standalone', true);
 				}
 			},
 			childrenFilter(query) {
-				query.columns({ lang: data.lang, content: true })
+				query.columns({ lang: language.lang, content: true })
 					.where('standalone', false)
 					.whereNot('type', 'content');
 			}
@@ -288,6 +287,7 @@ module.exports = class BlockService {
 		}
 
 		const obj = {
+			lang: language.lang,
 			items: rows,
 			count,
 			offset: data.offset,
@@ -296,7 +296,7 @@ module.exports = class BlockService {
 		if (data.parent?.type) obj.item = (await this.find(req, {
 			...data.parent,
 			type: [data.parent.type],
-			lang: data.lang
+			lang: language.lang
 		})).item;
 		if (ids.length) {
 			const hrow = await req.call('href.collect', {
@@ -1036,9 +1036,9 @@ function whereSub(q, data, alias = 'block') {
 	return valid;
 }
 
-function filterSub(q, data, table) {
-	q.columns({ table, lang: data.lang, content: data.content });
-	const valid = whereSub(q, data, table);
+function filterSub(q, data, language) {
+	q.columns({ lang: language.lang, content: data.content });
+	const valid = whereSub(q, data);
 	const orders = data.order || [];
 	orders.push('created_at');
 	const seen = {};

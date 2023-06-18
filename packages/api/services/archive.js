@@ -27,7 +27,7 @@ module.exports = class ArchiveService {
 	async export(req, { file, ids = [] }) {
 		const { site, trx, res } = req;
 		const { id } = site;
-		const lang = site.data.lang ? null : (site.data.languages?.[0] ?? null);
+		const { lang } = req.call('translate.lang');
 		const filepath = file ?? `${id}-${fileStamp()}.ndjson`;
 		const counts = {
 			users: 0,
