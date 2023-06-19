@@ -94,7 +94,7 @@ module.exports = class TranslateService {
 				q.where(fn('starts_with', ref('source.data:text').castText(), '<'));
 				q.where(fn('regexp_count', ref('source.data:text').castText(), '>\\w'), 0);
 			})
-			.where(ref('target.data:valid').castBool(), valid)
+			.where(fn.coalesce(ref('target.data:valid').castBool(), false), valid)
 			.orderBy('target._id', valid ? 'desc' : 'asc');
 		const [items, count] = await Promise.all([
 			q.limit(limit).offset(offset),
