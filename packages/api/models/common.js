@@ -1,4 +1,4 @@
-const { ref, val, raw, fn, Model, QueryBuilder } = require('objection');
+const { ref, val, raw, Model, QueryBuilder } = require('objection');
 const Duration = require('iso8601-duration');
 const Path = require('node:path');
 
