@@ -14,8 +14,9 @@ CREATE TYPE type_content_translated AS (
 CREATE OR REPLACE FUNCTION block_site(
 	block_id INTEGER
 ) RETURNS type_site_lang
-	STABLE
+	PARALLEL SAFE
 	LANGUAGE sql
+	STABLE
 AS $BODY$
 	SELECT block._id, block.data['languages'] FROM relation, block WHERE relation.child_id = block_id AND block._id = relation.parent_id AND block.type = 'site' LIMIT 1;
 $BODY$;
@@ -27,6 +28,7 @@ CREATE OR REPLACE FUNCTION block_find(
 	_value TEXT
 ) RETURNS block
 	PARALLEL SAFE
+	STABLE
 	LANGUAGE plpgsql
 AS $BODY$
 DECLARE
