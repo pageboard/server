@@ -356,13 +356,13 @@ function whereCond(q, key, value) {
 					byType.set('null', true);
 				} else {
 					const xtype = typeof x;
-					if (!byType[xtype]) byType.set(xtype, new Set());
+					if (!byType.has(xtype)) byType.set(xtype, new Set());
 					byType.get(xtype).add(x);
 				}
 			}
 			for (const [type, set] of byType) {
 				if (type == 'null') q.orWhereNull(refk);
-				else q.orWhere(refk.castTo(type), 'IN', Array.from(set));
+				else q.orWhere(refk.castTo(getCast(type)), 'IN', Array.from(set));
 			}
 		});
 		return q;
