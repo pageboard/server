@@ -208,7 +208,7 @@ module.exports = class BlockService {
 
 			q.with('doc', qdoc)
 				.join('doc', 'block._id', 'doc._id')
-				.select('headlines')
+				.select(raw('headlines[:3]'))
 				.select('rank').orderBy('rank', 'desc');
 		}
 		const eagers = {};
