@@ -94,15 +94,7 @@ module.exports = class TranslateService {
 				q.where(fn('starts_with', ref('source.data:text').castText(), '<'));
 				q.where(fn('regexp_count', ref('source.data:text').castText(), '>\\w'), 0);
 			})
-			.where(q => {
-				if (valid) {
-					q.whereNot(fn.coalesce(ref('target.data:text').castText(), ''), '');
-					q.where('source.updated_at', '<', ref('target.updated_at'));
-				} else {
-					q.where(fn.coalesce(ref('target.data:text').castText(), ''), '');
-					q.orWhere('source.updated_at', '>=', ref('target.updated_at'));
-				}
-			})
+			.where(ref('target.data:valid').castBool(), valid)
 			.orderBy('target._id', valid ? 'desc' : 'asc');
 		const [items, count] = await Promise.all([
 			q.limit(limit).offset(offset),
