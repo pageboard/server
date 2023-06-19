@@ -104,16 +104,13 @@ CREATE OR REPLACE FUNCTION content_get_headline (
 	doc TEXT,
 	query tsquery
 ) RETURNS TEXT
-	LANGUAGE 'plpgsql'
+	LANGUAGE 'sql'
+	PARALLEL SAFE
+	STABLE
 AS $BODY$
-DECLARE
-	headline TEXT;
-BEGIN
-	SELECT trimmed INTO headline FROM (
-		SELECT trim(ts_headline) AS trimmed, ts_headline AS text FROM ts_headline(config, doc, query)
-	) AS row WHERE length(row.trimmed) > 0 AND length(row.text) != length(doc);
-	RETURN headline;
-END
+SELECT trimmed AS headline FROM (
+	SELECT trim(ts_headline) AS trimmed, ts_headline AS text FROM ts_headline(config, doc, query)
+) AS row WHERE length(row.trimmed) > 0 AND length(row.text) != length(doc);
 $BODY$;
 
 CREATE OR REPLACE FUNCTION block_delete_orphans (
