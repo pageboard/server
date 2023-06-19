@@ -779,6 +779,11 @@ module.exports = class BlockService {
 				type: 'object',
 				nullable: true
 			},
+			content: {
+				title: 'content',
+				type: 'object',
+				nullable: true
+			},
 			expr: {
 				title: 'expr',
 				type: 'object',

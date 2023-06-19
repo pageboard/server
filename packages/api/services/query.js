@@ -42,6 +42,7 @@ module.exports = class SearchService {
 			{
 				$pathname,
 				$query: unflatten(data.query ?? {}),
+				$site: site.data,
 				$user: user
 			}
 		);
