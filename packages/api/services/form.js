@@ -48,6 +48,7 @@ module.exports = class FormService {
 			{
 				$request: reqBody ?? {},
 				$query: unflatten(data.query ?? {}),
+				$site: site.data,
 				$user: user
 			}
 		);
