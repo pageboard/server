@@ -21,6 +21,17 @@ module.exports = class DatabaseModule {
 			pg.types.builtins.TIMESTAMPTZ,
 			str => str.split(' ').join('T') + ":00"
 		);
+		pg.types.setTypeParser(
+			pg.types.builtins.INT8,
+			str => {
+				// convert BigInt to Number, or keep it as a String
+				// count() is a int8 so this is made to avoid having count to be a string
+				const n = Number(str);
+				if (n.toString() != n) return str;
+				else return n;
+			}
+		);
+		// 1016 (array of int8) is less useful
 	}
 	apiRoutes(app) {
 		if (app.version == app.upstream) {

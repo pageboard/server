@@ -26,10 +26,12 @@ module.exports = class BlockService {
 		});
 	}
 
-	get({ site, trx }, data) {
-		const q = site.$relatedQuery('children', trx)
+	get(req, data) {
+		const { lang } = req.call('translate.lang', data);
+		const q = req.site.$relatedQuery('children', req.trx)
 			.columns({
-				lang: data.lang ?? site.data.languages?.[0]
+				lang,
+				content: true
 			})
 			.where('block.id', data.id);
 		if (data.type) {
@@ -91,13 +93,11 @@ module.exports = class BlockService {
 		// TODO data.id or data.parent.id or data.child.id must be set
 		// currently the check filterSub -> boolean is only partially applied
 		const { site, trx, Block, Href } = req;
-		if (data.lang == null && site.data.languages?.length > 0) {
-			data.lang = site.data.languages[0];
-		}
+		const language = req.call('translate.lang', data);
 		let { parents } = data;
 		if (parents) {
 			if (parents.type || parents.id || parents.standalone) {
-				parents.lang = data.lang;
+				parents.lang = language.lang;
 			} else {
 				parents = null;
 			}
@@ -142,7 +142,9 @@ module.exports = class BlockService {
 			}
 		}
 
-		if (data.lang && children) children.lang = data.lang;
+		if (language.lang && children) {
+			children.lang = language.lang;
+		}
 
 		if (data.child && Object.keys(data.child).length) {
 			if (data.text) {
@@ -158,8 +160,6 @@ module.exports = class BlockService {
 			q.joinRelated('children', { alias: 'child' });
 			q.whereObject(data.child, data.child.type, 'child');
 		} else if (data.text) {
-			const language = this.app.languages[data.lang] ?? { tsconfig: 'unaccent' };
-
 			q.with('search', Block.query(trx)
 				.select(ref('websearch_to_tsquery').as('query'))
 				.from(raw(`websearch_to_tsquery(:tsconfig, :text)`, {
@@ -167,7 +167,7 @@ module.exports = class BlockService {
 					tsconfig: language.tsconfig
 				}))
 			);
-			if (data.lang && language.lang) {
+			if (language.lang) {
 				q.with('contents', Block.query(trx)
 					.select(
 						'block._id', 'children.tsv',
@@ -175,7 +175,7 @@ module.exports = class BlockService {
 					)
 					.joinRelated('children')
 					.where('children.type', 'content')
-					.where(ref('children.data:lang').castText(), data.lang)
+					.where(ref('children.data:lang').castText(), language.lang)
 				);
 			} else {
 				q.with('contents', Block.query(trx)
@@ -201,7 +201,6 @@ module.exports = class BlockService {
 					.join('search', 'contents.tsv', '@@', 'search.query');
 			} else {
 				qdoc.joinRelated('children as child')
-					.whereNot('child.type', 'content')
 					.whereIn('child.type', site.$pkg.textblocks)
 					.join('contents', 'child._id', 'contents._id')
 					.join('search', 'contents.tsv', '@@', 'search.query');
@@ -209,12 +208,12 @@ module.exports = class BlockService {
 
 			q.with('doc', qdoc)
 				.join('doc', 'block._id', 'doc._id')
-				.select('headlines')
+				.select(raw('headlines[:3]'))
 				.select('rank').orderBy('rank', 'desc');
 		}
 		const eagers = {};
 
-		valid = filterSub(q, data) || valid;
+		valid = filterSub(q, data, language) || valid;
 		if (!valid) {
 			throw new HttpError.BadRequest("Insufficient search parameters");
 		}
@@ -226,62 +225,49 @@ module.exports = class BlockService {
 		}
 
 		if (children) {
-			if (children.count) {
-				const qchildren = { ...children };
-				delete qchildren.count;
-				delete qchildren.limit;
-				delete qchildren.offset;
-				const qc = site.$relatedQuery('children', trx).alias('children');
-				whereSub(qc, qchildren, 'children');
-				qc.joinRelated('parents', { alias: 'parents' })
-					.where('parents._id', ref('block._id'));
-				q.select(Block.query(trx).count().from(qc.as('sub')).as('itemsCount'));
-			} else {
-				eagers.items = {
-					$relation: 'children',
-					$modify: ['itemsFilter']
-				};
-			}
-		}
-		if (data.count) {
-			// TODO
+			eagers.items = {
+				$relation: 'children',
+				$modify: ['itemsFilter']
+			};
+			const qc = site.$relatedQuery('children', trx).alias('children');
+			whereSub(qc, children, 'children');
+			qc.joinRelated('parents', { alias: 'parents' })
+				.where('parents._id', ref('block._id'));
+			q.select(
+				Block.query(trx).count().from(
+					qc.as('sub')
+				).as('count')
+			);
 		}
 		if (data.content) {
-			eagers.items = {
+			eagers.children = {
 				$relation: 'children',
 				$modify: ['childrenFilter']
 			};
 		}
 		if (!Object.isEmpty(eagers)) q.withGraphFetched(eagers).modifiers({
 			parentsFilter(query) {
-				filterSub(query, parents);
+				filterSub(query, parents, language);
 			},
 			itemsFilter(query) {
-				filterSub(query, children);
+				filterSub(query, children, language);
 				if (!children.type) {
 					// FIXME this is for backward compatibility
 					query.where('standalone', true);
 				}
 			},
 			childrenFilter(query) {
-				query.columns({ lang: data.lang })
+				query.columns({ lang: language.lang, content: true })
 					.where('standalone', false)
 					.whereNot('type', 'content');
 			}
 		});
 
-		const rows = await q;
+		const [rows, count] = await Promise.all([
+			q,
+			q.clone().clear('limit').clear('offset').resultSize()
+		]);
 		for (const type of data.type) req.bundles.add(type);
-		const obj = {
-			items: rows,
-			offset: data.offset,
-			limit: data.limit
-		};
-		if (data.parent?.type) obj.item = (await this.find(req, {
-			...data.parent,
-			type: [data.parent.type],
-			lang: data.lang
-		})).item;
 
 		const ids = [];
 		for (const row of rows) {
@@ -298,10 +284,20 @@ module.exports = class BlockService {
 				}
 				delete row.items;
 			}
-			if (!data.content) {
-				delete row.content;
-			}
 		}
+
+		const obj = {
+			lang: language.lang,
+			items: rows,
+			count,
+			offset: data.offset,
+			limit: data.limit
+		};
+		if (data.parent?.type) obj.item = (await this.find(req, {
+			...data.parent,
+			type: [data.parent.type],
+			lang: language.lang
+		})).item;
 		if (ids.length) {
 			const hrow = await req.call('href.collect', {
 				ids,
@@ -389,11 +385,6 @@ module.exports = class BlockService {
 				title: 'Offset',
 				type: 'integer',
 				default: 0
-			},
-			count: {
-				title: 'Count',
-				type: 'boolean',
-				default: false
 			},
 			lang: {
 				title: 'Select language',
@@ -544,7 +535,7 @@ module.exports = class BlockService {
 				}
 			},
 			children: {
-				title: 'Children',
+				title: 'Fetch children',
 				type: 'object',
 				nullable: true,
 				properties: {
@@ -606,11 +597,6 @@ module.exports = class BlockService {
 						title: 'Offset',
 						type: 'integer',
 						default: 0
-					},
-					count: {
-						title: 'Count',
-						type: 'boolean',
-						default: false
 					}
 				}
 			}
@@ -813,8 +799,9 @@ module.exports = class BlockService {
 		if (!Object.isEmpty(data.data)) obj.data = data.data;
 		if (!Object.isEmpty(data.lock)) obj.lock = data.lock;
 		if (!Object.isEmpty(data.content)) obj.content = data.content;
-		await block.$query(req.trx).patchObject(obj);
-		return { count: 1 };
+		return {
+			item: await block.$query(req.trx).patchObject(obj).returning('*')
+		};
 	}
 	static save = {
 		title: 'Modify a block',
@@ -864,10 +851,11 @@ module.exports = class BlockService {
 				.whereIn('block.type', types)
 				.select(ref('block.data:url').castText())
 			);
-		await site.$relatedQuery('children', trx)
+		const { count } = site.$relatedQuery('children', trx)
 			.select(raw('recursive_delete(block._id, FALSE) AS count'))
 			.whereIn('block.id', list)
 			.whereIn('block.type', types);
+		return { count };
 	}
 	static del = {
 		title: 'Delete blocks',
@@ -1048,9 +1036,9 @@ function whereSub(q, data, alias = 'block') {
 	return valid;
 }
 
-function filterSub(q, data, table) {
-	q.columns({ table, lang: data.lang });
-	const valid = whereSub(q, data, table);
+function filterSub(q, data, language) {
+	q.columns({ lang: language.lang, content: data.content });
+	const valid = whereSub(q, data);
 	const orders = data.order || [];
 	orders.push('created_at');
 	const seen = {};

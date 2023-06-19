@@ -27,7 +27,7 @@ module.exports = class ArchiveService {
 	async export(req, { file, ids = [] }) {
 		const { site, trx, res } = req;
 		const { id } = site;
-		const lang = site.data.lang ? null : (site.data.languages?.[0] ?? null);
+		const { lang } = req.call('translate.lang');
 		const filepath = file ?? `${id}-${fileStamp()}.ndjson`;
 		const counts = {
 			users: 0,
@@ -58,13 +58,15 @@ module.exports = class ArchiveService {
 
 		const modifiers = {
 			blocks(q) {
-				q.where('standalone', false).whereNot('type', 'content').columns({ lang });
+				q.where('standalone', false)
+					.whereNot('type', 'content')
+					.columns({ lang, content: true });
 			},
 			standalones(q) {
-				q.where('standalone', true).columns({ lang });
+				q.where('standalone', true).columns({ lang, content: true });
 			},
 			users(q) {
-				q.where('type', 'user').columns({ lang });
+				q.where('type', 'user').columns({ lang, content: true });
 			}
 		};
 
@@ -81,7 +83,7 @@ module.exports = class ArchiveService {
 				q.where('standalone', true).orWhere('type', 'settings');
 			})
 			.whereNotExists(countParents)
-			.columns({ lang });
+			.columns({ lang, content: true });
 		const blocks = await q.withGraphFetched(`[
 				parents(users),
 				children(standalones) as standalones . children(blocks),

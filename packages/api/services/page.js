@@ -77,11 +77,13 @@ module.exports = class PageService {
 		});
 	}
 
-	#QueryPage({ trx, site }, url, lang) {
-		if (lang === undefined) {
-			lang = site.data.languages?.[0] ?? null;
-		}
-		return site.$relatedQuery('children', trx).columns({ lang }).first()
+	#QueryPage(req, url, lang) {
+		return req.site.$relatedQuery('children', req.trx)
+			.columns({
+				lang,
+				content: true
+			})
+			.first()
 			// eager load children (in which there are standalones)
 			// and children of standalones
 			.withGraphFetched(`[
@@ -89,12 +91,12 @@ module.exports = class PageService {
 				children(standalonesFilter) as standalones .children(childrenFilter)
 			]`).modifiers({
 				childrenFilter(q) {
-					q.columns({ lang })
+					q.columns({ lang, content: true })
 						.where('block.standalone', false)
 						.whereNot('block.type', 'content');
 				},
 				standalonesFilter(q) {
-					q.columns({ lang })
+					q.columns({ lang, content: true })
 						.where('block.standalone', true)
 						.whereNot('block.type', 'content');
 				}
@@ -109,7 +111,7 @@ module.exports = class PageService {
 				q.where(ref("block.data:prefix").castBool(), true);
 			})
 			.orderBy(fn.coalesce(ref("block.data:prefix").castBool(), false), "asc")
-			.whereIn('block.type', site.$pkg.pages);
+			.whereIn('block.type', req.site.$pkg.pages);
 	}
 
 	async get(req, data) {
@@ -118,11 +120,9 @@ module.exports = class PageService {
 			status: 200,
 			site: site.data
 		};
-		if (data.lang && site.data.languages && site.data.languages.includes(data.lang) == false) {
-			throw new HttpError.BadRequest("Unknown language");
-		}
+		const { lang } = req.call('translate.lang', data);
 
-		let page = await this.#QueryPage(req, data.url, data.lang);
+		let page = await this.#QueryPage(req, data.url, lang);
 		if (!page) {
 			obj.status = 404;
 		} else if (req.locked(page.lock)) {
@@ -130,7 +130,7 @@ module.exports = class PageService {
 		}
 		const wkp = /^\/\.well-known\/(\d{3})$/.exec(data.url);
 		if (obj.status != 200) {
-			page = await this.#QueryPage(req, `/.well-known/${obj.status}`, data.lang);
+			page = await this.#QueryPage(req, `/.well-known/${obj.status}`, lang);
 			if (!page) return Object.assign(obj, {
 				item: { type: 'page' }
 			});
@@ -178,7 +178,7 @@ module.exports = class PageService {
 		return req.run('block.search', {
 			type: 'page',
 			data: {
-				nositemap: !data.draft
+				nositemap: data.draft ? undefined : false
 			},
 			offset: data.offset,
 			limit: data.limit,

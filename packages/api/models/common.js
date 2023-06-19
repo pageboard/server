@@ -1,4 +1,4 @@
-const { ref, val, raw, fn, Model, QueryBuilder } = require('objection');
+const { ref, val, raw, Model, QueryBuilder } = require('objection');
 const Duration = require('iso8601-duration');
 const Path = require('node:path');
 
@@ -141,20 +141,26 @@ exports.QueryBuilder = class CommonQueryBuilder extends QueryBuilder {
 		});
 		return super.select(list);
 	}
-	columns({ table, lang } = {}) {
+	columns({ table, lang, content } = {}) {
 		const model = this.modelClass();
 		if (!table) table = this.tableRefFor(model);
-		const cols = model.columns.map(col => {
-			if (col == 'content' && lang) {
-				return fn(
-					'block_get_content',
-					ref('_id').from(table),
-					lang
-				).as('content');
-			} else {
-				return `${table}.${col}`;
+		const cols = [];
+		for (const col of model.columns) {
+			const rcol = ref(col).from(table);
+			if (col == 'content') {
+				if (!content) continue;
+				if (lang) {
+					cols.push(
+						raw(`(block_get_content(:id:, :lang)).*`, {
+							id: ref('_id').from(table),
+							lang
+						})
+					);
+					continue;
+				}
 			}
-		});
+			cols.push(rcol);
+		}
 		return super.select(cols);
 	}
 	patchObjectOperationFactory(factory) {
@@ -195,127 +201,14 @@ exports.QueryBuilder = class CommonQueryBuilder extends QueryBuilder {
 		const schema = type ? mClass.schema(type) : null;
 		const table = alias || this.tableRefFor(mClass);
 		const refs = asPaths(obj, {}, table, true, schema);
-		const comps = {
-			lt: '<',
-			lte: '<=',
-			gt: '>',
-			gte: '>='
-		};
+
 		for (const [k, cond] of Object.entries(refs)) {
-			const refk = ref(k);
-			if (cond == null) {
-				this.whereNull(refk);
-			} else if (Array.isArray(cond)) {
-				this.where(function () {
-					const noNulls = cond.filter(x => x !== null);
-					this.where(refk.castText(), 'IN', noNulls);
-					if (noNulls.length != cond.length) this.orWhereNull(refk);
-				});
-			} else if (typeof cond == "object") {
-				if (cond.op in comps) {
-					if (cond.val instanceof Date) {
-						// DEAD CODE because asPaths doesn't return such a cond
-						this.where(refk.castTo('date'), comps[cond.op], cond.val);
-					} else if (typeof cond.val == "number") {
-						this.where(refk.castFloat(), comps[cond.op], cond.val);
-					} else {
-						this.where(refk.castText(), comps[cond.op], cond.val);
-					}
-				} else if (cond.range == "date") {
-					if (cond.names) {
-						// slot intersection
-						const start = `${k}.${cond.names[0]}`;
-						const end = `${k}.${cond.names[1]}`;
-						this.whereNotNull(ref(start)); // TODO optional start
-						this.whereNotNull(ref(end)); // TODO optional end
-						if (cond.start == cond.end) {
-							this.whereRaw(`(daterange(:start:, :end:) @> :at OR (:start: = :at AND :end: = :at))`, {
-								start: ref(start).castTo('date'),
-								end: ref(end).castTo('date'),
-								at: val(cond.start).castTo('date')
-							});
-						} else {
-							this.whereRaw(`daterange(:from, :to) && daterange(:start:, :end:)`, {
-								start: ref(start).castTo('date'),
-								end: ref(end).castTo('date'),
-								from: val(cond.start).castTo('date'),
-								to: val(cond.end).castTo('date')
-							});
-						}
-					} else {
-						this.whereNotNull(refk);
-						if (cond.start == cond.end) {
-							this.whereIn(refk.castTo('date'), [
-								val(cond.start).castTo('date'),
-								val(cond.end).castTo('date')
-							]);
-						} else {
-							this.whereRaw(`(daterange(:from, :to) @> :at: OR (:at: = :from AND :at: = :to))`, {
-								from: val(cond.start).castTo('date'),
-								to: val(cond.end).castTo('date'),
-								at: refk.castTo('date')
-							});
-						}
-					}
-				} else if (cond.op == "not") {
-					this.whereNot(refk.castText(), cond.val);
-				} else if (cond.op == "end") {
-					this.where(refk.castText(), "ilike", '%' + cond.val);
-				} else if (cond.op == "start") {
-					this.where(refk.castText(), "ilike", cond.val + '%');
-				} else if (cond.op == "has") {
-					if (cond.type == "string" && typeof cond.val == "string") {
-						// ref is a string and it contains that value
-						this.where(refk.castText(), "ilike", '%' + cond.val + '%');
-					} else {
-						// ref is a json text or array, and it intersects any of the values
-						const val = typeof cond.val == "string" ? [cond.val] : cond.val;
-						if (val != null) this.whereRaw('?? \\?| ?', [refk, val]);
-					}
-				} else if (cond.op == "in") {
-					if (cond.type == "string" && typeof cond.val == "string") {
-						// ref is a string and it is contained in that value
-						this.whereRaw("? ilike '%' || ?? || '%'", [cond.val, refk.castText()]);
-					} else {
-						// ref is a json string, and it is in the values
-						const val = typeof cond.val == "string" ? [cond.val] : cond.val;
-						if (val != null) this.whereRaw('?? \\?& ?', [refk, val]);
-					}
-				} else if (cond.range == "numeric") {
-					if (cond.names) {
-						const start = `${k}.${cond.names[0]}`;
-						const end = `${k}.${cond.names[1]}`;
-						this.whereNotNull(ref(start)); // TODO optional start
-						this.whereNotNull(ref(end)); // TODO optional end
-						if (cond.start == cond.end) {
-							this.whereRaw(`(numrange(:start:, :end:) @> :at OR (:start: = :at AND :end: = :at))`, {
-								start: ref(start).castTo('numeric'),
-								end: ref(end).castTo('numeric'),
-								at: val(cond.start).castTo('numeric')
-							});
-						} else {
-							this.whereRaw(`numrange(:from, :to) && numrange(:start:, :end:)`, {
-								start: ref(start).castTo('numeric'),
-								end: ref(end).castTo('numeric'),
-								from: val(cond.start).castTo('numeric'),
-								to: val(cond.end).castTo('numeric')
-							});
-						}
-					} else {
-						this.whereRaw(':col: <@ numrange(:from, :to)', {
-							col: refk,
-							from: val(cond.start).castTo('numeric'),
-							to: val(cond.end).castTo('numeric')
-						});
-					}
-				} else {
-					throw new HttpError.BadRequest(
-						`Bad condition operator ${JSON.stringify(cond)}`
-					);
-				}
-			} else {
-				this.where(refk.castText(), cond);
-			}
+			// FIXME
+			// jsonpath https://www.postgresql.org/docs/15/functions-json.html
+			// is much more effective at using GIN index on data
+			// select * from block where data @@ '$.id == "mb014"'; -- uses gin index
+			// select * from block where data['id']='"mb014"'; -- scans all rows
+			whereCond(this, k, cond);
 		}
 		return this;
 	}
@@ -325,6 +218,162 @@ exports.QueryBuilder = class CommonQueryBuilder extends QueryBuilder {
 		return builder;
 	}
 };
+
+function getCast(val) {
+	if (val == null) return null;
+	const type = typeof val;
+	if (type == "boolean") {
+		return "boolean";
+	} else if (type == "number") {
+		const p = val.toString();
+		if (val === Number.parseInt(p)) return "integer";
+		else return "float";
+	} else {
+		return "text";
+	}
+}
+
+function whereCondObject(q, refk, cond) {
+	const comps = {
+		lt: '<',
+		lte: '<=',
+		gt: '>',
+		gte: '>='
+	};
+	if (cond.op in comps) {
+		if (cond.val instanceof Date) {
+			// DEAD CODE because asPaths doesn't return such a cond
+			q.where(refk.castTo('date'), comps[cond.op], cond.val);
+		} else if (typeof cond.val == "number") {
+			q.where(refk.castFloat(), comps[cond.op], cond.val);
+		} else {
+			q.where(refk.castText(), comps[cond.op], cond.val);
+		}
+	} else if (cond.range == "date") {
+		if (cond.names) {
+			// slot intersection
+			const start = `${refk.expression}.${cond.names[0]}`;
+			const end = `${refk.expression}.${cond.names[1]}`;
+			q.whereNotNull(ref(start)); // TODO optional start
+			q.whereNotNull(ref(end)); // TODO optional end
+			if (cond.start == cond.end) {
+				q.whereRaw(`(daterange(:start:, :end:) @> :at OR (:start: = :at AND :end: = :at))`, {
+					start: ref(start).castTo('date'),
+					end: ref(end).castTo('date'),
+					at: val(cond.start).castTo('date')
+				});
+			} else {
+				q.whereRaw(`daterange(:from, :to) && daterange(:start:, :end:)`, {
+					start: ref(start).castTo('date'),
+					end: ref(end).castTo('date'),
+					from: val(cond.start).castTo('date'),
+					to: val(cond.end).castTo('date')
+				});
+			}
+		} else {
+			q.whereNotNull(refk);
+			if (cond.start == cond.end) {
+				q.whereIn(refk.castTo('date'), [
+					val(cond.start).castTo('date'),
+					val(cond.end).castTo('date')
+				]);
+			} else {
+				q.whereRaw(`(daterange(:from, :to) @> :at: OR (:at: = :from AND :at: = :to))`, {
+					from: val(cond.start).castTo('date'),
+					to: val(cond.end).castTo('date'),
+					at: refk.castTo('date')
+				});
+			}
+		}
+	} else if (cond.op == "not") {
+		q.whereNot(refk.castText(), cond.val);
+	} else if (cond.op == "end") {
+		q.where(refk.castText(), "ilike", '%' + cond.val);
+	} else if (cond.op == "start") {
+		q.where(refk.castText(), "ilike", cond.val + '%');
+	} else if (cond.op == "has") {
+		if (cond.type == "string" && typeof cond.val == "string") {
+			// ref is a string and it contains that value
+			q.where(refk.castText(), "ilike", '%' + cond.val + '%');
+		} else {
+			// ref is a json text or array, and it intersects any of the values
+			const val = typeof cond.val == "string" ? [cond.val] : cond.val;
+			if (val != null) q.whereRaw('?? \\?| ?', [refk, val]);
+		}
+	} else if (cond.op == "in") {
+		if (cond.type == "string" && typeof cond.val == "string") {
+			// ref is a string and it is contained in that value
+			q.whereRaw("? ilike '%' || ?? || '%'", [cond.val, refk.castText()]);
+		} else {
+			// ref is a json string, and it is in the values
+			const val = typeof cond.val == "string" ? [cond.val] : cond.val;
+			if (val != null) q.whereRaw('?? \\?& ?', [refk, val]);
+		}
+	} else if (cond.range == "numeric") {
+		if (cond.names) {
+			const start = `${refk.expression}.${cond.names[0]}`;
+			const end = `${refk.expression}.${cond.names[1]}`;
+			q.whereNotNull(ref(start)); // TODO optional start
+			q.whereNotNull(ref(end)); // TODO optional end
+			if (cond.start == cond.end) {
+				q.whereRaw(`(numrange(:start:, :end:) @> :at OR (:start: = :at AND :end: = :at))`, {
+					start: ref(start).castTo('numeric'),
+					end: ref(end).castTo('numeric'),
+					at: val(cond.start).castTo('numeric')
+				});
+			} else {
+				q.whereRaw(`numrange(:from, :to) && numrange(:start:, :end:)`, {
+					start: ref(start).castTo('numeric'),
+					end: ref(end).castTo('numeric'),
+					from: val(cond.start).castTo('numeric'),
+					to: val(cond.end).castTo('numeric')
+				});
+			}
+		} else {
+			q.whereRaw(':col: <@ numrange(:from, :to)', {
+				col: refk,
+				from: val(cond.start).castTo('numeric'),
+				to: val(cond.end).castTo('numeric')
+			});
+		}
+	} else {
+		throw new HttpError.BadRequest(
+			`Bad condition operator ${JSON.stringify(cond)}`
+		);
+	}
+}
+
+function whereCond(q, key, value) {
+	const refk = ref(key);
+	if (value == null) {
+		return q.whereNull(refk);
+	}
+	if (Array.isArray(value)) {
+		q.where(q => {
+			const byType = new Map();
+			for (const x of value) {
+				if (x == null) {
+					byType.set('null', true);
+				} else {
+					const xtype = typeof x;
+					if (!byType[xtype]) byType.set(xtype, new Set());
+					byType.get(xtype).add(x);
+				}
+			}
+			for (const [type, set] of byType) {
+				if (type == 'null') q.orWhereNull(refk);
+				else q.orWhere(refk.castTo(type), 'IN', Array.from(set));
+			}
+		});
+		return q;
+	}
+
+	if (typeof value == "object") {
+		whereCondObject(q, refk, value);
+	} else {
+		q.where(refk.castTo(getCast(value)), value);
+	}
+}
 
 function asPaths(obj, ret, pre, first, schema) {
 	if (!schema) schema = {};

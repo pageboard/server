@@ -6,11 +6,17 @@ CREATE TYPE type_site_lang AS (
 	languages JSONB
 );
 
+CREATE TYPE type_content_translated AS (
+	content JSONB,
+	translated BOOLEAN
+);
+
 CREATE OR REPLACE FUNCTION block_site(
 	block_id INTEGER
 ) RETURNS type_site_lang
-	STABLE
+	PARALLEL SAFE
 	LANGUAGE sql
+	STABLE
 AS $BODY$
 	SELECT block._id, block.data['languages'] FROM relation, block WHERE relation.child_id = block_id AND block._id = relation.parent_id AND block.type = 'site' LIMIT 1;
 $BODY$;
@@ -22,6 +28,7 @@ CREATE OR REPLACE FUNCTION block_find(
 	_value TEXT
 ) RETURNS block
 	PARALLEL SAFE
+	STABLE
 	LANGUAGE plpgsql
 AS $BODY$
 DECLARE
@@ -67,26 +74,31 @@ CREATE OR REPLACE TRIGGER content_tsv_trigger_insert BEFORE INSERT ON block FOR 
 CREATE OR REPLACE TRIGGER content_tsv_trigger_update_text BEFORE UPDATE OF data ON block FOR EACH ROW WHEN (NEW.type = 'content' AND NEW.data['text'] != OLD.data['text']) EXECUTE FUNCTION content_tsv_func();
 
 
-CREATE INDEX IF NOT EXISTS block_content_name_lang ON block(
+CREATE INDEX IF NOT EXISTS block_content_name_lang ON block (
 	(data->>'name'),
 	(data->>'lang')
 ) WHERE type='content';
 
-CREATE OR REPLACE FUNCTION block_get_content(
+CREATE OR REPLACE FUNCTION block_get_content (
 	block_id INTEGER,
 	_lang TEXT
-) RETURNS JSONB
+) RETURNS type_content_translated
 	LANGUAGE sql
 	PARALLEL SAFE
 	STABLE
 AS $BODY$
-SELECT jsonb_object(array_agg(content.name), array_agg(content.text))
-	FROM (
-		SELECT block.data->>'name' AS name, block.data->>'text' AS text
-		FROM relation AS r, block
-		WHERE r.parent_id = block_id AND block._id = r.child_id
-		AND block.type = 'content' AND block.data->>'lang' = _lang
-	) AS content;
+SELECT
+	jsonb_object(array_agg(contents.name), array_agg(contents.text)) AS content,
+	COALESCE(bool_and(contents.valid), false) AS translated
+FROM (
+	SELECT
+		block.data->>'name' AS name,
+		block.data->>'text' AS text,
+		block.data['valid']::boolean AS valid
+	FROM relation AS r, block
+	WHERE r.parent_id = block_id AND block._id = r.child_id
+	AND block.type = 'content' AND block.data->>'lang' = _lang
+) AS contents
 $BODY$;
 
 CREATE OR REPLACE FUNCTION content_get_headline (
@@ -94,16 +106,13 @@ CREATE OR REPLACE FUNCTION content_get_headline (
 	doc TEXT,
 	query tsquery
 ) RETURNS TEXT
-	LANGUAGE 'plpgsql'
+	LANGUAGE 'sql'
+	PARALLEL SAFE
+	STABLE
 AS $BODY$
-DECLARE
-	headline TEXT;
-BEGIN
-	SELECT trimmed INTO headline FROM (
-		SELECT trim(ts_headline) AS trimmed, ts_headline AS text FROM ts_headline(config, doc, query)
-	) AS row WHERE length(row.trimmed) > 0 AND length(row.text) != length(doc);
-	RETURN headline;
-END
+SELECT trimmed AS headline FROM (
+	SELECT trim(ts_headline) AS trimmed, ts_headline AS text FROM ts_headline(config, doc, query)
+) AS row WHERE length(row.trimmed) > 0 AND length(row.text) != length(doc);
 $BODY$;
 
 CREATE OR REPLACE FUNCTION block_delete_orphans (
@@ -226,6 +235,7 @@ BEGIN
 				jsonb_build_object(
 					'name', _name,
 					'lang', cur_lang,
+					'valid', (CASE WHEN (_lang = cur_lang OR is_trivial) THEN true ELSE false END),
 					'text', (CASE WHEN (_lang = cur_lang OR is_trivial) THEN _text ELSE '' END)
 				)
 			) RETURNING block._id INTO cur_id;

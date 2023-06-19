@@ -1,4 +1,4 @@
-const { ref, val, fn } = require.lazy('objection');
+const { ref, val, fn, raw } = require.lazy('objection');
 
 module.exports = class TranslateService {
 	static name = 'translate';
@@ -11,6 +11,29 @@ module.exports = class TranslateService {
 	async apiRoutes(app) {
 		app.languages = await app.run('translate.languages');
 	}
+
+	lang({ site }, { lang } = {}) {
+		if (!site.data.languages?.length) {
+			if (lang && lang != site.data.lang) {
+				throw new HttpError.BadRequest("Unsupported lang");
+			}
+			return {
+				tsconfig: 'unaccent'
+			};
+		}
+		if (!lang) {
+			lang = site.data.languages?.[0];
+		} else if (!site.data.languages.includes(lang)) {
+			throw new HttpError.BadRequest("Unsupported lang");
+		}
+		const language = this.app.languages[lang];
+		if (!language) throw new HttpError.BadRequest("Unknown language");
+		return language;
+	}
+	static lang = {
+		title: 'Get language',
+		$lock: true
+	};
 
 	async languages({ Block, trx }) {
 		const items = await Block.query(trx).columns().where('type', 'language');
@@ -30,7 +53,10 @@ module.exports = class TranslateService {
 		if (!lang) throw new HttpError.BadRequest("Missing site.data.languages");
 		const blocks = await Block.relatedQuery('children', trx).for(site)
 			.patch({
-				content: fn('block_get_content', ref('_id'), lang)
+				content: raw(`(block_get_content(:id:, :lang)).content`, {
+					id: ref('_id'),
+					lang
+				})
 			})
 			.whereNot('type', 'content');
 		return { blocks };
@@ -68,20 +94,18 @@ module.exports = class TranslateService {
 				q.where(fn('starts_with', ref('source.data:text').castText(), '<'));
 				q.where(fn('regexp_count', ref('source.data:text').castText(), '>\\w'), 0);
 			})
-			.where(q => {
-				if (valid) {
-					q.whereNot(fn.coalesce(ref('target.data:text').castText(), ''), '');
-					q.where('source.updated_at', '<', ref('target.updated_at'));
-				} else {
-					q.where(fn.coalesce(ref('target.data:text').castText(), ''), '');
-					q.orWhere('source.updated_at', '>=', ref('target.updated_at'));
-				}
-			})
-			.limit(limit)
-			.offset(offset)
+			.where(ref('target.data:valid').castBool(), valid)
 			.orderBy('target._id', valid ? 'desc' : 'asc');
-		const items = await q;
-		return { items, limit, offset };
+		const [items, count] = await Promise.all([
+			q.limit(limit).offset(offset),
+			q.resultSize()
+		]);
+		return {
+			items,
+			limit,
+			offset,
+			count
+		};
 	}
 	static list = {
 		title: 'List translations',
@@ -152,12 +176,13 @@ module.exports = class TranslateService {
 			.where(ref('target.data:name'), ref('source.data:name'))
 			.where(ref('target.data:lang').castText(), data.lang)
 			.where(fn.coalesce(ref('target.data:text').castText(), ''), '')
-			.limit(data.limit)
-			.offset(data.offset)
 			.orderBy('target._id');
-		const items = await q;
+		const [items, count] = await Promise.all([
+			q.limit(data.limit).offset(data.offset),
+			q.resultSize()
+		]);
 
-		if (items.length == 0) return { status: 404, count: 0 };
+		if (count == 0) return { status: 404, count };
 
 		const body = new URLSearchParams({
 			tag_handling: 'html',
@@ -188,7 +213,7 @@ module.exports = class TranslateService {
 					'data:text': val(target).castJson()
 				});
 		}
-		return { count: items.length };
+		return { count };
 	}
 
 	static fill = {

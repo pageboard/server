@@ -265,8 +265,7 @@ module.exports = class ApiModule {
 			}
 		}
 		if (schema.templates) {
-			if (!block.expr) block.expr = {};
-			mergeExpressions(block.expr, schema.templates, block.data);
+			block.expr = mergeExpressions(block.expr ?? {}, schema.templates, block);
 			if (Object.isEmpty(block.expr)) block.expr = null;
 		}
 	}
