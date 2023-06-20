@@ -376,8 +376,7 @@ function whereCond(q, key, value) {
 }
 
 function asPaths(obj, ret, pre, first, schema) {
-	if (!schema) schema = {};
-	const props = schema.properties || {};
+	const props = schema?.properties ?? {};
 	const dateTimes = ["date-time", "date"];
 	Object.keys(obj).forEach(str => {
 		let val = obj[str];
@@ -386,7 +385,12 @@ function asPaths(obj, ret, pre, first, schema) {
 			delete obj[str];
 			obj[key] = val;
 		}
-		const schem = props[key] || {};
+		const schem = props[key];
+		if (!schem && schema) {
+			// refuse extra conditions
+			delete obj[key];
+			return;
+		}
 		let cur;
 		if (pre) {
 			if (first) {
@@ -399,7 +403,7 @@ function asPaths(obj, ret, pre, first, schema) {
 		} else {
 			cur = key;
 		}
-		const propKeys = schem.properties ? Object.keys(schem.properties) : [];
+		const propKeys = Object.keys(schem?.properties ?? {});
 		if (
 			val && (
 				typeof val == "string"
