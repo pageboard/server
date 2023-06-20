@@ -608,14 +608,15 @@ function applyUnrelate({ site, trx }, obj) {
 	}));
 }
 
-function applyRemove(req, list, recursive) {
+function applyRemove({ site, trx }, list, recursive) {
 	if (!list.length) return;
-	const q = req.site.$relatedQuery('children', req.trx).whereIn('block.id', list);
+	const q = site.$relatedQuery('children', trx).whereIn('block.id', list);
 	if (!recursive) {
-		return q.whereNot('standalone', true).delete();
+		q.whereNot('standalone', true).delete();
 	} else {
-		return req.run('block.del', { id: list });
+		q.select(fn('recursive_delete', ref('block._id'), false).as('count'));
 	}
+	return q;
 }
 
 async function applyAdd({ site, trx, Block }, list) {
