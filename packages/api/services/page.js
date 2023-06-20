@@ -15,13 +15,16 @@ module.exports = class PageService {
 				data = {
 					item: {
 						type: 'write',
-						data: {}
+						data: {},
+						content: {}
 					},
 					site: site.data
 				};
 			} else {
 				data = await req.run('page.get', query);
-				if (isWebmaster && forWebmaster) req.bundles.add('editor');
+				if (isWebmaster && forWebmaster) {
+					req.bundles.set('editor', { content: true });
+				}
 			}
 			data.commons = app.opts.commons;
 			res.return(data);
