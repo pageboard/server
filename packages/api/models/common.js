@@ -204,10 +204,8 @@ exports.QueryBuilder = class CommonQueryBuilder extends QueryBuilder {
 
 		for (const [k, cond] of Object.entries(refs)) {
 			// FIXME
-			// jsonpath https://www.postgresql.org/docs/15/functions-json.html
-			// is much more effective at using GIN index on data
-			// select * from block where data @@ '$.id == "mb014"'; -- uses gin index
-			// select * from block where data['id']='"mb014"'; -- scans all rows
+			// https://www.postgresql.org/docs/current/datatype-json.html#JSON-INDEXING
+			// The default GIN operator class for jsonb supports queries with the key-exists operators ?, ?| and ?&, the containment operator @>, and the jsonpath match operators @? and @@.
 			whereCond(this, k, cond);
 		}
 		return this;
