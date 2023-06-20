@@ -39,7 +39,7 @@ exports.mergeExpressions = function mergeExpressions(data, expr, obj) {
 	const md = new Matchdom(sharedMd, {
 		hooks: {
 			afterAll(ctx, val) {
-				if (val == null) miss = true;
+				if (val === undefined) miss = true;
 				return val;
 			}
 		}
@@ -50,7 +50,7 @@ exports.mergeExpressions = function mergeExpressions(data, expr, obj) {
 		obj.$default = dget(data, key);
 		miss = false;
 		const fused = md.merge(val, obj);
-		if (!miss) dset(data, key, fused);
+		if (!miss && fused != null) dset(data, key, fused);
 	}
 	return data;
 };
