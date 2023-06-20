@@ -50,7 +50,7 @@
     "http-errors": "^2.0.0",
     "import-lazy": "^4.0.0",
     "lodash.merge": "^4.6.2",
-    "matchdom": "^11.4.0",
+    "matchdom": "^11.5.0",
     "morgan": "^1.10.0",
     "nestie": "^1.0.3",
     "outdent": "^0.8.0",
