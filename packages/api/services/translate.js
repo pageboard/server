@@ -176,7 +176,7 @@ module.exports = class TranslateService {
 			.where(ref('target.data:name'), ref('source.data:name'))
 			.where(ref('target.data:lang').castText(), data.lang)
 			.where(fn.coalesce(ref('target.data:text').castText(), ''), '')
-			.orderBy('target._id');
+			.orderBy('target._id', 'desc');
 		const [items, count] = await Promise.all([
 			q.limit(data.limit).offset(data.offset),
 			q.resultSize()
