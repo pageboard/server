@@ -242,7 +242,8 @@ module.exports = class PageService {
 			}
 		} else {
 			obj.item = {
-				type: 'sitemap'
+				type: 'sitemap',
+				content: {}
 			};
 		}
 		return obj;
