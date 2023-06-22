@@ -8,8 +8,8 @@ module.exports = class TranslateService {
 		this.opts = opts;
 	}
 
-	async apiRoutes(app) {
-		app.languages = await app.run('translate.languages');
+	async init() {
+		this.app.languages = await this.app.run('translate.languages');
 	}
 
 	lang({ site }, { lang } = {}) {

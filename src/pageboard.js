@@ -210,8 +210,8 @@ module.exports = class Pageboard {
 			}]);
 		});
 
-		await this.#initPlugins();
 		this.#initServices();
+		await this.#initPlugins();
 
 		if (!this.opts.server.start) return;
 
