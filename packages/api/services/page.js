@@ -548,7 +548,7 @@ function getParents({ site, trx }, url) {
 
 function listPages({ site, trx }, data) {
 	const q = site.$relatedQuery('children', trx)
-		.selectWithout('content')
+		.columns()
 		.select(raw("'site' || block.type AS type"))
 		.whereIn('block.type', data.type ?? site.$pkg.pages)
 		.where('block.standalone', true);
