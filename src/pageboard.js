@@ -126,7 +126,7 @@ module.exports = class Pageboard {
 		}
 	}
 
-	async run(command, data, site) {
+	async run(command, data, { site, grant } = {}) {
 		const req = {
 			res: {
 				locals: {
@@ -135,6 +135,9 @@ module.exports = class Pageboard {
 			}
 		};
 		this.domains.extendRequest(req, this);
+		req.user ??= { grants: [] };
+		req.locks ??= [];
+		if (grant) req.user.grants.push(grant);
 		if (site) {
 			let siteInst = this.domains.siteById[site];
 			if (!siteInst) {
@@ -210,8 +213,8 @@ module.exports = class Pageboard {
 			}]);
 		});
 
-		await this.#initPlugins();
 		this.#initServices();
+		await this.#initPlugins();
 
 		if (!this.opts.server.start) return;
 
