@@ -851,7 +851,7 @@ module.exports = class BlockService {
 
 	async del({ site, trx }, data) {
 		const types = data.type ? [data.type] : site.$pkg.standalones;
-		const { count } = site.$relatedQuery('children', trx)
+		const { count } = await site.$relatedQuery('children', trx)
 			.select(fn('recursive_delete', ref('block._id'), false).as('count'))
 			.where('block.id', data.id)
 			.whereIn('block.type', types);
