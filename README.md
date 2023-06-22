@@ -14,14 +14,20 @@ On linux, these packages are needed:
 
 See also `@pageboard/proxy`.
 
-API
----
+Cli options
+-----------
 
-`npx pageboard --help`
+To just run the server, do: `npx pageboard`
 
-To list all API modules.
+To list all API modules: `npx pageboard --help`
 
-`npx pageboard --help=<module.method>`
+To show help for a method: `npx pageboard --help=<module.method>`
 
-To list a specific API module.
+Most methods require a site to be set:
+`npx pageboard --site=<id> module.method param=val`
 
+Some methods dynamically check for a grant level. To set the highest grant level, do:
+`npx pageboard --grant=root ...`
+
+It is often handy to change database tenant (as defined in config):
+`npx pageboard --database.tenant=dev ...`
