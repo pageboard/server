@@ -58,27 +58,25 @@ END
 $$;
 ALTER FUNCTION jsonb_set_recursive(data jsonb, path text[], new_value jsonb);
 
-CREATE FUNCTION recursive_delete(root_id integer, standalones boolean) RETURNS integer
-    LANGUAGE plpgsql
-    AS $$
-DECLARE
- deleted INTEGER;
-BEGIN
- WITH RECURSIVE children(_id, parent_id, path, cycle) AS (
-  SELECT b._id, 0 AS parent_id, ARRAY[0], FALSE
-  FROM block AS b
-  WHERE b._id = root_id
- UNION ALL
-  SELECT b._id, r.parent_id, path || b._id, children._id = ANY(path)
-  FROM children, relation AS r, block AS b
-  WHERE r.parent_id = children._id AND b._id = r.child_id AND (b.standalone IS FALSE OR standalones IS TRUE)
- )
- DELETE FROM block WHERE _id IN (SELECT _id FROM children ORDER BY path DESC);
- GET DIAGNOSTICS deleted = ROW_COUNT;
- RETURN deleted;
-END
-$$;
-ALTER FUNCTION recursive_delete(root_id integer, standalones boolean);
+CREATE OR REPLACE FUNCTION recursive_delete(
+    root_id integer,
+    standalones boolean
+) RETURNS INTEGER
+  LANGUAGE 'sql'
+AS $BODY$
+    WITH RECURSIVE children(_id, parent_id, level) AS (
+        SELECT b._id, 0 AS parent_id, 0 AS level
+        FROM block AS b
+        WHERE b._id = root_id
+        UNION ALL
+        SELECT b._id, r.parent_id, level + 1 AS level
+        FROM children, relation AS r, block AS b
+        WHERE r.parent_id = children._id AND b._id = r.child_id AND (b.standalone IS FALSE OR standalones IS TRUE) AND b.type != 'content'
+    ),
+    dels AS (
+        DELETE FROM block WHERE _id IN (SELECT _id FROM children ORDER BY level DESC) RETURNING _id
+    ) SELECT count(*) FROM dels;
+$BODY$;
 
 CREATE TABLE block (
     _id integer NOT NULL,
