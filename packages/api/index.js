@@ -98,8 +98,21 @@ module.exports = class ApiModule {
 	}
 
 	help(apiStr) {
-		const [schema] = this.#getService(apiStr);
-		return jsonDoc(schema, this.app.opts.cli);
+		let schema;
+		const [modName, funName] = (apiStr || "").split('.');
+		if (!funName) {
+			schema = {
+				properties: Object.fromEntries(
+					Object.entries(this.app.services).map(([name, schema]) => {
+						if (modName && modName != name) return [name, undefined];
+						return [name, { type: "", title: Object.keys(schema) }];
+					})
+				)
+			};
+		} else {
+			schema = this.#getService(apiStr)[0];
+		}
+		return jsonDoc(apiStr, schema, this.app.opts.cli);
 	}
 
 	async run(req = {}, apiStr, data = {}) {
@@ -114,7 +127,7 @@ module.exports = class ApiModule {
 				method: apiStr,
 				messages: err.message
 			};
-			err.content = jsonDoc(schema, app.opts.cli);
+			err.content = jsonDoc(apiStr, schema, app.opts.cli);
 			throw err;
 		}
 		// start a transaction on set trx object on site

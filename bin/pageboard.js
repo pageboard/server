@@ -8,26 +8,26 @@ if (!process.env.HOME) {
 
 (async () => {
 	const {
-		help,
 		command,
 		opts = {},
 		data = {}
 	} = Pageboard.parse(process.argv.slice(2));
-
-	if (!opts.server) opts.server = {};
-	opts.server.start = !command;
-	if (opts.verbose === undefined) opts.verbose = !command;
-
-	const { site, grant } = opts;
+	const { site, grant, help } = opts;
 	delete opts.site;
 	delete opts.grant;
+	delete opts.help;
+	if (!opts.server) opts.server = {};
+	opts.server.start = !command && !help;
+	if (opts.verbose === undefined && !help) opts.verbose = !command;
 
 	const app = new Pageboard(opts);
 	await app.init();
 
 	if (help) {
+		// eslint-disable-next-line no-console
 		if (command) console.info("\n", command);
-		console.info(app.api.help(command));
+		// eslint-disable-next-line no-console
+		console.log(app.api.help(command));
 		process.exit(0);
 	} else if (!command) {
 		return app;
