@@ -18,8 +18,9 @@ if (!process.env.HOME) {
 	opts.server.start = !command;
 	if (opts.verbose === undefined) opts.verbose = !command;
 
-	const { site } = opts;
+	const { site, grant } = opts;
 	delete opts.site;
+	delete opts.grant;
 
 	const app = new Pageboard(opts);
 	await app.init();
@@ -32,7 +33,7 @@ if (!process.env.HOME) {
 		return app;
 	}
 	try {
-		const results = await app.run(command, data, site);
+		const results = await app.run(command, data, { site, grant });
 		// eslint-disable-next-line no-console
 		console.log(
 			typeof results == "string"
