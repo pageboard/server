@@ -56,7 +56,7 @@ module.exports = class GitModule {
 		try {
 			const changed = await req.run('git.decide', getRefs(payload));
 			if (!changed) return;
-			await req.run('site.save', site);
+			await req.run('site.save', site.data);
 			mail.subject = `Pageboard deployed ${site.id} at version ${site.data.version}`;
 			mail.text = Text`
 						The version is immediately available at
