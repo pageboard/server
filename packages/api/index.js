@@ -211,10 +211,10 @@ module.exports = class ApiModule {
 			if (obj.item) fillTypes(obj.item, req.bundles);
 			if (obj.items) fillTypes(obj.items, req.bundles);
 
-			const usedRoots = new Set();
-			for (const type of req.bundles) {
+			const usedRoots = new Map();
+			for (const [type, conf] of req.bundles) {
 				if (bundles[type]) {
-					usedRoots.add(type);
+					usedRoots.set(type, conf);
 				} else {
 					const rootSet = bundleMap.get(type);
 					if (!rootSet) {
@@ -223,31 +223,31 @@ module.exports = class ApiModule {
 					}
 					// ignore elements without bundles, or belonging to multiple roots
 					if (rootSet.size != 1) continue;
-					usedRoots.add(Array.from(rootSet).at(0));
+					usedRoots.set(Array.from(rootSet).at(0), conf);
 				}
 			}
 			const metas = [];
 			if (obj.meta) {
 				console.warn("obj.meta is set", obj.meta);
-				metas.push(obj.meta);
+				metas.push([obj.meta, {}]);
 				delete obj.meta;
 			}
-			for (const root of usedRoots) {
+			for (const [root, conf] of usedRoots) {
 				const { meta } = bundles[root];
 				if (meta.dependencies) for (const dep of meta.dependencies) {
-					metas.push(bundles[dep].meta);
+					metas.push([bundles[dep].meta, conf]);
 				}
-				metas.push(meta);
+				metas.push([meta, conf]);
 			}
 			metas.sort(({ priority: a = 0 }, { priority: b = 0 }) => {
 				if (a == b) return 0;
 				else if (a > b) return 1;
 				else return -1;
 			});
-			obj.metas = metas.map(meta => {
+			obj.metas = metas.map(([meta, conf]) => {
 				const obj = {};
 				for (const key of ['schemas', 'scripts', 'stylesheets', 'resources', 'priority']) if (meta[key]) {
-					obj[key] = meta[key];
+					if (key == 'schemas' || conf.content) obj[key] = meta[key];
 				}
 				return obj;
 			});
@@ -272,30 +272,34 @@ module.exports = class ApiModule {
 
 };
 
-function fillTypes(list, set) {
-	if (!list) return set;
+function fillTypes(list, map) {
+	if (!list) return map;
 	if (!Array.isArray(list)) list = [list];
 	for (const row of list) {
-		if (row.type) set.add(row.type);
-		if (row.type == "binding" || row.type == "block_binding") {
-			findTypeBinding(row.data.fill, set);
-			findTypeBinding(row.data.attr, set);
+		if (row.type) {
+			if (!map.has(row.type)) map.set(row.type, {});
+			const conf = map.get(row.type);
+			if (row.content != null) conf.content = true;
 		}
-		if (row.parent) fillTypes(row.parent, set);
-		if (row.child) fillTypes(row.child, set);
-		if (row.parents) fillTypes(row.parents, set);
-		if (row.children) fillTypes(row.children, set);
+		if (row.type == "binding" || row.type == "block_binding") {
+			findTypeBinding(row.data.fill, map);
+			findTypeBinding(row.data.attr, map);
+		}
+		if (row.parent) fillTypes(row.parent, map);
+		if (row.child) fillTypes(row.child, map);
+		if (row.parents) fillTypes(row.parents, map);
+		if (row.children) fillTypes(row.children, map);
 	}
-	return set;
+	return map;
 }
 
 
-function findTypeBinding(str, set) {
+function findTypeBinding(str, map) {
 	if (!str) return;
 	const { groups: {
 		type
 	} } = /^schema:[.\w]+:(?<type>\w+)\./m.exec(str) ?? {
 		groups: {}
 	};
-	if (type) set.add(type);
+	if (type && !map.has(type)) map.set(type, {});
 }

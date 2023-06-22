@@ -3,6 +3,21 @@ exports.site = {
 	$lock: true,
 	bundle: true,
 	properties: {
+		title: {
+			title: 'Site title',
+			nullable: true,
+			type: "string"
+		},
+		domains: {
+			title: 'Domain names',
+			description: 'The main domain and the redirecting ones if any',
+			nullable: true,
+			type: "array",
+			items: {
+				type: "string",
+				format: 'hostname'
+			}
+		},
 		module: {
 			title: 'Module name',
 			nullable: true,
@@ -53,6 +68,22 @@ exports.site = {
 				title: 'Production'
 			}],
 			default: 'dev'
+		},
+		favicon: {
+			title: 'Favicon',
+			nullable: true,
+			type: "string",
+			format: "pathname",
+			$helper: {
+				name: 'href',
+				display: 'icon',
+				filter: {
+					type: ["image", "svg"],
+					maxSize: 20000,
+					maxWidth: 320,
+					maxHeight: 320
+				}
+			}
 		}
 	}
 };

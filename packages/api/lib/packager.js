@@ -125,15 +125,23 @@ module.exports = class Packager {
 
 	async makeBundles(site, pkg) {
 		const { eltsMap, bundles } = pkg;
-		const standalones = [];
-		for (const name of pkg.standalones) {
-			standalones.push(pkg.eltsMap[name]);
-		}
+
 		site.$pkg.bundleMap = pkg.bundleMap;
 		site.$pkg.aliases = pkg.aliases;
 		if (eltsMap.write) {
+			const standalones = [];
+			for (const name of pkg.standalones) {
+				standalones.push(pkg.eltsMap[name]);
+			}
+			const services = Object.fromEntries(
+				Object.entries(this.app.services).map(([key, group]) => {
+					const entries = Object.entries(group)
+						.filter(([, service]) => service.$lock !== true);
+					if (entries.length) return [key, Object.fromEntries(entries)];
+				}).filter(x => Boolean(x))
+			);
 			const writeBundles = await Promise.all([this.#bundleSource(
-				site, pkg, null, 'services', this.app.services
+				site, pkg, null, 'services', services
 			), this.#bundleSource(
 				site, pkg, null, 'standalones', standalones
 			)]);

@@ -150,28 +150,24 @@ module.exports = class SiteService {
 
 	async save(req, data) {
 		const { site } = req;
-		const dbSite = await this.get(req, data);
-		const languagesChanged = data.data.languages !== undefined &&
-			(data.data.languages ?? []).join(' ')
+		const dbSite = await this.get(req, { id: site.id });
+		const initial = dbSite.data;
+		const languagesChanged = data.languages !== undefined &&
+			(data.languages ?? []).join(' ')
 			!=
-			(dbSite.data.languages?.slice() ?? []).join(' ')
+			(initial.languages?.slice() ?? []).join(' ')
 			;
 		// FIXME be more explicit about it
 		// this is bound to fail
-		const toMulti = dbSite.data.lang && data.data.languages?.length > 0;
-		const toMono = !dbSite.data.lang && data.data.lang;
+		const toMulti = initial.lang && data.languages?.length > 0;
+		const toMono = !initial.lang && data.lang;
 
-		mergeRecursive(dbSite.data, data.data);
-		if (site && site.url) {
-			dbSite.url = site.url;
-		}
+		mergeRecursive(initial, data);
 		const runSite = await this.app.install(dbSite);
-		const copy = { ...data.data };
 		await runSite.$query(req.trx).patchObject({
 			type: runSite.type,
-			data: copy
+			data: runSite.data
 		});
-		runSite.data = copy;
 		if (languagesChanged || toMulti || toMono) {
 			req.site = runSite;
 			await req.run('translate.initialize');
@@ -181,16 +177,7 @@ module.exports = class SiteService {
 	static save = {
 		title: 'Save site',
 		$action: 'write',
-		$lock: true,
-		required: ['id', 'data'],
-		properties: {
-			id: {
-				title: 'ID',
-				type: 'string',
-				format: 'id'
-			},
-			data: schemas.site
-		}
+		properties: schemas.site.properties
 	};
 
 	all({ trx, Block }, { text }) {

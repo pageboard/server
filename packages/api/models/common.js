@@ -204,10 +204,8 @@ exports.QueryBuilder = class CommonQueryBuilder extends QueryBuilder {
 
 		for (const [k, cond] of Object.entries(refs)) {
 			// FIXME
-			// jsonpath https://www.postgresql.org/docs/15/functions-json.html
-			// is much more effective at using GIN index on data
-			// select * from block where data @@ '$.id == "mb014"'; -- uses gin index
-			// select * from block where data['id']='"mb014"'; -- scans all rows
+			// https://www.postgresql.org/docs/current/datatype-json.html#JSON-INDEXING
+			// The default GIN operator class for jsonb supports queries with the key-exists operators ?, ?| and ?&, the containment operator @>, and the jsonpath match operators @? and @@.
 			whereCond(this, k, cond);
 		}
 		return this;
@@ -376,8 +374,7 @@ function whereCond(q, key, value) {
 }
 
 function asPaths(obj, ret, pre, first, schema) {
-	if (!schema) schema = {};
-	const props = schema.properties || {};
+	const props = schema?.properties ?? {};
 	const dateTimes = ["date-time", "date"];
 	Object.keys(obj).forEach(str => {
 		let val = obj[str];
@@ -386,7 +383,12 @@ function asPaths(obj, ret, pre, first, schema) {
 			delete obj[str];
 			obj[key] = val;
 		}
-		const schem = props[key] || {};
+		const schem = props[key];
+		if (!schem && schema) {
+			// refuse extra conditions
+			delete obj[key];
+			return;
+		}
 		let cur;
 		if (pre) {
 			if (first) {
@@ -399,24 +401,26 @@ function asPaths(obj, ret, pre, first, schema) {
 		} else {
 			cur = key;
 		}
-		const propKeys = schem.properties ? Object.keys(schem.properties) : [];
+		const curProps = schem?.properties ?? {};
+		const curType = schem?.type;
+		const propKeys = Object.keys(curProps);
 		if (
 			val && (
 				typeof val == "string"
 				|| typeof val == "object" && val.start && val.end
 				|| Array.isArray(val)
 			)
-			&& schem.type == "object" && propKeys.length == 2
+			&& curType == "object" && propKeys.length == 2
 			&& (
-				dateTimes.includes(schem.properties[propKeys[0]].format)
-				&& dateTimes.includes(schem.properties[propKeys[1]].format)
-				|| schem.properties[propKeys[0]].type == "integer"
-				&& schem.properties[propKeys[1]].type == "integer"
+				dateTimes.includes(curProps[propKeys[0]].format)
+				&& dateTimes.includes(curProps[propKeys[1]].format)
+				|| curProps[propKeys[0]].type == "integer"
+				&& curProps[propKeys[1]].type == "integer"
 			)
 		) {
 			// we have a date or numeric slot
 			let range;
-			if (schem.properties[propKeys[0]].type == "integer" && schem.properties[propKeys[1]].type == "integer") {
+			if (curProps[propKeys[0]].type == "integer" && curProps[propKeys[1]].type == "integer") {
 				range = numericRange(val);
 			} else {
 				range = dateRange(val);
@@ -430,7 +434,7 @@ function asPaths(obj, ret, pre, first, schema) {
 			};
 			else ret[cur] = val;
 		} else if (Array.isArray(val) || val == null || typeof val != "object") {
-			if (val && schem.type == "string" && dateTimes.includes(schem.format)) {
+			if (val && curType == "string" && dateTimes.includes(schem.format)) {
 				if (op) {
 					val = new Date(val);
 				} else {
@@ -439,7 +443,7 @@ function asPaths(obj, ret, pre, first, schema) {
 						val = range;
 					}
 				}
-			} else if (schem.type == "boolean" && typeof val != "boolean") {
+			} else if (curType == "boolean" && typeof val != "boolean") {
 				if (!val || val == "false") {
 					if (schem.default == false) {
 						val = [false, null];
@@ -449,11 +453,11 @@ function asPaths(obj, ret, pre, first, schema) {
 				} else {
 					val = true;
 				}
-			} else if (["integer", "number"].includes(schem.type) && typeof val == "string" && (val.includes("~") || val.includes("⩽"))) {
-				val = numericRange(val, schem.type);
+			} else if (["integer", "number"].includes(curType) && typeof val == "string" && (val.includes("~") || val.includes("⩽"))) {
+				val = numericRange(val, curType);
 			}
 			if (op) ret[cur] = {
-				type: schem.type,
+				type: curType,
 				op,
 				val
 			};

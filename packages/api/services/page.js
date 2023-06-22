@@ -15,13 +15,16 @@ module.exports = class PageService {
 				data = {
 					item: {
 						type: 'write',
-						data: {}
+						data: {},
+						content: {}
 					},
 					site: site.data
 				};
 			} else {
 				data = await req.run('page.get', query);
-				if (isWebmaster && forWebmaster) req.bundles.add('editor');
+				if (isWebmaster && forWebmaster) {
+					req.bundles.set('editor', { content: true });
+				}
 			}
 			data.commons = app.opts.commons;
 			res.return(data);
@@ -239,7 +242,8 @@ module.exports = class PageService {
 			}
 		} else {
 			obj.item = {
-				type: 'sitemap'
+				type: 'sitemap',
+				content: {}
 			};
 		}
 		return obj;
@@ -545,7 +549,7 @@ function getParents({ site, trx }, url) {
 
 function listPages({ site, trx }, data) {
 	const q = site.$relatedQuery('children', trx)
-		.selectWithout('content')
+		.columns()
 		.select(raw("'site' || block.type AS type"))
 		.whereIn('block.type', data.type ?? site.$pkg.pages)
 		.where('block.standalone', true);

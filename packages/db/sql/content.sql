@@ -88,8 +88,8 @@ CREATE OR REPLACE FUNCTION block_get_content (
 	STABLE
 AS $BODY$
 SELECT
-	jsonb_object(array_agg(contents.name), array_agg(contents.text)) AS content,
-	COALESCE(bool_and(contents.valid), false) AS translated
+	CASE WHEN count(contents.name) = 0 THEN '{}'::jsonb ELSE jsonb_object(array_agg(contents.name), array_agg(contents.text)) END AS content,
+	CASE WHEN count(contents.name) = 0 THEN true ELSE COALESCE(bool_and(contents.valid), false) END AS translated
 FROM (
 	SELECT
 		block.data->>'name' AS name,
