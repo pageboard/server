@@ -65,6 +65,65 @@ module.exports = class SettingsService {
 		}
 	};
 
+	async list(req, { grant, email }) {
+		if (req.locked(['webmaster'])) {
+			throw new HttpError.Forbidden("Method only allowed for webmaster");
+		}
+		const data = {};
+		if (grant === null) data.grants = null;
+		else if (grant !== undefined) data['grants:has'] = [grant];
+
+		const parent = {};
+		if (email) parent['email:has'] = email;
+		const obj = await req.run('block.search', {
+			type: 'settings',
+			data,
+			parents: {
+				type: 'user',
+				first: true,
+				data: parent
+			}
+		});
+		obj.items = obj.items.filter(item => {
+			if (req.locked(item.data.grants)) return false;
+			item.data.email = item.parent.data.email;
+			delete item.parent;
+			delete item.lock;
+			return true;
+		});
+		return obj;
+	}
+	static list = {
+		title: 'List users grants',
+		$action: 'read',
+		properties: {
+			grant: {
+				title: 'Filter by grant',
+				type: 'string',
+				format: 'grant',
+				nullable: true
+			},
+			email: {
+				title: 'Filter by email',
+				type: 'string',
+				format: 'singleline',
+				nullable: true
+			},
+			limit: {
+				title: 'Limit',
+				type: 'integer',
+				minimum: 0,
+				maximum: 1000,
+				default: 10
+			},
+			offset: {
+				title: 'Offset',
+				type: 'integer',
+				default: 0
+			}
+		}
+	};
+
 	async grant(req, { email, grant }) {
 		if (req.locked([grant], true)) {
 			throw new HttpError.Forbidden("Higher grant is needed");
