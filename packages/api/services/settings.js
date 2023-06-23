@@ -65,34 +65,6 @@ module.exports = class SettingsService {
 		}
 	};
 
-	async search(req, data) {
-		const { items } = await req.run('block.search', {
-			type: 'settings',
-			parents: {
-				type: 'user',
-				first: true
-			},
-			parent: data
-		});
-		return {
-			items: items.map(item => {
-				item.data = { grants: item.data.grants };
-				return item;
-			})
-		};
-	}
-	static search = {
-		title: 'Search users',
-		$action: 'read',
-		properties: {
-			data: {
-				title: 'Data',
-				type: 'object',
-				default: {}
-			}
-		}
-	};
-
 	async grant(req, { email, grant }) {
 		if (req.locked([grant], true)) {
 			throw new HttpError.Forbidden("Higher grant is needed");
