@@ -177,12 +177,13 @@ module.exports = class TranslateService {
 			.where(ref('target.data:lang').castText(), data.lang)
 			.where(fn.coalesce(ref('target.data:text'), val('').castJson()), val('').castJson())
 			.orderBy('target._id', 'desc');
+
 		const [items, count] = await Promise.all([
 			q.limit(data.limit).offset(data.offset),
 			q.resultSize()
 		]);
 
-		if (count == 0) return { status: 404, count };
+		if (count == 0) return { ...data, count };
 
 		const body = new URLSearchParams({
 			tag_handling: 'html',
@@ -213,7 +214,7 @@ module.exports = class TranslateService {
 					'data:text': val(target).castJson()
 				});
 		}
-		return { count };
+		return { ...data, count };
 	}
 
 	static fill = {
