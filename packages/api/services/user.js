@@ -116,6 +116,45 @@ module.exports = class UserService {
 		$lock: true,
 		$action: 'write'
 	};
+
+	async list(req, { grant }) {
+		const cond = {};
+		if (grant === null) cond.grants = null;
+		else if (grant !== undefined) cond['grants:has'] = [grant];
+		const { items } = await req.run('block.search', {
+			type: 'settings',
+			data: cond,
+			parents: {
+				type: 'user',
+				first: true
+			}
+		});
+		const filtered = [];
+		for (const item of items) {
+			if (req.locked(item.data.grants) == false) {
+				filtered.push({
+					type: 'grants',
+					data: {
+						email: item.parent.data.email,
+						grants: item.data.grants
+					}
+				});
+			}
+		}
+		return filtered;
+	}
+	static list = {
+		title: 'List users',
+		$action: 'read',
+		properties: {
+			grant: {
+				title: 'Filter by grant',
+				type: 'string',
+				format: 'grant',
+				nullable: true
+			}
+		}
+	};
 };
 
 
