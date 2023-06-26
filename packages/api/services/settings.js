@@ -65,7 +65,7 @@ module.exports = class SettingsService {
 		}
 	};
 
-	async list(req, { grant, email }) {
+	async list(req, { grant, email, limit, offset }) {
 		if (req.locked(['webmaster'])) {
 			throw new HttpError.Forbidden("Method only allowed for webmaster");
 		}
@@ -74,19 +74,21 @@ module.exports = class SettingsService {
 		else if (grant !== undefined) data['grants:has'] = [grant];
 
 		const parent = {};
-		if (email) parent['email:has'] = email;
+		if (email) parent.data = { 'email:has': email };
 		const obj = await req.run('block.search', {
 			type: 'settings',
 			data,
+			parent,
 			parents: {
 				type: 'user',
-				first: true,
-				data: parent
-			}
+				first: true
+			},
+			limit, offset,
+			order: '-created_at'
 		});
 		obj.items = obj.items.filter(item => {
 			if (req.locked(item.data.grants)) return false;
-			item.data.email = item.parent.data.email;
+			item.email = item.parent.data.email;
 			delete item.parent;
 			delete item.lock;
 			return true;
@@ -130,7 +132,7 @@ module.exports = class SettingsService {
 		}
 		const obj = await req.run('settings.have', { email });
 		const { grants = [] } = obj.item.data ?? {};
-		if (!grants.includes(grant)) {
+		if (grant && !grants.includes(grant)) {
 			grants.push(grant);
 			return req.run('block.save', {
 				id: obj.item.id,
@@ -170,7 +172,7 @@ module.exports = class SettingsService {
 		const obj = await req.run('settings.find', { email });
 		const { grants = [] } = obj.item?.data ?? {};
 
-		if (grants.includes(grant)) {
+		if (grant && grants.includes(grant)) {
 			grants.splice(grants.indexOf(grant), 1);
 			return req.run('block.save', {
 				id: obj.item.id,
@@ -246,16 +248,21 @@ module.exports = class SettingsService {
 	};
 
 	async save(req, { id, data }) {
-		const settings = await req.run('settings.get', { id });
-		if (data.grants) {
-			throw new HttpError.Unauthorized("Cannot change grants");
+		if (Object.keys(data).length == 0) return { id, data };
+		if (data.grants && req.locked(data.grants, true)) {
+			throw new HttpError.Forbidden("Higher grant is needed");
 		}
-		if (Object.keys(data).length == 0) return settings;
-		await settings.$query(req.trx).patchObject({
-			type: 'settings',
-			data
-		});
-		return settings;
+
+		// const { item } = await req.run('settings.get', { id });
+
+
+		return req.site.$relatedQuery('children', req.trx)
+			.where('type', 'settings')
+			.where('id', id).patchObject({
+				type: 'settings',
+				data
+			})
+			.returning('*');
 	}
 
 	static save = {
@@ -264,6 +271,7 @@ module.exports = class SettingsService {
 		required: ['id'],
 		properties: {
 			id: {
+				title: 'User settings ID',
 				type: 'string',
 				minLength: 1,
 				format: 'id'
