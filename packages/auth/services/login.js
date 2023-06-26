@@ -12,6 +12,17 @@ module.exports = class LoginModule {
 			// third-party TOTP apps expect steps of 30 seconds
 			step: 30
 		};
+
+		server.post("/.api/login/send", async (req, res) => {
+			const data = await req.run('login.send', req.query);
+			res.return(data);
+		});
+
+		server.post("/.api/login/grant", async (req, res) => {
+			const data = await req.run('login.grant', req.query);
+			res.return(data);
+		});
+
 		server.get("/.api/login", async (req, res) => {
 			const data = await req.run('login.grant', req.query);
 			res.return(data);
