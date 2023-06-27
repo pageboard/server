@@ -1,0 +1,29 @@
+{
+  "name": "@pageboard/print",
+  "version": "0.13.0",
+  "description": "send file to printer",
+  "main": "index.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/pageboard/server.git"
+  },
+  "keywords": [
+    "pageboard",
+    "prerender",
+    "dom"
+  ],
+  "author": "Jérémy Lal <kapouer@melix.org>",
+  "license": "MIT",
+  "bugs": {
+    "url": "https://github.com/pageboard/server/issues"
+  },
+  "homepage": "https://github.com/pageboard/server#readme",
+  "dependencies": {
+    "cups-get-printers": "^1.1.0",
+    "cups-print": "^1.0.0",
+    "cups-printer": "^0.2.0"
+  }
+}
