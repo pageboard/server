@@ -22,6 +22,22 @@ module.exports = class PrintModule {
 		this.Printer = (await import('cups-printer')).Printer;
 	}
 
+	async list(req) {
+		const list = await this.Printer.all();
+		return {
+			items: list.map(p => {
+				return {
+					type: 'printer',
+					data: {
+						name: p.name
+					}
+				};
+			})
+		};
+	}
+	static list = {
+		title: 'Local printers'
+	};
 
 	async local(req, { printer, url }) {
 		const inst = await this.Printer.find(x => {
@@ -36,7 +52,6 @@ module.exports = class PrintModule {
 	static local = {
 		title: 'Local print',
 		required: ['url', 'printer'],
-		$lock: true,
 		properties: {
 			url: {
 				title: 'URL',
