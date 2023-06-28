@@ -13,12 +13,12 @@ module.exports = class LoginModule {
 	}
 	apiRoutes(app, server) {
 		server.post("/.api/login/send", async (req, res) => {
-			const data = await req.run('login.send', req.query);
+			const data = await req.run('login.send', req.body);
 			res.return(data);
 		});
 
 		server.post("/.api/login/grant", async (req, res) => {
-			const data = await req.run('login.grant', req.query);
+			const data = await req.run('login.grant', req.body);
 			res.return(data);
 		});
 
@@ -297,7 +297,7 @@ module.exports = class LoginModule {
 				errorCorrectionLevel: 'L'
 			});
 			return { item };
-		}		
+		}
 	}
 	static key = {
 		title: 'Get user otp key',
