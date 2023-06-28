@@ -4,6 +4,7 @@ const fs = require('node:fs');
 const Path = require('node:path');
 const pipeline = promisify(require('node:stream').pipeline);
 const mime = require.lazy('mime-types');
+const cups = require('node-cups');
 
 module.exports = class PrintModule {
 	static name = 'print';
@@ -14,23 +15,13 @@ module.exports = class PrintModule {
 		this.opts = opts;
 	}
 
-	// snippet using cups http backend https://gist.github.com/vodolaz095/5325917
-
-	//
-
-	async init() {
-		this.Printer = (await import('cups-printer')).Printer;
-	}
-
 	async list(req) {
-		const list = await this.Printer.all();
+		const list = await cups.getPrinterNames();
 		return {
-			items: list.map(p => {
+			items: list.map(name => {
 				return {
 					type: 'printer',
-					data: {
-						name: p.name
-					}
+					data: { name }
 				};
 			})
 		};
@@ -39,14 +30,47 @@ module.exports = class PrintModule {
 		title: 'Local printers'
 	};
 
-	async local(req, { printer, url }) {
-		const inst = await this.Printer.find(x => {
-			return x.name.toLowerCase().includes(printer.toLowerCase());
-		});
-		if (!inst) throw new HttpError.NotFound("Missing printer");
+	async options(req, { name }) {
+		const list = await cups.getPrinterOptions(name);
+		return {
+			item: {
+				type: 'schema',
+				data: {
+					title: 'Printer options schema',
+					name,
+					properties: Object.fromEntries(list.map(po => {
+						const obj = {
+							enum: po.values
+						};
+						if (po.defaultValue) obj.default = po.defaultValue;
+						return [
+							po.name,
+							obj
+						];
+					}))
+				}
+			}
+		};
+	}
+	static options = {
+		title: 'Get printer specific options',
+		description: 'PPD options as JSON-schema',
+		required: ['name'],
+		properties: {
+			name: {
+				title: 'Printer name',
+				type: 'string',
+				format: 'singleline'
+			}
+		}
+	};
 
+	async local(req, { printer, url, options }) {
 		const path = await this.#download(req, url);
-		const ret = await inst.print(path);
+		const ret = await cups.printFile(path, {
+			printer,
+			printerOptions: options
+		});
 		return ret;
 	}
 	static local = {
@@ -62,6 +86,11 @@ module.exports = class PrintModule {
 				title: 'Printer',
 				type: 'string',
 				format: 'singleline'
+			},
+			options: {
+				title: 'Options',
+				type: 'object',
+				additionalProperties: { type: 'string' }
 			}
 		}
 	};
