@@ -279,19 +279,26 @@ module.exports = class LoginModule {
 			email: data.email
 		});
 		const priv = await this.#userPriv(req, user);
-		const uri = otp.authenticator.keyuri(
-			user.data.email, this.app.name, priv.data.otp.secret
-		);
 		const item = {
 			type: 'otp',
-			data: { uri }
+			data: {
+				uri: otp.authenticator.keyuri(
+					user.data.email, this.app.name, priv.data.otp.secret
+				)
+			}
 		};
-		if (!this.app.opts.cli) {
-			item.data.uri = await qrcode.toDataURL(uri, {
+
+		if (this.app.opts.cli) {
+			return qrcode.toString(item.data.uri, {
+				type: 'terminal',
 				errorCorrectionLevel: 'L'
 			});
-		}
-		return { item };
+		} else {
+			item.data.qrcode = await qrcode.toDataURL(item.data.uri, {
+				errorCorrectionLevel: 'L'
+			});
+			return { item };
+		}		
 	}
 	static key = {
 		title: 'Get user otp key',
