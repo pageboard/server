@@ -1,4 +1,9 @@
 const BearerAgent = require('./src/agent');
+const { promisify } = require('node:util');
+const fs = require('node:fs');
+const Path = require('node:path');
+const pipeline = promisify(require('node:stream').pipeline);
+const mime = require.lazy('mime-types');
 
 module.exports = class PrintModule {
 	static name = 'print';
@@ -15,27 +20,28 @@ module.exports = class PrintModule {
 
 	async init() {
 		this.Printer = (await import('cups-printer')).Printer;
-		// TODO use another module that can send options with lp.
-		// or do our own module
 	}
 
 
-	async local(req, { printer, path }) {
+	async local(req, { printer, url }) {
 		const inst = await this.Printer.find(x => {
 			return x.name.toLowerCase().includes(printer.toLowerCase());
 		});
 		if (!inst) throw new HttpError.NotFound("Missing printer");
-		return inst.print(path);
+
+		const path = await this.#download(req, url);
+		const ret = await inst.print(path);
+		return ret;
 	}
 	static local = {
 		title: 'Local print',
-		required: ['path', 'printer'],
+		required: ['url', 'printer'],
 		$lock: true,
 		properties: {
-			path: {
-				title: 'Path',
+			url: {
+				title: 'URL',
 				type: 'string',
-				format: 'pathname'
+				format: 'uri'
 			},
 			printer: {
 				title: 'Printer',
@@ -72,5 +78,41 @@ module.exports = class PrintModule {
 			}
 		}
 	};
-};
 
+	async #download(req, url) {
+		const controller = new AbortController();
+		const toId = setTimeout(() => controller.abort(), 100000);
+		const response = await fetch(url, {
+			headers: {
+				cookie: req.get('cookie')
+			},
+			signal: controller.signal
+		});
+		let path;
+		try {
+			clearTimeout(toId);
+			if (!response.ok) {
+				throw new HttpError.BadRequest(response.statusText);
+			}
+			const type = response.headers.get('Content-Type');
+			if (!type) {
+				throw new HttpError.BadParams("Cannot print file that has not Content-Type");
+			}
+			const ext = mime.extension(type);
+			if (ext != "pdf") {
+				throw new HttpError.BadParams("Cannot print non-pdf file");
+			}
+			path = Path.join(this.app.dirs.tmp, await req.Block.genId()) + "." + ext;
+			await pipeline(response.body, fs.createWriteStream(path));
+			return path;
+		} catch (err) {
+			try {
+				controller.abort();
+				if (path) await fs.promises.unlink(path);
+			} catch {
+				// pass
+			}
+			throw err;
+		}
+	}
+};
