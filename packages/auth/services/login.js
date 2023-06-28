@@ -6,13 +6,12 @@ module.exports = class LoginModule {
 
 	constructor(app, opts) {
 		this.app = app;
-	}
-	apiRoutes(app, server) {
 		otp.authenticator.options = {
 			// third-party TOTP apps expect steps of 30 seconds
 			step: 30
 		};
-
+	}
+	apiRoutes(app, server) {
 		server.post("/.api/login/send", async (req, res) => {
 			const data = await req.run('login.send', req.query);
 			res.return(data);
