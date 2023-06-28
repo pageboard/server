@@ -12,8 +12,8 @@
   },
   "keywords": [
     "pageboard",
-    "prerender",
-    "dom"
+    "print",
+    "cups"
   ],
   "author": "Jérémy Lal <kapouer@melix.org>",
   "license": "MIT",
@@ -22,8 +22,6 @@
   },
   "homepage": "https://github.com/pageboard/server#readme",
   "dependencies": {
-    "cups-get-printers": "^1.1.0",
-    "cups-print": "^1.0.0",
-    "cups-printer": "^0.2.0"
+    "node-cups": "1.2.1"
   }
 }
