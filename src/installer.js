@@ -175,7 +175,7 @@ module.exports = class Installer {
 		const siteModuleDir = Path.join(siteDir, 'node_modules', pkg.name);
 		try {
 			const stat = await fs.lstat(siteModuleDir);
-			if (stat.isSymbolicLink()) {
+			if (this.opts.bin != "pnpm" && stat.isSymbolicLink()) {
 				console.info("detected linked module", pkg.name);
 			} else {
 				throw new Error();

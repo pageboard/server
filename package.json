@@ -40,6 +40,7 @@
     "@pageboard/inspector": "workspace:*",
     "@pageboard/mail": "workspace:*",
     "@pageboard/prerender": "workspace:*",
+    "@pageboard/print": "workspace:*",
     "@pageboard/statics": "workspace:*",
     "@pageboard/upload": "workspace:*",
     "class-deferred": "^1.0.1",
