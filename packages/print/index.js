@@ -27,7 +27,8 @@ module.exports = class PrintModule {
 		};
 	}
 	static list = {
-		title: 'Local printers'
+		title: 'Local printers',
+		$action: 'read'
 	};
 
 	async options(req, { name }) {
@@ -55,6 +56,7 @@ module.exports = class PrintModule {
 	static options = {
 		title: 'Get printer specific options',
 		description: 'PPD options as JSON-schema',
+		$action: 'read',
 		required: ['name'],
 		properties: {
 			name: {
@@ -75,6 +77,7 @@ module.exports = class PrintModule {
 	}
 	static local = {
 		title: 'Local print',
+		$action: 'write',
 		required: ['url', 'printer'],
 		properties: {
 			url: {
@@ -110,6 +113,7 @@ module.exports = class PrintModule {
 	}
 	static remote = {
 		title: 'Remote print',
+		$action: 'write',
 		properties: {
 			provider: {
 				title: 'Provider',
