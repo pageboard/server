@@ -1,6 +1,7 @@
 const serveStatic = require.lazy('serve-static');
 const Path = require('node:path');
 const { promises: fs } = require('node:fs');
+const { pipeline } = require('node:stream/promises');
 
 const bundlers = {
 	js: require.lazy('postinstall-js'),
@@ -31,6 +32,26 @@ module.exports = class StaticsModule {
 			dotfiles: 'ignore',
 			fallthrough: true
 		};
+
+		server.get('*', app.cache.tag('remotes'), async (req, res, next) => {
+			const host = req.get('X-Proxy-Host');
+			if (!host) return next();
+			res.vary('X-Proxy-Host');
+			const url = new URL(req.url, req.site.url);
+			url.port = '';
+			url.host = host;
+			const headers = Object.fromEntries(
+				Object.entries(req.headers).filter(([key]) => !key.startsWith('x-'))
+			);
+			delete headers.host;
+			headers['accept-encoding'] = 'Identity';
+
+			const response = await fetch(url.href, { headers });
+			for (const [key, val] of response.headers.entries()) {
+				res.set(key, val);
+			}
+			pipeline(response.body, res);
+		});
 
 		server.get("/.files/*",
 			req => {
