@@ -134,6 +134,20 @@ AS $BODY$
 	) SELECT count(*) FROM dels;
 $BODY$;
 
+CREATE OR REPLACE PROCEDURE content_delete_name(
+	_id INTEGER,
+	_name TEXT
+) LANGUAGE 'sql'
+AS $BODY$
+DELETE FROM relation WHERE id IN (
+	SELECT r.id FROM relation AS r, block as content
+	WHERE r.parent_id = _id
+	AND content._id = r.child_id
+	AND content.type = 'content'
+	AND content.data->>'name' = _name
+);
+$BODY$;
+
 CREATE OR REPLACE FUNCTION block_insert_content(
 	_block block,
 	_site type_site_lang
@@ -142,7 +156,7 @@ CREATE OR REPLACE FUNCTION block_insert_content(
 AS $BODY$
 DECLARE
 	languages JSONB;
-	_lang TEXT;
+	def_lang TEXT;
 	block_ids INTEGER[];
 
 	content_ids INTEGER[];
@@ -150,30 +164,27 @@ DECLARE
 	cur_id INTEGER;
 	cur_pos INTEGER;
 	cur_lang TEXT;
-	_name TEXT;
-	_text TEXT;
+	cur_name TEXT;
+	cur_text TEXT;
+	old_text TEXT;
 	is_trivial BOOLEAN;
+	cur_valid BOOLEAN;
 BEGIN
 	languages := _site.languages;
 	IF COALESCE(jsonb_array_length(languages), 0) = 0 THEN
 		RETURN _block.content;
 	END IF;
-	_lang := languages->>0;
+	def_lang := languages->>0;
 
-	FOR _name, _text IN
+	FOR cur_name, cur_text IN
 		SELECT * FROM jsonb_each_text(_block.content)
 	LOOP
-		IF _text IS NULL OR _text = '' THEN
+		IF cur_text IS NULL OR cur_text = '' THEN
 			-- unlink those named contents
-			DELETE FROM relation WHERE id IN (
-				SELECT r.id FROM relation AS r, block as content
-				WHERE r.parent_id = _block._id
-				AND content._id = r.child_id
-				AND content.type = 'content'
-				AND content.data->>'name' = _name
-			);
+			PERFORM content_delete_name(_block._id, cur_name);
 			CONTINUE;
 		END IF;
+		is_trivial := starts_with(cur_text, '<') AND regexp_count(cur_text, '>\w') = 0;
 		-- list all block._id that have a matching content text for that name/lang
 		SELECT COALESCE(array_agg(block._id), ARRAY[]::INTEGER[])
 		INTO block_ids
@@ -184,13 +195,14 @@ BEGIN
 			AND content_block.parent_id = block._id
 			AND content._id = content_block.child_id
 			AND content.type = 'content'
-			AND content.data->>'name' = _name
-			AND content.data->>'lang' = _lang
-			AND content.data->>'text' = _text;
+			AND content.data->>'name' = cur_name
+			AND content.data->>'lang' = def_lang
+			AND content.data->>'text' = cur_text;
 
-		-- get initial content (id, lang) situation on one of the blocks
 		content_ids := ARRAY[]::INTEGER[];
 		content_langs := ARRAY[]::TEXT[];
+
+		-- two situations: there are some block_ids, or there aren't
 		IF array_length(block_ids, 1) > 0 THEN
 			SELECT
 				COALESCE(array_agg(content._id), content_ids),
@@ -199,57 +211,89 @@ BEGIN
 				FROM relation AS r, block AS content
 				WHERE r.parent_id = block_ids[1] AND content._id = r.child_id
 				AND content.type = 'content'
-				AND content.data->>'name' = _name;
-		END IF;
-
-		-- ensure current block_id is part of block_ids
-		IF _block._id != ALL(block_ids) THEN
-			INSERT INTO relation (child_id, parent_id) (
-				SELECT unnest(content_ids) AS child_id, _block._id AS parent_id
-			);
-			block_ids := array_append(block_ids, _block._id);
-		END IF;
-
-		-- assume the db is in a valid state
-		-- that is, each block has the same number of (name, lang) content childs
-		-- which could be zero, or the right number of lang, but all blocks are equal
-		-- 1. create the missing (name, lang) contents, if any
-		-- 2. link all blocks to them
-
-		-- for each lang, ensure we have content, for all blocks
-		is_trivial := starts_with(_text, '<') AND regexp_count(_text, '>\w') = 0;
-		FOR cur_lang IN
-			SELECT * FROM jsonb_array_elements_text(languages)
-		LOOP
-			cur_pos := array_position(content_langs, cur_lang);
-			IF cur_pos IS NOT NULL THEN
-				-- a content of matches, nothing to do
-				content_ids[cur_pos] := NULL;
-				content_langs[cur_pos] := NULL;
-				CONTINUE;
+				AND content.data->>'name' = cur_name;
+			IF _block._id = ANY(block_ids) THEN
+				-- there is already our block in that list
+			ELSE
+				-- our block is not in that list
+				-- remove old content
+				PERFORM content_delete_name(_block._id, cur_name);
+				-- link our block to the contents
+				INSERT INTO relation (child_id, parent_id) (
+					SELECT unnest(content_ids) AS child_id, _block._id AS parent_id
+				);
+				-- add our block to that list
+				block_ids := array_append(block_ids, _block._id);
 			END IF;
-			-- missing, create content
-			INSERT INTO block (id, type, data) VALUES (
-				replace(gen_random_uuid()::text, '-', ''),
-				'content',
-				jsonb_build_object(
-					'name', _name,
-					'lang', cur_lang,
-					'valid', (CASE WHEN (_lang = cur_lang OR is_trivial) THEN true ELSE false END),
-					'text', (CASE WHEN (_lang = cur_lang OR is_trivial) THEN _text ELSE '' END)
-				)
-			) RETURNING block._id INTO cur_id;
-			INSERT INTO relation (child_id, parent_id) VALUES (cur_id, _site._id);
-			-- link content to all blocks
-			INSERT INTO relation (child_id, parent_id) (
-				SELECT cur_id AS child_id, unnest(block_ids) AS parent_id
-			);
-		END LOOP;
+			-- at this point the original content exists by construction
+			-- and all contents are linked to all blocks and ours
+			-- check each lang
+			FOR cur_lang IN
+				SELECT * FROM jsonb_array_elements_text(languages)
+			LOOP
+				-- do existing content has that lang ?
+				cur_pos := array_position(content_langs, cur_lang);
+				IF cur_pos IS NOT NULL THEN
+					-- yes, mark it as so
+					content_ids[cur_pos] := NULL;
+					content_langs[cur_pos] := NULL;
+				ELSE
+					-- no, insert and link to all blocks
+					cur_valid := def_lang = cur_lang OR is_trivial;
+					INSERT INTO block (id, type, data) VALUES (
+						replace(gen_random_uuid()::text, '-', ''),
+						'content',
+						jsonb_build_object(
+							'name', cur_name,
+							'lang', cur_lang,
+							'valid', cur_valid,
+							'text', CASE WHEN is_trivial THEN cur_text ELSE '' END
+						)
+					) RETURNING block._id INTO cur_id;
+					INSERT INTO relation (child_id, parent_id) VALUES (cur_id, _site._id);
+					INSERT INTO relation (child_id, parent_id) (
+						SELECT cur_id AS child_id, unnest(block_ids) AS parent_id
+					);
+				END IF;
+			END LOOP;
 
-		-- remaining content_ids must be removed from all blocks
-		DELETE FROM block WHERE _id	IN (
-			SELECT unnest(content_ids)
-		);
+			-- remaining unmarked contents must be unlinked and deleted
+			DELETE FROM block WHERE _id	IN (
+				SELECT unnest(content_ids)
+			);
+		ELSE
+			-- check each lang
+			FOR cur_lang IN
+				SELECT * FROM jsonb_array_elements_text(languages)
+			LOOP
+				cur_valid := def_lang = cur_lang OR is_trivial;
+				IF NOT cur_valid THEN
+					-- get old content if any
+					SELECT _id, content.data->>'text' INTO cur_id, old_text
+						FROM relation AS content_block, block AS content
+						WHERE content_block.parent_id = block._id
+						AND content._id = content_block.child_id
+						AND content.type = 'content'
+						AND content.data->>'name' = cur_name
+						AND content.data->>'lang' = cur_lang;
+				END IF;
+				IF cur_id IS NOT NULL THEN
+					DELETE FROM relation WHERE child_id = cur_id AND parent_id = _block._id;
+				END IF;
+				INSERT INTO block (id, type, data) VALUES (
+						replace(gen_random_uuid()::text, '-', ''),
+						'content',
+						jsonb_build_object(
+							'name', cur_name,
+							'lang', cur_lang,
+							'valid', cur_valid,
+							'text', CASE WHEN is_trivial THEN cur_text ELSE COALESCE(old_text, '') END
+						)
+					) RETURNING block._id INTO cur_id;
+					INSERT INTO relation (child_id, parent_id) VALUES (cur_id, _site._id);
+					INSERT INTO relation (child_id, parent_id) VALUES (cur_id, _block._id);
+			END LOOP;
+		END IF;
 	END LOOP;
 	RETURN '{}'::jsonb;
 END
@@ -322,7 +366,6 @@ DECLARE
 	_site type_site_lang;
 BEGIN
 	_site := block_site(NEW._id);
-	PERFORM block_delete_content(OLD, _site);
 	NEW.content := block_insert_content(NEW, _site);
 	IF NEW.content = '{}'::jsonb THEN
 		NEW.tsv = NULL;
