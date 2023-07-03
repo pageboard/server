@@ -280,22 +280,23 @@ BEGIN
 					AND content.type = 'content'
 					AND content.data->>'name' = cur_name
 					AND content.data->>'lang' = cur_lang;
+				-- delete old content
 				IF cur_id IS NOT NULL THEN
 					DELETE FROM relation WHERE id = cur_id;
 				END IF;
 
 				INSERT INTO block (id, type, data) VALUES (
-						replace(gen_random_uuid()::text, '-', ''),
-						'content',
-						jsonb_build_object(
-							'name', cur_name,
-							'lang', cur_lang,
-							'valid', cur_valid,
-							'text', CASE WHEN cur_valid THEN cur_text ELSE COALESCE(old_text, '') END
-						)
-					) RETURNING block._id INTO cur_id;
-					INSERT INTO relation (child_id, parent_id) VALUES (cur_id, _site._id);
-					INSERT INTO relation (child_id, parent_id) VALUES (cur_id, _block._id);
+					replace(gen_random_uuid()::text, '-', ''),
+					'content',
+					jsonb_build_object(
+						'name', cur_name,
+						'lang', cur_lang,
+						'valid', cur_valid,
+						'text', CASE WHEN cur_valid THEN cur_text ELSE COALESCE(old_text, '') END
+					)
+				) RETURNING block._id INTO cur_id;
+				INSERT INTO relation (child_id, parent_id) VALUES (cur_id, _site._id);
+				INSERT INTO relation (child_id, parent_id) VALUES (cur_id, _block._id);
 			END LOOP;
 		END IF;
 	END LOOP;
