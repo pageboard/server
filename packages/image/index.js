@@ -117,8 +117,8 @@ module.exports = class ImageModule {
 				fit: "inside",
 				withoutEnlargement: true,
 				fastShrinkOnLoad: false,
-				width: 2560,
-				height: 2560
+				width: 4096,
+				height: 4096
 			})
 			.toFormat("webp", {
 				quality: 85,
