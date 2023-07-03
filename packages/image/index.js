@@ -109,31 +109,31 @@ module.exports = class ImageModule {
 			console.warn("image.upload cannot process", mime);
 			return;
 		}
-
-		const dst = path + '.tmp';
-		await this.sharp(path)
-			.withMetadata()
-			.resize({
-				fit: "inside",
-				withoutEnlargement: true,
-				fastShrinkOnLoad: false,
-				width: 4096,
-				height: 4096
-			})
-			.toFormat("webp", {
-				quality: 85,
-				lossless: false,
-				smartSubsample: true,
-				reductionEffort: 2
-			})
-			.toFile(dst);
+		const orig = path + ".orig";
+		await fs.rename(path, orig);
 		const pathObj = Path.parse(path);
 		const filename = pathObj.name + '.webp';
 		const npath = Path.format({
 			dir: pathObj.dir,
 			base: filename
 		});
-		await fs.rename(dst, npath);
+
+		await this.sharp(orig)
+			.withMetadata()
+			.resize({
+				fit: "inside",
+				withoutEnlargement: true,
+				fastShrinkOnLoad: false,
+				width: 2048,
+				height: 2048
+			})
+			.toFormat("webp", {
+				quality: 90,
+				lossless: false,
+				smartSubsample: true,
+				reductionEffort: 2
+			})
+			.toFile(npath);
 		return {
 			mime: "image/webp",
 			path: npath
