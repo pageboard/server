@@ -134,10 +134,11 @@ AS $BODY$
 	) SELECT count(*) FROM dels;
 $BODY$;
 
-CREATE OR REPLACE PROCEDURE content_delete_name(
+CREATE OR REPLACE FUNCTION content_delete_name(
 	_id INTEGER,
 	_name TEXT
-) LANGUAGE 'sql'
+) RETURNS VOID
+	LANGUAGE 'sql'
 AS $BODY$
 DELETE FROM relation WHERE id IN (
 	SELECT r.id FROM relation AS r, block as content
@@ -247,7 +248,7 @@ BEGIN
 							'name', cur_name,
 							'lang', cur_lang,
 							'valid', cur_valid,
-							'text', CASE WHEN is_trivial THEN cur_text ELSE '' END
+							'text', CASE WHEN cur_valid THEN cur_text ELSE '' END
 						)
 					) RETURNING block._id INTO cur_id;
 					INSERT INTO relation (child_id, parent_id) VALUES (cur_id, _site._id);
@@ -267,19 +268,19 @@ BEGIN
 				SELECT * FROM jsonb_array_elements_text(languages)
 			LOOP
 				cur_valid := def_lang = cur_lang OR is_trivial;
-				IF NOT cur_valid THEN
-					-- get old content if any
-					SELECT _id, content.data->>'text' INTO cur_id, old_text
-						FROM relation AS content_block, block AS content
-						WHERE content_block.parent_id = block._id
-						AND content._id = content_block.child_id
-						AND content.type = 'content'
-						AND content.data->>'name' = cur_name
-						AND content.data->>'lang' = cur_lang;
-				END IF;
+
+				-- get old content if any
+				SELECT r.id, content.data->>'text' INTO cur_id, old_text
+					FROM relation AS r, block AS content
+					WHERE r.parent_id = _block._id
+					AND content._id = r.child_id
+					AND content.type = 'content'
+					AND content.data->>'name' = cur_name
+					AND content.data->>'lang' = cur_lang;
 				IF cur_id IS NOT NULL THEN
-					DELETE FROM relation WHERE child_id = cur_id AND parent_id = _block._id;
+					DELETE FROM relation WHERE id = cur_id;
 				END IF;
+
 				INSERT INTO block (id, type, data) VALUES (
 						replace(gen_random_uuid()::text, '-', ''),
 						'content',
@@ -287,7 +288,7 @@ BEGIN
 							'name', cur_name,
 							'lang', cur_lang,
 							'valid', cur_valid,
-							'text', CASE WHEN is_trivial THEN cur_text ELSE COALESCE(old_text, '') END
+							'text', CASE WHEN cur_valid THEN cur_text ELSE COALESCE(old_text, '') END
 						)
 					) RETURNING block._id INTO cur_id;
 					INSERT INTO relation (child_id, parent_id) VALUES (cur_id, _site._id);
