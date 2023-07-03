@@ -135,18 +135,21 @@ AS $BODY$
 $BODY$;
 
 CREATE OR REPLACE FUNCTION content_delete_name(
-	_id INTEGER,
-	_name TEXT
-) RETURNS VOID
+	p_id INTEGER,
+	p_name TEXT
+) RETURNS INTEGER
 	LANGUAGE 'sql'
 AS $BODY$
-DELETE FROM relation WHERE id IN (
-	SELECT r.id FROM relation AS r, block as content
-	WHERE r.parent_id = _id
-	AND content._id = r.child_id
-	AND content.type = 'content'
-	AND content.data->>'name' = _name
-);
+	WITH sels AS (
+		SELECT r.id FROM relation AS r, block as content
+			WHERE r.parent_id = p_id
+			AND content._id = r.child_id
+			AND content.type = 'content'
+			AND content.data->>'name' = p_name
+	),
+	dels AS (
+		DELETE FROM relation USING sels WHERE relation.id = sels.id RETURNING relation.id
+	) SELECT count(*) FROM dels;
 $BODY$;
 
 CREATE OR REPLACE FUNCTION block_insert_content(
