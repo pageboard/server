@@ -147,18 +147,16 @@ module.exports = class SiteService {
 	async save(req, data) {
 		const { site } = req;
 		const dbSite = await this.get(req, { id: site.id });
-		const initial = dbSite.data;
+		const initial = site.data;
 		const languagesChanged = data.languages !== undefined &&
 			(data.languages ?? []).join(' ')
 			!=
 			(initial.languages?.slice() ?? []).join(' ')
 			;
-		// FIXME be more explicit about it
-		// this is bound to fail
 		const toMulti = initial.lang && data.languages?.length > 0;
 		const toMono = !initial.lang && data.lang;
 
-		mergeRecursive(initial, data);
+		mergeRecursive(dbSite.data, data);
 		const runSite = await this.app.install(dbSite);
 		await runSite.$query(req.trx).patchObject({
 			type: runSite.type,
@@ -168,6 +166,7 @@ module.exports = class SiteService {
 			req.site = runSite;
 			await req.run('translate.initialize');
 		}
+		site.data = runSite.data;
 		return runSite;
 	}
 	static save = {
