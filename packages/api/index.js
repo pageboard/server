@@ -41,12 +41,10 @@ module.exports = class ApiModule {
 		const tenantsLen = Object.keys(app.opts.database.url).length - 1;
 		// api depends on site files, that tag is invalidated in cache install
 		server.get('/.api/*',
-			app.cache.tag('app-:site'),
+			app.cache.tag('app-:site', 'data-:site'),
 			app.cache.tag('db-:tenant').for(`${tenantsLen}day`)
 		);
 		server.use('/.api/*',
-			// invalid site by site
-			app.cache.tag('data-:site'),
 			// parse json bodies
 			bodyParser.json({ limit: '1000kb' }),
 			bodyParser.urlencoded({ extended: false, limit: '100kb' })

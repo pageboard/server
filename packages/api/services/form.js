@@ -11,7 +11,7 @@ module.exports = class FormService {
 		server.get("/.api/form", () => {
 			throw new HttpError.MethodNotAllowed("Only post allowed");
 		});
-		server.post("/.api/form/:id", async (req, res) => {
+		server.post("/.api/form/:id", app.cache.tag('data-:site'), async (req, res) => {
 			const data = await req.run('form.submit', {
 				id: req.params.id,
 				query: req.query,

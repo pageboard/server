@@ -30,7 +30,7 @@ module.exports = class UploadModule {
 		this.storage = multer.diskStorage(this);
 	}
 	async apiRoutes(app, server) {
-		server.post('/.api/upload/:id?', async req => {
+		server.post('/.api/upload/:id?', app.cache.tag('data-:site'), async req => {
 			const limits = { ...this.opts.limits };
 			if (req.params.id) {
 				const input = await req.run('block.get', { id: req.params.id });

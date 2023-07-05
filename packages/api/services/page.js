@@ -47,16 +47,16 @@ module.exports = class PageService {
 			const obj = await req.run(action, query);
 			res.return(obj);
 		});
-		server.post('/.api/page', app.auth.lock('webmaster'), async (req, res) => {
+		server.post('/.api/page', app.cache.tag('data-:site'), app.auth.lock('webmaster'), async (req, res) => {
 			const page = await req.run('page.add', req.body);
 			// FIXME use res.return ?
 			res.send(page);
 		});
-		server.put('/.api/page', app.auth.lock('webmaster'), async (req, res) => {
+		server.put('/.api/page', app.cache.tag('data-:site'), app.auth.lock('webmaster'), async (req, res) => {
 			const page = await req.run('page.save', req.body);
 			res.send(page);
 		});
-		server.delete('/.api/page', app.auth.lock('webmaster'), async (req, res) => {
+		server.delete('/.api/page', app.cache.tag('data-:site'), app.auth.lock('webmaster'), async (req, res) => {
 			const page = await req.run('page.del', req.query);
 			res.send(page);
 		});

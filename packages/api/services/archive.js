@@ -19,6 +19,7 @@ module.exports = class ArchiveService {
 		);
 		// TODO process req.files with multer
 		server.put('/.api/archive',
+			app.cache.tag('data-:site'),
 			app.auth.lock('webmaster'),
 			req => req.run('archive.import', req.query)
 		);
