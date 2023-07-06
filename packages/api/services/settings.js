@@ -9,7 +9,7 @@ module.exports = class SettingsService {
 			res.return(data);
 		});
 
-		server.put('/.api/settings', app.auth.lock('webmaster'), async (req, res) => {
+		server.put('/.api/settings', app.cache.tag('data-:site'), app.auth.lock('webmaster'), async (req, res) => {
 			const data = await req.run('settings.save', req.body);
 			res.return(data);
 		});

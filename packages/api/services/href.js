@@ -19,11 +19,11 @@ module.exports = class HrefService {
 			const obj = await req.run('href.find', req.query);
 			res.send(obj);
 		});
-		server.post("/.api/href", app.auth.lock('user'), async (req, res) => {
+		server.post("/.api/href", app.cache.tag('data-:site'), app.auth.lock('user'), async (req, res) => {
 			const obj = await req.run('href.add', req.body);
 			res.send(obj);
 		});
-		server.delete("/.api/href", app.auth.lock('webmaster'), async (req, res) => {
+		server.delete("/.api/href", app.cache.tag('data-:site'), app.auth.lock('webmaster'), async (req, res) => {
 			const obj = await req.run('href.del', req.query);
 			res.send(obj);
 		});

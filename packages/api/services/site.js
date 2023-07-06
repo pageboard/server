@@ -9,7 +9,7 @@ module.exports = class SiteService {
 	}
 
 	apiRoutes(app, server) {
-		server.put('/.api/site', app.auth.lock('webmaster'), async (req, res) => {
+		server.put('/.api/site', app.cache.tag('data-:site'), app.auth.lock('webmaster'), async (req, res) => {
 			const site = await req.run('site.save', req.body);
 			res.send(site);
 		});

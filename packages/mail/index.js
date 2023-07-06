@@ -46,14 +46,14 @@ module.exports = class MailModule {
 				console.error(ex);
 			}
 		});
-		server.post('/.api/mail/receive', multipart, (req, res, next) => {
+		server.post('/.api/mail/receive', app.cache.tag('data-:site'), multipart, (req, res, next) => {
 			req.run('mail.receive', req.body).then(ok => {
 				// https://documentation.mailgun.com/en/latest/user_manual.html#receiving-messages-via-http-through-a-forward-action
 				if (!ok) res.sendStatus(406);
 				else res.sendStatus(200);
 			}).catch(next);
 		});
-		server.post('/.api/mail/report', (req, res, next) => {
+		server.post('/.api/mail/report', app.cache.tag('data-:site'), (req, res, next) => {
 			req.run('mail.report', req.body).then(ok => {
 				// https://documentation.mailgun.com/en/latest/user_manual.html#webhooks
 				if (!ok) res.sendStatus(406);

@@ -20,10 +20,14 @@ module.exports = class BlockService {
 			res.return(data);
 		});
 
-		server.post('/.api/blocks', app.auth.lock('writer'), async (req, res) => {
-			const data = await req.run('block.write', req.body);
-			res.return(data);
-		});
+		server.post('/.api/blocks',
+			app.cache.tag('data-:site'),
+			app.auth.lock('writer'),
+			async (req, res) => {
+				const data = await req.run('block.write', req.body);
+				res.return(data);
+			}
+		);
 	}
 
 	get(req, data) {
