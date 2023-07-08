@@ -17,6 +17,11 @@ module.exports = class PrintModule {
 
 	async list(req) {
 		const list = await cups.getPrinterNames();
+		if (this.opts.hotfolder) {
+			list.unshift({
+				name: 'hotfolder'
+			});
+		}
 		return {
 			items: list.map(name => {
 				return {
@@ -32,7 +37,12 @@ module.exports = class PrintModule {
 	};
 
 	async options(req, { name }) {
-		const list = await cups.getPrinterOptions(name);
+		let list;
+		if (name == "hotfolder" && this.opts.hotfolder) {
+			list = [];
+		} else {
+			list = await cups.getPrinterOptions(name);
+		}
 		return {
 			item: {
 				type: 'schema',
@@ -69,11 +79,17 @@ module.exports = class PrintModule {
 
 	async local(req, { printer, url, options }) {
 		const path = await this.#download(req, url);
-		const ret = await cups.printFile(path, {
-			printer,
-			printerOptions: options
-		});
-		return ret;
+		if (printer == "hotfolder" && this.opts.hotfolder) {
+			await fs.rename(path, Path.join(this.opts.hotfolder, Path.basename(path)));
+			return {};
+		} else {
+			const ret = await cups.printFile(path, {
+				printer,
+				printerOptions: options
+			});
+			if (ret.stdout) console.info(ret.stdout);
+			return {};
+		}
 	}
 	static local = {
 		title: 'Local print',
@@ -109,7 +125,9 @@ module.exports = class PrintModule {
 		})).token;
 
 		const products = await agent.fetch("/data/products");
-		console.log(products);
+		const product = products.find(item => item.url == 'booklet-printing');
+		if (!product) throw new HttpError.NotFound("No product with that name");
+		return { workinprogress: true };
 	}
 	static remote = {
 		title: 'Remote print',
@@ -117,12 +135,23 @@ module.exports = class PrintModule {
 		properties: {
 			provider: {
 				title: 'Provider',
-				description: 'Choose a supported provider'
+				description: 'Choose a supported provider',
+				anyOf: [{ const: 'expresta', title: 'Expresta' }]
 			},
-			path: {
-				title: 'Path',
+			product: {
+				title: 'Product',
 				type: 'string',
-				format: 'pathname'
+				format: 'singleline'
+			},
+			paper: {
+				title: 'Paper',
+				type: 'string',
+				format: 'singleline'
+			},
+			url: {
+				title: 'URL',
+				type: 'string',
+				format: 'uri'
 			}
 		}
 	};
