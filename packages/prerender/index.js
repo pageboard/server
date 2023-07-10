@@ -34,16 +34,14 @@ module.exports = class PrerenderModule {
 			'cookies',
 			'form',
 			'upcache',
-			'equivs',
-			'remotes'
+			'equivs'
 		]);
 
 		Object.assign(dom.plugins, {
 			serialize: require('./plugins/serialize'),
 			form: require('./plugins/form'),
 			upcache: require('./plugins/upcache'),
-			render: require('./plugins/render'),
-			remotes: require('./plugins/remotes')
+			render: require('./plugins/render')
 		});
 		dom.defaults.cookies.add("bearer");
 
