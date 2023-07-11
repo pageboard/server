@@ -1,14 +1,9 @@
-module.exports = function render(page) {
+module.exports = function render(page, settings) {
 	page.on('idle', async () => {
-		await page.evaluate(() => {
-			return new Promise(resolve => {
-				// eslint-disable-next-line no-undef
-				Page.paint(state => {
-					state.finish(() => {
-						Promise.allSettled(state.scope.reveals ?? []).then(resolve);
-					});
-				});
-			});
+		await page.evaluate(async () => {
+			// eslint-disable-next-line no-undef
+			const state = await Page.paint();
+			await Promise.allSettled(state.scope.reveals ?? []);
 		});
 	});
 };

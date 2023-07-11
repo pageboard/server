@@ -7,7 +7,9 @@ module.exports = class PageService {
 	apiRoutes(app, server) {
 		server.get('/.api/page', async (req, res) => {
 			const { site, query } = req;
-			const isWebmaster = !req.locked(['webmaster']);
+			const { url } = query;
+			query.url = url?.replace(/\.\w+$/, '');
+			const isWebmaster = !req.locked(['webmaster']) && query.url == url;
 			const forWebmaster = Boolean(query.nested);
 			delete query.nested;
 			let data;

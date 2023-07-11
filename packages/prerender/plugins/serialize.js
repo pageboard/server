@@ -10,7 +10,6 @@ module.exports = function(page, settings, req, res) {
 			if (document.hidden) {
 				await Page.patch();
 			} else {
-				console.error("page is visible");
 				await Page.paint();
 			}
 		} catch (err) {
