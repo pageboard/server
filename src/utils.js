@@ -9,7 +9,17 @@ const getSlug = require.lazy('speakingurl');
 const sharedMd = new Matchdom(TextPlugin, ArrayPlugin, OpsPlugin, NumPlugin, DatePlugin, {
 	formats: {
 		as: {
-			slug: (ctx, str) => getSlug(str, { custom: { "_": "-" } })
+			slug: (ctx, str) => getSlug(str, { custom: { "_": "-" } }),
+			query: (ctx, obj) => {
+				if (!obj) return obj;
+				const q = new URLSearchParams();
+				for (const [key, val] of Object.entries(obj)) {
+					if (Array.isArray(val)) for (const item of val) q.append(key, item);
+					else if (val !== null) q.append(key, val);
+				}
+				const ser = q.toString();
+				return ser ? `?${ser}` : '';
+			}
 		}
 	}
 });
