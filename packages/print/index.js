@@ -1,8 +1,7 @@
 const BearerAgent = require('./src/agent');
-const { promisify } = require('node:util');
 const fs = require('node:fs');
 const Path = require('node:path');
-const pipeline = promisify(require('node:stream').pipeline);
+const { pipeline } = require('node:stream/promises');
 const mime = require.lazy('mime-types');
 const cups = require('node-cups');
 
@@ -80,7 +79,7 @@ module.exports = class PrintModule {
 	async local(req, { printer, url, options }) {
 		const path = await this.#download(req, url);
 		if (printer == "hotfolder" && this.opts.hotfolder) {
-			await fs.rename(path, Path.join(this.opts.hotfolder, Path.basename(path)));
+			await fs.promises.rename(path, Path.join(this.opts.hotfolder, Path.basename(path)));
 			return {};
 		} else {
 			const ret = await cups.printFile(path, {
@@ -97,9 +96,17 @@ module.exports = class PrintModule {
 		required: ['url', 'printer'],
 		properties: {
 			url: {
-				title: 'URL',
-				type: 'string',
-				format: 'uri'
+				title: 'PDF page',
+				type: "string",
+				format: "uri-reference",
+				$filter: {
+					name: 'helper',
+					helper: {
+						name: 'page',
+						type: 'pdf'
+					}
+				},
+				$helper: 'href'
 			},
 			printer: {
 				title: 'Printer',
@@ -159,7 +166,7 @@ module.exports = class PrintModule {
 	async #download(req, url) {
 		const controller = new AbortController();
 		const toId = setTimeout(() => controller.abort(), 100000);
-		const response = await fetch(url, {
+		const response = await fetch(new URL(url, req.site.url), {
 			headers: {
 				cookie: req.get('cookie')
 			},
@@ -173,7 +180,7 @@ module.exports = class PrintModule {
 			}
 			const type = response.headers.get('Content-Type');
 			if (!type) {
-				throw new HttpError.BadParams("Cannot print file that has not Content-Type");
+				throw new HttpError.BadRequest("Cannot print file that has not Content-Type");
 			}
 			const ext = mime.extension(type);
 			if (ext != "pdf") {
