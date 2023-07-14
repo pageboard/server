@@ -34,7 +34,12 @@ module.exports = class UploadModule {
 			const limits = { ...this.opts.limits };
 			if (req.params.id) {
 				const input = await req.run('block.get', { id: req.params.id });
+				if (req.locked(input.lock)) {
+					throw new HttpError.Unauthorized("Check user permissions");
+				}
 				Object.assign(limits, input.data.limits);
+			} else {
+				console.warn("/.api/upload without /:id is deprecated.\nConfigure an upload input and use its id");
 			}
 			const files = await this.parse(req, limits);
 			const list = await Promise.all(files.map(file => this.store(req, file)));
