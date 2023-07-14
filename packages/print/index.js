@@ -16,9 +16,9 @@ module.exports = class PrintModule {
 
 	async list(req) {
 		const list = await cups.getPrinterNames();
-		if (this.opts.hotfolder) {
+		if (this.opts.storage) {
 			list.unshift({
-				name: 'hotfolder'
+				name: 'storage'
 			});
 		}
 		return {
@@ -37,7 +37,7 @@ module.exports = class PrintModule {
 
 	async options(req, { name }) {
 		let list;
-		if (name == "hotfolder" && this.opts.hotfolder) {
+		if (name == "storage" && this.opts.storage) {
 			list = [];
 		} else {
 			list = await cups.getPrinterOptions(name);
@@ -78,8 +78,8 @@ module.exports = class PrintModule {
 
 	async local(req, { printer, url, options }) {
 		const path = await this.#download(req, url);
-		if (printer == "hotfolder" && this.opts.hotfolder) {
-			await fs.promises.rename(path, Path.join(this.opts.hotfolder, Path.basename(path)));
+		if (printer == "storage" && this.opts.storage) {
+			await fs.promises.rename(path, Path.join(this.opts.storage, Path.basename(path)));
 			return {};
 		} else {
 			const ret = await cups.printFile(path, {
@@ -87,6 +87,7 @@ module.exports = class PrintModule {
 				printerOptions: options
 			});
 			if (ret.stdout) console.info(ret.stdout);
+			await fs.promises.unlink(path);
 			return {};
 		}
 	}
