@@ -87,6 +87,7 @@ module.exports = class PrintModule {
 				printerOptions: options
 			});
 			if (ret.stdout) console.info(ret.stdout);
+			await fs.promises.unlink(path);
 			return {};
 		}
 	}
