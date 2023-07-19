@@ -124,11 +124,11 @@ module.exports = class ImageModule {
 				fit: "inside",
 				withoutEnlargement: true,
 				fastShrinkOnLoad: false,
-				width: 2048,
-				height: 2048
+				width: 2362, // 200mm at 300dpi
+				height: 3390 // 287mm at 300dpi
 			})
 			.toFormat("webp", {
-				quality: 90,
+				quality: 95,
 				lossless: false,
 				smartSubsample: true,
 				reductionEffort: 2
