@@ -75,8 +75,7 @@ module.exports = class PageService {
 				type: ['page']
 			});
 			res.type('text/plain');
-			app.auth.filter(req, obj);
-			res.send(obj.items.map(page => {
+			res.send(app.responseFilter.run(req, obj).items.map(page => {
 				return new URL(page.data.url, req.site.url).href;
 			}).join('\n'));
 		});
