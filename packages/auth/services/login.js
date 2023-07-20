@@ -237,8 +237,8 @@ module.exports = class LoginModule {
 		const token = await this.#generate(req, data);
 		return "/.api/login?" + new URLSearchParams({
 			email: data.email,
-			grant: 'webmaster',
-			token: token
+			grant: data.grant,
+			token
 		}).toString();
 	}
 	static link = {
