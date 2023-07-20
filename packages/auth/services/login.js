@@ -22,12 +22,19 @@ module.exports = class LoginModule {
 			res.return(data);
 		});
 
+		server.post("/.api/login/out", async (req, res) => {
+			const data = await req.run('login.clear', req.query);
+			res.return(data);
+		});
+
 		server.get("/.api/login", async (req, res) => {
+			// deprecated
 			const data = await req.run('login.grant', req.query);
 			res.return(data);
 		});
 
 		server.get("/.api/logout", async (req, res) => {
+			// deprecated
 			const data = await req.run('login.clear', req.query);
 			res.return(data);
 		});
