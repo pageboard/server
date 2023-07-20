@@ -22,18 +22,25 @@ module.exports = class LoginModule {
 			res.return(data);
 		});
 
+		server.post("/.api/login/out", async (req, res) => {
+			const data = await req.run('login.clear', req.query);
+			res.return(data);
+		});
+
 		server.get("/.api/login", async (req, res) => {
+			// deprecated
 			const data = await req.run('login.grant', req.query);
 			res.return(data);
 		});
 
 		server.get("/.api/logout", async (req, res) => {
+			// deprecated
 			const data = await req.run('login.clear', req.query);
 			res.return(data);
 		});
 	}
 
-	async #userPriv({ trx }, user) {
+	async priv({ trx }, user) {
 		try {
 			return await user.$relatedQuery('children', trx).alias('privs')
 				.where('privs.type', 'priv')
@@ -58,7 +65,7 @@ module.exports = class LoginModule {
 		const user = await req.run('user.get', {
 			email: data.email
 		});
-		const priv = await this.#userPriv(req, user);
+		const priv = await this.priv(req, user);
 		return otp.authenticator.generate(priv.data.otp.secret);
 	}
 
@@ -133,7 +140,7 @@ module.exports = class LoginModule {
 	async #verifyToken(req, { email, token, tokenMaxAge }) {
 		const { trx } = req;
 		const user = await req.run('user.get', { email });
-		const priv = await this.#userPriv(req, user);
+		const priv = await this.priv(req, user);
 		const tries = (priv.data.otp.tries || 0) + 1;
 		if (tries >= 5) {
 			const at = Date.parse(priv.data.otp.checked_at);
@@ -277,7 +284,7 @@ module.exports = class LoginModule {
 		const user = await req.run('user.get', {
 			email: data.email
 		});
-		const priv = await this.#userPriv(req, user);
+		const priv = await this.priv(req, user);
 		const item = {
 			type: 'otp',
 			data: {
