@@ -1,7 +1,7 @@
 module.exports = class UserService {
 	static name = 'user';
 
-	async #QueryUser({ trx, Block }, data) {
+	#QueryUser({ trx, Block }, data) {
 		if (!data.id && !data.email) {
 			throw new HttpError.BadRequest("Missing id or email");
 		}
@@ -44,16 +44,18 @@ module.exports = class UserService {
 		}
 	};
 
-	async add({ trx, Block }, data) {
+	async add(req, data) {
 		try {
-			return await this.#QueryUser({ trx, Block }, data);
+			return await this.#QueryUser(req, data);
 		} catch (err) {
 			if (err.status != 404) throw err;
 		}
-		return Block.query(trx).insert({
+		const user = await req.Block.query(req.trx).insert({
 			data: { email: data.email },
 			type: 'user'
 		}).returning('*');
+		await req.call('login.priv', user);
+		return user;
 	}
 	static add = {
 		title: 'Add user',
@@ -109,6 +111,7 @@ module.exports = class UserService {
 
 	async del(req, data) {
 		return this.#QueryUser(req, data).del();
+
 	}
 	static del = {
 		...this.add,
