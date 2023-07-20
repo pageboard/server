@@ -40,40 +40,56 @@ module.exports = class PrintModule {
 		$action: 'read'
 	};
 
-	async options(req, { name }) {
-		let list;
-		if (name == "storage" && this.opts.storage) {
-			list = [];
-		} else {
-			list = await cups.getPrinterOptions(name);
-		}
-		return {
-			item: {
-				type: 'schema',
-				data: {
-					title: 'Printer options schema',
-					name,
-					properties: Object.fromEntries(list.map(po => {
-						const obj = {
-							enum: po.values
-						};
-						if (po.defaultValue) obj.default = po.defaultValue;
-						return [
-							po.name,
-							obj
-						];
-					}))
-				}
+	async options(req, { printer }) {
+		const item = {
+			type: 'schema',
+			data: {
+				title: 'Printer options schema',
+				name: printer
 			}
 		};
+		if (printer == "storage" && this.opts[printer]) {
+			item.properties = {};
+		} else if (printer == "expresta" && this.opts[printer]) {
+			const conf = this.opts[printer];
+			const agent = new BearerAgent(this.opts, conf.url);
+
+			agent.bearer = (await agent.fetch("/login", "post", {
+				email: conf.email,
+				password: conf.password
+			})).token;
+			const iso_code = 'us';
+			const couriers = await agent.fetch(`/data/deliveries-by-courier/${iso_code}`);
+			item.data.properties = {
+				couriers: {
+					title: 'Couriers for ' + iso_code,
+					anyOf: couriers.map(item => {
+						return { const: item.courier, title: item.name };
+					})
+				}
+			};
+		} else {
+			const optsList = await cups.getPrinterOptions(printer);
+			item.properties = Object.fromEntries(optsList.map(po => {
+				const obj = {
+					enum: po.values
+				};
+				if (po.defaultValue) obj.default = po.defaultValue;
+				return [
+					po.name,
+					obj
+				];
+			}));
+		}
+		return { item };
 	}
 	static options = {
-		title: 'Get printer specific options',
-		description: 'PPD options as JSON-schema',
+		title: 'Get printer options',
+		description: 'Returns options as a JSON-schema',
 		$action: 'read',
-		required: ['name'],
+		required: ['printer'],
 		properties: {
-			name: {
+			printer: {
 				title: 'Printer name',
 				type: 'string',
 				format: 'singleline'
@@ -211,16 +227,27 @@ module.exports = class PrintModule {
 		// https://api.expresta.com/api/v1/order/sandbox-create for testing orders
 
 
+		pdfUrl.searchParams.set('pages', '2-');
+		const coverUrl = new URL(pdfUrl);
+		coverUrl.searchParams.set('pages', '1');
+
 		const order = {
 			customer_reference: "1234567890",
 			delivery,
 			products: [{
 				product_type_id: product.id, // GetProducts id
 				pdf: pdfUrl.href,
+				cover_pdf: coverUrl.href,
 				binding_id: binding.id,
 				binding_placement: "left",
 				amount: 1,
 				runlists: [{
+					tag: "cover",
+					sides: 1,
+					paper_id: paper.id,
+				}, {
+					tag: "content",
+					sides: 2,
 					size_a: sizeA,
 					size_b: sizeB,
 					paper_id: paper.id,
