@@ -154,9 +154,7 @@ module.exports = class MailModule {
 		}
 		data.from = sender;
 		data.headers = { ...mailer.headers };
-		if (req.site.id) {
-			data.headers["X-PM-Tag"] = req.site.id;
-		}
+		if (req.site.id) data.tag = req.site.id;
 		if (data.attachments) data.attachments = data.attachments.filter(obj => {
 			const url = new URL(obj.href, req.site.url);
 			return url.host == req.site.url.host;
