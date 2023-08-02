@@ -85,7 +85,7 @@ module.exports = class PrintModule {
 	}
 	static options = {
 		title: 'Get printer options',
-		description: 'Returns options as a JSON-schema',
+		description: 'Returns options as JSON-schema',
 		$action: 'read',
 		required: ['printer'],
 		properties: {
