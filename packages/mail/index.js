@@ -160,15 +160,16 @@ module.exports = class MailModule {
 			return url.host == req.site.url.host;
 		});
 		Log.mail("mail.to", data);
-		return mailer.transport.sendMail(data).then(sentStatus => {
+		try {
+			const sentStatus = await mailer.transport.sendMail(data);
 			return {
 				accepted: sentStatus.accepted.length > 0,
 				rejected: sentStatus.rejected.length > 0
 			};
-		}).catch(err => {
+		} catch(err) {
 			err.statusCode = 400;
 			throw err;
-		});
+		}
 	}
 	static to = {
 		title: 'Send email to',
