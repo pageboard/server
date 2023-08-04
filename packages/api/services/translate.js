@@ -45,7 +45,8 @@ module.exports = class TranslateService {
 	}
 	static languages = {
 		title: 'Initialize languages',
-		$lock: true
+		$lock: true,
+		$global: true
 	};
 
 	async initialize({ site, trx, Block }) {

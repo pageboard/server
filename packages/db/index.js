@@ -9,6 +9,7 @@ const tenants = new Map();
 
 module.exports = class DatabaseModule {
 	static name = 'database';
+	static $global = true;
 	static priority = -100;
 
 	constructor(app, opts) {

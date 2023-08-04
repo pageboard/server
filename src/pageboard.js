@@ -325,9 +325,11 @@ module.exports = class Pageboard {
 			let defined = false;
 			for (const key of Object.getOwnPropertyNames(constructor)) {
 				const desc = constructor[key];
-				if (desc == null || typeof desc != "object") continue;
-				if (typeof plugin[key] != "function") continue;
-				defined = true;
+				if (!key.startsWith('$')) {
+					if (desc == null || typeof desc != "object") continue;
+					if (typeof plugin[key] != "function") continue;
+					defined = true;
+				}
 				service[key] = desc;
 			}
 			if (!services[name] && defined) {

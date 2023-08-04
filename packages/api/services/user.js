@@ -1,5 +1,6 @@
 module.exports = class UserService {
 	static name = 'user';
+	static $global = true;
 
 	#QueryUser({ trx, Block }, data) {
 		if (!data.id && !data.email) {

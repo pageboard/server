@@ -2,6 +2,7 @@ const jsonDoc = require.lazy('../lib/json-doc');
 
 module.exports = class HelpService {
 	static name = 'help';
+	static $global = true;
 
 	constructor(app, opts) {
 		this.app = app;

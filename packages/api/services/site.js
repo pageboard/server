@@ -3,6 +3,7 @@ const schemas = require.lazy('../lib/schemas');
 
 module.exports = class SiteService {
 	static name = 'site';
+	static $global = true;
 
 	constructor(app) {
 		this.app = app;

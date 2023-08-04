@@ -92,6 +92,9 @@ module.exports = class ApiModule {
 		if (!schema) {
 			throw new HttpError.BadRequest(`Internal api method ${apiStr}`);
 		}
+		if (!site && !mod.$global && !schema.$global) {
+			throw new HttpError.BadRequest(`API method ${apiStr} expects a site`);
+		}
 		return [schema, inst, fun];
 	}
 
