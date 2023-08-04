@@ -6,7 +6,6 @@ const jsonPath = require.lazy('@kapouer/path');
 
 const Packager = require.lazy('./lib/packager');
 const Validation = require('./lib/validation');
-const jsonDoc = require.lazy('./lib/json-doc');
 
 const Href = require('./models/href');
 const Block = require('./models/block');
@@ -17,7 +16,7 @@ module.exports = class ApiModule {
 	static name = 'api';
 	static priority = -1;
 	static plugins = [
-		'user', 'site', 'archive', 'settings', 'page',
+		'help', 'user', 'site', 'archive', 'settings', 'page',
 		'block', 'href', 'form', 'query',	'reservation', 'translate'
 	].map(name => Path.join(__dirname, 'services', name));
 
@@ -74,7 +73,7 @@ module.exports = class ApiModule {
 		else return data;
 	}
 
-	#getService(apiStr) {
+	getService({ site }, apiStr) {
 		const [modName, funName] = (apiStr || "").split('.');
 		const mod = this.app.services[modName];
 		if (!modName || !mod) {
@@ -96,37 +95,19 @@ module.exports = class ApiModule {
 		return [schema, inst, fun];
 	}
 
-	help(apiStr) {
-		let schema;
-		const [modName, funName] = (apiStr || "").split('.');
-		if (!funName) {
-			schema = {
-				properties: Object.fromEntries(
-					Object.entries(this.app.services).map(([name, schema]) => {
-						if (modName && modName != name) return [name, undefined];
-						return [name, { type: "", title: Object.keys(schema) }];
-					})
-				)
-			};
-		} else {
-			schema = this.#getService(apiStr)[0];
-		}
-		return jsonDoc(apiStr, schema, this.app.opts.cli);
-	}
-
-	async run(req = {}, apiStr, data = {}) {
+	async run(req = {}, command, data = {}) {
 		const { app } = this;
-		const [schema, mod, fun] = this.#getService(apiStr);
+		const [schema, mod, fun] = this.getService(req, command);
 		data = mergeRecursive({}, data);
-		Log.api("run %s:\n%O", apiStr, data);
+		Log.api("run %s:\n%O", command, data);
 		try {
 			this.validate(schema, data, fun);
 		} catch (err) {
 			err.data = {
-				method: apiStr,
+				method: command,
 				messages: err.message
 			};
-			err.content = jsonDoc(apiStr, schema, app.opts.cli);
+			err.content = await this.run('help.doc', { command, schema });
 			throw err;
 		}
 		// start a transaction on set trx object on site
@@ -150,11 +131,11 @@ module.exports = class ApiModule {
 			}
 			return obj;
 		} catch(err) {
-			Log.api("error %s:\n%O", apiStr, err);
+			Log.api("error %s:\n%O", command, err);
 			if (!hadTrx && !req.trx.isCompleted()) {
 				await req.trx.rollback();
 			}
-			if (!err.method) err.method = apiStr;
+			if (!err.method) err.method = command;
 			throw err;
 		} finally {
 			if (req.trx && req.trx.isCompleted()) {

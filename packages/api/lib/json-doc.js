@@ -22,17 +22,20 @@ module.exports = function(api, schema, formatted) {
 		}
 	});
 
-	if (lines.length == 0) return "";
-	else if (!formatted) return lines.join('\n');
-	else return table(lines, {
-		header,
-		drawHorizontalLine: (index, size) => {
-			const dec = header.content != null ? 1 : 0;
-			if (index <= dec || index >= size) return true;
-			return lines[index - dec][1] === "";
-		},
-		border: getBorderCharacters('norc')
-	});
+	if (!formatted) {
+		return header.content + '\n' + lines.join('\n');
+	} else {
+		if (lines.length == 0) lines.push(["missing properties"]);
+		return table(lines, {
+			header,
+			drawHorizontalLine: (index, size) => {
+				const dec = header.content != null ? 1 : 0;
+				if (index <= dec || index >= size) return true;
+				return lines[index - dec][1] === "";
+			},
+			border: getBorderCharacters('norc')
+		});
+	}
 };
 
 

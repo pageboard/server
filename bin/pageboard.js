@@ -7,11 +7,12 @@ if (!process.env.HOME) {
 }
 
 (async () => {
+	const args = Pageboard.parse(process.argv.slice(2));
 	const {
-		command,
 		opts = {},
 		data = {}
-	} = Pageboard.parse(process.argv.slice(2));
+	} = args;
+	let { command } = args;
 	const { site, grant, help } = opts;
 	delete opts.site;
 	delete opts.grant;
@@ -24,12 +25,10 @@ if (!process.env.HOME) {
 	await app.init();
 
 	if (help) {
-		// eslint-disable-next-line no-console
-		if (command) console.info("\n", command);
-		// eslint-disable-next-line no-console
-		console.log(app.api.help(command));
-		process.exit(0);
-	} else if (!command) {
+		data.command = command;
+		command = 'help.command';
+	}
+	if (!command) {
 		return app;
 	}
 	try {
