@@ -146,8 +146,11 @@ module.exports = class SiteService {
 	};
 
 	async save(req, data) {
-		const site = await this.get(req, { id: data.id });
-		const initial = site.data;
+		if (data.id == null && req.site) {
+			data.id = req.site.id;
+		}
+		const dbSite = await this.get(req, { id: data.id });
+		const initial = dbSite.data;
 		const languagesChanged = data.languages !== undefined &&
 			(data.languages ?? []).join(' ')
 			!=
@@ -156,17 +159,20 @@ module.exports = class SiteService {
 		const toMulti = initial.lang && data.languages?.length > 0;
 		const toMono = !initial.lang && data.lang;
 
-		mergeRecursive(site.data, data);
-		const runSite = await this.app.install(site);
-		await runSite.$query(req.trx).patchObject({
-			type: runSite.type,
-			data: runSite.data
+		mergeRecursive(dbSite.data, data);
+		const site = await this.app.install(dbSite);
+		await site.$query(req.trx).patchObject({
+			type: site.type,
+			data: site.data
 		});
 		if (languagesChanged || toMulti || toMono) {
-			req.site = runSite;
+			req.site = site;
 			await req.run('translate.initialize');
 		}
-		return runSite;
+		if (this.app.domains.siteById[site.id]) {
+			this.app.domains.siteById[site.id] = site;
+		}
+		return site;
 	}
 	static save = {
 		title: 'Save site',
