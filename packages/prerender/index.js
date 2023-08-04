@@ -140,7 +140,9 @@ module.exports = class PrerenderModule {
 				if (preset != null) {
 					location.searchParams.delete('pdf');
 				}
-				settings.pdf(preset ?? 'screen');
+				if (preset != "browser") {
+					settings.pdf(preset ?? 'screen');
+				}
 			} else if (online) {
 				// pass to next middleware
 				cspSchemaToPhase(policies, req.schema.csp);
