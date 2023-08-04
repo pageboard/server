@@ -11,7 +11,7 @@ module.exports = class SiteService {
 
 	apiRoutes(app, server) {
 		server.put('/.api/site', app.cache.tag('data-:site'), app.auth.lock('webmaster'), async (req, res) => {
-			const site = await req.run('site.save', req.body);
+			const site = await req.run('site.save', { id: req.site.id, data: req.body });
 			res.send(site);
 		});
 	}
@@ -146,8 +146,7 @@ module.exports = class SiteService {
 	};
 
 	async save(req, data) {
-		const { site } = req;
-		const dbSite = await this.get(req, { id: site.id });
+		const site = await this.get(req, { id: data.id });
 		const initial = site.data;
 		const languagesChanged = data.languages !== undefined &&
 			(data.languages ?? []).join(' ')
@@ -157,8 +156,8 @@ module.exports = class SiteService {
 		const toMulti = initial.lang && data.languages?.length > 0;
 		const toMono = !initial.lang && data.lang;
 
-		mergeRecursive(dbSite.data, data);
-		const runSite = await this.app.install(dbSite);
+		mergeRecursive(site.data, data);
+		const runSite = await this.app.install(site);
 		await runSite.$query(req.trx).patchObject({
 			type: runSite.type,
 			data: runSite.data
@@ -167,7 +166,6 @@ module.exports = class SiteService {
 			req.site = runSite;
 			await req.run('translate.initialize');
 		}
-		site.data = runSite.data;
 		return runSite;
 	}
 	static save = {
