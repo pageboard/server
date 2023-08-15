@@ -11,7 +11,7 @@ class Block extends Model {
 
 	static jsonSchema = {
 		type: 'object',
-		$id: '/api/blocks',
+		$id: '/blocks',
 		properties: {
 			id: {
 				title: 'ID',
@@ -177,7 +177,7 @@ class Block extends Model {
 			throw new Error("missing block.id\n" + JSON.stringify(block));
 		}
 		const schema = {
-			$id: `${Block.jsonSchema.$id}/${block.id}`,
+			$id: `/${block.id}/${block.data.version ?? tag}${Block.jsonSchema.$id}`,
 			type: 'object',
 			discriminator: { propertyName: "type" },
 			required: ['type'],

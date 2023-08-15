@@ -13,7 +13,7 @@ class Href extends common.Model {
 	static jsonSchema = {
 		type: 'object',
 		required: ['url', 'mime'],
-		$id: '/api/href',
+		$id: '/href',
 		properties: {
 			updated_at: {
 				type: 'string',

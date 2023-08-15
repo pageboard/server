@@ -123,6 +123,12 @@ module.exports = class Packager {
 		return Block.initSite(site, pkg);
 	}
 
+	async makeSchemas(site, pkg) {
+		const mclass = site.$modelClass;
+		const validator = mclass.getValidator();
+		await validator.prepare(mclass.jsonSchema);
+	}
+
 	async makeBundles(site, pkg) {
 		const { eltsMap, bundles } = pkg;
 

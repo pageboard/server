@@ -56,6 +56,7 @@ module.exports = class ApiModule {
 	}
 
 	async makeBundles(site, pkg) {
+		await this.#packager.makeSchemas(site, pkg);
 		return this.#packager.makeBundles(site, pkg);
 	}
 

@@ -5,6 +5,9 @@ const AjvFormats = require('ajv-formats');
 const { betterAjvErrors } = require('@apideck/better-ajv-errors');
 const NP = require('number-precision');
 const Traverse = require('json-schema-traverse');
+const { writeFile } = require('node:fs/promises');
+const ajvStandalone = require.lazy("ajv/dist/standalone");
+const Path = require('node:path');
 
 function fixSchema(schema) {
 	Traverse(schema, {
@@ -29,13 +32,51 @@ function fixSchema(schema) {
 }
 
 class AjvValidatorExt extends AjvValidator {
+	#cacheDir;
+
+	constructor(opts) {
+		super(opts);
+		this.#cacheDir = opts.cacheDir;
+	}
+	async prepare(jsonSchema) {
+		const p = this.cache.get(jsonSchema.$id);
+		if (p) {
+			console.warn("Already has cached validators", jsonSchema.$id);
+		}
+		const cachePath = Path.join(
+			this.#cacheDir,
+			jsonSchema.$id
+		);
+		const obj = {};
+		try {
+			obj.patchValidator = require(cachePath + '-patch.js');
+		} catch (ex) {
+			if (ex.code != 'MODULE_NOT_FOUND') console.error(ex);
+			obj.patchValidator = this.compilePatchValidator(jsonSchema);
+			const patchCode = ajvStandalone.default(this.ajvNoDefaults, obj.patchValidator);
+			await writeFile(cachePath + '-patch.js', patchCode);
+		}
+		try {
+			obj.normalValidator = require(cachePath + '-normal.js');
+		} catch (ex) {
+			if (ex.code != 'MODULE_NOT_FOUND') console.error(ex);
+			obj.normalValidator = this.compileNormalValidator(jsonSchema);
+			const normalCode = ajvStandalone.default(this.ajv, obj.normalValidator);
+			await writeFile(cachePath + '-normal.js', normalCode);
+		}
+		this.cache.set(jsonSchema.$id, obj);
+	}
+
 	compilePatchValidator(jsonSchema) {
-		jsonSchema = jsonSchemaWithoutRequired(fixSchema(jsonSchema));
-		// We need to use the ajv instance that doesn't set the default values.
-		return this.ajvNoDefaults.compile(jsonSchema);
+		const schema = jsonSchemaWithoutRequired(
+			fixSchema(jsonSchema)
+		);
+		return this.ajvNoDefaults.compile(schema);
 	}
 	compileNormalValidator(jsonSchema) {
-		return super.compileNormalValidator(fixSchema(jsonSchema));
+		return this.ajv.compile(
+			fixSchema(jsonSchema)
+		);
 	}
 }
 
@@ -99,11 +140,15 @@ module.exports = class Validation {
 	}
 	createValidator() {
 		return new AjvValidatorExt({
+			cacheDir: this.app.dirs.filesCache,
 			onCreateAjv: (ajv) => this.#setupAjv(ajv),
 			options: {
 				...Validation.AjvOptions,
 				strictSchema: this.app.env == "dev" ? "log" : false,
-				validateSchema: false
+				validateSchema: false,
+				code: {
+					source: true
+				}
 			}
 		});
 	}
