@@ -126,7 +126,20 @@ module.exports = class Validation {
 			code(cxt) {
 				const { schema, data } = cxt;
 				const { _ } = Ajv;
-				cxt.pass(_`Number.isInteger(${data} / ${schema})`);
+				let decimalPlaces = 0;
+				if (!Number.isNaN(schema)) {
+					const parts = schema.toString().split('e');
+					if (parts.length === 2) {
+						if (parts[1][0] === '-') {
+							decimalPlaces = Number(parts[1].slice(1));
+						}
+					}
+					const decimalParts = parts[0].split('.');
+					if (decimalParts.length === 2) {
+						decimalPlaces += decimalParts[1].length;
+					}
+				}
+				cxt.pass(_`Number.isInteger((1e${decimalPlaces} * ${data}) / (1e${decimalPlaces} * ${schema}))`);
 			},
 			errors: false,
 			metaSchema: {
