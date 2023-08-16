@@ -227,7 +227,7 @@ class Block extends Model {
 				delete element.output;
 			}
 
-			for (const p of ElementKeywords) {
+			if (element.bundle === true) for (const p of ElementKeywords) {
 				if (element[p] != null) sub[p] = element[p];
 			}
 			Object.assign(sub.properties, blockProps, standProp, {
