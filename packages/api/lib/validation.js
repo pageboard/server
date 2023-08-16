@@ -3,7 +3,6 @@ const Ajv = require('ajv');
 const AjvKeywords = require('ajv-keywords');
 const AjvFormats = require('ajv-formats');
 const { betterAjvErrors } = require('@apideck/better-ajv-errors');
-const NP = require('number-precision');
 const Traverse = require('json-schema-traverse');
 const { writeFile } = require('node:fs/promises');
 const ajvStandalone = require.lazy("ajv/dist/standalone");
@@ -124,8 +123,10 @@ module.exports = class Validation {
 		ajv.addKeyword({
 			keyword: "multipleOf",
 			type: "number",
-			compile(schema) {
-				return data => Number.isInteger(NP.divide(data, schema));
+			code(cxt) {
+				const { schema, data } = cxt;
+				const { _ } = Ajv;
+				cxt.pass(_`Number.isInteger(${data} / ${schema})`);
 			},
 			errors: false,
 			metaSchema: {
