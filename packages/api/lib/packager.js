@@ -6,6 +6,7 @@ const { promises: fs } = require('node:fs');
 const vm = require.lazy('node:vm');
 const translateJSON = require.lazy('./translate');
 const schemas = require.lazy('./schemas');
+const { mergeRecursive } = require('../../../src/utils');
 
 
 /*
@@ -119,7 +120,10 @@ module.exports = class Packager {
 		Object.assign(pkg, {
 			eltsMap, groups, aliases, bundles, standalones, textblocks
 		});
-		if (!pkg.eltsMap.site) pkg.eltsMap.site = schemas.site;
+		for (const [type, elt] of Object.entries(schemas)) {
+			// server schemas are mandatory
+			pkg.eltsMap[type] = mergeRecursive(pkg.eltsMap[type] ?? {}, elt);
+		}
 		return Block.initSite(site, pkg);
 	}
 
