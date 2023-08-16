@@ -221,38 +221,45 @@ module.exports = class Validation {
 			modifying: true,
 			schemaType: 'boolean',
 			errors: false,
-			validate: function (schema, data, parentSchema, dataCxt) {
-				if (data == null) return true;
-				const parent = dataCxt.parentData;
-				const name = dataCxt.parentDataProperty;
-				const format = parentSchema.format;
+			code(cxt) {
+				const { gen, parentSchema, data, it } = cxt;
+				const { format } = parentSchema;
+				const { parentData, parentDataProperty } = it;
+				const { _ } = Ajv;
+
 				if ('const' in parentSchema && typeof parentSchema.const == "number") {
-					// coerce numbers
-					if (data != null && typeof data == "string") {
-						const num = Number(data);
-						if (!Number.isNaN(num)) parent[name] = num;
-						return true;
-					}
-				}
-				if (parentSchema.type == "string" && data === "") {
+					gen.if(_`typeof ${data} == "string" && ${data} != null`, () => {
+						const num = gen.const("num", _`Number(${data})`);
+						gen.if(_`!Number.isNaN(${num})`, () => {
+							gen.assign(_`${parentData}[${parentDataProperty}]`, num);
+						});
+					});
+				} else if (parentSchema.type == "string") {
 					if (parentSchema.default !== undefined) {
-						parent[name] = parentSchema.default;
+						gen.if(_`${data} === ""`, () => {
+							gen.assign(_`${parentData}[${parentDataProperty}]`, _`${parentSchema.default}`);
+						});
 					} else if (parentSchema.nullable) {
-						delete parent[name];
+						gen.if(_`${data} === ""`, () => {
+							gen.code(_`delete ${parentData}[${parentDataProperty}]`);
+						});
 					}
-					return true;
+				} else if (["date", "time", "date-time"].includes(format)) {
+					const d = gen.const("d", _`new Date(${data})`);
+					gen.if(_`Number.isNaN(${d}.getTime())`, () => {
+						gen.assign(_`${parentData}[${parentDataProperty}]`, null);
+					});
+					gen.else(() => {
+						const dstr = gen.const("dstr", _`${d}.toISOString()`);
+						if (format == "date") {
+							gen.assign(_`${parentData}[${parentDataProperty}]`, _`${dstr}.split('T').shift()`);
+						} else if (format == "time") {
+							gen.assign(_`${parentData}[${parentDataProperty}]`, _`${dstr}.split('T').pop()`);
+						} else {
+							gen.assign(_`${parentData}[${parentDataProperty}]`, dstr);
+						}
+					});
 				}
-				if (format != "date" && format != "time" && format != "date-time") return true;
-				const d = new Date(data);
-				if (Number.isNaN(d.getTime())) {
-					parent[name] = null;
-				} else {
-					data = d.toISOString();
-					if (format == "date") parent[name] = data.split('T').shift();
-					else if (format == "time") parent[name] = data.split('T').pop();
-					else if (format == "date-time") parent[name] = data;
-				}
-				return true;
 			}
 		});
 		return ajv;
