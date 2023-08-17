@@ -4,7 +4,7 @@ const AjvKeywords = require('ajv-keywords');
 const AjvFormats = require('ajv-formats');
 const { betterAjvErrors } = require('@apideck/better-ajv-errors');
 const Traverse = require('json-schema-traverse');
-const { writeFile } = require('node:fs/promises');
+const fs = require('node:fs/promises');
 const ajvStandalone = require.lazy("ajv/dist/standalone");
 const Path = require('node:path');
 
@@ -37,7 +37,7 @@ class AjvValidatorExt extends AjvValidator {
 		super(opts);
 		this.#cacheDir = opts.cacheDir;
 	}
-	async prepare(jsonSchema) {
+	async prepare(jsonSchema, pkg) {
 		const p = this.cache.get(jsonSchema.$id);
 		if (p) {
 			console.warn("Already has cached validators", jsonSchema.$id);
@@ -46,22 +46,38 @@ class AjvValidatorExt extends AjvValidator {
 			this.#cacheDir,
 			jsonSchema.$id
 		);
+		const cacheDir = Path.dirname(cachePath);
 		const obj = {};
+		await fs.mkdir(Path.join(cacheDir, 'node_modules'), { recursive: true });
 		try {
-			obj.patchValidator = require(cachePath + '-patch.js');
+			await fs.symlink(Path.join(__dirname, '../node_modules/ajv'), Path.join(cacheDir, 'node_modules', 'ajv'));
+			await fs.symlink(Path.join(__dirname, '../node_modules/ajv-keywords'), Path.join(cacheDir, 'node_modules', 'ajv-keywords'));
 		} catch (ex) {
-			if (ex.code != 'MODULE_NOT_FOUND') console.error(ex);
+			if (ex.code != 'EEXIST') throw ex;
+		}
+		const patchPath = cachePath + '-patch.js';
+		try {
+			if (!pkg.cache || !(await fileExists(patchPath))) {
+				throw new Error();
+			}
+			obj.patchValidator = require(patchPath);
+		} catch (ex) {
+			if (ex.code) console.error(ex);
 			obj.patchValidator = this.compilePatchValidator(jsonSchema);
 			const patchCode = ajvStandalone.default(this.ajvNoDefaults, obj.patchValidator);
-			await writeFile(cachePath + '-patch.js', patchCode);
+			await fs.writeFile(patchPath, patchCode);
 		}
+		const normalPath = cachePath + '-normal.js';
 		try {
-			obj.normalValidator = require(cachePath + '-normal.js');
+			if (!pkg.cache || !(await fileExists(normalPath))) {
+				throw new Error();
+			}
+			obj.normalValidator = require(normalPath);
 		} catch (ex) {
-			if (ex.code != 'MODULE_NOT_FOUND') console.error(ex);
+			if (ex.code) console.error(ex);
 			obj.normalValidator = this.compileNormalValidator(jsonSchema);
 			const normalCode = ajvStandalone.default(this.ajv, obj.normalValidator);
-			await writeFile(cachePath + '-normal.js', normalCode);
+			await fs.writeFile(normalPath, normalCode);
 		}
 		this.cache.set(jsonSchema.$id, obj);
 	}
@@ -359,4 +375,13 @@ function omit(obj, keys) {
 	return Object.fromEntries(
 		Object.entries(obj).filter(([key]) => !keys.includes(key))
 	);
+}
+
+async function fileExists(path) {
+	try {
+		await fs.access(path);
+		return true;
+	} catch {
+		return false;
+	}
 }

@@ -183,6 +183,8 @@ module.exports = class Installer {
 		} catch (err) {
 			if (newTag) {
 				pkg.install = true;
+			} else {
+				pkg.cache = true;
 			}
 		}
 		return pkg;
