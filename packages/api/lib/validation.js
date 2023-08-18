@@ -8,6 +8,7 @@ const fs = require('node:fs/promises');
 const ajvStandalone = require.lazy("ajv/dist/standalone");
 const Path = require('node:path');
 const { exists } = require('../../../src/utils');
+const schemas = require('./schemas');
 
 function fixSchema(schema) {
 	Traverse(schema, {
@@ -115,11 +116,23 @@ module.exports = class Validation {
 
 	constructor(app, opts) {
 		this.app = app;
+		const customSchemas = Object.entries(schemas).map(([key, obj]) => {
+			obj.$id = '/$elements/' + key;
+			return fixSchema(obj);
+		});
+
 		this.#validatorWithDefaults = this.#setupAjv(
-			new Ajv(this.#createSettings({ useDefaults: 'empty' }))
+			new Ajv(this.#createSettings({
+				useDefaults: 'empty',
+				schemas: customSchemas
+			}))
 		);
+
 		this.#validatorNoDefaults = this.#setupAjv(
-			new Ajv(this.#createSettings({ useDefaults: false }))
+			new Ajv(this.#createSettings({
+				useDefaults: false,
+				schemas: customSchemas
+			}))
 		);
 	}
 	#setupAjv(ajv) {
