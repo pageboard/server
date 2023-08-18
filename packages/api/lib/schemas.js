@@ -87,3 +87,208 @@ exports.site = {
 		}
 	}
 };
+
+exports.print = {
+	title: 'Print',
+	required: ['url', 'printer'],
+	$lock: true,
+	group: 'site',
+	properties: {
+		url: {
+			title: 'PDF page',
+			type: "string",
+			format: "uri-reference",
+			$filter: {
+				name: 'helper',
+				helper: {
+					name: 'page',
+					type: 'pdf'
+				}
+			},
+			$helper: 'href'
+		},
+		printer: {
+			title: 'Printer service',
+			description: 'Choose a supported printer service',
+			type: 'string'
+		},
+		options: {
+			title: 'Print options',
+			type: 'object',
+			properties: {
+				product: {
+					title: 'Product',
+					type: 'string',
+					format: 'singleline'
+				},
+				paper: {
+					title: 'Paper',
+					type: 'string',
+					format: 'id',
+					default: '420'
+				},
+				fold: {
+					title: 'Fold',
+					type: 'string',
+					format: 'id',
+					default: '19'
+				},
+				fold_on: {
+					title: 'Fold on',
+					default: null,
+					anyOf: [{
+						type: 'null',
+						title: 'n/a'
+					}, {
+						const: 'axis_longer',
+						title: 'Long side'
+					}, {
+						const: 'axis_longer',
+						title: 'Short side'
+					}]
+				},
+				binding: {
+					title: 'Binding',
+					type: 'string',
+					format: 'id',
+					default: '254' // paperback, perfect binding
+				}
+			}
+		},
+		delivery: {
+			title: 'Delivery',
+			type: 'object',
+			nullable: true,
+			required: ['iso_code', 'name', 'phone', 'email', 'street', 'city', 'zip'],
+			properties: {
+				courier: {
+					title: 'Courier',
+					anyOf: [{
+						const: 'slow',
+						title: 'Slow'
+					}, {
+						const: 'fast',
+						title: 'Fast'
+					}]
+				},
+				iso_code: {
+					title: 'Country Code',
+					type: 'string',
+					format: 'singleline'
+				},
+				name: {
+					title: 'Name',
+					type: 'string',
+					format: 'singleline'
+				},
+				phone: {
+					title: 'Phone',
+					type: 'string',
+					format: 'phone'
+				},
+				email: {
+					title: 'Email',
+					type: 'string',
+					format: 'email'
+				},
+				street: {
+					title: 'Street',
+					type: 'string'
+				},
+				city: {
+					title: 'City',
+					type: 'string',
+					format: 'singleline'
+				},
+				zip: {
+					title: 'Zip Code',
+					type: 'string',
+					format: 'singleline'
+				}
+			}
+		}
+	}
+};
+
+exports.email = {
+	title: 'Site',
+	$lock: true,
+	group: 'site',
+	required: ['url', 'to'],
+	properties: {
+		purpose: {
+			title: 'Purpose',
+			anyOf: [{
+				title: "Transactional",
+				const: "transactional"
+			}, {
+				title: "Conversations",
+				const: "conversations"
+			}, {
+				title: "Subscriptions",
+				const: "subscriptions"
+			}],
+			default: 'transactional'
+		},
+		from: {
+			title: 'From',
+			description: 'User settings.id or email',
+			anyOf: [{
+				type: 'string',
+				format: 'id'
+			}, {
+				type: 'string',
+				format: 'email'
+			}]
+		},
+		replyTo: {
+			title: 'Reply To',
+			description: 'Email address or user id',
+			anyOf: [{
+				type: 'string',
+				format: 'id'
+			}, {
+				type: 'string',
+				format: 'email'
+			}]
+		},
+		to: {
+			title: 'To',
+			description: 'List of email addresses or users id',
+			type: 'array',
+			items: {
+				anyOf: [{
+					type: 'string',
+					format: 'id'
+				}, {
+					type: 'string',
+					format: 'email'
+				}]
+			}
+		},
+		url: {
+			title: 'Mail page',
+			type: "string",
+			format: "pathname",
+			$filter: {
+				name: 'helper',
+				helper: {
+					name: 'page',
+					type: 'mail'
+				}
+			},
+			$helper: 'href'
+		},
+		subject: {
+			title: 'Subject',
+			description: 'Defaults to mail page title',
+			type: 'string',
+			nullable: true
+		},
+		body: {
+			title: 'Query',
+			type: 'object',
+			default: {}
+		}
+	}
+};
