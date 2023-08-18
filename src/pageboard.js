@@ -271,15 +271,19 @@ module.exports = class Pageboard {
 	async install(block) {
 		this.domains.hold(block);
 		try {
+			// get configured pkg with paths to elements definitions
 			const pkg = await this.#installer.install(block, this);
+			// parse and normalize all elements and build site schema
 			const site = await this.api.install(block, pkg);
+			// mount paths
 			await this.statics.install(site, pkg);
+			// build js, css, and compile schema validators
 			await this.api.makeBundles(site, pkg);
 			await this.auth.install(site);
-			await this.cache.install(site);
 			if (this.env != "development") await this.#installer.clean(site, pkg);
 			site.data.server = pkg.server ?? this.version;
 			this.domains.release(site);
+			await this.cache.install(site);
 			return site;
 		} catch (err) {
 			if (block.url) this.domains.error(block, err);
