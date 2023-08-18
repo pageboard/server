@@ -5,6 +5,7 @@ const {
 	Matchdom, TextPlugin, ArrayPlugin, OpsPlugin, NumPlugin, DatePlugin
 } = require('../lib/matchdom');
 const getSlug = require.lazy('speakingurl');
+const { access } = require('node:fs/promises');
 
 const sharedMd = new Matchdom(TextPlugin, ArrayPlugin, OpsPlugin, NumPlugin, DatePlugin, {
 	formats: {
@@ -121,3 +122,13 @@ function nestie(input, glue) {
 }
 
 exports.nestie = nestie;
+
+
+exports.exists = async function(path) {
+	try {
+		await access(path);
+		return true;
+	} catch {
+		return false;
+	}
+};

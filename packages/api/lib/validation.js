@@ -7,6 +7,7 @@ const Traverse = require('json-schema-traverse');
 const fs = require('node:fs/promises');
 const ajvStandalone = require.lazy("ajv/dist/standalone");
 const Path = require('node:path');
+const { exists } = require('../../../src/utils');
 
 function fixSchema(schema) {
 	Traverse(schema, {
@@ -57,7 +58,7 @@ class AjvValidatorExt extends AjvValidator {
 		}
 		const patchPath = cachePath + '-patch.js';
 		try {
-			if (!pkg.cache || !(await fileExists(patchPath))) {
+			if (!pkg.cache || !(await exists(patchPath))) {
 				throw new Error();
 			}
 			obj.patchValidator = require(patchPath);
@@ -69,7 +70,7 @@ class AjvValidatorExt extends AjvValidator {
 		}
 		const normalPath = cachePath + '-normal.js';
 		try {
-			if (!pkg.cache || !(await fileExists(normalPath))) {
+			if (!pkg.cache || !(await exists(normalPath))) {
 				throw new Error();
 			}
 			obj.normalValidator = require(normalPath);
@@ -377,11 +378,4 @@ function omit(obj, keys) {
 	);
 }
 
-async function fileExists(path) {
-	try {
-		await fs.access(path);
-		return true;
-	} catch {
-		return false;
-	}
-}
+
