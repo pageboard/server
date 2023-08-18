@@ -318,12 +318,13 @@ module.exports = class Domains {
 	}
 
 	release(site) {
-		if (!site.url) return;
 		const host = this.hostById[site.id];
 		if (!host) return;
 
 		if (!site.data.domains) site.data.domains = [];
-		this.#idByDomainUpdate(site, this.siteById[site.id]);
+		const old = this.siteById[site.id];
+		site.url ??= old?.url;
+		this.#idByDomainUpdate(site, old);
 		this.siteById[site.id] = site;
 
 		host.queue.release();

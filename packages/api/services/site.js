@@ -169,9 +169,6 @@ module.exports = class SiteService {
 			req.site = site;
 			await req.run('translate.initialize');
 		}
-		if (this.app.domains.siteById[site.id]) {
-			this.app.domains.siteById[site.id] = site;
-		}
 		return site;
 	}
 	static save = {
