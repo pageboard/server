@@ -111,7 +111,7 @@ module.exports = class ApiModule {
 				method: command,
 				messages: err.message
 			};
-			err.content = await this.run('help.doc', { command, schema });
+			err.content = await this.run(req, 'help.doc', { command, schema });
 			throw err;
 		}
 		// start a transaction on set trx object on site
