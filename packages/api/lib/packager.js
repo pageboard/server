@@ -2,7 +2,7 @@ const Path = require('node:path');
 const toSource = require.lazy('tosource');
 const { EltProxy, MapProxy } = require('./proxies');
 
-const { promises: fs } = require('node:fs');
+const fs = require('node:fs/promises');
 const vm = require.lazy('node:vm');
 const translateJSON = require.lazy('./translate');
 const schemas = require.lazy('./schemas');
