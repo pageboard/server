@@ -172,19 +172,14 @@ module.exports = class Installer {
 			pkg.install = true;
 			return pkg;
 		}
-		const siteModuleDir = Path.join(siteDir, 'node_modules', pkg.name);
+		pkg.cache = true;
 		try {
-			const stat = await fs.lstat(siteModuleDir);
-			if (this.opts.bin != "pnpm" && stat.isSymbolicLink()) {
-				console.info("detected linked module", pkg.name);
-			} else {
-				throw new Error();
-			}
-		} catch (err) {
+			await fs.access(Path.join(siteDir, 'node_modules', pkg.name, '.git'));
+			console.info("detected git module", pkg.name);
+			pkg.cache = false;
+		} catch (ex) {
 			if (newTag) {
 				pkg.install = true;
-			} else {
-				pkg.cache = true;
 			}
 		}
 		return pkg;
