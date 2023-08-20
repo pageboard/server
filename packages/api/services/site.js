@@ -1,5 +1,4 @@
 const { mergeRecursive } = require('../../../src/utils');
-const schemas = require.lazy('../lib/schemas');
 
 module.exports = class SiteService {
 	static name = 'site';
@@ -11,7 +10,7 @@ module.exports = class SiteService {
 
 	apiRoutes(app, server) {
 		server.put('/.api/site', app.cache.tag('data-:site'), app.auth.lock('webmaster'), async (req, res) => {
-			const site = await req.run('site.save', { id: req.site.id, data: req.body });
+			const site = await req.run('site.update', req.body);
 			res.send(site);
 		});
 	}
@@ -141,16 +140,36 @@ module.exports = class SiteService {
 				type: 'string',
 				format: 'id'
 			},
-			data: schemas.site
+			data: {
+				$ref: "/$elements/site"
+			}
 		}
 	};
 
-	async save(req, data) {
-		if (data.id == null && req.site) {
-			data.id = req.site.id;
+	async save(req, { id, data }) {
+		const oldSite = await this.get(req, { id });
+		req.site = oldSite;
+		return this.update(req, data);
+	}
+	static save = {
+		title: 'Save site',
+		$action: 'write',
+		$lock: true, // or lock: site-manager ?
+		properties: {
+			id: {
+				title: 'Site ID',
+				type: 'string',
+				format: 'id'
+			},
+			data: {
+				$ref: "/$elements/site"
+			}
 		}
-		const dbSite = await this.get(req, { id: data.id });
-		const initial = dbSite.data;
+	};
+
+	async update(req, data) {
+		const oldSite = req.site;
+		const { data: initial } = oldSite;
 		const languagesChanged = data.languages !== undefined &&
 			(data.languages ?? []).join(' ')
 			!=
@@ -159,8 +178,9 @@ module.exports = class SiteService {
 		const toMulti = initial.lang && data.languages?.length > 0;
 		const toMono = !initial.lang && data.lang;
 
-		mergeRecursive(dbSite.data, data);
-		const site = await this.app.install(dbSite);
+		mergeRecursive(oldSite.data, data);
+
+		const site = await this.app.install(oldSite);
 		await site.$query(req.trx).patchObject({
 			type: site.type,
 			data: site.data
@@ -171,10 +191,11 @@ module.exports = class SiteService {
 		}
 		return site;
 	}
-	static save = {
-		title: 'Save site',
+	static update = {
+		title: 'Update own site',
 		$action: 'write',
-		properties: schemas.site.properties
+		$ref: "/$elements/site",
+		$global: false
 	};
 
 	all({ trx, Block }, { text }) {
