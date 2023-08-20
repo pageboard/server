@@ -22,9 +22,10 @@ module.exports = class PrintModule {
 	async list(req) {
 		const list = await cups.getPrinterNames();
 		if (this.opts.storage) {
-			list.unshift({
-				name: 'storage'
-			});
+			list.unshift('storage');
+		}
+		if (this.opts.remote) {
+			list.unshift('remote');
 		}
 		return {
 			items: list.map(name => {
@@ -36,7 +37,7 @@ module.exports = class PrintModule {
 		};
 	}
 	static list = {
-		title: 'Local printers',
+		title: 'List printers',
 		$action: 'read'
 	};
 
@@ -46,11 +47,13 @@ module.exports = class PrintModule {
 			data: {
 				title: 'Printer options schema',
 				name: printer
-			}
+			},
+			properties: {}
 		};
+		const p = item.properties;
 		if (printer == "storage" && this.opts[printer]) {
-			item.properties = {};
-		} else if (printer == "expresta" && this.opts[printer]) {
+			// nothing
+		} else if (printer == "remote" && this.opts[printer]) {
 			const conf = this.opts[printer];
 			const agent = new BearerAgent(this.opts, conf.url);
 
@@ -58,15 +61,28 @@ module.exports = class PrintModule {
 				email: conf.email,
 				password: conf.password
 			})).token;
-			const iso_code = 'us';
-			const couriers = await agent.fetch(`/data/deliveries-by-courier/${iso_code}`);
-			item.data.properties = {
-				couriers: {
-					title: 'Couriers for ' + iso_code,
-					anyOf: couriers.map(item => {
-						return { const: item.courier, title: item.name };
-					})
-				}
+
+			const remap = list => list.map(item => {
+				const obj = {
+					const: item.id,
+					title: item.name
+				};
+				if (item.description) obj.description = item.description;
+				return obj;
+			});
+
+			p.product = remap(await agent.fetch("/data/products"));
+			p.paper = remap(await agent.fetch("/data/papers"));
+			p.fold = remap(await agent.fetch("/data/folds"));
+			p.binding = remap(await agent.fetch("/data/bindings"));
+			p.surfaceTreatment = remap(await agent.fetch("/data/surface-treatments"));
+			p.courier = {
+				title: 'Courier method',
+				anyOf: [{
+					const: 'standard', title: 'Standard'
+				}, {
+					const: 'express', title: 'Express'
+				}]
 			};
 		} else {
 			const optsList = await cups.getPrinterOptions(printer);
@@ -97,57 +113,61 @@ module.exports = class PrintModule {
 		}
 	};
 
-	async local(req, { printer, url, options }) {
-		const path = await this.#download(req, url);
-		if (printer == "storage" && this.opts.storage) {
-			await fs.promises.rename(path, Path.join(this.opts.storage, Path.basename(path)));
-			return {};
+	async run(req, data) {
+		const block = await req.run('block.add', { type: 'print', data });
+		let job;
+		if (data.printer == "remote") {
+			job = this.#remoteJob(req, block);
+		} else if (data.printer == "storage") {
+			job = this.#storageJob(req, block);
 		} else {
-			const ret = await cups.printFile(path, {
-				printer,
-				printerOptions: options
-			});
-			if (ret.stdout) console.info(ret.stdout);
-			await fs.promises.unlink(path);
-			return {};
+			job = this.#localJob(req, block);
 		}
+		await runJob(req, block, job);
+		return block;
 	}
-	static local = {
-		title: 'Local print',
+
+	static run = {
+		title: 'Run print task',
 		$action: 'write',
-		required: ['url', 'printer'],
-		properties: {
-			url: {
-				title: 'PDF page',
-				type: "string",
-				format: "uri-reference",
-				$filter: {
-					name: 'helper',
-					helper: {
-						name: 'page',
-						type: 'pdf'
-					}
-				},
-				$helper: 'href'
-			},
-			printer: {
-				title: 'Printer',
-				type: 'string',
-				format: 'singleline'
-			},
-			options: {
-				title: 'Options',
-				type: 'object',
-				additionalProperties: { type: 'string' }
-			}
-		}
+		$ref: "/$elements/print"
 	};
 
-	async remote(req, {
-		url, printer, options = {}, delivery = {}
-	}) {
-		const { expresta: conf } = this.opts;
-		if (!conf) throw new HttpError.NotFound("No remote printer");
+	async #localJob(req, print) {
+		const { printer, url, options } = print.data;
+		const list = await cups.getPrinterNames();
+		if (!list.find(name => name == printer)) {
+			throw new HttpError.NotFound("Printer not found");
+		}
+
+		runJob(req, print, async () => {
+			const path = await this.#download(req, url);
+			try {
+				const ret = await cups.printFile(path, {
+					printer,
+					printerOptions: options
+				});
+				if (ret.stdout) console.info(ret.stdout);
+			} finally {
+				await fs.promises.unlink(path);
+			}
+		});
+	}
+
+	async #storageJob(req, print) {
+		const { url } = print.data;
+		if (!this.opts.storage) {
+			throw new HttpError.BadRequest("No storage printer");
+		}
+		runJob(req, print, async () => {
+			const path = await this.#download(req, url);
+			await fs.promises.rename(path, Path.join(this.opts.storage, Path.basename(path)));
+		});
+	}
+
+	async #remoteJob(req, print) {
+		const { remote: conf } = this.opts;
+		if (!conf) throw new HttpError.BadRequest("No remote printer");
 		const agent = new BearerAgent(this.opts, conf.url);
 
 		agent.bearer = (await agent.fetch("/login", "post", {
@@ -155,55 +175,20 @@ module.exports = class PrintModule {
 			password: conf.password
 		})).token;
 
-		const products = await agent.fetch("/data/products");
-		const product = products.find(item => item.url == options.product);
-		if (!product) {
-			return {
-				status: 400,
-				statusText: 'Unknown product',
-				items: products
-			};
-		}
-
-		const papers = await agent.fetch("/data/papers");
-		const paper = papers.find(item => item.id == options.paper);
-		if (!paper) {
-			return {
-				status: 400,
-				statusText: 'Unknown paper',
-				items: papers
-			};
-		}
-
-		const folds = await agent.fetch("/data/folds");
-		const fold = folds.find(item => item.id == options.fold);
-		if (!fold && options.fold) {
-			return {
-				status: 400,
-				statusText: 'Unknown fold',
-				items: folds
-			};
-		}
-
-		const bindings = await agent.fetch("/data/bindings");
-		const binding = bindings.find(item => item.id == options.binding);
-		if (!binding) {
-			return {
-				status: 400,
-				statusText: 'Unknown binding',
-				items: bindings
-			};
-		}
+		const { url, options, delivery } = print.data;
 
 		const couriers = await agent.fetch(`/data/deliveries-by-courier/${delivery.iso_code}`);
-		const courier = couriers.find(item => item.courier == delivery.courier);
-		if (!courier) {
-			return {
-				status: 400,
-				statusText: 'Unknown courier',
-				items: couriers
-			};
-		}
+		const courier = couriers.find(item => {
+			if (delivery.courier == "express") {
+				if (item.courier.includes("express")) {
+					return item;
+				}
+			} else if (delivery.courier == "standard") {
+				if (item.courier == "courier" || item.courier.includes("courier")) {
+					return item;
+				}
+			}
+		});
 
 		const pdfUrl = new URL(url, req.site.url);
 		// 1. find pdf item
@@ -224,152 +209,67 @@ module.exports = class PrintModule {
 		}
 
 
+		const printProduct = {
+			product_type_id: options.product,
+			binding_id: options.binding,
+			binding_placement: options.binding_placement,
+			amount: 1,
+			runlists: []
+		};
+		if (options.cover.sides) {
+			pdfUrl.searchParams.set('pages', (options.cover.sides + 1) + '-');
+			const coverUrl = new URL(pdfUrl);
+			coverUrl.searchParams.set('pages', '1-' + options.cover.sides);
+			printProduct.cover_pdf = coverUrl.href;
+			printProduct.runlists.push({
+				tag: "cover",
+				sides: options.cover.sides,
+				paper_id: options.cover.paper,
+				separation_mode: "CMYK",
+				fold_on: "axis_longer"
+			});
+		}
+		printProduct.pdf = pdfUrl.href;
+		printProduct.runlists.push({
+			tag: "content",
+			sides: 2,
+			paper_id: options.content.paper,
+			separation_mode: "CMYK",
+			size_a: sizeA,
+			size_b: sizeB,
+			bleed: !margin
+		});
+
+		const products = [printProduct];
+		if (options.additionalProduct) {
+			products.push({
+				product_type_id: options.additionalProduct,
+				amount: 1
+			});
+		}
+
 		// https://api.expresta.com/api/v1/order/sandbox-create for testing orders
 
-
-		pdfUrl.searchParams.set('pages', '2-');
-		const coverUrl = new URL(pdfUrl);
-		coverUrl.searchParams.set('pages', '1');
-
 		const order = {
-			customer_reference: "1234567890",
-			delivery,
-			products: [{
-				product_type_id: product.id, // GetProducts id
-				pdf: pdfUrl.href,
-				cover_pdf: coverUrl.href,
-				binding_id: binding.id,
-				binding_placement: "left",
-				amount: 1,
-				runlists: [{
-					tag: "cover",
-					sides: 1,
-					paper_id: paper.id,
-				}, {
-					tag: "content",
-					sides: 2,
-					size_a: sizeA,
-					size_b: sizeB,
-					paper_id: paper.id,
-					bleed: !margin,
-					fold_type_id: fold?.id,
-					fold_on: options.fold_on
-				}]
-			}]
+			customer_reference: print.id,
+			customs_clearance_by_customer_data: 1,
+			// documentation: "https://cdn.expresta.com/common/files/customs-sample-usa.pdf",
+			delivery: {
+				...delivery,
+				courier: courier?.courier ?? "courier"
+			},
+			products
 		};
+
+		console.log(order);
 		//const price = await agent.fetch("/order/calculate-price", "post", {data: order});
 		const ret = await agent.fetch("/order/sandbox-create", "post", { data: order });
-		return {
-			type: 'order',
-			data: {
-				order
-				//price
-			},
-			status: ret.status == "error" ? 500 : 200,
-			statusText: ret.msg
-		};
-	}
-	static remote = {
-		title: 'Remote print',
-		$action: 'write',
-		required: ['url', 'delivery', 'printer', 'options'],
-		properties: {
-			url: {
-				title: 'PDF page',
-				type: "string",
-				format: "uri-reference",
-				$filter: {
-					name: 'helper',
-					helper: {
-						name: 'page',
-						type: 'pdf'
-					}
-				},
-				$helper: 'href'
-			},
-			printer: {
-				title: 'Printer service',
-				description: 'Choose a supported printer service',
-				anyOf: [{ const: 'expresta', title: 'Expresta' }]
-			},
-			options: {
-				title: 'Print options',
-				type: 'object',
-				//required: ['product', 'paper', 'size'],
-				properties: {
-					product: {
-						title: 'Product',
-						type: 'string',
-						format: 'singleline'
-					},
-					paper: {
-						title: 'Paper',
-						type: 'string',
-						format: 'id',
-						default: '420'
-					},
-					fold: {
-						title: 'Fold',
-						type: 'string',
-						format: 'id',
-						default: '19'
-					},
-					fold_on: {
-						title: 'Fold on',
-						default: null,
-						anyOf: [{
-							type: 'null',
-							title: 'n/a'
-						}, {
-							const: 'axis_longer',
-							title: 'Long side'
-						}, {
-							const: 'axis_longer',
-							title: 'Short side'
-						}]
-					},
-					binding: {
-						title: 'Binding',
-						type: 'string',
-						format: 'id',
-						default: '254' // paperback, perfect binding
-					}
-				}
-			},
-			delivery: {
-				title: 'Delivery',
-				type: 'object',
-				//required: ['iso_code', 'name', 'phone', 'email', 'street', 'city', 'zip'],
-				properties: {
-					courier: {
-						title: 'Courier' // as obtained by GetDeliveriesByCourier
-
-					},
-					iso_code: {
-						title: 'Country Code' // the same used to call GetDeliveriesByCourier
-					},
-					name: {
-
-					},
-					phone: {
-
-					},
-					email: {
-
-					},
-					street: {
-
-					},
-					city: {
-
-					},
-					zip: {
-
-					}
-				}
-			}
+		if (ret.status == "error") {
+			throw new HttpError.BadRequest(ret.msg);
 		}
-	};
+		console.log(ret);
+		return print;
+	}
 
 	async #download(req, url) {
 		const controller = new AbortController();
@@ -416,4 +316,18 @@ function convertLengthToMillimiters(str = '') {
 	const { groups: { unit } } = /\d+(?<unit>\w+)/.exec(str) ?? { groups: {} };
 	if (unit == "cm") return num * 10;
 	else if (unit == "mm") return num;
+}
+
+async function runJob(req, block, job) {
+	const isPromise = job instanceof Promise;
+	try {
+		if (!isPromise) await job();
+		else await job;
+		block.data.status = 'done';
+	} catch (ex) {
+		block.data.status = 'error';
+		if (isPromise) throw ex;
+	} finally {
+		await req.run('block.save', block);
+	}
 }
