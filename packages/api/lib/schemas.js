@@ -112,46 +112,80 @@ exports.print = {
 			description: 'Choose a supported printer service',
 			type: 'string'
 		},
+		status: {
+			title: 'Status',
+			default: 'pending',
+			anyOf: [{
+				const: 'pending',
+				title: 'Pending'
+			}, {
+				const: 'done',
+				title: 'Done'
+			}, {
+				const: 'error',
+				title: 'Error'
+			}, {
+				const: 'cancelled',
+				title: 'Cancelled'
+			}]
+		},
 		options: {
 			title: 'Print options',
 			type: 'object',
 			properties: {
 				product: {
 					title: 'Product',
-					type: 'string',
-					format: 'singleline'
+					type: 'integer',
+					default: 8620 // Books (Book printing)
 				},
-				paper: {
-					title: 'Paper',
-					type: 'string',
-					format: 'id',
-					default: '420'
+				additionalProduct: {
+					title: 'Additional product',
+					description: 'A product id already prepared by the remote printer',
+					type: 'integer',
+					nullable: true
 				},
-				fold: {
-					title: 'Fold',
-					type: 'string',
-					format: 'id',
-					default: '19'
+				cover: {
+					type: 'object',
+					default: {},
+					properties: {
+						sides: {
+							title: 'Sides',
+							type: 'integer',
+							default: 2
+						},
+						paper: {
+							title: 'Paper',
+							type: 'integer',
+							default: 673 // Matt one-sided laminated (0.31 mm / 315 g/m²)
+						}
+					}
 				},
-				fold_on: {
-					title: 'Fold on',
-					default: null,
-					anyOf: [{
-						type: 'null',
-						title: 'n/a'
-					}, {
-						const: 'axis_longer',
-						title: 'Long side'
-					}, {
-						const: 'axis_longer',
-						title: 'Short side'
-					}]
+				content: {
+					type: 'object',
+					default: {},
+					properties: {
+						paper: {
+							title: 'Paper',
+							type: 'integer',
+							default: 436
+						}
+					}
 				},
 				binding: {
 					title: 'Binding',
-					type: 'string',
-					format: 'id',
-					default: '254' // paperback, perfect binding
+					type: 'integer',
+					default: 254 // paperback, perfect binding
+				},
+				binding_placement: {
+					title: 'Binding placement',
+					default: 'left',
+					anyOf: [{
+						const: 'left',
+						title: 'Left'
+					}, {
+						const: 'right',
+						title: 'Right'
+					}]
 				}
 			}
 		},
@@ -164,11 +198,11 @@ exports.print = {
 				courier: {
 					title: 'Courier',
 					anyOf: [{
-						const: 'slow',
-						title: 'Slow'
+						const: 'standard',
+						title: 'Standard'
 					}, {
-						const: 'fast',
-						title: 'Fast'
+						const: 'express',
+						title: 'Express'
 					}]
 				},
 				iso_code: {
