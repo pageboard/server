@@ -5,7 +5,7 @@ const { EltProxy, MapProxy } = require('./proxies');
 const fs = require('node:fs/promises');
 const vm = require.lazy('node:vm');
 const translateJSON = require.lazy('./translate');
-const schemas = require.lazy('./schemas');
+const schemas = require('./schemas');
 const { mergeRecursive } = require('../../../src/utils');
 
 
@@ -45,8 +45,8 @@ module.exports = class Packager {
 		sortPriority(allElts);
 
 		const bundleMap = pkg.bundleMap = new Map();
-		const elts = {};
-		const names = [];
+		const elts = Object.assign({}, schemas);
+		const names = Object.keys(schemas);
 		const context = {};
 		for (const eltObj of allElts) {
 			const { path } = eltObj;
@@ -120,10 +120,6 @@ module.exports = class Packager {
 		Object.assign(pkg, {
 			eltsMap, groups, aliases, bundles, standalones, textblocks
 		});
-		for (const [type, elt] of Object.entries(schemas)) {
-			// server schemas are mandatory
-			pkg.eltsMap[type] = mergeRecursive(pkg.eltsMap[type] ?? {}, elt);
-		}
 		return Block.initSite(site, pkg);
 	}
 
