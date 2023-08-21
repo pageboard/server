@@ -378,7 +378,7 @@ function findHrefs(schema, list, root, array) {
 			if (!Array.isArray(types)) types = [types];
 			if (types.length == 0) {
 				if ($filter?.helper == "pageUrl") types.push('link');
-				else console.warn("href helper has no types", $helper);
+				else console.warn("href helper has no types", $helper, "in", prop);
 			}
 			list.push({ path, types, array });
 		} else if (prop.type == "array") {
