@@ -320,7 +320,7 @@ function convertLengthToMillimiters(str = '') {
 }
 
 async function runJob(req, block, job) {
-	const isPromise = job instanceof Promise;
+	const isPromise = typeof job != "function";
 	try {
 		if (!isPromise) await job();
 		else await job;
@@ -328,6 +328,7 @@ async function runJob(req, block, job) {
 	} catch (ex) {
 		block.data.status = 'error';
 		if (isPromise) throw ex;
+		else console.error(ex);
 	} finally {
 		await req.run('block.save', block);
 	}
