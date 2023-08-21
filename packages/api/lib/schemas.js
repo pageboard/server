@@ -129,6 +129,22 @@ exports.print = {
 				title: 'Cancelled'
 			}]
 		},
+		order: {
+			title: 'Order',
+			type: 'object',
+			nullable: true,
+			properties: {
+				id: {
+					title: 'ID',
+					type: 'string',
+					format: 'id'
+				},
+				price: {
+					title: 'Price',
+					type: 'number'
+				}
+			}
+		},
 		options: {
 			title: 'Print options',
 			type: 'object',

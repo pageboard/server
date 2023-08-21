@@ -261,13 +261,14 @@ module.exports = class PrintModule {
 			products
 		};
 
-		console.log(order);
-		//const price = await agent.fetch("/order/calculate-price", "post", {data: order});
 		const ret = await agent.fetch("/order/sandbox-create", "post", { data: order });
-		if (ret.status == "error") {
+		if (ret.status != "ok") {
 			throw new HttpError.BadRequest(ret.msg);
 		}
-		console.log(ret);
+		print.data.order = {
+			id: ret.order_id,
+			price: ret.total_price
+		};
 		return print;
 	}
 
