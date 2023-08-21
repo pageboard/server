@@ -232,7 +232,7 @@ module.exports = class Packager {
 	}
 
 	async #bundleSource(site, pkg, prefix, name, obj) {
-		if (!site.url || prefix?.startsWith('ext-')) return;
+		if (prefix?.startsWith('ext-')) return;
 		const tag = site.data.version ?? site.$pkg.tag;
 		if (tag == null) return;
 		const filename = [prefix, name].filter(Boolean).join('-') + '.js';
