@@ -10,8 +10,21 @@ class MapProxy {
 				console.error(`Modifying ${key} element is not allowed`);
 				return false;
 			}
-			console.error("Please avoid setting", key, "in", this.context.path, " - using Object.assign instead");
-			Object.assign(obj[key], val);
+			const item = obj[key];
+			for (const [k, v] of Object.entries(val)) {
+				const vs = item[k];
+				if (vs != null) {
+					if (typeof v != "object") {
+						if (v !== vs) {
+							console.error("Overriding element property is not supported", key, k, v, vs, "in", this.context.path);
+						}
+					} else {
+						item[k] = Object.assign(v, item[k]);
+					}
+				} else {
+					item[k] = v;
+				}
+			}
 			return false;
 		}
 		return Reflect.set(obj, key, val);
