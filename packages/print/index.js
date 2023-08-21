@@ -235,8 +235,8 @@ module.exports = class PrintModule {
 			sides: 2,
 			paper_id: options.content.paper,
 			separation_mode: "CMYK",
-			size_a: sizeA,
-			size_b: sizeB,
+			size_a: sizeA.toFixed(2),
+			size_b: sizeB.toFixed(2),
 			bleed: !margin
 		});
 
