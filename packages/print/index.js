@@ -1,7 +1,6 @@
 const BearerAgent = require('./src/agent');
 const fs = require('node:fs');
 const Path = require('node:path');
-const { Deferred } = require.lazy('class-deferred');
 const { pipeline } = require('node:stream/promises');
 const mime = require.lazy('mime-types');
 const cups = require('node-cups');
@@ -118,13 +117,13 @@ module.exports = class PrintModule {
 		const block = await req.run('block.add', { type: 'print', data });
 		let job;
 		if (data.printer == "remote") {
-			job = this.#remoteJob(req, block);
+			job = this.#remoteJob;
 		} else if (data.printer == "storage") {
-			job = this.#storageJob(req, block);
+			job = this.#storageJob;
 		} else {
-			job = this.#localJob(req, block);
+			job = this.#localJob;
 		}
-		await runJob(req, block, job);
+		await runJob(req, block, true, job);
 		return block;
 	}
 
@@ -134,14 +133,14 @@ module.exports = class PrintModule {
 		$ref: "/$elements/print"
 	};
 
-	async #localJob(req, print) {
-		const { printer, url, options } = print.data;
+	async #localJob(req, block) {
+		const { printer, url, options } = block.data;
 		const list = await cups.getPrinterNames();
 		if (!list.find(name => name == printer)) {
 			throw new HttpError.NotFound("Printer not found");
 		}
 
-		runJob(req, print, async () => {
+		runJob(req, block, false, async () => {
 			const path = await this.#download(req, url);
 			try {
 				const ret = await cups.printFile(path, {
@@ -155,18 +154,18 @@ module.exports = class PrintModule {
 		});
 	}
 
-	async #storageJob(req, print) {
-		const { url } = print.data;
+	async #storageJob(req, block) {
+		const { url } = block.data;
 		if (!this.opts.storage) {
 			throw new HttpError.BadRequest("No storage printer");
 		}
-		runJob(req, print, async () => {
+		runJob(req, block, false, async () => {
 			const path = await this.#download(req, url);
 			await fs.promises.rename(path, Path.join(this.opts.storage, Path.basename(path)));
 		});
 	}
 
-	async #remoteJob(req, print) {
+	async #remoteJob(req, block) {
 		const { remote: conf } = this.opts;
 		if (!conf) throw new HttpError.BadRequest("No remote printer");
 		const agent = new BearerAgent(this.opts, conf.url);
@@ -176,7 +175,7 @@ module.exports = class PrintModule {
 			password: conf.password
 		})).token;
 
-		const { url, options, delivery } = print.data;
+		const { url, options, delivery } = block.data;
 
 		const couriers = await agent.fetch(`/data/deliveries-by-courier/${delivery.iso_code}`);
 		const courier = couriers.find(item => {
@@ -252,7 +251,7 @@ module.exports = class PrintModule {
 		// https://api.expresta.com/api/v1/order/sandbox-create for testing orders
 
 		const order = {
-			customer_reference: print.id,
+			customer_reference: block.id,
 			customs_clearance_by_customer_data: 1,
 			// documentation: "https://cdn.expresta.com/common/files/customs-sample-usa.pdf",
 			delivery: {
@@ -266,11 +265,11 @@ module.exports = class PrintModule {
 		if (ret.status != "ok") {
 			throw new HttpError.BadRequest(ret.msg);
 		}
-		print.data.order = {
+		block.data.order = {
 			id: ret.order_id,
 			price: ret.total_price
 		};
-		return print;
+		return block;
 	}
 
 	async #download(req, url) {
@@ -320,17 +319,17 @@ function convertLengthToMillimiters(str = '') {
 	else if (unit == "mm") return num;
 }
 
-async function runJob(req, block, job) {
-	const isPromise = typeof job != "function";
+async function runJob(req, block, throws, job) {
 	try {
-		if (!isPromise) await job();
-		else await job;
+		const result = await job(req, block);
 		block.data.status = 'done';
+		return result;
 	} catch (ex) {
 		block.data.status = 'error';
-		if (isPromise) throw ex;
+		if (throws) throw ex;
 		else console.error(ex);
 	} finally {
 		await req.run('block.save', block);
 	}
 }
+
