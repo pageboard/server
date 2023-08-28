@@ -226,7 +226,8 @@ module.exports = class PrintModule {
 				sides: options.cover.sides,
 				paper_id: options.cover.paper,
 				separation_mode: "CMYK",
-				fold_on: "axis_longer"
+				fold_on: "axis_longer",
+				bleed: !margin
 			});
 		}
 		printProduct.pdf = pdfUrl.href;
