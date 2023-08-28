@@ -22,7 +22,7 @@
   },
   "homepage": "https://github.com/pageboard/server#readme",
   "dependencies": {
-    "node-cups": "1.2.1",
+    "node-cups": "1.2.2",
     "ultrafetch": "^0.4.0"
   }
 }

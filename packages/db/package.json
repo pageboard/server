@@ -17,8 +17,8 @@
   },
   "homepage": "https://github.com/pageboard/server#readme",
   "dependencies": {
-    "knex": "^0.95.15",
+    "knex": "^2.5.1",
     "node-schedule": "^2.1.1",
-    "pg": "^8.11.0"
+    "pg": "^8.11.3"
   }
 }
