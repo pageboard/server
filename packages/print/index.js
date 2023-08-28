@@ -1,6 +1,7 @@
 const BearerAgent = require('./src/agent');
 const fs = require('node:fs');
 const Path = require('node:path');
+const { Deferred } = require.lazy('class-deferred');
 const { pipeline } = require('node:stream/promises');
 const mime = require.lazy('mime-types');
 const cups = require('node-cups');

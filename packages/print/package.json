@@ -22,6 +22,7 @@
   },
   "homepage": "https://github.com/pageboard/server#readme",
   "dependencies": {
+    "class-deferred": "^1.0.1",
     "node-cups": "1.2.2",
     "ultrafetch": "^0.4.0"
   }
