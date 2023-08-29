@@ -97,9 +97,7 @@ module.exports = class PrintModule {
 		required: ['printer'],
 		properties: {
 			printer: {
-				title: 'Printer name',
-				type: 'string',
-				format: 'singleline'
+				$ref: "/$elements/print#/properties/printer"
 			}
 		}
 	};
