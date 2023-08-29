@@ -65,6 +65,7 @@ module.exports = class Packager {
 			const el = { ...elts[name] }; // drop proxy
 			el.name = name;
 			el.contents = Block.normalizeContentSpec(el.contents);
+			if (!el.contents) delete el.contents;
 			if (el.alias) {
 				aliases[name] = el.alias;
 			} else if (el.standalone && !Object.isEmpty(el.properties) && el.$lock !== true) {
