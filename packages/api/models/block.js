@@ -191,6 +191,8 @@ class Block extends Model {
 		];
 		const types = new Map();
 
+		// TODO merge csp for each page bundle
+
 		for (const [type, element] of Object.entries(eltsMap)) {
 			const hrefsList = [];
 			findHrefs(element, hrefsList);
@@ -372,7 +374,11 @@ function findHrefs(schema, list, root, array) {
 		if (array) path = root;
 		else if (root) path = `${root}.${key}`;
 		else path = key;
-		const { $helper, $filter } = prop;
+		const { $filter } = prop;
+		let { $helper } = prop;
+		if ($filter?.name == "helper") {
+			$helper = $filter.helper;
+		}
 		if ($helper == "href" || $helper?.name == "href") {
 			let types = $helper.filter?.type ?? [];
 			if (!Array.isArray(types)) types = [types];
