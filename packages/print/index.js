@@ -111,7 +111,7 @@ module.exports = class PrintModule {
 			job = this.#remoteJob;
 		} else if (data.printer == "storage") {
 			job = this.#storageJob;
-		} else {
+		} else if (data.printer == "local") {
 			job = this.#localJob;
 		}
 		await runJob(req, block, true, (req, block) => job.call(this, req, block));
@@ -125,9 +125,9 @@ module.exports = class PrintModule {
 	};
 
 	async #localJob(req, block) {
-		const { printer, url, options } = block.data;
+		const { url, options } = block.data;
 		const list = await cups.getPrinterNames();
-		if (!list.find(name => name == printer)) {
+		if (!list.find(name => name == this.opts.local)) {
 			throw new HttpError.NotFound("Printer not found");
 		}
 
@@ -135,7 +135,7 @@ module.exports = class PrintModule {
 			const path = await this.#download(req, url);
 			try {
 				const ret = await cups.printFile(path, {
-					printer,
+					printer: this.opts.local,
 					printerOptions: options
 				});
 				if (ret.stdout) console.info(ret.stdout);
@@ -195,10 +195,6 @@ module.exports = class PrintModule {
 		const sizeA = convertLengthToMillimiters(pdfPaper.width) || 210;
 		const sizeB = convertLengthToMillimiters(pdfPaper.height) || 297;
 		const margin = convertLengthToMillimiters(pdfPaper.margin) || 0;
-		if (margin > 0 && margin < 5) {
-			throw new HttpError.BadRequest("Margin should be >= 5mm for bleed to work");
-		}
-
 
 		const printProduct = {
 			product_type_id: options.product,

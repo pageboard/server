@@ -122,8 +122,8 @@ exports.print = {
 			$helper: 'href'
 		},
 		printer: {
-			title: 'Printer service',
-			description: 'Choose a supported printer service',
+			title: 'Printer',
+			description: 'Preconfigured printer type',
 			type: 'string'
 		},
 		status: {
