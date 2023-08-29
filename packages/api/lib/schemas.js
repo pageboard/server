@@ -1,7 +1,8 @@
 exports.site = {
 	title: 'Site',
-	$lock: true,
 	bundle: true,
+	standalone: true,
+	$lock: true,
 	properties: {
 		title: {
 			title: 'Site title',
@@ -20,6 +21,7 @@ exports.site = {
 		},
 		module: {
 			title: 'Module name',
+			description: 'npm name, or git url',
 			nullable: true,
 			type: "string",
 			format: "singleline"
@@ -84,6 +86,18 @@ exports.site = {
 					maxHeight: 320
 				}
 			}
+		},
+		author: {
+			title: 'Author',
+			nullable: true,
+			type: "string",
+			format: "singleline"
+		},
+		license: {
+			title: 'License',
+			nullable: true,
+			type: "string",
+			format: "singleline"
 		}
 	}
 };
@@ -91,8 +105,8 @@ exports.site = {
 exports.print = {
 	title: 'Print',
 	required: ['url', 'printer'],
+	bundle: 'site',
 	$lock: true,
-	group: 'site',
 	properties: {
 		url: {
 			title: 'PDF page',
@@ -262,8 +276,8 @@ exports.print = {
 
 exports.email = {
 	title: 'Site',
+	bundle: 'site',
 	$lock: true,
-	group: 'site',
 	required: ['url', 'to'],
 	properties: {
 		purpose: {
