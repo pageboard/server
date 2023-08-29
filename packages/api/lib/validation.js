@@ -8,7 +8,6 @@ const fs = require('node:fs/promises');
 const ajvStandalone = require.lazy("ajv/dist/standalone");
 const Path = require('node:path');
 const { exists } = require('../../../src/utils');
-const schemas = require('./schemas');
 
 function fixSchema(schema) {
 	Traverse(schema, {
@@ -116,7 +115,7 @@ module.exports = class Validation {
 
 	constructor(app, opts) {
 		this.app = app;
-		const customSchemas = Object.entries(schemas).map(([key, obj]) => {
+		const customSchemas = Object.entries(app.schemas).map(([key, obj]) => {
 			obj.$id = '/$elements/' + key;
 			return fixSchema(obj);
 		});

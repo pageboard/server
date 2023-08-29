@@ -17,29 +17,20 @@ module.exports = class PrintModule {
 	async init() {
 		const { withCache } = await import("ultrafetch");
 		this.opts.fetch = withCache(fetch);
+		const list = this.app.schemas.print.properties.printer.anyOf = [];
+		if (this.opts.local) list.push({
+			const: 'local',
+			title: 'Local'
+		});
+		if (this.opts.storage) list.push({
+			const: 'storage',
+			title: 'Storage'
+		});
+		if (this.opts.remote) list.push({
+			const: 'remote',
+			title: 'Remote'
+		});
 	}
-
-	async list(req) {
-		const list = await cups.getPrinterNames();
-		if (this.opts.storage) {
-			list.unshift('storage');
-		}
-		if (this.opts.remote) {
-			list.unshift('remote');
-		}
-		return {
-			items: list.map(name => {
-				return {
-					type: 'printer',
-					data: { name }
-				};
-			})
-		};
-	}
-	static list = {
-		title: 'List printers',
-		$action: 'read'
-	};
 
 	async options(req, { printer }) {
 		const item = {

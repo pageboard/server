@@ -23,6 +23,7 @@ module.exports = class ApiModule {
 	#packager;
 
 	constructor(app, opts) {
+		app.schemas = require('./lib/schemas');
 		this.validation = new Validation(app, opts);
 		Href.createValidator = Block.createValidator = () => {
 			return this.validation.createValidator();
