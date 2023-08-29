@@ -253,7 +253,7 @@ module.exports = class PrintModule {
 
 		const order = {
 			customer_reference: block.id,
-			customs_clearance_by_customer_data: 1,
+			// customs_clearance_by_customer_data: 1,
 			// documentation: "https://cdn.expresta.com/common/files/customs-sample-usa.pdf",
 			delivery: {
 				...delivery,
