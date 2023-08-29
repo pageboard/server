@@ -169,7 +169,7 @@ exports.print = {
 					default: 8620 // Books (Book printing)
 				},
 				additionalProduct: {
-					title: 'Additional product',
+					title: 'Extra product',
 					description: 'A product id already prepared by the remote printer',
 					type: 'integer',
 					nullable: true
