@@ -123,7 +123,7 @@ module.exports = class PrintModule {
 		} else {
 			job = this.#localJob;
 		}
-		await runJob(req, block, true, job);
+		await runJob(req, block, true, (req, block) => job.call(this, req, block));
 		return block;
 	}
 
