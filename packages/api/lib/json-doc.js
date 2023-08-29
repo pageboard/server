@@ -1,7 +1,7 @@
 const traverse = require('json-schema-traverse');
 const { table, getBorderCharacters } = require('table');
 
-module.exports = function(api, schema, formatted) {
+module.exports = function(schemas, api, schema, formatted) {
 	if (!schema) return;
 	const lines = [];
 	const header = {};
@@ -9,11 +9,33 @@ module.exports = function(api, schema, formatted) {
 
 	traverse(schema, {
 		cb(schema, pointer, root, parentPointer, keyword, parent, name) {
+			const { $ref } = schema;
+			if ($ref) {
+				const prefix = '/$elements/';
+				if ($ref?.startsWith(prefix)) {
+					delete schema.$ref;
+					const [name, rel] = $ref.slice(prefix.length).split("#");
+					let ref = schemas[name];
+					if (rel && ref) {
+						ref = rel.substring(1).split('/').reduce((schema, key) => schema[key], ref);
+					}
+					if (ref) Object.assign(schema, ref);
+					else console.error("$ref not found", $ref);
+				}
+			}
 			if (keyword == "properties") {
 				const required = (parent && parent.required || []).includes(name);
 				let type = schema.type;
-				if (typeof type != "string") type = 'object';
-				else if (type == "object" && schema.properties) type = "";
+				if (typeof type != "string") {
+					type = 'object';
+				} else if (type == "object" && schema.properties) {
+					type = "";
+				} else if (schema.anyOf) {
+					const consts = schema.anyOf.map(item => item.const);
+					if (consts.length == schema.anyOf.length) {
+						type = consts.join(', ');
+					}
+				}
 				const path = pointer.split('/').slice(1).filter(x => x != 'properties').join('.');
 				if (schema.default) type += `|${JSON.stringify(schema.default)}`;
 				if (!type) lines.push([path, schema.title]);
