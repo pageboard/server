@@ -97,13 +97,17 @@ module.exports = class PrintModule {
 		required: ['printer'],
 		properties: {
 			printer: {
-				$ref: "/$elements/print#/properties/printer"
+				$ref: "/$elements/print_job#/properties/printer"
 			}
 		}
 	};
 
 	async run(req, data) {
-		const block = await req.run('block.add', { type: 'print', data });
+		const response = {};
+		const block = await req.run('block.add', {
+			type: 'print_job',
+			data: { ...data, response }
+		});
 		let job;
 		if (data.printer == "remote") {
 			job = this.#remoteJob;
@@ -112,24 +116,27 @@ module.exports = class PrintModule {
 		} else if (data.printer == "local") {
 			job = this.#localJob;
 		}
-		await runJob(req, block, true, (req, block) => job.call(this, req, block));
+		await runJob(req, block, (req, block) => job.call(this, req, block));
+		if (response.status != null && response.status != 200) {
+			throw new HttpError[response.status](response.text);
+		}
 		return block;
 	}
 
 	static run = {
 		title: 'Run print task',
 		$action: 'write',
-		$ref: "/$elements/print"
+		$ref: "/$elements/print_job"
 	};
 
 	async #localJob(req, block) {
-		const { url, options } = block.data;
+		const { url, options, response } = block.data;
 		const list = await cups.getPrinterNames();
 		if (!list.find(name => name == this.opts.local)) {
 			throw new HttpError.NotFound("Printer not found");
 		}
 
-		runJob(req, block, false, async () => {
+		runJob(req, block, async () => {
 			const path = await this.#download(req, url);
 			try {
 				const ret = await cups.printFile(path, {
@@ -137,6 +144,7 @@ module.exports = class PrintModule {
 					printerOptions: options
 				});
 				if (ret.stdout) console.info(ret.stdout);
+				response.status = 200;
 			} finally {
 				await fs.promises.unlink(path);
 			}
@@ -144,13 +152,14 @@ module.exports = class PrintModule {
 	}
 
 	async #storageJob(req, block) {
-		const { url } = block.data;
+		const { url, response } = block.data;
 		if (!this.opts.storage) {
 			throw new HttpError.BadRequest("No storage printer");
 		}
-		runJob(req, block, false, async () => {
+		runJob(req, block, async () => {
 			const path = await this.#download(req, url);
 			await fs.promises.rename(path, Path.join(this.opts.storage, Path.basename(path)));
+			response.status = 200;
 		});
 	}
 
@@ -164,7 +173,7 @@ module.exports = class PrintModule {
 			password: conf.password
 		})).token;
 
-		const { url, options, delivery } = block.data;
+		const { url, options, delivery, response } = block.data;
 
 		const couriers = await agent.fetch(`/data/deliveries-by-courier/${delivery.iso_code}`);
 		const courier = couriers.find(item => {
@@ -255,6 +264,7 @@ module.exports = class PrintModule {
 			id: ret.order_id,
 			price: ret.total_price
 		};
+		response.status = 200;
 		return block;
 	}
 
@@ -305,15 +315,14 @@ function convertLengthToMillimiters(str = '') {
 	else if (unit == "mm") return num;
 }
 
-async function runJob(req, block, throws, job) {
+async function runJob(req, block, job) {
+	const { response } = block.data;
 	try {
 		const result = await job(req, block);
-		block.data.status = 'done';
 		return result;
 	} catch (ex) {
-		block.data.status = 'error';
-		if (throws) throw ex;
-		else console.error(ex);
+		response.status = ex.statusCode ?? 500;
+		response.text = ex.message;
 	} finally {
 		await req.run('block.save', block);
 	}

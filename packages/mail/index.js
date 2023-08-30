@@ -138,8 +138,13 @@ module.exports = class MailModule {
 		const purpose = data.purpose;
 		data = { ...data };
 		delete data.purpose;
+
 		const mailer = Mailers[purpose];
 		if (!mailer) throw new Error("Unknown mailer purpose " + purpose);
+
+		if (purpose == "transactional" && data.to.length > 5) {
+			throw new Error("Transactional mail allowed for at most five recipients");
+		}
 		if (data.to.length > 1) {
 			data.bcc = data.to;
 			data.to = data.replyTo || data.from || mailer.sender;
@@ -178,18 +183,7 @@ module.exports = class MailModule {
 		required: ['subject', 'to', 'text'],
 		properties: {
 			purpose: {
-				title: 'Purpose',
-				anyOf: [{
-					title: "Transactional",
-					const: "transactional"
-				}, {
-					title: "Conversations",
-					const: "conversations"
-				}, {
-					title: "Subscriptions",
-					const: "subscriptions"
-				}],
-				default: 'transactional'
+				$ref: "/$elements/mail_job#/properties/purpose"
 			},
 			subject: {
 				title: 'Subject',
@@ -289,12 +283,9 @@ module.exports = class MailModule {
 			throw new HttpError.NotFound("Missing parameters");
 		}
 		const { site } = req;
-		const purpose = data.purpose;
-		data = { ...data };
-		delete data.purpose;
-		const mailer = Mailers[purpose];
+		const mailer = Mailers[data.purpose];
 		if (!mailer) {
-			throw new Error("Unknown mailer purpose " + purpose);
+			throw new Error("Unknown mailer purpose " + data.purpose);
 		}
 		const { item: emailPage } = await req.run('block.find', {
 			type: 'mail',
@@ -303,7 +294,7 @@ module.exports = class MailModule {
 		if (!emailPage) throw new HttpError.NotFound("email page missing");
 
 		const mailOpts = {
-			purpose: purpose
+			purpose: data.purpose
 		};
 
 		if (data.from) {
@@ -328,7 +319,6 @@ module.exports = class MailModule {
 			}
 		}
 
-		const domains = {};
 		mailOpts.to = await Promise.all(data.to.map(async to => {
 			let res;
 			if (to.indexOf('@') > 0) {
@@ -338,18 +328,18 @@ module.exports = class MailModule {
 			}
 			const email = res.item?.parent?.data?.email;
 			if (!email) throw new HttpError.NotFound("recipient not found: " + to);
-			const parsedAddress = AddressParser(email)[0];
-			domains[parsedAddress.address.split('@').pop()] = true;
 			return {
 				address: email
 			};
 		}));
 
-		if (purpose == "transactional" && (Object.keys(domains).length > 2 || mailOpts.to.length > 10)) {
-			throw new Error("Transactional mail allowed for at most two different recipients domains and ten recipients");
-		}
-		const emailUrl = new URL(emailPage.data.url, site.url);
-		try {
+		const block = await req.run('block.add', {
+			type: 'mail_job',
+			data: { ...data, response: {} }
+		});
+
+		runJob(req, block, async () => {
+			const emailUrl = new URL(emailPage.data.url, site.url);
 			for (const [key, val] of Object.entries(data.body)) {
 				if (Array.isArray(val)) for (const sval of val) {
 					emailUrl.searchParams.append(key, sval);
@@ -374,84 +364,31 @@ module.exports = class MailModule {
 			mailOpts.html = mailObj.html;
 			mailOpts.text = mailObj.text;
 			mailOpts.attachments = mailObj.attachments;
-		} catch (err) {
-			if (err && err.response && err.response.statusCode) {
-				throw new HttpError[err.response.statusCode];
-			} else {
-				throw err;
-			}
-		}
-		return req.run('mail.to', mailOpts);
+			await req.run('mail.to', mailOpts);
+			block.data.response.status = 200;
+		});
+		return block;
 	}
 	static send = {
 		title: 'Send email',
 		$action: 'write',
-		required: ['url', 'to'],
-		properties: {
-			purpose: this.to.properties.purpose,
-			from: {
-				title: 'From',
-				description: 'User settings.id or email',
-				anyOf: [{
-					type: 'string',
-					format: 'id'
-				}, {
-					type: 'string',
-					format: 'email'
-				}]
-			},
-			replyTo: {
-				title: 'Reply To',
-				description: 'Email address or user id',
-				anyOf: [{
-					type: 'string',
-					format: 'id'
-				}, {
-					type: 'string',
-					format: 'email'
-				}]
-			},
-			to: {
-				title: 'To',
-				description: 'List of email addresses or users id',
-				type: 'array',
-				items: {anyOf: [{
-					type: 'string',
-					format: 'id'
-				}, {
-					type: 'string',
-					format: 'email'
-				}]}
-			},
-			url: {
-				title: 'Mail page',
-				type: "string",
-				format: "pathname",
-				$filter: {
-					name: 'helper',
-					helper: {
-						name: 'page',
-						type: 'mail'
-					}
-				},
-				$helper: 'href'
-			},
-			subject: {
-				title: 'Subject',
-				description: 'Defaults to mail page title',
-				type: 'string',
-				nullable: true
-			},
-			body: {
-				title: 'Query',
-				type: 'object',
-				default: {}
-			}
-		}
+		$ref: "/$elements/mail_job"
 	};
 };
 
 
 function checkMail() {
 	throw new Error("TODO checkMail");
+}
+
+async function runJob(req, block, job) {
+	try {
+		const result = await job(req, block);
+		return result;
+	} catch (ex) {
+		block.data.response.status = ex.statusCode ?? 500;
+		block.data.response.text = ex.message;
+	} finally {
+		await req.run('block.save', block);
+	}
 }

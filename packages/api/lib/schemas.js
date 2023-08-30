@@ -102,7 +102,7 @@ exports.site = {
 	}
 };
 
-exports.print = {
+exports.print_job = {
 	title: 'Print',
 	required: ['url', 'printer'],
 	bundle: 'site',
@@ -126,22 +126,21 @@ exports.print = {
 			description: 'Preconfigured printer type',
 			type: 'string'
 		},
-		status: {
-			title: 'Status',
-			default: 'pending',
-			anyOf: [{
-				const: 'pending',
-				title: 'Pending'
-			}, {
-				const: 'done',
-				title: 'Done'
-			}, {
-				const: 'error',
-				title: 'Error'
-			}, {
-				const: 'cancelled',
-				title: 'Cancelled'
-			}]
+		response: {
+			title: 'Response',
+			type: 'object',
+			properties: {
+				status: {
+					title: 'Status',
+					type: 'integer',
+					nullable: true
+				},
+				text: {
+					title: 'Text',
+					type: 'string',
+					nullable: true
+				}
+			}
 		},
 		order: {
 			title: 'Order',
@@ -274,12 +273,28 @@ exports.print = {
 	}
 };
 
-exports.email = {
-	title: 'Site',
+exports.mail_job = {
+	title: 'Email',
 	bundle: 'site',
 	$lock: true,
 	required: ['url', 'to'],
 	properties: {
+		response: {
+			title: 'Response',
+			type: 'object',
+			properties: {
+				status: {
+					title: 'Status',
+					type: 'integer',
+					nullable: true
+				},
+				text: {
+					title: 'Text',
+					type: 'string',
+					nullable: true
+				}
+			}
+		},
 		purpose: {
 			title: 'Purpose',
 			anyOf: [{
