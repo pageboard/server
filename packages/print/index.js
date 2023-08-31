@@ -17,7 +17,7 @@ module.exports = class PrintModule {
 	async init() {
 		const { withCache } = await import("ultrafetch");
 		this.opts.fetch = withCache(fetch);
-		const list = this.app.schemas.print.properties.printer.anyOf = [];
+		const list = [];
 		if (this.opts.local) list.push({
 			const: 'local',
 			title: 'Local'
@@ -30,6 +30,8 @@ module.exports = class PrintModule {
 			const: 'remote',
 			title: 'Remote'
 		});
+		const { print_job } = Object.assign(this.app.schemas, await import('./src/print_job.mjs'));
+		print_job.properties.printer.anyOf = list;
 	}
 
 	async options(req, { printer }) {

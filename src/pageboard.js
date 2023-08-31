@@ -37,6 +37,7 @@ module.exports = class Pageboard {
 	#server;
 	#installer;
 	#plugins;
+	schemas = {};
 	services = {};
 	elements = [];
 	directories = [];

@@ -10,6 +10,7 @@ const multipart = require.lazy('./lib/multipart.js');
 module.exports = class MailModule {
 	static name = 'mail';
 	constructor(app, opts) {
+		this.app = app;
 		this.opts = opts;
 
 		Object.entries(opts).forEach(([purpose, conf]) => {
@@ -30,6 +31,10 @@ module.exports = class MailModule {
 				return;
 			}
 		});
+	}
+
+	async init() {
+		Object.assign(this.app.schemas, await import('./lib/mail_job.mjs'));
 	}
 	apiRoutes(app, server) {
 		Object.entries(this.opts).forEach(([purpose, conf]) => {

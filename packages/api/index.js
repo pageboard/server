@@ -21,19 +21,26 @@ module.exports = class ApiModule {
 	].map(name => Path.join(__dirname, 'services', name));
 
 	#packager;
+	#validation;
 
 	constructor(app, opts) {
-		app.schemas = require('./lib/schemas');
-		this.validation = new Validation(app, opts);
-		Href.createValidator = Block.createValidator = () => {
-			return this.validation.createValidator();
-		};
 		this.app = app;
 
 		this.opts = {
 			...opts,
 			migrations: [Path.join(__dirname, 'migrations')]
 		};
+
+		Href.createValidator = Block.createValidator = () => {
+			return this.validation.createValidator();
+		};
+	}
+
+	get validation() {
+		if (!this.#validation) {
+			this.#validation = new Validation(this.app, this.opts);
+		}
+		return this.#validation;
 	}
 
 	apiRoutes(app, server) {
@@ -105,15 +112,17 @@ module.exports = class ApiModule {
 		const [schema, mod, fun] = this.getService(req, command);
 		data = mergeRecursive({}, data);
 		Log.api("run %s:\n%O", command, data);
-		try {
-			this.validate(schema, data, fun);
-		} catch (err) {
-			err.data = {
-				method: command,
-				messages: err.message
-			};
-			err.content = await this.run(req, 'help.doc', { command, schema });
-			throw err;
+		if (schema.properties) {
+			try {
+				this.validate(schema, data, fun);
+			} catch (err) {
+				err.data = {
+					method: command,
+					messages: err.message
+				};
+				err.content = await this.run(req, 'help.doc', { command, schema });
+				throw err;
+			}
 		}
 		// start a transaction on set trx object on site
 		let hadTrx = false;

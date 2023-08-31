@@ -8,6 +8,10 @@ module.exports = class SiteService {
 		this.app = app;
 	}
 
+	async init() {
+		Object.assign(this.app.schemas, await import('../lib/site.mjs'));
+	}
+
 	apiRoutes(app, server) {
 		server.put('/.api/site', app.cache.tag('data-:site'), app.auth.lock('webmaster'), async (req, res) => {
 			const site = await req.run('site.update', req.body);

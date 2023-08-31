@@ -115,7 +115,7 @@ module.exports = class Validation {
 
 	constructor(app, opts) {
 		this.app = app;
-		const customSchemas = Object.entries(app.schemas).map(([key, obj]) => {
+		const schemas = Object.entries(app.schemas).map(([key, obj]) => {
 			obj.$id = '/$elements/' + key;
 			return fixSchema(obj);
 		});
@@ -123,14 +123,14 @@ module.exports = class Validation {
 		this.#validatorWithDefaults = this.#setupAjv(
 			new Ajv(this.#createSettings({
 				useDefaults: 'empty',
-				schemas: customSchemas
+				schemas
 			}))
 		);
 
 		this.#validatorNoDefaults = this.#setupAjv(
 			new Ajv(this.#createSettings({
 				useDefaults: false,
-				schemas: customSchemas
+				schemas
 			}))
 		);
 	}
