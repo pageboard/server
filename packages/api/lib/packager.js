@@ -44,8 +44,8 @@ module.exports = class Packager {
 		sortPriority(allElts);
 
 		const bundleMap = pkg.bundleMap = new Map();
-		const elts = Object.assign({}, this.app.schemas);
-		const names = Object.keys(this.app.schemas);
+		const elts = Object.assign({}, this.app.api.schemas);
+		const names = Object.keys(this.app.api.schemas);
 		const context = {};
 		for (const eltObj of allElts) {
 			const { path } = eltObj;

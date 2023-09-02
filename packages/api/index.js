@@ -23,6 +23,8 @@ module.exports = class ApiModule {
 	#packager;
 	#validation;
 
+	schemas = {};
+
 	constructor(app, opts) {
 		this.app = app;
 
@@ -80,6 +82,12 @@ module.exports = class ApiModule {
 		}
 		if (!inst) return true;
 		else return data;
+	}
+
+	async add(p) {
+		const schemas = await p;
+		Object.assign(this.schemas, schemas);
+		return schemas;
 	}
 
 	getService({ site }, apiStr) {

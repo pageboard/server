@@ -9,7 +9,7 @@ module.exports = class SiteService {
 	}
 
 	async init() {
-		Object.assign(this.app.schemas, await import('../lib/site.mjs'));
+		await this.app.api.add(import("../lib/site.mjs"));
 	}
 
 	apiRoutes(app, server) {

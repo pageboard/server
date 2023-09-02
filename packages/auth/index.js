@@ -23,6 +23,10 @@ module.exports = class AuthModule {
 		}
 	}
 
+	async init() {
+		this.app.api.add(import('./src/schemas.mjs'));
+	}
+
 	async apiRoutes(app, server) {
 		const keys = await this.#keygen(
 			Path.join(app.dirs.data, 'keys.json')

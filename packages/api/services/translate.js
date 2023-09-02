@@ -9,6 +9,7 @@ module.exports = class TranslateService {
 	}
 
 	async init() {
+		await this.app.api.add(import('../lib/language.mjs'));
 		this.app.languages = await this.app.run('translate.languages');
 	}
 

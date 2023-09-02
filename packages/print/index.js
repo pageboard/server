@@ -30,7 +30,7 @@ module.exports = class PrintModule {
 			const: 'remote',
 			title: 'Remote'
 		});
-		const { print_job } = Object.assign(this.app.schemas, await import('./src/print_job.mjs'));
+		const { print_job } = await this.app.api.add(import('./src/print_job.mjs'));
 		print_job.properties.printer.anyOf = list;
 	}
 
