@@ -387,10 +387,8 @@ function loadFromFile(buf, elts, names, context) {
 			enumerable: false,
 			configurable: false
 		});
-		if (name != "user" && name != "priv") {
-			elt.scripts = elt.scripts || [];
-			elt.stylesheets = elt.stylesheets || [];
-			elt.resources = elt.resources || {};
-		}
+		elt.scripts = elt.scripts || [];
+		elt.stylesheets = elt.stylesheets || [];
+		elt.resources = elt.resources || {};
 	}
 }

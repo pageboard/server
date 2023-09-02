@@ -6,10 +6,6 @@ class MapProxy {
 	}
 	set(obj, key, val) {
 		if (Object.prototype.hasOwnProperty.call(obj, key)) {
-			if (key == "user" || key == "priv") {
-				console.error(`Modifying ${key} element is not allowed`);
-				return false;
-			}
 			const item = obj[key];
 			for (const [k, v] of Object.entries(val)) {
 				const vs = item[k];
@@ -64,10 +60,6 @@ class EltProxy {
 		this.context = context;
 	}
 	set(elt, key, val) {
-		if (this.name == "user" || this.name == "priv") {
-			console.error(`Modifying ${this.name} element properties is not allowed`);
-			return false;
-		}
 		if (key == "scripts" || key == "stylesheets" || key == "resources") {
 			val = new Proxy(absolutePaths(val, this.context), new AbsoluteProxy(this.context));
 		}
