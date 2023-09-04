@@ -67,8 +67,7 @@ module.exports = class Packager {
 			if (!el.contents) delete el.contents;
 			if (el.alias) {
 				aliases[name] = el.alias;
-			} else if (el.standalone && !Object.isEmpty(el.properties) && el.$lock !== true) {
-				// e.g. "write", "user", "private"
+			} else if (el.standalone && !el.virtual) {
 				standalones.add(name);
 			}
 			if (!el.expressions && !el.inline && el.contents && el.contents.some(item => {
@@ -132,7 +131,6 @@ module.exports = class Packager {
 	async makeBundles(site, pkg) {
 		const { eltsMap, bundles } = pkg;
 
-		site.$pkg.bundleMap = pkg.bundleMap;
 		site.$pkg.aliases = pkg.aliases;
 
 		await Promise.all(Object.entries(bundles).map(
@@ -140,7 +138,7 @@ module.exports = class Packager {
 				site, pkg, eltsMap[name], list
 			)
 		));
-		// all bundles in page group need the core bundle
+		// just set the path to elements bundle
 		site.$pkg.bundles.set('elements', {
 			priority: -999,
 			scripts: [
@@ -154,15 +152,10 @@ module.exports = class Packager {
 				if (entries.length) return [key, Object.fromEntries(entries)];
 			}).filter(x => Boolean(x))
 		);
-		const standalones = [];
-		for (const name of pkg.standalones) {
-			standalones.push(pkg.eltsMap[name]);
-		}
+
 		site.$pkg.bundles.set('services', {
 			scripts: [await this.#bundleSource(
 				site, pkg, null, 'services', services
-			), await this.#bundleSource( // FIXME remove me, elements are all exported
-				site, pkg, null, 'standalones', standalones
 			)]
 		});
 
@@ -190,11 +183,13 @@ module.exports = class Packager {
 			delete rootEl.dependencies;
 		}
 
+		// actually build elements bundle
 		await this.#bundleSource(site, pkg, null, 'elements', eltsMap);
 
 
 		// clear up some space
 		delete pkg.eltsMap;
+		delete pkg.bundleMap;
 		delete pkg.bundles;
 		delete pkg.aliases;
 	}
@@ -211,23 +206,27 @@ module.exports = class Packager {
 		const prefix = rootEl.name;
 
 		const eltsMap = {};
-		list.forEach(el => {
+		const bundle = [];
+		for (const el of list) {
+			const copy = { ...el };
 			if (!el.standalone) {
-				el = { ...el };
-				delete el.scripts;
-				delete el.stylesheets;
+				delete copy.scripts;
+				delete copy.stylesheets;
+				delete copy.resources;
 			}
-			if (!el.bundle) el.bundle = rootEl.name;
-			eltsMap[el.name] = el;
-		});
+			bundle.push(el.name);
+			eltsMap[el.name] = copy;
+		}
 
 		const [scripts, styles] = await Promise.all([
 			this.app.statics.bundle(site, pkg, scriptsList, `${prefix}.js`),
 			this.app.statics.bundle(site, pkg, stylesList, `${prefix}.css`)
 		]);
+		// this removes proxies
 		rootEl.scripts = scripts;
 		rootEl.stylesheets = styles;
 		rootEl.resources = { ...rootEl.resources };
+		rootEl.bundle = bundle;
 		site.$pkg.bundles.set(rootEl.name, rootEl);
 
 		return eltsMap;
