@@ -271,7 +271,7 @@ class Block extends Model {
 			}
 
 			#pkg = {
-				bundles: {},
+				bundles: new Map(),
 				standalones: Array.from(standalones),
 				pages: groups.page ?? [],
 				textblocks: Array.from(textblocks),

@@ -201,9 +201,9 @@ module.exports = class PrerenderModule {
 	}
 
 	source({ site }, res) {
-		const coreMeta = site.$pkg.bundles.core?.meta;
-		const scripts = (coreMeta?.scripts ?? []).map(src => {
-			return `<script defer src="${src}" data-priority="${coreMeta.priority}"></script>`;
+		const core = site.$pkg.bundles.get('core');
+		const scripts = (core?.scripts ?? []).map(src => {
+			return `<script defer src="${src}" data-priority="${core.priority}"></script>`;
 		});
 		res.type('text/html');
 		res.send(Text`

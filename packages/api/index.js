@@ -220,54 +220,6 @@ module.exports = class ApiModule {
 		}
 		if (req.granted) res.set('X-Granted', 1);
 
-		if (obj.item || obj.items) {
-			const { bundles, bundleMap } = req.site.$pkg;
-
-			if (obj.item) fillTypes(obj.item, req.bundles);
-			if (obj.items) fillTypes(obj.items, req.bundles);
-
-			const usedRoots = new Map();
-			for (const [type, conf] of req.bundles) {
-				if (bundles[type]) {
-					usedRoots.set(type, conf);
-				} else {
-					const rootSet = bundleMap.get(type);
-					if (!rootSet) {
-						console.warn("missing bundle for block type:", type);
-						continue;
-					}
-					// ignore elements without bundles, or belonging to multiple roots
-					if (rootSet.size != 1) continue;
-					usedRoots.set(Array.from(rootSet).at(0), conf);
-				}
-			}
-			const metas = [];
-			if (obj.meta) {
-				console.warn("obj.meta is set", obj.meta);
-				metas.push([obj.meta, {}]);
-				delete obj.meta;
-			}
-			for (const [root, conf] of usedRoots) {
-				const { meta } = bundles[root];
-				if (meta.dependencies) for (const dep of meta.dependencies) {
-					metas.push([bundles[dep].meta, conf]);
-				}
-				metas.push([meta, conf]);
-			}
-			metas.sort(({ priority: a = 0 }, { priority: b = 0 }) => {
-				if (a == b) return 0;
-				else if (a > b) return 1;
-				else return -1;
-			});
-			obj.metas = metas.map(([meta, conf]) => {
-				const obj = {};
-				for (const key of ['schemas', 'scripts', 'stylesheets', 'resources', 'priority']) if (meta[key]) {
-					if (key == 'schemas' || conf.content) obj[key] = meta[key];
-				}
-				return obj;
-			});
-		}
-
 		res.json(obj);
 	}
 

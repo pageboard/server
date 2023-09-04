@@ -25,7 +25,7 @@ module.exports = class PageService {
 			} else {
 				data = await req.run('page.get', query);
 				if (isWebmaster && forWebmaster) {
-					req.bundles.set('editor', { content: true });
+					data.item.type = 'write' + data.item.type;
 				}
 			}
 			data.commons = app.opts.commons;

@@ -5,6 +5,10 @@ class MapProxy {
 		this.context = context;
 	}
 	set(obj, key, val) {
+		if (val == undefined) {
+			console.warn("Do not set an element to null", key);
+			return false;
+		}
 		if (Object.prototype.hasOwnProperty.call(obj, key)) {
 			const item = obj[key];
 			for (const [k, v] of Object.entries(val)) {

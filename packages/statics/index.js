@@ -98,7 +98,7 @@ module.exports = class StaticsModule {
 		return pathname;
 	}
 
-	async bundle(site, pkg, list, filename) {
+	async bundle(site, pkg, list, filename, dry = false) {
 		if (list.length == 0) return [];
 		const suffix = {
 			production: ".min",
@@ -130,6 +130,7 @@ module.exports = class StaticsModule {
 		const outUrl = `/.files/${site.data.version ?? site.$pkg.tag}/${buildFile}`;
 		outList.push(outUrl);
 		const output = urlToPath(this.opts.files, site.id, outUrl);
+		if (dry) return outList;
 
 		await fs.mkdir(buildDir, { recursive: true });
 

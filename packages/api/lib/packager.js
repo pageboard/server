@@ -134,32 +134,65 @@ module.exports = class Packager {
 
 		site.$pkg.bundleMap = pkg.bundleMap;
 		site.$pkg.aliases = pkg.aliases;
-		if (eltsMap.write) {
-			const standalones = [];
-			for (const name of pkg.standalones) {
-				standalones.push(pkg.eltsMap[name]);
-			}
-			const services = Object.fromEntries(
-				Object.entries(this.app.services).map(([key, group]) => {
-					const entries = Object.entries(group)
-						.filter(([, service]) => service.$lock !== true);
-					if (entries.length) return [key, Object.fromEntries(entries)];
-				}).filter(x => Boolean(x))
-			);
-			const writeBundles = await Promise.all([this.#bundleSource(
-				site, pkg, null, 'services', services
-			), this.#bundleSource(
-				site, pkg, null, 'standalones', standalones
-			)]);
-			for (const bundle of writeBundles) if (bundle) {
-				eltsMap.write.scripts.push(bundle);
-			}
-		}
+
 		await Promise.all(Object.entries(bundles).map(
 			([name, { list }]) => this.#bundle(
 				site, pkg, eltsMap[name], list
 			)
 		));
+		// all bundles in page group need the core bundle
+		site.$pkg.bundles.set('elements', {
+			priority: -999,
+			scripts: [
+				await this.#bundleSource(site, pkg, null, 'elements', eltsMap, true)
+			]
+		});
+		const services = Object.fromEntries(
+			Object.entries(this.app.services).map(([key, group]) => {
+				const entries = Object.entries(group)
+					.filter(([, service]) => service.$lock !== true);
+				if (entries.length) return [key, Object.fromEntries(entries)];
+			}).filter(x => Boolean(x))
+		);
+		const standalones = [];
+		for (const name of pkg.standalones) {
+			standalones.push(pkg.eltsMap[name]);
+		}
+		site.$pkg.bundles.set('services', {
+			scripts: [await this.#bundleSource(
+				site, pkg, null, 'services', services
+			), await this.#bundleSource( // FIXME remove me, elements are all exported
+				site, pkg, null, 'standalones', standalones
+			)]
+		});
+
+		for (const [, rootEl] of site.$pkg.bundles) {
+			const dependencies = (rootEl.dependencies ?? [])
+				.map(name => {
+					const b = site.$pkg.bundles.get(name);
+					if (!b) console.error("Missing bundle", name);
+					return b;
+				});
+			dependencies.push(rootEl);
+			sortPriority(dependencies);
+			const scripts = [];
+			const stylesheets = [];
+			const resources = {};
+			for (const bundle of dependencies) {
+				if (!bundle) continue;
+				if (bundle.scripts) scripts.push(...bundle.scripts);
+				if (bundle.stylesheets) stylesheets.push(...bundle.stylesheets);
+				if (bundle.resources) Object.assign(resources, bundle.resources);
+			}
+			rootEl.scripts = scripts;
+			rootEl.stylesheets = stylesheets;
+			rootEl.resources = resources;
+			delete rootEl.dependencies;
+		}
+
+		await this.#bundleSource(site, pkg, null, 'elements', eltsMap);
+
+
 		// clear up some space
 		delete pkg.eltsMap;
 		delete pkg.bundles;
@@ -184,14 +217,9 @@ module.exports = class Packager {
 				delete el.scripts;
 				delete el.stylesheets;
 			}
+			if (!el.bundle) el.bundle = rootEl.name;
 			eltsMap[el.name] = el;
 		});
-		const metaEl = { ...rootEl };
-		const metaKeys = Object.keys(eltsMap);
-		site.$pkg.bundles[rootEl.name] = {
-			meta: metaEl,
-			elements: metaKeys
-		};
 
 		const [scripts, styles] = await Promise.all([
 			this.app.statics.bundle(site, pkg, scriptsList, `${prefix}.js`),
@@ -199,54 +227,33 @@ module.exports = class Packager {
 		]);
 		rootEl.scripts = scripts;
 		rootEl.stylesheets = styles;
-		// for (const el of cobundles) {
-		// 	if (el.bundle) {
-		// 		if (typeof el.bundle == "string") console.log("cobundle", el.bundle, "name", el.name);
-		// 		pkg.eltsMap[el.name].scripts = scripts;
-		// 		pkg.eltsMap[el.name].stylesheets = styles;
-		// 	}
-		// }
-		const skipSchemas = metaKeys.length == 1 && rootEl.name == "core";
-		const path = skipSchemas ? null : await this.#bundleSource(site, pkg, prefix, 'elements', eltsMap);
-		metaEl.bundles = [];
-		metaEl.schemas = path ? [path] : [];
-		metaEl.scripts = rootEl.bundle === true ? rootEl.scripts : [];
-		metaEl.stylesheets = rootEl.bundle === true ? rootEl.stylesheets : [];
-		metaEl.resources = rootEl.resources;
-		metaEl.priority = rootEl.priority;
+		rootEl.resources = { ...rootEl.resources };
+		site.$pkg.bundles.set(rootEl.name, rootEl);
 
-		// for (const el of cobundles) {
-		// 	if (el.bundle === true) {
-		// 		site.$pkg.bundles[el.name] = {
-		// 			meta: {
-		// 				...el,
-		// 				scripts: metaEl.scripts,
-		// 				stylesheets: metaEl.stylesheets,
-		// 				resources: metaEl.resources,
-		// 				schemas: metaEl.schemas
-		// 			},
-		// 			elements: metaKeys
-		// 		};
-		// 	}
-		// }
+		return eltsMap;
 	}
 
-	async #bundleSource(site, pkg, prefix, name, obj) {
+	async #bundleSource(site, pkg, prefix, name, obj, dry = false) {
 		if (prefix?.startsWith('ext-')) return;
 		const tag = site.data.version ?? site.$pkg.tag;
-		if (tag == null) return;
+		if (tag == null) {
+			console.error("Cannot do a bundle without version/tag", site.id);
+			return;
+		}
 		const filename = [prefix, name].filter(Boolean).join('-') + '.js';
 		const sourceUrl = `/.files/${tag}/${filename}`;
 		const sourcePath = this.app.statics.resolve(site.id, sourceUrl);
 		let source = toSource(obj);
 		if (!Array.isArray(obj)) {
-			source = `Object.assign(Pageboard.${name} || {}, ${source})`;
+			source = `Object.assign(window.Pageboard.${name} || {}, ${source})`;
 		}
-		const str = `Pageboard.${name} = ${source};`;
-		await fs.mkdir(Path.dirname(sourcePath), { recursive: true });
-		await fs.writeFile(sourcePath, str);
+		const str = `window.Pageboard.${name} = ${source};`;
+		if (!dry) {
+			await fs.mkdir(Path.dirname(sourcePath), { recursive: true });
+			await fs.writeFile(sourcePath, str);
+		}
 		const paths = await this.app.statics.bundle(
-			site, pkg, [sourceUrl], filename
+			site, pkg, [sourceUrl], filename, dry
 		);
 		return paths[0];
 	}
