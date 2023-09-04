@@ -24,9 +24,6 @@ module.exports = class PageService {
 				};
 			} else {
 				data = await req.run('page.get', query);
-				if (isWebmaster && forWebmaster) {
-					data.item.type = 'write' + data.item.type;
-				}
 			}
 			data.commons = app.opts.commons;
 			res.return(data);
