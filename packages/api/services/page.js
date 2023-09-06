@@ -323,7 +323,7 @@ module.exports = class PageService {
 		const returning = {};
 		const dbPages = await site.$relatedQuery('children', trx)
 			.select('block.id', ref('block.data:url').as('url'))
-			.whereIn('block.type', pkg.pages)
+			.whereIn('block.type', Array.from(pkg.pages))
 			.whereNotNull(ref('block.data:url'));
 		for (const page of pages.all) {
 			const { url } = page.data;
