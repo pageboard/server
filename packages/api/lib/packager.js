@@ -79,20 +79,16 @@ module.exports = class Packager {
 			if (!bundleMap.has(name)) {
 				bundleMap.set(name, new Set());
 			}
-			const bundleSet = bundleMap.get(name);
 			if (el.group) el.group.split(/\s+/).forEach(gn => {
-				let group = groups[gn];
-				if (!group) group = groups[gn] = [];
-				if (!group.includes(name)) group.push(name);
+				const group = groups[gn] ??= new Set();
+				group.add(name);
 			});
 
 			if (el.bundle === true) {
-				bundles[name] = {};
+				bundles[name] ??= new Set();
 			} else if (el.bundle) {
-				if (!bundles[el.bundle]) bundles[el.bundle] = {};
-				if (!bundles[el.bundle].list) bundles[el.bundle].list = [];
-				bundles[el.bundle].list.push(el);
-				bundleSet.add(el.bundle);
+				bundles[el.bundle] ??= new Set();
+				bundles[el.bundle].add(el.name);
 			}
 			if (el.intl) {
 				const { lang } = site.data;
@@ -125,20 +121,24 @@ module.exports = class Packager {
 	}
 
 	async makeBundles(site, pkg) {
-		const { eltsMap, bundles } = pkg;
+		const { $pkg } = site;
+		$pkg.aliases = pkg.aliases;
 
-		site.$pkg.aliases = pkg.aliases;
-
-		await Promise.all(Object.entries(bundles).map(
-			([name, { list }]) => this.#bundle(
-				site, pkg, eltsMap[name], list
+		await Promise.all(Object.entries(pkg.bundles).sort((a, b) => {
+			// bundle page group before others
+			if (a.group == "page" && b.group != "page") return -1;
+			else if (b.group == "page" && a.group != "page") return 1;
+			else return 0;
+		}).map(
+			([name, list]) => this.#bundle(
+				site, pkg, name, list
 			)
 		));
 		// just set the path to elements bundle
-		site.$pkg.bundles.set('elements', {
+		$pkg.bundles.set('elements', {
 			priority: -999,
 			scripts: [
-				await this.#bundleSource(site, pkg, null, 'elements', eltsMap, true)
+				await this.#bundleSource(site, pkg, null, 'elements', pkg.eltsMap, true)
 			]
 		});
 		const services = Object.fromEntries(
@@ -149,16 +149,16 @@ module.exports = class Packager {
 			}).filter(x => Boolean(x))
 		);
 
-		site.$pkg.bundles.set('services', {
+		$pkg.bundles.set('services', {
 			scripts: [await this.#bundleSource(
 				site, pkg, null, 'services', services
 			)]
 		});
 
-		for (const [, rootEl] of site.$pkg.bundles) {
+		for (const [, rootEl] of $pkg.bundles) {
 			const dependencies = (rootEl.dependencies ?? [])
 				.map(name => {
-					const b = site.$pkg.bundles.get(name);
+					const b = $pkg.bundles.get(name);
 					if (!b) console.error("Missing bundle", name);
 					return b;
 				});
@@ -180,8 +180,7 @@ module.exports = class Packager {
 		}
 
 		// actually build elements bundle
-		await this.#bundleSource(site, pkg, null, 'elements', eltsMap);
-
+		await this.#bundleSource(site, pkg, null, 'elements', pkg.eltsMap);
 
 		// clear up some space
 		delete pkg.eltsMap;
@@ -190,18 +189,20 @@ module.exports = class Packager {
 		delete pkg.aliases;
 	}
 
-	async #bundle(site, pkg, rootEl, cobundles = []) {
-		const list = this.#listDependencies(
-			pkg, rootEl, rootEl, cobundles.slice()
-		);
+	async #bundle(site, pkg, root, cobundles = new Set()) {
+		const { eltsMap } = pkg;
+		const rootEl = eltsMap[root];
+
+		const list = Array.from(this.#listDependencies(
+			pkg, rootEl, rootEl, new Set(cobundles)
+		)).map(n => eltsMap[n]);
 		list.sort((a, b) => {
 			return (a.priority || 0) - (b.priority || 0);
 		});
 		const scriptsList = sortElements(list, 'scripts');
 		const stylesList = sortElements(list, 'stylesheets');
-		const prefix = rootEl.name;
 
-		const eltsMap = {};
+		const bundleElts = {};
 		const bundle = [];
 		for (const el of list) {
 			const copy = { ...el };
@@ -211,21 +212,22 @@ module.exports = class Packager {
 				delete copy.resources;
 			}
 			bundle.push(el.name);
-			eltsMap[el.name] = copy;
+			bundleElts[el.name] = copy;
+			if (typeof el.bundle == "string") delete el.bundle;
 		}
 
 		const [scripts, styles] = await Promise.all([
-			this.app.statics.bundle(site, pkg, scriptsList, `${prefix}.js`),
-			this.app.statics.bundle(site, pkg, stylesList, `${prefix}.css`)
+			this.app.statics.bundle(site, pkg, scriptsList, `${root}.js`),
+			this.app.statics.bundle(site, pkg, stylesList, `${root}.css`)
 		]);
 		// this removes proxies
 		rootEl.scripts = scripts;
 		rootEl.stylesheets = styles;
 		rootEl.resources = { ...rootEl.resources };
 		rootEl.bundle = bundle;
-		site.$pkg.bundles.set(rootEl.name, rootEl);
+		site.$pkg.bundles.set(root, rootEl);
 
-		return eltsMap;
+		return bundleElts;
 	}
 
 	async #bundleSource(site, pkg, prefix, name, obj, dry = false) {
@@ -259,17 +261,16 @@ module.exports = class Packager {
 		gDone = new Set()
 	) {
 		const bundleSet = pkg.bundleMap.get(el.name);
-		if (bundleSet.has(root.name)) {
+		// elements from other non-page bundles are not included
+		if (bundleSet.has(root.name) || root.group != "page" && bundleSet.size > 0 || el.bundle === true && el.name != root.name || typeof el.bundle == "string" && root.name != el.bundle) {
 			return list;
 		}
-		if (typeof el.bundle == "string" && root.name != el.bundle || el.bundle === true && el.name != root.name) {
-			return list;
-		}
+		bundleSet.add(root.name);
 		const elts = pkg.eltsMap;
-		list.push(el);
+		list.add(el.name);
 		// when listing dependencies, do not include elements from other bundles
 		// -> other bundles are known
-		bundleSet.add(root.name);
+
 		if (el.contents) for (const content of el.contents) {
 			if (!content.nodes) continue;
 			for (const word of content.nodes.split(/\W+/).filter(Boolean)) {
@@ -290,7 +291,7 @@ module.exports = class Packager {
 				}
 			}
 		} else if (el.name == root.group) {
-			const group = pkg.groups[el.name];
+			const group = pkg.groups.get(el.name);
 			if (group) {
 				gDone.add(el.name);
 				for (const sub of group) {
@@ -298,6 +299,7 @@ module.exports = class Packager {
 				}
 			}
 		}
+
 		return list;
 	}
 };
@@ -318,9 +320,9 @@ function sortPriority(list) {
 function sortElements(elements, prop) {
 	const map = {};
 	let res = [];
-	elements.forEach(el => {
+	for (const el of elements) {
 		let list = el[prop];
-		if (!list) return;
+		if (!list) continue;
 		if (typeof list == "string") list = [list];
 		for (let i = 0; i < list.length; i++) {
 			const url = list[i];
@@ -345,7 +347,7 @@ function sortElements(elements, prop) {
 			map[url] = el;
 			res.push(url);
 		}
-	});
+	}
 	return res;
 }
 

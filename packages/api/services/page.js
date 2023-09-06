@@ -36,7 +36,7 @@ module.exports = class PageService {
 				// this must not be confused with page.lock
 				query.drafts = true;
 				if (!query.type) {
-					query.type = site.$pkg.pages;
+					query.type = Array.from(site.$pkg.pages);
 				}
 			} else if (!query.type) {
 				query.type = ['page'];
@@ -112,7 +112,7 @@ module.exports = class PageService {
 				q.where(ref("block.data:prefix").castBool(), true);
 			})
 			.orderBy(fn.coalesce(ref("block.data:prefix").castBool(), false), "asc")
-			.whereIn('block.type', req.site.$pkg.pages);
+			.whereIn('block.type', Array.from(req.site.$pkg.pages));
 	}
 
 	async get(req, data) {
@@ -306,7 +306,7 @@ module.exports = class PageService {
 			pages[method] = changes[method].filter(b => {
 				const alias = pkg.aliases[b.type];
 				if (alias) b.type = alias;
-				return pkg.pages.includes(b.type);
+				return pkg.pages.has(b.type);
 			});
 		}
 		pages.all = [ ...pages.add, ...pages.update ];
@@ -540,7 +540,7 @@ function getParents({ site, trx }, url) {
 			ref('block.data:redirect').as('redirect'),
 			ref('block.data:title').as('title')
 		])
-		.whereIn('block.type', site.$pkg.pages)
+		.whereIn('block.type', Array.from(site.$pkg.pages))
 		.whereJsonText('block.data:url', 'IN', urlParents)
 		.orderByRaw("length(block.data->>'url') DESC");
 }
@@ -549,7 +549,7 @@ function listPages({ site, trx }, data) {
 	const q = site.$relatedQuery('children', trx)
 		.columns()
 		.select(raw("'site' || block.type AS type"))
-		.whereIn('block.type', data.type ?? site.$pkg.pages)
+		.whereIn('block.type', data.type ?? Array.from(site.$pkg.pages))
 		.where('block.standalone', true);
 
 	if (!data.drafts) {
@@ -642,7 +642,7 @@ async function applyUpdate(req, list) {
 		if (block.id in blocksMap) {
 			block.updated_at = blocksMap[block.id];
 		}
-		if (site.$pkg.pages.includes(block.type)) {
+		if (site.$pkg.pages.has(block.type)) {
 			updates.push(await updatePage(req, block, blocksMap));
 		} else if (!block.updated_at) {
 			throw new HttpError.BadRequest(`Block is missing 'updated_at' ${block.id}`);
@@ -674,7 +674,7 @@ async function updatePage({ site, trx, Block, Href }, page, sideEffects) {
 	if (!sideEffects) sideEffects = {};
 	const dbPage = await site.$relatedQuery('children', trx)
 		.where('block.id', page.id)
-		.whereIn('block.type', page.type ? [page.type] : site.$pkg.pages)
+		.whereIn('block.type', page.type ? [page.type] : Array.from(site.$pkg.pages))
 		.select('_id', ref('block.data:url').as('url'))
 		.first().throwIfNotFound();
 

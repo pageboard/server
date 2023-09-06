@@ -89,7 +89,7 @@ module.exports = class HrefService {
 				if (href) {
 					const obj = await req.run('block.search', {
 						parent: {
-							type: site.$pkg.pages,
+							type: Array.from(site.$pkg.pages),
 							data: {
 								url: url
 							}
@@ -453,7 +453,7 @@ module.exports = class HrefService {
 		for (const [type, list] of Object.entries(hrefs)) {
 			if (data.block != type) continue;
 			const flist = list.filter(desc => desc.types.includes(data.href));
-			if (site.$pkg.pages.includes(type)) flist.push({
+			if (site.$pkg.pages.has(type)) flist.push({
 				path: 'url',
 				types: ['link']
 			});
