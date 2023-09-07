@@ -5,7 +5,7 @@ class MapProxy {
 		this.context = context;
 	}
 	set(obj, key, val) {
-		if (val == undefined) {
+		if (val == null) {
 			console.warn("Do not set an element to null", key);
 			return false;
 		}
