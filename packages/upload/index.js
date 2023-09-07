@@ -19,8 +19,8 @@ module.exports = class UploadModule {
 		}
 		app.dirs.uploads = opts.dir;
 		opts.tmp = app.dirs.tmp;
-		console.info(`uploads:\t${opts.dir}`);
-		console.info(`tmp dir:\t${opts.tmp}`);
+		console.info(`uploads: ${opts.dir}`);
+		console.info(`tmp dir: ${opts.tmp}`);
 
 		opts.limits = {
 			files: 100,
