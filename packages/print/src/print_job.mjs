@@ -1,7 +1,7 @@
 export const print_job = {
 	title: 'Print Job',
 	required: ['url', 'printer'],
-	bundle: 'site',
+	bundle: true,
 	standalone: true,
 	properties: {
 		url: {

@@ -1,6 +1,6 @@
 export const mail_job = {
 	title: 'Mail Job',
-	bundle: 'site',
+	bundle: true,
 	standalone: true,
 	required: ['url', 'to'],
 	properties: {
