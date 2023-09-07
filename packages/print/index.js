@@ -214,7 +214,7 @@ module.exports = class PrintModule {
 			runlists: []
 		};
 		if (options.cover.url) {
-			const coverUrl = new URL(options.cover.url);
+			const coverUrl = new URL(options.cover.url, req.site.url);
 			printProduct.cover_pdf = coverUrl.href;
 			printProduct.runlists.push({
 				tag: "cover",
