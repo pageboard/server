@@ -59,7 +59,7 @@ module.exports = class PrerenderModule {
 		const ext = Path.extname(pathname);
 		let type = ext.substring(1) || "page";
 
-		if (!site.$pkg.pages.includes(type)) {
+		if (!site.$pkg.pages.has(type)) {
 			type = 'page';
 		} else if (ext.length) {
 			pathname = pathname.slice(0, -ext.length);
