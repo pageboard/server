@@ -213,10 +213,8 @@ module.exports = class PrintModule {
 			amount: 1,
 			runlists: []
 		};
-		if (options.cover.sides) {
-			pdfUrl.searchParams.set('pages', (options.cover.sides + 1) + '-');
-			const coverUrl = new URL(pdfUrl);
-			coverUrl.searchParams.set('pages', '1-' + options.cover.sides);
+		if (options.cover.url) {
+			const coverUrl = new URL(options.cover.url);
 			printProduct.cover_pdf = coverUrl.href;
 			printProduct.runlists.push({
 				tag: "cover",

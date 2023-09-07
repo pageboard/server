@@ -69,8 +69,22 @@ export const print_job = {
 					nullable: true
 				},
 				cover: {
+					title: 'Cover',
 					type: 'object',
 					properties: {
+						url: {
+							title: 'PDF page',
+							type: "string",
+							format: "uri-reference",
+							$filter: {
+								name: 'helper',
+								helper: {
+									name: 'page',
+									type: 'pdf'
+								}
+							},
+							$helper: 'href'
+						},
 						sides: {
 							title: 'Sides',
 							type: 'integer'
@@ -82,6 +96,7 @@ export const print_job = {
 					}
 				},
 				content: {
+					title: 'Content',
 					type: 'object',
 					properties: {
 						paper: {
