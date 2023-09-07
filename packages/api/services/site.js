@@ -159,6 +159,7 @@ module.exports = class SiteService {
 		title: 'Save site',
 		$action: 'write',
 		$lock: true, // or lock: site-manager ?
+		required: ['id', 'data'],
 		properties: {
 			id: {
 				title: 'Site ID',
