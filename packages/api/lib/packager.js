@@ -76,8 +76,9 @@ module.exports = class Packager {
 				textblocks.add(name);
 			}
 			eltsMap[name] = el;
-			if (!bundleMap.has(name)) {
-				bundleMap.set(name, new Set());
+			let rootList = bundleMap.get(name);
+			if (!rootList) {
+				bundleMap.set(name, rootList = new Set());
 			}
 			if (el.group) el.group.split(/\s+/).forEach(gn => {
 				const group = groups[gn] ??= new Set();
@@ -89,6 +90,7 @@ module.exports = class Packager {
 			} else if (el.bundle) {
 				bundles[el.bundle] ??= new Set();
 				bundles[el.bundle].add(el.name);
+				rootList.add(el.bundle);
 			}
 			if (el.intl) {
 				const { lang } = site.data;

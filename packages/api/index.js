@@ -220,61 +220,7 @@ module.exports = class ApiModule {
 		}
 		if (req.granted) res.set('X-Granted', 1);
 
-		/*
-		if (obj.item || obj.items) {
-			const { bundles, bundleMap } = req.site.$pkg;
-
-			if (obj.item) fillTypes(obj.item, req.bundles);
-			if (obj.items) fillTypes(obj.items, req.bundles);
-
-			const usedRoots = new Map();
-			for (const [type, conf] of req.bundles) {
-				if (bundles[type]) {
-					usedRoots.set(type, conf);
-				} else {
-					const rootSet = bundleMap.get(type);
-					if (!rootSet) {
-						console.warn("missing bundle for block type:", type);
-						continue;
-					}
-					// ignore elements without bundles, or belonging to multiple roots
-					if (rootSet.size != 1) continue;
-					usedRoots.set(Array.from(rootSet).at(0), conf);
-				}
-			}
-			const metas = [];
-			if (obj.meta) {
-				console.warn("obj.meta is set", obj.meta);
-				metas.push([obj.meta, {}]);
-				delete obj.meta;
-			}
-			for (const [root, conf] of usedRoots) {
-				const { meta } = bundles[root];
-				if (meta.dependencies) for (const dep of meta.dependencies) {
-					if (dep == "*") {
-						for (const bdep of Object.keys(bundles)) {
-							metas.push([bundles[bdep].meta, conf]);
-						}
-					} else {
-						metas.push([bundles[dep].meta, conf]);
-					}
-				}
-				metas.push([meta, conf]);
-			}
-			metas.sort(({ priority: a = 0 }, { priority: b = 0 }) => {
-				if (a == b) return 0;
-				else if (a > b) return 1;
-				else return -1;
-			});
-			obj.metas = metas.map(([meta, conf]) => {
-				const obj = {};
-				for (const key of ['schemas', 'scripts', 'stylesheets', 'resources', 'priority']) if (meta[key]) {
-					if (key == 'schemas' || conf.content) obj[key] = meta[key];
-				}
-				return obj;
-			});
-		}
-		*/
+		if (req.types.size > 0) obj.types = Array.from(req.types);
 
 		res.json(obj);
 	}
@@ -294,35 +240,3 @@ module.exports = class ApiModule {
 	}
 
 };
-
-function fillTypes(list, map) {
-	if (!list) return map;
-	if (!Array.isArray(list)) list = [list];
-	for (const row of list) {
-		if (row.type) {
-			if (!map.has(row.type)) map.set(row.type, {});
-			const conf = map.get(row.type);
-			if (row.content != null) conf.content = true;
-		}
-		if (row.type == "binding" || row.type == "block_binding") {
-			findTypeBinding(row.data.fill, map);
-			findTypeBinding(row.data.attr, map);
-		}
-		if (row.parent) fillTypes(row.parent, map);
-		if (row.child) fillTypes(row.child, map);
-		if (row.parents) fillTypes(row.parents, map);
-		if (row.children) fillTypes(row.children, map);
-	}
-	return map;
-}
-
-
-function findTypeBinding(str, map) {
-	if (!str) return;
-	const { groups: {
-		type
-	} } = /^schema:[.\w]+:(?<type>\w+)\./m.exec(str) ?? {
-		groups: {}
-	};
-	if (type && !map.has(type)) map.set(type, {});
-}

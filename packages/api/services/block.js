@@ -271,6 +271,9 @@ module.exports = class BlockService {
 			q,
 			q.clone().clear('limit').clear('offset').resultSize()
 		]);
+		for (const type of data.type) {
+			req.types.add(type);
+		}
 
 		const ids = [];
 		for (const row of rows) {

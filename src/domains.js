@@ -165,6 +165,8 @@ module.exports = class Domains {
 			return app.api.run(req, command, data);
 		};
 
+		req.types = new Set();
+
 		req.locked = list => app.auth.locked(req, list);
 		req.tag = (...args) => app.cache.tag(...args)(req, res);
 		if (!req.get) req.get = str => {
