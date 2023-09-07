@@ -38,7 +38,7 @@ module.exports = function(schemas, api, schema, formatted) {
 				}
 				const path = pointer.split('/').slice(1).filter(x => x != 'properties').join('.');
 				if (schema.default) type += `|${JSON.stringify(schema.default)}`;
-				if (!type) lines.push([path, schema.title]);
+				if (!type) lines.push([path, 'object', schema.title]);
 				else lines.push([path + (required ? ' *' : ''), type, schema.title || '-']);
 			}
 		}
