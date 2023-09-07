@@ -50,7 +50,7 @@ export const print_job = {
 				},
 				price: {
 					title: 'Price',
-					type: 'number'
+					type: 'string'
 				}
 			}
 		},
