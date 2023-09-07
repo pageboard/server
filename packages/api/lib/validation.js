@@ -1,5 +1,6 @@
 const { AjvValidator } = require('objection');
 const Ajv = require('ajv');
+const { _ } = Ajv;
 const AjvKeywords = require('ajv-keywords');
 const AjvFormats = require('ajv-formats');
 const { betterAjvErrors } = require('@apideck/better-ajv-errors');
@@ -182,7 +183,7 @@ module.exports = class Validation {
 				validateSchema: false,
 				code: {
 					source: true,
-					formats: require('./formats.js')
+					formats: _`require('${Path.resolve(__dirname, './formats')}')`
 				}
 			}
 		});
@@ -254,7 +255,6 @@ module.exports = class Validation {
 				const { gen, parentSchema, data, it } = cxt;
 				const { format } = parentSchema;
 				const { parentData, parentDataProperty } = it;
-				const { _ } = Ajv;
 
 				if ('const' in parentSchema && typeof parentSchema.const == "number") {
 					gen.if(_`typeof ${data} == "string" && ${data} != null`, () => {
