@@ -31,7 +31,8 @@ module.exports = class PrintModule {
 			title: 'Remote'
 		});
 		const { print_job } = await this.app.api.add(import('./src/print_job.mjs'));
-		print_job.properties.printer.anyOf = list;
+		if (list.length > 0) print_job.properties.printer.anyOf = list;
+		else console.info("print: disabled");
 	}
 
 	async options(req, { printer }) {
