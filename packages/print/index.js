@@ -257,15 +257,17 @@ module.exports = class PrintModule {
 			products
 		};
 
-		const ret = await agent.fetch("/order/sandbox-create", "post", { data: order });
-		if (ret.status != "ok") {
-			throw new HttpError.BadRequest(ret.msg);
-		}
-		block.data.order = {
-			id: ret.order_id,
-			price: ret.total_price
-		};
-		response.status = 200;
+		runJob(req, block, async () => {
+			const ret = await agent.fetch("/order/sandbox-create", "post", { data: order });
+			if (ret.status != "ok") {
+				throw new HttpError.BadRequest(ret.msg);
+			}
+			block.data.order = {
+				id: ret.order_id,
+				price: ret.total_price
+			};
+			response.status = 200;
+		});
 		return block;
 	}
 
