@@ -124,11 +124,13 @@ module.exports = class ApiModule {
 			try {
 				this.validate(schema, data, fun);
 			} catch (err) {
-				err.data = {
-					method: command,
-					messages: err.message
-				};
-				err.content = await this.run(req, 'help.doc', { command, schema });
+				if (err.name == "BadRequestError") {
+					err.data = {
+						method: command,
+						messages: err.message
+					};
+					err.content = await this.run(req, 'help.doc', { command, schema });
+				}
 				throw err;
 			}
 		}
