@@ -110,9 +110,10 @@ module.exports = class Installer {
 				module
 			];
 		} else {
-			throw new Error("Unknown install.bin option, expected pnpm, yarn, npm, got", bin);
+			throw new Error("Unknown installer.bin option, expected pnpm, yarn, npm", bin);
 		}
 		const command = `${bin} ${args.join(' ')}`;
+
 		try {
 			await exec(command, {
 				cwd: pkg.dir,
@@ -187,11 +188,18 @@ module.exports = class Installer {
 
 	async #populate(site, pkg) {
 		const pair = `${site.id}/${pkg.tag ?? site.data.version}`;
-		const siteModuleDir = Path.join(pkg.dir, 'node_modules', pkg.name);
+		let pnpmStyle = false;
+		let siteModuleDir = Path.join(pkg.dir, 'node_modules', pkg.name);
+		try {
+			siteModuleDir = Path.join(pkg.dir, 'node_modules', await fs.readlink(siteModuleDir));
+			pnpmStyle = true;
+		} catch (ex) {
+			if (ex.code != 'EINVAL') throw ex;
+		}
 		const sitePkg = await readPkg(Path.join(siteModuleDir, "package.json"), true);
 		// configure directories/elements for each dependency
 		await Promise.all(Object.keys(sitePkg.dependencies || {}).map(subMod => {
-			const moduleDir = Path.join(pkg.dir, 'node_modules', subMod);
+			const moduleDir = Path.join(siteModuleDir, '..', subMod);
 			return this.config(moduleDir, pair, subMod, pkg);
 		}));
 		await this.config(siteModuleDir, pair, pkg.name, pkg);
