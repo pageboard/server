@@ -50,8 +50,8 @@ export const print_job = {
 				},
 				price: {
 					title: 'Price',
-					type: 'number',
-					multipleOf: 0.01
+					type: 'string',
+					format: 'singleline'
 				},
 				status: {
 					title: 'Status',
