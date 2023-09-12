@@ -199,7 +199,7 @@ module.exports = class PrintModule {
 				url: pdfUrl.pathname.replace(/\.pdf$/, '')
 			}
 		});
-		if (!pdf) throw new HttpError.NotFound('PDF not found');
+		if (!pdf) throw new HttpError.NotFound('Content PDF not found');
 		pdfUrl.searchParams.set('pdf', 'printer');
 		const pdfPaper = pdf.data.paper;
 		const sizeA = convertLengthToMillimiters(pdfPaper.width) || 210;
@@ -215,6 +215,14 @@ module.exports = class PrintModule {
 		};
 		if (options.cover.url) {
 			const coverUrl = new URL(options.cover.url, req.site.url);
+			const { item: coverPdf } = await req.run('block.find', {
+				type: 'pdf',
+				data: {
+					url: coverUrl.pathname.replace(/\.pdf$/, '')
+				}
+			});
+			if (!coverPdf) throw new HttpError.NotFound('Cover PDF not found');
+			coverUrl.searchParams.set('pdf', 'printer');
 			printProduct.cover_pdf = coverUrl.href;
 			printProduct.runlists.push({
 				tag: "cover",
