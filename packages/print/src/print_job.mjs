@@ -50,7 +50,20 @@ export const print_job = {
 				},
 				price: {
 					title: 'Price',
-					type: 'string'
+					type: 'number',
+					multipleOf: 0.01
+				},
+				status: {
+					title: 'Status',
+					type: 'string',
+					format: 'singleline',
+					nullable: true
+				},
+				tracking: {
+					title: 'Tracking',
+					type: 'string',
+					format: "uri-reference",
+					nullable: true
 				}
 			}
 		},
