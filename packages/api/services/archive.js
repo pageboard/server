@@ -280,16 +280,22 @@ module.exports = class ArchiveService {
 			fstream.on('finish', resolve);
 		});
 
+		const errors = [];
+
 		for (let obj of list) {
 			try {
 				obj = await upgrader.process(obj);
 				await afterEachStandalone(obj);
 			} catch (err) {
-				err.message = (err.message ?? "") +
-					`\nwhile processing ${obj.type} ${obj.id}`;
-				throw err;
+				err.message = `${obj.id} ${obj.type}: ${err.message}`;
+				if (err.name == "ValidationError") errors.push(err.message);
+				else throw err;
 			}
 		}
+		if (errors.length) {
+			throw new HttpError.BadRequest(errors.join('\n'));
+		}
+
 		return counts;
 	}
 
