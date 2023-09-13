@@ -856,7 +856,7 @@ module.exports = class BlockService {
 	async del({ site, trx }, data) {
 		const types = data.type ? [data.type] : site.$pkg.standalones;
 		const { count } = await site.$relatedQuery('children', trx)
-			.select(trx.fun('recursive_delete', trx.ref('block._id'), false).as('count'))
+			.select(req.fun('recursive_delete', req.ref('block._id'), false).as('count'))
 			.where('block.id', data.id)
 			.whereIn('block.type', types);
 		return { count };
@@ -1071,7 +1071,7 @@ function filterSub(q, data, language) {
 
 async function gc({ trx }, days) {
 	// this might prove useless
-	const results = await trx.raw(`DELETE FROM block USING (
+	const results = await req.raw(`DELETE FROM block USING (
 		SELECT count(relation.child_id), b._id FROM block AS b
 			LEFT OUTER JOIN relation ON (relation.child_id = b._id)
 			LEFT JOIN block AS p ON (p._id = relation.parent_id AND p.type='site')

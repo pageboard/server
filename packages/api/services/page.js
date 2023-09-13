@@ -322,9 +322,9 @@ module.exports = class PageService {
 		const allUrl = {};
 		const returning = {};
 		const dbPages = await site.$relatedQuery('children', trx)
-			.select('block.id', trx.ref('block.data:url').as('url'))
+			.select('block.id', req.ref('block.data:url').as('url'))
 			.whereIn('block.type', Array.from(pkg.pages))
-			.whereNotNull(trx.ref('block.data:url'));
+			.whereNotNull(req.ref('block.data:url'));
 		for (const page of pages.all) {
 			const { url } = page.data;
 			if (!url) {
@@ -428,17 +428,17 @@ module.exports = class PageService {
 	};
 
 
-	async del({ site, trx, Href, run }, data) {
+	async del({ site, trx, Href, run, ref }, data) {
 		const page = await run('block.get', data);
 		const links = site.$relatedQuery('children', trx)
 			.select(
 				'block.id',
 				'block.type',
 				'block.content',
-				trx.ref('parents.id').as('parentId'),
-				trx.ref('parents.data:url').as('parentUrl')
+				ref('parents.id').as('parentId'),
+				ref('parents.data:url').as('parentUrl')
 			)
-			.where(trx.ref('block.data:url').castText(), page.data.url)
+			.where(ref('block.data:url').castText(), page.data.url)
 			.joinRelated('parents')
 			.whereNot('parents.type', 'site')
 			.whereNot('parents.id', page.id);
@@ -528,7 +528,7 @@ function redUrl(obj) {
 	return obj;
 }
 
-function getParents({ site, trx }, url) {
+function getParents({ site, trx, ref }, url) {
 	const urlParts = url.split('/');
 	const urlParents = ['/'];
 	for (let i = 1; i < urlParts.length - 1; i++) {
@@ -536,16 +536,16 @@ function getParents({ site, trx }, url) {
 	}
 	return site.$relatedQuery('children', trx)
 		.select([
-			trx.ref('block.data:url').as('url'),
-			trx.ref('block.data:redirect').as('redirect'),
-			trx.ref('block.data:title').as('title')
+			ref('block.data:url').as('url'),
+			ref('block.data:redirect').as('redirect'),
+			ref('block.data:title').as('title')
 		])
 		.whereIn('block.type', Array.from(site.$pkg.pages))
 		.whereJsonText('block.data:url', 'IN', urlParents)
 		.orderByRaw("length(block.data->>'url') DESC");
 }
 
-function listPages({ site, trx }, data) {
+function listPages({ site, trx, fun }, data) {
 	const { raw, ref } = trx;
 	const q = site.$relatedQuery('children', trx)
 		.columns()
@@ -576,7 +576,7 @@ function listPages({ site, trx }, data) {
 		q.whereJsonText('block.data:url', '~', regexp)
 			.orderBy(ref('block.data:index'));
 	} else if (data.url) {
-		q.where(trx.fun('starts_with',
+		q.where(fun('starts_with',
 			ref('block.data:url').castText(),
 			data.url
 		));
@@ -611,13 +611,13 @@ function applyUnrelate({ site, trx }, obj) {
 	}));
 }
 
-function applyRemove({ site, trx }, list, recursive) {
+function applyRemove({ site, trx, ref, fun }, list, recursive) {
 	if (!list.length) return;
 	const q = site.$relatedQuery('children', trx).whereIn('block.id', list);
 	if (!recursive) {
 		q.whereNot('standalone', true).delete();
 	} else {
-		q.select(trx.fun('recursive_delete', trx.ref('block._id'), false).as('count'));
+		q.select(fun('recursive_delete', ref('block._id'), false).as('count'));
 	}
 	return q;
 }
@@ -653,8 +653,8 @@ async function applyUpdate(req, list) {
 				.where('block.id', block.id)
 				.where('block.type', block.type)
 				.where(
-					trx.raw("date_trunc('milliseconds', block.updated_at)"),
-					trx.raw("date_trunc('milliseconds', ?::timestamptz)", [block.updated_at]),
+					req.raw("date_trunc('milliseconds', block.updated_at)"),
+					req.raw("date_trunc('milliseconds', ?::timestamptz)", [block.updated_at]),
 				)
 				.patch(block)
 				.returning('id', 'updated_at')
@@ -671,12 +671,14 @@ async function applyUpdate(req, list) {
 	return updates;
 }
 
-async function updatePage({ site, trx, Block, Href }, page, sideEffects) {
+async function updatePage({
+	site, trx, ref, fun, raw, Block, Href
+}, page, sideEffects) {
 	if (!sideEffects) sideEffects = {};
 	const dbPage = await site.$relatedQuery('children', trx)
 		.where('block.id', page.id)
 		.whereIn('block.type', page.type ? [page.type] : Array.from(site.$pkg.pages))
-		.select('_id', trx.ref('block.data:url').as('url'))
+		.select('_id', ref('block.data:url').as('url'))
 		.first().throwIfNotFound();
 
 	const hrefs = site.$hrefs;
@@ -690,7 +692,7 @@ async function updatePage({ site, trx, Block, Href }, page, sideEffects) {
 					return ['image', 'video', 'audio', 'svg'].includes(type);
 				})) continue;
 				const key = 'block.data:' + desc.path;
-				const field = trx.ref(key).castText();
+				const field = ref(key).castText();
 				// this is a fake query not part of trx
 				const args = field._createRawArgs(Block.query());
 				try {
@@ -698,13 +700,13 @@ async function updatePage({ site, trx, Block, Href }, page, sideEffects) {
 						.where('block.type', type)
 						.where(function () {
 							// use fn.starts_with
-							this.where(trx.fun('starts_with', field, `${oldUrlStr}/`));
+							this.where(fun('starts_with', field, `${oldUrlStr}/`));
 							if (oldUrl == null) this.orWhereNull(field);
 							else this.orWhere(field, oldUrl);
 						})
 						.patch({
 							type,
-							[key]: trx.raw(
+							[key]: raw(
 								`overlay(${args[0]} placing ? from 1 for ${oldUrlStr.length})`,
 								args[1],
 								newUrl
@@ -727,15 +729,15 @@ async function updatePage({ site, trx, Block, Href }, page, sideEffects) {
 	await Href.query(trx).where('_parent_id', site._id)
 		.where('type', 'link')
 		.where(function () {
-			this.where(trx.fun('starts_with', 'url', `${oldUrlStr}/`));
+			this.where(fun('starts_with', 'url', `${oldUrlStr}/`));
 			if (oldUrl == null) this.orWhereNull('url');
 			else this.orWhere('url', oldUrl);
 		}).delete();
 	const row = await site.$relatedQuery('children', trx)
 		.where('block.id', page.id)
 		.where(
-			trx.raw("date_trunc('milliseconds', block.updated_at)"),
-			trx.raw("date_trunc('milliseconds', ?::timestamptz)", [page.updated_at]),
+			raw("date_trunc('milliseconds', block.updated_at)"),
+			raw("date_trunc('milliseconds', ?::timestamptz)", [page.updated_at]),
 		)
 		.patch(page)
 		.returning('block.id', 'block.updated_at')

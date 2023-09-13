@@ -316,7 +316,7 @@ module.exports = class ReservationService {
 					} else if (data.paid === false) {
 						q.whereNot(ref('data:payment.due'), ref('data:payment.paid'));
 					}
-					q.where(trx.raw(`jsonb_array_length(coalesce(data['attendees'], '[]'::jsonb)) > 0`));
+					q.where(req.raw(`jsonb_array_length(coalesce(data['attendees'], '[]'::jsonb)) > 0`));
 					q.where('type', 'event_reservation').columns();
 				},
 				settings(q) {

@@ -61,13 +61,13 @@ module.exports = class HrefService {
 			q.whereIn('href.type', data.type);
 		}
 		if (data.maxSize) {
-			q.where(trx.ref('href.meta:size'), '<=', data.maxSize);
+			q.where(req.ref('href.meta:size'), '<=', data.maxSize);
 		}
 		if (data.maxWidth) {
-			q.where(trx.ref('href.meta:width'), '<=', data.maxWidth);
+			q.where(req.ref('href.meta:width'), '<=', data.maxWidth);
 		}
 		if (data.maxHeight) {
-			q.where(trx.ref('href.meta:height'), '<=', data.maxHeight);
+			q.where(req.ref('href.meta:height'), '<=', data.maxHeight);
 		}
 		if (data.offset < 0) {
 			data.limit += data.offset;
@@ -111,13 +111,13 @@ module.exports = class HrefService {
 			}
 		} else if (data.text) {
 			if (/^\w+$/.test(data.text)) {
-				q.from(trx.raw("to_tsquery('unaccent', ?) AS query, ??", [data.text + ':*', 'href']));
+				q.from(req.raw("to_tsquery('unaccent', ?) AS query, ??", [data.text + ':*', 'href']));
 			} else {
-				q.from(trx.raw("websearch_to_tsquery('unaccent', href_tsv_url(?)) AS query, ??", [data.text, 'href']));
+				q.from(req.raw("websearch_to_tsquery('unaccent', href_tsv_url(?)) AS query, ??", [data.text, 'href']));
 			}
 			q.whereRaw('query @@ href.tsv');
 			q.orderByRaw('ts_rank(href.tsv, query) DESC');
-			q.orderBy(trx.ref('href.url'));
+			q.orderBy(req.ref('href.url'));
 			q.where('href.visible', true);
 			q.orderBy('updated_at', 'desc');
 			items = await q;
@@ -317,17 +317,17 @@ module.exports = class HrefService {
 				for (const desc of list) {
 					const bq = site.$modelClass.query(trx).from('blocks')
 						.where('blocks.type', type)
-						.whereNotNull(trx.ref(`blocks.data:${desc.path}`));
+						.whereNotNull(req.ref(`blocks.data:${desc.path}`));
 					if (desc.array) {
-						bq.select(trx.raw("jsonb_array_elements_text(??) AS url", [
-							trx.ref(`blocks.data:${desc.path}`)
+						bq.select(req.raw("jsonb_array_elements_text(??) AS url", [
+							req.ref(`blocks.data:${desc.path}`)
 						]));
 						bq.where(
-							trx.raw("jsonb_typeof(??)", [trx.ref(`blocks.data:${desc.path}`)]),
+							req.raw("jsonb_typeof(??)", [req.ref(`blocks.data:${desc.path}`)]),
 							'array'
 						);
 					} else {
-						bq.select(trx.ref(`blocks.data:${desc.path}`).castText().as('url'));
+						bq.select(req.ref(`blocks.data:${desc.path}`).castText().as('url'));
 					}
 					urlQueries.push(bq);
 				}
@@ -355,7 +355,7 @@ module.exports = class HrefService {
 			if (data.preview) {
 				meta = `jsonb_set(${meta}, '{preview}', to_jsonb(href.preview))`;
 			}
-			q.select(trx.raw(`jsonb_object_agg(
+			q.select(req.raw(`jsonb_object_agg(
 				href.url,
 				${meta}
 			) AS hrefs`));
@@ -470,13 +470,13 @@ module.exports = class HrefService {
 					this.on(function () {
 						for (const [type, list] of Object.entries(fhrefs)) {
 							this.orOn(function () {
-								this.on('block.type', trx.val(type));
+								this.on('block.type', req.val(type));
 								this.on(function () {
 									for (const desc of list) {
 										if (desc.array) {
-											this.orOn(trx.ref(`data:${desc.path}`).from('block'), '@>', trx.ref('href.url').castJson());
+											this.orOn(req.ref(`data:${desc.path}`).from('block'), '@>', req.ref('href.url').castJson());
 										} else {
-											this.orOn('href.url', trx.ref(`data:${desc.path}`).from('block').castText());
+											this.orOn('href.url', req.ref(`data:${desc.path}`).from('block').castText());
 										}
 									}
 								});
@@ -578,7 +578,7 @@ exports.gc = function ({ trx }, days) {
 	// BOTH are wrong since they won't touch external links...
 	// TODO the outer join on url is also a bit wrong since it does not use href._parent !!!
 	/*
-	return trx.raw(`DELETE FROM href USING (
+	return req.raw(`DELETE FROM href USING (
 		SELECT count(block.*) AS count, href._id FROM href
 		LEFT OUTER JOIN block ON (block.data->>'url' = href.url)
 		LEFT JOIN relation AS r ON (r.child_id = block._id)

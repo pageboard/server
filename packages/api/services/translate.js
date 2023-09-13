@@ -48,13 +48,13 @@ module.exports = class TranslateService {
 		$global: true
 	};
 
-	async initialize({ site, trx, Block }) {
+	async initialize({ site, trx, ref, raw, Block }) {
 		const lang = site.data.languages?.[0];
 		if (!lang) throw new HttpError.BadRequest("Missing site.data.languages");
 		const blocks = await Block.relatedQuery('children', trx).for(site)
 			.patch({
-				content: trx.raw(`(block_get_content(:id:, :lang)).content`, {
-					id: trx.ref('_id'),
+				content: raw(`(block_get_content(:id:, :lang)).content`, {
+					id: ref('_id'),
 					lang
 				})
 			})
@@ -67,14 +67,13 @@ module.exports = class TranslateService {
 		$action: 'write'
 	};
 
-	async list({ site, trx }, { self, id, lang, limit, offset, valid }) {
+	async list({ site, trx, ref, fun }, { self, id, lang, limit, offset, valid }) {
 		const sourceLang = site.data.languages?.[0];
 		if (!sourceLang) throw new HttpError.BadRequest("Missing site.data.languages");
-		const { ref, fun } = trx;
 		const q = site.$relatedQuery('children', trx)
 			.distinct(
 				'target.id', 'target.data', 'target.type', 'target._id',
-				trx.ref('source.data:text').castText().as('source')
+				ref('source.data:text').castText().as('source')
 			);
 		if (!self) {
 			q.joinRelated('[parents, children as source, children as target]')

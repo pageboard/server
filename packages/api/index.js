@@ -1,4 +1,4 @@
-const { transaction, fn: fun, val } = require('objection');
+const { transaction, fn: fun, val, ref, raw } = require('objection');
 const Path = require('node:path');
 
 const bodyParser = require.lazy('body-parser');
@@ -101,8 +101,8 @@ module.exports = class ApiModule {
 		}
 		const schema = mod[funName];
 		const inst = this.app[modName];
-		const fun = inst[funName];
-		if (!funName || !fun) throw new HttpError.BadRequest(Text`
+		const meth = inst[funName];
+		if (!funName || !meth) throw new HttpError.BadRequest(Text`
 			Available methods:
 			${Object.getOwnPropertyNames(mod).sort().join(', ')}
 		`);
@@ -112,7 +112,7 @@ module.exports = class ApiModule {
 		if (!site && !mod.$global && !schema.$global) {
 			throw new HttpError.BadRequest(`API method ${apiStr} expects a site`);
 		}
-		return [schema, inst, fun];
+		return [schema, inst, meth];
 	}
 
 	async run(req = {}, command, data = {}) {
@@ -142,7 +142,7 @@ module.exports = class ApiModule {
 			hadTrx = true;
 		} else {
 			req.trx = await transaction.start(app.database.tenant(locals.tenant));
-			Object.assign(req.trx, { req, val, fun });
+			Object.assign(req, { ref, val, raw, fun });
 		}
 		Object.assign(req, { Block, Href });
 

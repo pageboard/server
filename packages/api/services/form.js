@@ -26,7 +26,7 @@ module.exports = class FormService {
 			.where('block.id', data.id)
 			.orWhere(q => {
 				q.where('block.type', 'api_form');
-				q.where(trx.ref('block.data:name').castText(), data.id);
+				q.where(req.ref('block.data:name').castText(), data.id);
 			})
 			.orderBy('id')
 			.first().throwIfNotFound();

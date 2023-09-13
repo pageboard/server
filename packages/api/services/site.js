@@ -267,7 +267,7 @@ module.exports = class SiteService {
 
 	async gc({ trx }) {
 		// deletes all blocks that belong to no site
-		const ret = await trx.raw(`DELETE FROM block
+		const ret = await req.raw(`DELETE FROM block
 		WHERE block.type NOT IN ('site', 'user') AND NOT EXISTS (SELECT c._id FROM block c, relation r, block p
 		WHERE c._id = block._id AND r.child_id = c._id AND p._id = r.parent_id AND p.type IN ('site', 'user')
 		GROUP BY c._id HAVING count(*) >= 1)`);
