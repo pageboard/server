@@ -175,6 +175,7 @@ module.exports = class ArchiveService {
 
 		let upgrader;
 		const refs = new Map();
+
 		const list = [];
 		const beforeEachStandalone = obj => {
 			if (obj.type == "site" || list.length == 0) {
@@ -240,6 +241,7 @@ module.exports = class ArchiveService {
 						const rchild = await site.$relatedQuery('children', trx)
 							.insert(child).returning('_id');
 						children.push(rchild._id);
+						refs.set(child.id, rchild._id);
 					}
 					delete obj.children;
 				}
@@ -256,7 +258,7 @@ module.exports = class ArchiveService {
 					delete obj.standalones;
 				}
 				const row = await site.$relatedQuery('children', trx)
-					.insert(obj).returning('*');
+					.insert(obj).returning('_id');
 				if (children.length) {
 					await Block.relatedQuery('children', trx).for(row._id).relate(children);
 				}
