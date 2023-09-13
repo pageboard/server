@@ -26,9 +26,9 @@ module.exports = class ArchiveService {
 	}
 
 	async export(req, { file, ids = [] }) {
-		const { site, trx, res } = req;
+		const { site, trx, res, ref, fun } = req;
 		const { id } = site;
-		const { lang } = req.call('translate.lang');
+		const lang = site.data.languages?.length == 0 ? req.call('translate.lang') : null;
 		const filepath = file ?? `${id}-${fileStamp()}.ndjson`;
 		const counts = {
 			users: 0,
@@ -57,17 +57,19 @@ module.exports = class ArchiveService {
 		delete nsite.data.domains;
 		jstream.write(nsite);
 
+		const colOpts = { lang, content: Boolean(lang) };
+
 		const modifiers = {
 			blocks(q) {
 				q.where('standalone', false)
 					.whereNot('type', 'content')
-					.columns({ lang, content: true });
+					.columns(colOpts);
 			},
 			standalones(q) {
-				q.where('standalone', true).columns({ lang, content: true });
+				q.where('standalone', true).columns(colOpts);
 			},
 			users(q) {
-				q.where('type', 'user').columns({ lang, content: true });
+				q.where('type', 'user').columns(colOpts);
 			}
 		};
 
@@ -84,7 +86,8 @@ module.exports = class ArchiveService {
 				q.where('standalone', true).orWhere('type', 'settings');
 			})
 			.whereNotExists(countParents)
-			.columns({ lang, content: true });
+			.columns(colOpts);
+
 		const blocks = await q.withGraphFetched(`[
 				parents(users),
 				children(standalones) as standalones . children(blocks),
@@ -101,6 +104,28 @@ module.exports = class ArchiveService {
 				console.error("Skip already inserted block", block.id, block.type);
 			} else {
 				jstream.write(block);
+			}
+		}
+
+		if (!lang) {
+			const contents = await site.$relatedQuery('children', trx)
+				.with('parents', site.$relatedQuery('children', trx)
+					.select('block._id')
+					.joinRelated('parents')
+					.whereNot('parents.type', 'site')
+					.modify(q => {
+						if (ids.length) q.whereIn('parents.id', ids);
+					})
+					.select(fun('array_agg', ref('parents.id')).as('parents'))
+					.groupBy('block._id')
+				)
+				.join('parents', 'parents._id', 'block._id')
+				.select('parents.parents')
+				.where('block.type', 'content')
+				.columns();
+			counts.contents = contents.length;
+			for (const content of contents) {
+				jstream.write(content);
 			}
 		}
 
