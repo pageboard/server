@@ -1,4 +1,3 @@
-const { ref, raw, val: toval, fn } = require('objection');
 const Block = require('../models/block');
 const { unflatten, mergeRecursive, dget } = require('../../../src/utils');
 
@@ -97,6 +96,7 @@ module.exports = class BlockService {
 		// TODO data.id or data.parent.id or data.child.id must be set
 		// currently the check filterSub -> boolean is only partially applied
 		const { site, trx, Block, Href } = req;
+		const { ref, raw, fn } = trx;
 		const language = req.call('translate.lang', data);
 		let { parents } = data;
 		if (parents) {
@@ -856,7 +856,7 @@ module.exports = class BlockService {
 	async del({ site, trx }, data) {
 		const types = data.type ? [data.type] : site.$pkg.standalones;
 		const { count } = await site.$relatedQuery('children', trx)
-			.select(fn('recursive_delete', ref('block._id'), false).as('count'))
+			.select(trx.fun('recursive_delete', trx.ref('block._id'), false).as('count'))
 			.where('block.id', data.id)
 			.whereIn('block.type', types);
 		return { count };
@@ -1043,15 +1043,15 @@ function filterSub(q, data, language) {
 	orders.push('created_at');
 	const seen = {};
 	for (const order of orders) {
-		const { col, dir } = parseOrder('block', order);
+		const { col, dir } = parseOrder(q, 'block', order);
 		if (seen[col.expression]) continue;
 		seen[col.expression] = true;
 		const val = dget(data, order);
 		if (Array.isArray(val)) {
-			q.orderByRaw(raw(
+			q.orderByRaw(q.raw(
 				'array_position(??, ?) ' + dir,
-				toval(val).asArray().castTo('text[]'),
-				ref(col).castText()
+				q.val(val).asArray().castTo('text[]'),
+				q.ref(col).castText()
 			));
 		} else {
 			q.orderBy(col, dir);
@@ -1085,7 +1085,7 @@ async function gc({ trx }, days) {
 	};
 }
 
-function parseOrder(table, str) {
+function parseOrder(q, table, str) {
 	let col = str;
 	let dir = 'asc';
 	if (col.startsWith('-')) {
@@ -1096,6 +1096,6 @@ function parseOrder(table, str) {
 	const first = list.shift();
 	col = `${table}.${first}`;
 	if (list.length > 0) col += `:${list.join('.')}`;
-	return { col: ref(col), dir };
+	return { col: q.ref(col), dir };
 }
 

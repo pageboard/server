@@ -1,5 +1,4 @@
 const Path = require('node:path');
-const { ref, raw, val } = require('objection');
 const jsonPath = require.lazy('@kapouer/path');
 
 module.exports = class HrefService {
@@ -62,13 +61,13 @@ module.exports = class HrefService {
 			q.whereIn('href.type', data.type);
 		}
 		if (data.maxSize) {
-			q.where(ref('href.meta:size'), '<=', data.maxSize);
+			q.where(trx.ref('href.meta:size'), '<=', data.maxSize);
 		}
 		if (data.maxWidth) {
-			q.where(ref('href.meta:width'), '<=', data.maxWidth);
+			q.where(trx.ref('href.meta:width'), '<=', data.maxWidth);
 		}
 		if (data.maxHeight) {
-			q.where(ref('href.meta:height'), '<=', data.maxHeight);
+			q.where(trx.ref('href.meta:height'), '<=', data.maxHeight);
 		}
 		if (data.offset < 0) {
 			data.limit += data.offset;
@@ -112,13 +111,13 @@ module.exports = class HrefService {
 			}
 		} else if (data.text) {
 			if (/^\w+$/.test(data.text)) {
-				q.from(raw("to_tsquery('unaccent', ?) AS query, ??", [data.text + ':*', 'href']));
+				q.from(trx.raw("to_tsquery('unaccent', ?) AS query, ??", [data.text + ':*', 'href']));
 			} else {
-				q.from(raw("websearch_to_tsquery('unaccent', href_tsv_url(?)) AS query, ??", [data.text, 'href']));
+				q.from(trx.raw("websearch_to_tsquery('unaccent', href_tsv_url(?)) AS query, ??", [data.text, 'href']));
 			}
 			q.whereRaw('query @@ href.tsv');
 			q.orderByRaw('ts_rank(href.tsv, query) DESC');
-			q.orderBy(ref('href.url'));
+			q.orderBy(trx.ref('href.url'));
 			q.where('href.visible', true);
 			q.orderBy('updated_at', 'desc');
 			items = await q;
@@ -318,17 +317,17 @@ module.exports = class HrefService {
 				for (const desc of list) {
 					const bq = site.$modelClass.query(trx).from('blocks')
 						.where('blocks.type', type)
-						.whereNotNull(ref(`blocks.data:${desc.path}`));
+						.whereNotNull(trx.ref(`blocks.data:${desc.path}`));
 					if (desc.array) {
-						bq.select(raw("jsonb_array_elements_text(??) AS url", [
-							ref(`blocks.data:${desc.path}`)
+						bq.select(trx.raw("jsonb_array_elements_text(??) AS url", [
+							trx.ref(`blocks.data:${desc.path}`)
 						]));
 						bq.where(
-							raw("jsonb_typeof(??)", [ref(`blocks.data:${desc.path}`)]),
+							trx.raw("jsonb_typeof(??)", [trx.ref(`blocks.data:${desc.path}`)]),
 							'array'
 						);
 					} else {
-						bq.select(ref(`blocks.data:${desc.path}`).castText().as('url'));
+						bq.select(trx.ref(`blocks.data:${desc.path}`).castText().as('url'));
 					}
 					urlQueries.push(bq);
 				}
@@ -356,7 +355,7 @@ module.exports = class HrefService {
 			if (data.preview) {
 				meta = `jsonb_set(${meta}, '{preview}', to_jsonb(href.preview))`;
 			}
-			q.select(raw(`jsonb_object_agg(
+			q.select(trx.raw(`jsonb_object_agg(
 				href.url,
 				${meta}
 			) AS hrefs`));
@@ -471,13 +470,13 @@ module.exports = class HrefService {
 					this.on(function () {
 						for (const [type, list] of Object.entries(fhrefs)) {
 							this.orOn(function () {
-								this.on('block.type', val(type));
+								this.on('block.type', trx.val(type));
 								this.on(function () {
 									for (const desc of list) {
 										if (desc.array) {
-											this.orOn(ref(`data:${desc.path}`).from('block'), '@>', ref('href.url').castJson());
+											this.orOn(trx.ref(`data:${desc.path}`).from('block'), '@>', trx.ref('href.url').castJson());
 										} else {
-											this.orOn('href.url', ref(`data:${desc.path}`).from('block').castText());
+											this.orOn('href.url', trx.ref(`data:${desc.path}`).from('block').castText());
 										}
 									}
 								});

@@ -1,5 +1,3 @@
-const { ref } = require('objection');
-
 module.exports = class ReservationService {
 	static name = 'reservation';
 
@@ -298,6 +296,7 @@ module.exports = class ReservationService {
 
 	async search({ site, trx }, data) {
 		// given an event_date, retrieve reservations, user settings and email
+		const { ref } = trx;
 		const eventDate = await site.$relatedQuery('children', trx)
 			.where('block.type', 'event_date')
 			.where('block.id', data.id)

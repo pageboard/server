@@ -4,8 +4,6 @@ const {
 	unflatten
 } = require('../../../src/utils');
 
-const { ref } = require('objection');
-
 module.exports = class FormService {
 	static name = 'form';
 
@@ -28,7 +26,7 @@ module.exports = class FormService {
 			.where('block.id', data.id)
 			.orWhere(q => {
 				q.where('block.type', 'api_form');
-				q.where(ref('block.data:name').castText(), data.id);
+				q.where(trx.ref('block.data:name').castText(), data.id);
 			})
 			.orderBy('id')
 			.first().throwIfNotFound();
