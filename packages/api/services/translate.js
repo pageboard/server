@@ -147,14 +147,13 @@ module.exports = class TranslateService {
 		}
 	};
 
-	async fill({ site, trx }, data) {
+	async fill({ site, trx, ref, val, fun }, data) {
 		const lang = site.data.languages?.[0];
 		if (!lang) throw new HttpError.BadRequest("Missing site.data.languages");
 		const source = this.app.languages[lang];
 		if (!source) throw new HttpError.BadRequest("Missing source language: " + lang);
 		const target = this.app.languages[data.lang];
 		if (!target) throw new HttpError.BadRequest("Missing target language: " + data.lang);
-		const { ref, val, fun } = trx;
 
 		const q = site.$relatedQuery('children', trx)
 			.distinct(

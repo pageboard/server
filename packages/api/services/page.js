@@ -77,9 +77,8 @@ module.exports = class PageService {
 		});
 	}
 
-	#QueryPage(req, url, lang) {
-		const { ref, val, fun } = req.trx;
-		return req.site.$relatedQuery('children', req.trx)
+	#QueryPage({ site, trx, ref, val, fun }, url, lang) {
+		return site.$relatedQuery('children', trx)
 			.columns({
 				lang,
 				content: true
@@ -112,7 +111,7 @@ module.exports = class PageService {
 				q.where(ref("block.data:prefix").castBool(), true);
 			})
 			.orderBy(fun.coalesce(ref("block.data:prefix").castBool(), false), "asc")
-			.whereIn('block.type', Array.from(req.site.$pkg.pages));
+			.whereIn('block.type', Array.from(site.$pkg.pages));
 	}
 
 	async get(req, data) {
@@ -545,8 +544,7 @@ function getParents({ site, trx, ref }, url) {
 		.orderByRaw("length(block.data->>'url') DESC");
 }
 
-function listPages({ site, trx, fun }, data) {
-	const { raw, ref } = trx;
+function listPages({ site, trx, fun, raw, ref }, data) {
 	const q = site.$relatedQuery('children', trx)
 		.columns()
 		.select(raw("'site' || block.type AS type"))
@@ -778,7 +776,7 @@ async function applyRelate({ site, trx }, obj) {
 }
 
 async function navigationLinks(req, url, prefix) {
-	const { ref } = req.trx;
+	const { ref } = req;
 	const [parents, siblings] = await Promise.all([
 		getParents(req, url),
 		prefix ? [] : listPages(req, {

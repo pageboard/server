@@ -95,8 +95,7 @@ module.exports = class BlockService {
 	async search(req, data) {
 		// TODO data.id or data.parent.id or data.child.id must be set
 		// currently the check filterSub -> boolean is only partially applied
-		const { site, trx, Block, Href } = req;
-		const { ref, raw, fn } = trx;
+		const { site, trx, ref, raw, fun, Block, Href } = req;
 		const language = req.call('translate.lang', data);
 		let { parents } = data;
 		if (parents) {
@@ -195,7 +194,7 @@ module.exports = class BlockService {
 			// children block search where one wants to find blocks by their direct content and by their non-standalone children direct contents
 
 			const qdoc = Block.query(trx).select('block._id')
-				.select(fn.sum(raw('ts_rank(contents.tsv, search.query)')).as('rank'))
+				.select(fun.sum(raw('ts_rank(contents.tsv, search.query)')).as('rank'))
 				.select(raw(
 					`array_remove(array_agg(DISTINCT content_get_headline(:tsconfig, contents.text, search.query)), NULL) AS headlines`, language
 				))
@@ -853,10 +852,10 @@ module.exports = class BlockService {
 		}
 	};
 
-	async del({ site, trx }, data) {
+	async del({ site, trx, fun, ref }, data) {
 		const types = data.type ? [data.type] : site.$pkg.standalones;
 		const { count } = await site.$relatedQuery('children', trx)
-			.select(req.fun('recursive_delete', req.ref('block._id'), false).as('count'))
+			.select(fun('recursive_delete', ref('block._id'), false).as('count'))
 			.where('block.id', data.id)
 			.whereIn('block.type', types);
 		return { count };
@@ -1069,9 +1068,9 @@ function filterSub(q, data, language) {
 }
 
 
-async function gc({ trx }, days) {
+async function gc({ trx, raw }, days) {
 	// this might prove useless
-	const results = await req.raw(`DELETE FROM block USING (
+	const results = await raw(`DELETE FROM block USING (
 		SELECT count(relation.child_id), b._id FROM block AS b
 			LEFT OUTER JOIN relation ON (relation.child_id = b._id)
 			LEFT JOIN block AS p ON (p._id = relation.parent_id AND p.type='site')
