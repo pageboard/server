@@ -293,6 +293,7 @@ module.exports = class BlockService {
 
 		const obj = {
 			lang: language.lang,
+			languages: site.data.languages,
 			items: rows,
 			count,
 			offset: data.offset,
@@ -607,7 +608,7 @@ module.exports = class BlockService {
 			}
 		},
 		templates: {
-			lang: '[$query.lang?]',
+			lang: '[$lang]',
 			offset: '[$query.offset?]'
 		}
 	};

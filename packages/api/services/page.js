@@ -120,7 +120,12 @@ module.exports = class PageService {
 			status: 200,
 			site: site.data
 		};
-		const { lang } = req.call('translate.lang', data);
+		const { lang } = req.call('translate.lang', { lang: data.lang });
+		if (lang != data.lang) {
+			const mapUrl = new URL(req.path, site.url);
+			mapUrl.searchParams.set('lang', lang);
+			req.call('cache.map', mapUrl.pathname + mapUrl.search);
+		}
 
 		let page = await this.#QueryPage(req, data.url, lang);
 		if (!page) {
@@ -148,7 +153,8 @@ module.exports = class PageService {
 			item: page,
 			items: [ ...page.children, ...page.standalones ],
 			links: links,
-			hrefs: hrefs[0].hrefs
+			hrefs: hrefs[0].hrefs,
+			lang
 		});
 		delete page.standalones;
 		delete page.children;
