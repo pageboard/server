@@ -142,9 +142,9 @@ module.exports = class ApiModule {
 			hadTrx = true;
 		} else {
 			req.trx = await transaction.start(app.database.tenant(locals.tenant));
-			Object.assign(req, { ref, val, raw, fun });
+			req.trx.req = req;
 		}
-		Object.assign(req, { Block, Href });
+		Object.assign(req, { Block, Href, ref, val, raw, fun });
 
 		const args = [req, data];
 

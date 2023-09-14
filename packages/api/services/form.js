@@ -21,12 +21,12 @@ module.exports = class FormService {
 		});
 	}
 
-	async submit({ site, run, user, locked, trx }, data) {
+	async submit({ site, run, user, locked, trx, ref }, data) {
 		const form = await site.$relatedQuery('children', trx)
 			.where('block.id', data.id)
 			.orWhere(q => {
 				q.where('block.type', 'api_form');
-				q.where(req.ref('block.data:name').castText(), data.id);
+				q.where(ref('block.data:name').castText(), data.id);
 			})
 			.orderBy('id')
 			.first().throwIfNotFound();
