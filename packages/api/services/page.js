@@ -128,6 +128,7 @@ module.exports = class PageService {
 				title: site.data.title,
 				favicon: site.data.favicon,
 				env: site.data.env,
+				version: site.data.version,
 				extra: {
 					// TODO custom properties added by packages go there
 					// e.g. site-verification
