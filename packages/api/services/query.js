@@ -34,17 +34,23 @@ module.exports = class SearchService {
 		if (!method) {
 			throw new HttpError.BadRequest("Missing method");
 		}
-		const { $pathname } = data.query;
-		delete data.query.$pathname;
+		const scope = {};
+		const query = unflatten(data.query ?? {});
+		for (const [key, val] of Object.entries(query)) {
+			if (key.startsWith('$')) {
+				scope[key] = val;
+				delete query[key];
+			}
+		}
+		Object.assign(scope, {
+			$query: query,
+			$site: site.data,
+			$user: user
+		});
 		const params = mergeExpressions(
 			form.data?.action?.parameters ?? {},
 			form.expr?.action?.parameters ?? {},
-			{
-				$pathname,
-				$query: unflatten(data.query ?? {}),
-				$site: site.data,
-				$user: user
-			}
+			scope
 		);
 
 		return run(method, params);
