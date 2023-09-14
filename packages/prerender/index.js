@@ -55,14 +55,20 @@ module.exports = class PrerenderModule {
 		);
 	}
 
-	#requestedRenderingSchema({ site }, { pathname }) {
-		const ext = Path.extname(pathname);
-		let type = ext.substring(1) || "page";
-
-		if (!site.$pkg.pages.has(type)) {
-			type = 'page';
-		} else if (ext.length) {
-			pathname = pathname.slice(0, -ext.length);
+	#requestedRenderingSchema(req, { pathname }) {
+		const { site } = req;
+		let ext = Path.extname(pathname)?.substring(1);
+		let type = 'page';
+		if (ext && site.$pkg.pages.has(ext)) {
+			// is this a known extension
+			type = ext;
+			pathname = pathname.slice(0, -ext.length - 1);
+			ext = null;
+		}
+		// consume suffix .$lang.$type
+		if (!ext) ext = Path.extname(pathname)?.substring(1);
+		if (ext && site.data.languages?.includes(ext)) {
+			pathname = pathname.slice(0, -ext.length - 1);
 		}
 		if (this.app.api.validate({
 			type: 'string',
