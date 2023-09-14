@@ -116,16 +116,27 @@ module.exports = class PageService {
 
 	async get(req, data) {
 		const { site, Href } = req;
-		const obj = {
-			status: 200,
-			site: site.data
-		};
 		const { lang } = req.call('translate.lang', { lang: data.lang });
 		if (lang != data.lang) {
 			const mapUrl = new URL(req.path, site.url);
 			mapUrl.searchParams.set('lang', lang);
 			req.call('cache.map', mapUrl.pathname + mapUrl.search);
 		}
+		const obj = {
+			status: 200,
+			site: {
+				title: site.data.title,
+				favicon: site.data.favicon,
+				env: site.data.env,
+				extra: {
+					// TODO custom properties added by packages go there
+					// e.g. site-verification
+				}
+			},
+			languages: site.data.languages,
+			lang
+		};
+
 
 		let page = await this.#QueryPage(req, data.url, lang);
 		if (!page) {
@@ -153,8 +164,7 @@ module.exports = class PageService {
 			item: page,
 			items: [ ...page.children, ...page.standalones ],
 			links: links,
-			hrefs: hrefs[0].hrefs,
-			lang
+			hrefs: hrefs[0].hrefs
 		});
 		delete page.standalones;
 		delete page.children;
