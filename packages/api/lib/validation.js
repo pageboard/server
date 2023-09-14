@@ -3,6 +3,7 @@ const Ajv = require('ajv');
 const { _ } = Ajv;
 const AjvKeywords = require('ajv-keywords');
 const AjvFormats = require('ajv-formats');
+
 const { betterAjvErrors } = require('@apideck/better-ajv-errors');
 const Traverse = require('json-schema-traverse');
 const fs = require('node:fs/promises');
@@ -85,15 +86,10 @@ class AjvValidatorExt extends AjvValidator {
 	}
 
 	compilePatchValidator(jsonSchema) {
-		const schema = jsonSchemaWithoutRequired(
-			fixSchema(jsonSchema)
-		);
-		return this.ajvNoDefaults.compile(schema);
+		return super.compilePatchValidator(fixSchema(jsonSchema));
 	}
 	compileNormalValidator(jsonSchema) {
-		return this.ajv.compile(
-			fixSchema(jsonSchema)
-		);
+		return super.compileNormalValidator(fixSchema(jsonSchema));
 	}
 }
 
@@ -320,74 +316,3 @@ module.exports = class Validation {
 		}
 	}
 };
-
-// NB: this is mostly objection code, do not refactor
-function jsonSchemaWithoutRequired(jsonSchema) {
-	const subSchemaProps = ['anyOf', 'oneOf', 'allOf', 'not', 'then', 'else', 'properties'];
-	const discriminatorRequired = {};
-	if (jsonSchema.discriminator && jsonSchema.discriminator.propertyName) {
-		discriminatorRequired.required = [jsonSchema.discriminator.propertyName];
-	}
-	return Object.assign(
-		omit(jsonSchema, ['required', ...subSchemaProps]),
-		discriminatorRequired,
-		...subSchemaProps.map(prop => subSchemaWithoutRequired(jsonSchema, prop)),
-		jsonSchema && jsonSchema.definitions
-			? {
-				definitions: Object.assign(
-					...Object.keys(jsonSchema.definitions).map(prop => ({
-						[prop]: jsonSchemaWithoutRequired(jsonSchema.definitions[prop]),
-					}))
-				),
-			}
-			: {}
-	);
-}
-
-function subSchemaWithoutRequired(jsonSchema, prop) {
-	if (jsonSchema[prop]) {
-		if (Array.isArray(jsonSchema[prop])) {
-			const schemaArray = jsonSchemaArrayWithoutRequired(jsonSchema[prop]);
-
-			if (schemaArray.length !== 0) {
-				return {
-					[prop]: schemaArray,
-				};
-			} else {
-				return {};
-			}
-		} else if (prop == "properties" && jsonSchema.type == "object") {
-			return {
-				[prop]: jsonSchemaPropertiesWithoutRequired(jsonSchema[prop])
-			};
-		} else {
-			return {
-				[prop]: jsonSchemaWithoutRequired(jsonSchema[prop]),
-			};
-		}
-	} else {
-		return {};
-	}
-}
-
-function jsonSchemaPropertiesWithoutRequired(jsonSchemaProperties) {
-	const schema = {};
-	for (const [key, sub] of Object.entries(jsonSchemaProperties)) {
-		schema[key] = jsonSchemaWithoutRequired(sub);
-	}
-	return schema;
-}
-
-function jsonSchemaArrayWithoutRequired(jsonSchemaArray) {
-	return jsonSchemaArray
-		.map(jsonSchemaWithoutRequired)
-		.filter(obj => !Object.isEmpty(obj));
-}
-
-function omit(obj, keys) {
-	return Object.fromEntries(
-		Object.entries(obj).filter(([key]) => !keys.includes(key))
-	);
-}
-
-

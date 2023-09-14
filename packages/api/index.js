@@ -1,4 +1,4 @@
-const { transaction } = require('objection');
+const { transaction, fn: fun, val, ref, raw } = require('objection');
 const Path = require('node:path');
 
 const bodyParser = require.lazy('body-parser');
@@ -101,8 +101,8 @@ module.exports = class ApiModule {
 		}
 		const schema = mod[funName];
 		const inst = this.app[modName];
-		const fun = inst[funName];
-		if (!funName || !fun) throw new HttpError.BadRequest(Text`
+		const meth = inst[funName];
+		if (!funName || !meth) throw new HttpError.BadRequest(Text`
 			Available methods:
 			${Object.getOwnPropertyNames(mod).sort().join(', ')}
 		`);
@@ -112,17 +112,17 @@ module.exports = class ApiModule {
 		if (!site && !mod.$global && !schema.$global) {
 			throw new HttpError.BadRequest(`API method ${apiStr} expects a site`);
 		}
-		return [schema, inst, fun];
+		return [schema, inst, meth];
 	}
 
 	async run(req = {}, command, data = {}) {
 		const { app } = this;
-		const [schema, mod, fun] = this.getService(req, command);
+		const [schema, mod, meth] = this.getService(req, command);
 		data = mergeRecursive({}, data);
 		Log.api("run %s:\n%O", command, data);
 		if (schema.properties) {
 			try {
-				this.validate(schema, data, fun);
+				this.validate(schema, data, meth);
 			} catch (err) {
 				if (err.name == "BadRequestError") {
 					err.data = {
@@ -142,14 +142,14 @@ module.exports = class ApiModule {
 			hadTrx = true;
 		} else {
 			req.trx = await transaction.start(app.database.tenant(locals.tenant));
-			req.trx.req = req; // models hooks can call api
+			req.trx.req = req;
 		}
-		Object.assign(req, { Block, Href });
+		Object.assign(req, { Block, Href, ref, val, raw, fun });
 
 		const args = [req, data];
 
 		try {
-			const obj = await fun.apply(mod, args);
+			const obj = await meth.apply(mod, args);
 			if (!hadTrx && req.trx && !req.trx.isCompleted()) {
 				await req.trx.commit();
 			}

@@ -1,4 +1,4 @@
-const { ref, val, raw, Model, QueryBuilder } = require('objection');
+const { ref, val, raw, fn: fun, Model, QueryBuilder } = require('objection');
 const Duration = require('iso8601-duration');
 const Path = require('node:path');
 
@@ -87,18 +87,6 @@ exports.Model = class CommonModel extends Model {
 		return super.$relatedQuery(what, trx);
 	}
 
-	$ref(str) {
-		return ref(str);
-	}
-
-	$val(str) {
-		return val(str);
-	}
-
-	$raw(str) {
-		return raw(str);
-	}
-
 	async $beforeUpdate(opts, q) {
 		await super.$beforeUpdate(opts, q);
 		this.updated_at = new Date().toISOString();
@@ -131,6 +119,18 @@ exports.QueryBuilder = class CommonQueryBuilder extends QueryBuilder {
 				modelOptions: { patch: true }
 			});
 		};
+	}
+	get fun() {
+		return fun;
+	}
+	get ref() {
+		return ref;
+	}
+	get val() {
+		return val;
+	}
+	get raw() {
+		return raw;
 	}
 	selectWithout(...args) {
 		const model = this.modelClass();

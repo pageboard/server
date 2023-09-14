@@ -1,5 +1,3 @@
-const { ref, val, fn, raw } = require.lazy('objection');
-
 module.exports = class TranslateService {
 	static name = 'translate';
 
@@ -50,7 +48,7 @@ module.exports = class TranslateService {
 		$global: true
 	};
 
-	async initialize({ site, trx, Block }) {
+	async initialize({ site, trx, ref, raw, Block }) {
 		const lang = site.data.languages?.[0];
 		if (!lang) throw new HttpError.BadRequest("Missing site.data.languages");
 		const blocks = await Block.relatedQuery('children', trx).for(site)
@@ -69,10 +67,9 @@ module.exports = class TranslateService {
 		$action: 'write'
 	};
 
-	async list({ site, trx }, { self, id, lang, limit, offset, valid }) {
+	async list({ site, trx, ref, fun }, { self, id, lang, limit, offset, valid }) {
 		const sourceLang = site.data.languages?.[0];
 		if (!sourceLang) throw new HttpError.BadRequest("Missing site.data.languages");
-
 		const q = site.$relatedQuery('children', trx)
 			.distinct(
 				'target.id', 'target.data', 'target.type', 'target._id',
@@ -93,10 +90,10 @@ module.exports = class TranslateService {
 			.where(ref('target.data:name'), ref('source.data:name'))
 			.where(ref('target.data:lang').castText(), lang)
 			.whereNot(q => {
-				q.where(fn('starts_with', ref('source.data:text').castText(), '<'));
-				q.where(fn('regexp_count', ref('source.data:text').castText(), '>\\w'), 0);
+				q.where(fun('starts_with', ref('source.data:text').castText(), '<'));
+				q.where(fun('regexp_count', ref('source.data:text').castText(), '>\\w'), 0);
 			})
-			.where(fn.coalesce(ref('target.data:valid').castBool(), false), valid)
+			.where(fun.coalesce(ref('target.data:valid').castBool(), false), valid)
 			.orderBy('target._id', 'desc');
 		const [items, count] = await Promise.all([
 			q.limit(limit).offset(offset),
@@ -150,7 +147,7 @@ module.exports = class TranslateService {
 		}
 	};
 
-	async fill({ site, trx }, data) {
+	async fill({ site, trx, ref, val, fun }, data) {
 		const lang = site.data.languages?.[0];
 		if (!lang) throw new HttpError.BadRequest("Missing site.data.languages");
 		const source = this.app.languages[lang];
@@ -177,7 +174,7 @@ module.exports = class TranslateService {
 			.where('target.type', 'content')
 			.where(ref('target.data:name'), ref('source.data:name'))
 			.where(ref('target.data:lang').castText(), data.lang)
-			.where(fn.coalesce(ref('target.data:text'), val('').castJson()), val('').castJson())
+			.where(fun.coalesce(ref('target.data:text'), val('').castJson()), val('').castJson())
 			.orderBy('target._id', 'desc');
 
 		const [items, count] = await Promise.all([

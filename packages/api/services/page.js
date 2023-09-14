@@ -1,4 +1,3 @@
-const { ref, raw, fn, val } = require('objection');
 const jsonPath = require.lazy('@kapouer/path');
 
 module.exports = class PageService {
@@ -78,8 +77,8 @@ module.exports = class PageService {
 		});
 	}
 
-	#QueryPage(req, url, lang) {
-		return req.site.$relatedQuery('children', req.trx)
+	#QueryPage({ site, trx, ref, val, fun }, url, lang) {
+		return site.$relatedQuery('children', trx)
 			.columns({
 				lang,
 				content: true
@@ -104,24 +103,41 @@ module.exports = class PageService {
 			})
 			.where(q => {
 				q.whereJsonText("block.data:url", url);
-				q.where(fn.coalesce(ref("block.data:prefix").castBool(), false), false);
+				q.where(fun.coalesce(ref("block.data:prefix").castBool(), false), false);
 				q.orWhere(
 					// matching pages have url ending with /
-					fn('starts_with', val(url), ref('block.data:url').castText())
+					fun('starts_with', val(url), ref('block.data:url').castText())
 				);
 				q.where(ref("block.data:prefix").castBool(), true);
 			})
-			.orderBy(fn.coalesce(ref("block.data:prefix").castBool(), false), "asc")
-			.whereIn('block.type', Array.from(req.site.$pkg.pages));
+			.orderBy(fun.coalesce(ref("block.data:prefix").castBool(), false), "asc")
+			.whereIn('block.type', Array.from(site.$pkg.pages));
 	}
 
 	async get(req, data) {
 		const { site, Href } = req;
+		const { lang } = req.call('translate.lang', { lang: data.lang });
+		if (lang != data.lang) {
+			const mapUrl = new URL(req.path, site.url);
+			mapUrl.searchParams.set('lang', lang);
+			req.call('cache.map', mapUrl.pathname + mapUrl.search);
+		}
 		const obj = {
 			status: 200,
-			site: site.data
+			site: {
+				title: site.data.title,
+				favicon: site.data.favicon,
+				env: site.data.env,
+				version: site.data.version,
+				extra: {
+					// TODO custom properties added by packages go there
+					// e.g. site-verification
+				}
+			},
+			languages: site.data.languages,
+			lang
 		};
-		const { lang } = req.call('translate.lang', data);
+
 
 		let page = await this.#QueryPage(req, data.url, lang);
 		if (!page) {
@@ -322,9 +338,9 @@ module.exports = class PageService {
 		const allUrl = {};
 		const returning = {};
 		const dbPages = await site.$relatedQuery('children', trx)
-			.select('block.id', ref('block.data:url').as('url'))
+			.select('block.id', req.ref('block.data:url').as('url'))
 			.whereIn('block.type', Array.from(pkg.pages))
-			.whereNotNull(ref('block.data:url'));
+			.whereNotNull(req.ref('block.data:url'));
 		for (const page of pages.all) {
 			const { url } = page.data;
 			if (!url) {
@@ -428,7 +444,7 @@ module.exports = class PageService {
 	};
 
 
-	async del({ site, trx, Href, run }, data) {
+	async del({ site, trx, Href, run, ref }, data) {
 		const page = await run('block.get', data);
 		const links = site.$relatedQuery('children', trx)
 			.select(
@@ -528,7 +544,7 @@ function redUrl(obj) {
 	return obj;
 }
 
-function getParents({ site, trx }, url) {
+function getParents({ site, trx, ref }, url) {
 	const urlParts = url.split('/');
 	const urlParents = ['/'];
 	for (let i = 1; i < urlParts.length - 1; i++) {
@@ -545,7 +561,7 @@ function getParents({ site, trx }, url) {
 		.orderByRaw("length(block.data->>'url') DESC");
 }
 
-function listPages({ site, trx }, data) {
+function listPages({ site, trx, fun, raw, ref }, data) {
 	const q = site.$relatedQuery('children', trx)
 		.columns()
 		.select(raw("'site' || block.type AS type"))
@@ -575,7 +591,7 @@ function listPages({ site, trx }, data) {
 		q.whereJsonText('block.data:url', '~', regexp)
 			.orderBy(ref('block.data:index'));
 	} else if (data.url) {
-		q.where(fn('starts_with',
+		q.where(fun('starts_with',
 			ref('block.data:url').castText(),
 			data.url
 		));
@@ -610,13 +626,13 @@ function applyUnrelate({ site, trx }, obj) {
 	}));
 }
 
-function applyRemove({ site, trx }, list, recursive) {
+function applyRemove({ site, trx, ref, fun }, list, recursive) {
 	if (!list.length) return;
 	const q = site.$relatedQuery('children', trx).whereIn('block.id', list);
 	if (!recursive) {
 		q.whereNot('standalone', true).delete();
 	} else {
-		q.select(fn('recursive_delete', ref('block._id'), false).as('count'));
+		q.select(fun('recursive_delete', ref('block._id'), false).as('count'));
 	}
 	return q;
 }
@@ -652,8 +668,8 @@ async function applyUpdate(req, list) {
 				.where('block.id', block.id)
 				.where('block.type', block.type)
 				.where(
-					raw("date_trunc('milliseconds', block.updated_at)"),
-					raw("date_trunc('milliseconds', ?::timestamptz)", [block.updated_at]),
+					req.raw("date_trunc('milliseconds', block.updated_at)"),
+					req.raw("date_trunc('milliseconds', ?::timestamptz)", [block.updated_at]),
 				)
 				.patch(block)
 				.returning('id', 'updated_at')
@@ -670,7 +686,9 @@ async function applyUpdate(req, list) {
 	return updates;
 }
 
-async function updatePage({ site, trx, Block, Href }, page, sideEffects) {
+async function updatePage({
+	site, trx, ref, fun, raw, Block, Href
+}, page, sideEffects) {
 	if (!sideEffects) sideEffects = {};
 	const dbPage = await site.$relatedQuery('children', trx)
 		.where('block.id', page.id)
@@ -697,7 +715,7 @@ async function updatePage({ site, trx, Block, Href }, page, sideEffects) {
 						.where('block.type', type)
 						.where(function () {
 							// use fn.starts_with
-							this.where(fn('starts_with', field, `${oldUrlStr}/`));
+							this.where(fun('starts_with', field, `${oldUrlStr}/`));
 							if (oldUrl == null) this.orWhereNull(field);
 							else this.orWhere(field, oldUrl);
 						})
@@ -726,7 +744,7 @@ async function updatePage({ site, trx, Block, Href }, page, sideEffects) {
 	await Href.query(trx).where('_parent_id', site._id)
 		.where('type', 'link')
 		.where(function () {
-			this.where(fn('starts_with', 'url', `${oldUrlStr}/`));
+			this.where(fun('starts_with', 'url', `${oldUrlStr}/`));
 			if (oldUrl == null) this.orWhereNull('url');
 			else this.orWhere('url', oldUrl);
 		}).delete();
@@ -775,6 +793,7 @@ async function applyRelate({ site, trx }, obj) {
 }
 
 async function navigationLinks(req, url, prefix) {
+	const { ref } = req;
 	const [parents, siblings] = await Promise.all([
 		getParents(req, url),
 		prefix ? [] : listPages(req, {

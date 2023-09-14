@@ -97,6 +97,11 @@ export const site = {
 			nullable: true,
 			type: "string",
 			format: "singleline"
+		},
+		extra: {
+			title: 'Extra settings',
+			type: 'object',
+			properties: {}
 		}
 	}
 };

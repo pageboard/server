@@ -1,5 +1,3 @@
-const { ref } = require('objection');
-
 module.exports = class ReservationService {
 	static name = 'reservation';
 
@@ -296,7 +294,7 @@ module.exports = class ReservationService {
 		}
 	};
 
-	async search({ site, trx }, data) {
+	async search({ site, trx, ref, raw }, data) {
 		// given an event_date, retrieve reservations, user settings and email
 		const eventDate = await site.$relatedQuery('children', trx)
 			.where('block.type', 'event_date')
@@ -317,7 +315,7 @@ module.exports = class ReservationService {
 					} else if (data.paid === false) {
 						q.whereNot(ref('data:payment.due'), ref('data:payment.paid'));
 					}
-					q.where(trx.raw(`jsonb_array_length(coalesce(data['attendees'], '[]'::jsonb)) > 0`));
+					q.where(raw(`jsonb_array_length(coalesce(data['attendees'], '[]'::jsonb)) > 0`));
 					q.where('type', 'event_reservation').columns();
 				},
 				settings(q) {
