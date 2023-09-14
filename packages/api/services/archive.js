@@ -281,6 +281,7 @@ module.exports = class ArchiveService {
 		});
 
 		const errors = [];
+		let error;
 
 		for (let obj of list) {
 			try {
@@ -288,13 +289,18 @@ module.exports = class ArchiveService {
 				await afterEachStandalone(obj);
 			} catch (err) {
 				err.message = `${obj.id} ${obj.type}: ${err.message}`;
-				if (err.name == "ValidationError") errors.push(err.message);
-				else throw err;
+				if (err.name == "ValidationError") {
+					errors.push(err.message);
+				} else {
+					error = err;
+					break;
+				}
 			}
 		}
 		if (errors.length) {
 			throw new HttpError.BadRequest(errors.join('\n'));
 		}
+		if (error) throw error;
 
 		return counts;
 	}
