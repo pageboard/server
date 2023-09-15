@@ -30,10 +30,13 @@ module.exports = class ArchiveService {
 		const { id } = site;
 		const lang = site.data.languages?.length == 0 ? req.call('translate.lang') : null;
 		const filepath = file ?? `${id}-${fileStamp()}.ndjson`;
+		const { orphaned } = await site.$query(trx)
+			.select(fun('block_delete_orphans', ref('block._id')).as('orphaned'));
 		const counts = {
 			users: 0,
 			blocks: 0,
-			hrefs: 0
+			hrefs: 0,
+			orphaned
 		};
 
 		let out;
@@ -163,12 +166,16 @@ module.exports = class ArchiveService {
 		}
 	};
 
-	async import(req, { file, empty, idMap, types = [] }) {
+	async import(req, { file, empty, idMap, types = [], languages }) {
 		const { site, trx, Block } = req;
 		const counts = {
 			users: 0,
 			blocks: 0,
-			hrefs: 0
+			hrefs: 0,
+			langs: {
+				in: new Set(),
+				out: new Set()
+			}
 		};
 		const fstream = createReadStream(Path.resolve(this.app.cwd, file))
 			.pipe(ndjson.parse());
@@ -206,6 +213,10 @@ module.exports = class ArchiveService {
 				return site.$relatedQuery('hrefs', trx).insert(obj).onConflict(['_parent_id', 'url']).ignore();
 			} else if (obj.type == "site") {
 				if (empty) await req.run('site.empty', { id: req.site.id });
+				if (languages && obj.data.languages) {
+					site.data.languages = obj.data.languages;
+					await req.run('site.update', site.data);
+				}
 			} else if (obj.type == "user") {
 				try {
 					const user = await site.$modelClass.query(trx).where('type', 'user')
@@ -220,6 +231,14 @@ module.exports = class ArchiveService {
 				}
 				counts.users += 1;
 			} else {
+				if (obj.type == "content") {
+					if (site.data.languages?.includes(obj.data.lang)) {
+						counts.langs.in.add(obj.data.lang);
+					} else {
+						counts.langs.out.add(obj.data.lang);
+						return;
+					}
+				}
 				const parents = [];
 				if (obj.parents) {
 					// e.g. settings < user
@@ -302,6 +321,9 @@ module.exports = class ArchiveService {
 		}
 		if (error) throw error;
 
+		counts.langs.in = Array.from(counts.langs.in);
+		counts.langs.out = Array.from(counts.langs.out);
+
 		return counts;
 	}
 
@@ -325,6 +347,11 @@ module.exports = class ArchiveService {
 				title: 'Empty before',
 				type: 'boolean',
 				default: false
+			},
+			languages: {
+				title: 'Import languages',
+				type: 'boolean',
+				default: true
 			},
 			excludes: {
 				title: 'Excluded types',
