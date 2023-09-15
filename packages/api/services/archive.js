@@ -166,7 +166,7 @@ module.exports = class ArchiveService {
 		}
 	};
 
-	async import(req, { file, empty, idMap, types = [] }) {
+	async import(req, { file, empty, idMap, types = [], languages }) {
 		const { site, trx, Block } = req;
 		const counts = {
 			users: 0,
@@ -213,6 +213,10 @@ module.exports = class ArchiveService {
 				return site.$relatedQuery('hrefs', trx).insert(obj).onConflict(['_parent_id', 'url']).ignore();
 			} else if (obj.type == "site") {
 				if (empty) await req.run('site.empty', { id: req.site.id });
+				if (languages && obj.data.languages) {
+					site.data.languages = obj.data.languages;
+					await req.run('site.update', site.data);
+				}
 			} else if (obj.type == "user") {
 				try {
 					const user = await site.$modelClass.query(trx).where('type', 'user')
@@ -340,6 +344,11 @@ module.exports = class ArchiveService {
 				title: 'Empty before',
 				type: 'boolean',
 				default: false
+			},
+			languages: {
+				title: 'Import languages',
+				type: 'boolean',
+				default: true
 			},
 			excludes: {
 				title: 'Excluded types',
