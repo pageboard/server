@@ -321,6 +321,9 @@ module.exports = class ArchiveService {
 		}
 		if (error) throw error;
 
+		counts.langs.in = Array.from(counts.langs.in);
+		counts.langs.out = Array.from(counts.langs.out);
+
 		return counts;
 	}
 
