@@ -171,7 +171,11 @@ module.exports = class ArchiveService {
 		const counts = {
 			users: 0,
 			blocks: 0,
-			hrefs: 0
+			hrefs: 0,
+			langs: {
+				in: new Set(),
+				out: new Set()
+			}
 		};
 		const fstream = createReadStream(Path.resolve(this.app.cwd, file))
 			.pipe(ndjson.parse());
@@ -223,6 +227,14 @@ module.exports = class ArchiveService {
 				}
 				counts.users += 1;
 			} else {
+				if (obj.type == "content") {
+					if (site.data.languages?.includes(obj.data.lang)) {
+						counts.langs.in.add(obj.data.lang);
+					} else {
+						counts.langs.out.add(obj.data.lang);
+						return;
+					}
+				}
 				const parents = [];
 				if (obj.parents) {
 					// e.g. settings < user
