@@ -30,10 +30,13 @@ module.exports = class ArchiveService {
 		const { id } = site;
 		const lang = site.data.languages?.length == 0 ? req.call('translate.lang') : null;
 		const filepath = file ?? `${id}-${fileStamp()}.ndjson`;
+		const { orphaned } = await site.$query(trx)
+			.select(fun('block_delete_orphans', ref('block._id')).as('orphaned'));
 		const counts = {
 			users: 0,
 			blocks: 0,
-			hrefs: 0
+			hrefs: 0,
+			orphaned
 		};
 
 		let out;
