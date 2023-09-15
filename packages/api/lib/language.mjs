@@ -28,3 +28,28 @@ export const language = {
 		}
 	}
 };
+
+export const content = {
+	title: 'Content',
+	properties: {
+		name: {
+			title: 'Name',
+			type: 'string',
+			format: 'name'
+		},
+		lang: {
+			title: 'Language',
+			type: 'string',
+			format: 'lang'
+		},
+		text: {
+			title: 'Text',
+			type: 'string'
+		},
+		valid: {
+			title: 'Valid',
+			type: 'boolean',
+			default: false
+		}
+	}
+};
