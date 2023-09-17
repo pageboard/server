@@ -118,7 +118,7 @@ module.exports = class PageService {
 		const { site, Href } = req;
 		const { lang } = req.call('translate.lang', { lang: data.lang });
 		if (lang != data.lang) {
-			const mapUrl = new URL(req.path, site.url);
+			const mapUrl = new URL(req.url, site.url);
 			mapUrl.searchParams.set('lang', lang);
 			req.call('cache.map', mapUrl.pathname + mapUrl.search);
 		}
