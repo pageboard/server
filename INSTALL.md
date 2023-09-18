@@ -6,8 +6,15 @@ CREATE EXTENSION unaccent;
 
 pageboard api.migrate
 
-To restore an existing pageboard dump:
-pg_restore -c -d pageboard pageboard-20180117T020001.dump
+kickstart
+---------
+
+Shared configuration, and particularly the shared languages declarations, must be imported twice:
+
+pageboard site.add id=shared
+pageboard --site=shared archive.import empty=true file=data/shared.ndjson
+pageboard --site=shared site.update languages.0=fr
+pageboard --site=shared archive.import empty=true file=data/shared.ndjson
 
 user
 ----
@@ -28,7 +35,7 @@ data.module=pageboard/site-semantic-ui
 domain, module, env can be changed using site.save.
 
 also add a github hook in your github project settings, sending application/json payloads to
-http://myproject.pageboard.fr/.api/github
+http://myproject.pageboard.io/.api/github
 
 How to set a user as webmaster for a site ?
 -------------------------------------------

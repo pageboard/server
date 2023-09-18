@@ -53,7 +53,7 @@ module.exports = class FormService {
 			{
 				$request: reqBody ?? {},
 				$query: unflatten(data.query ?? {}),
-				$site: site.data,
+				$site: site.id,
 				$user: user
 			}
 		);

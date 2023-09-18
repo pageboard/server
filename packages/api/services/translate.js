@@ -27,25 +27,34 @@ module.exports = class TranslateService {
 		}
 		const language = this.app.languages[lang];
 		if (!language) throw new HttpError.BadRequest("Unknown language");
-		return language;
+		return language.data;
 	}
 	static lang = {
 		title: 'Get language',
 		$lock: true
 	};
 
-	async languages({ Block, trx }) {
-		const items = await Block.query(trx).columns().where('type', 'language');
+	async languages({ Block, trx }, { lang }) {
+		const items = await Block.query(trx).whereSite('shared')
+			.columns({ content: true, lang }).where('block.type', 'language');
 		const obj = {};
 		for (const item of items) {
-			obj[item.data.lang] = item.data;
+			obj[item.data.lang] = item;
 		}
 		return obj;
 	}
 	static languages = {
 		title: 'Initialize languages',
 		$lock: true,
-		$global: true
+		$global: true,
+		properties: {
+			lang: {
+				title: 'Get Titles in that lang',
+				type: 'string',
+				format: 'lang',
+				nullable: true
+			}
+		}
 	};
 
 	async initialize({ site, trx, ref, raw, Block }) {
@@ -100,6 +109,7 @@ module.exports = class TranslateService {
 			q.resultSize()
 		]);
 		return {
+			languages: site.data.languages.map(lang => this.app.languages[lang]),
 			items,
 			limit,
 			offset,
@@ -187,8 +197,8 @@ module.exports = class TranslateService {
 		const body = new URLSearchParams({
 			tag_handling: 'html',
 			preserve_formatting: 1,
-			source_lang: source.translation,
-			target_lang: target.translation
+			source_lang: source.data.translation,
+			target_lang: target.data.translation
 		});
 		for (const row of items) body.append('text', row.source);
 

@@ -44,7 +44,7 @@ module.exports = class SearchService {
 		}
 		Object.assign(scope, {
 			$query: query,
-			$site: site.data,
+			$site: site.id,
 			$user: user
 		});
 		const params = mergeExpressions(

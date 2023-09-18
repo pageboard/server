@@ -1,0 +1,17 @@
+{"id":"shared","type":"site","data":{"server":"0.14","languages":["fr"]},"expr":null,"standalone":false,"updated_at":"2023-09-18T10:03:01.266+02:00","lock":null,"url":{}}
+{"id":"fr","type":"language","data":{"lang":"fr","tsconfig":"french","translation":"fr"},"expr":null,"standalone":true,"updated_at":"2023-05-12T00:32:56.80012+02:00","lock":null}
+{"id":"en","type":"language","data":{"lang":"en","tsconfig":"english","translation":"en"},"expr":null,"standalone":true,"updated_at":"2023-05-12T01:13:04.158981+02:00","lock":null}
+{"id":"it","type":"language","data":{"lang":"it","tsconfig":"italian","translation":"it"},"expr":null,"standalone":true,"updated_at":"2023-05-12T01:13:26.919542+02:00","lock":null}
+{"id":"de","type":"language","data":{"lang":"de","tsconfig":"german","translation":"de"},"expr":null,"standalone":true,"updated_at":"2023-05-12T09:50:45.519601+02:00","lock":null}
+{"id":"es","type":"language","data":{"lang":"es","tsconfig":"spanish","translation":"es"},"expr":null,"standalone":true,"updated_at":"2023-05-12T09:50:49.112225+02:00","lock":null}
+{"id":"jp","type":"language","data":{"lang":"jp","tsconfig":null,"translation":"jp"},"expr":null,"standalone":true,"updated_at":"2023-05-12T09:50:50.360631+02:00","lock":null}
+{"id":"zh","type":"language","data":{"lang":"zh","tsconfig":null,"translation":"zh"},"expr":null,"standalone":true,"updated_at":"2023-05-12T09:50:50.360631+02:00","lock":null}
+{"id":"ko","type":"language","data":{"lang":"ko","tsconfig":null,"translation":"ko"},"expr":null,"standalone":true,"updated_at":"2023-05-12T09:50:50.360631+02:00","lock":null}
+{"parents":["fr"],"id":"cfr","type":"content","data":{"lang":"fr","name":"","text":"Français","valid":true},"expr":null,"standalone":false,"updated_at":"2023-09-18T10:04:10.857422+02:00","lock":null}
+{"parents":["en"],"id":"cen","type":"content","data":{"lang":"fr","name":"","text":"Anglais","valid":true},"expr":null,"standalone":false,"updated_at":"2023-09-18T10:04:10.857422+02:00","lock":null}
+{"parents":["it"],"id":"cit","type":"content","data":{"lang":"fr","name":"","text":"Italien","valid":true},"expr":null,"standalone":false,"updated_at":"2023-09-18T10:04:10.857422+02:00","lock":null}
+{"parents":["de"],"id":"cde","type":"content","data":{"lang":"fr","name":"","text":"Allemand","valid":true},"expr":null,"standalone":false,"updated_at":"2023-09-18T10:04:10.857422+02:00","lock":null}
+{"parents":["es"],"id":"ces","type":"content","data":{"lang":"fr","name":"","text":"Espagnol","valid":true},"expr":null,"standalone":false,"updated_at":"2023-09-18T10:04:10.857422+02:00","lock":null}
+{"parents":["jp"],"id":"cjp","type":"content","data":{"lang":"fr","name":"","text":"Japonais","valid":true},"expr":null,"standalone":false,"updated_at":"2023-09-18T10:04:10.857422+02:00","lock":null}
+{"parents":["zh"],"id":"czh","type":"content","data":{"lang":"fr","name":"","text":"Chinois","valid":true},"expr":null,"standalone":false,"updated_at":"2023-09-18T10:04:10.857422+02:00","lock":null}
+{"parents":["ko"],"id":"cko","type":"content","data":{"lang":"fr","name":"","text":"Koréen","valid":true},"expr":null,"standalone":false,"updated_at":"2023-09-18T10:04:10.857422+02:00","lock":null}

@@ -2,17 +2,11 @@ export const language = {
 	title: 'Language',
 	description: 'Global constants',
 	properties: {
-		title: {
-			title: 'Title',
-			type: 'string',
-			format: 'singleline'
-		},
 		lang: {
 			title: 'Language Code',
 			description: 'RFC 5646 format',
 			type: 'string',
-			format: 'lang',
-			nullable: true
+			format: 'lang'
 		},
 		translation: {
 			title: 'Translation Code',
@@ -24,9 +18,11 @@ export const language = {
 		tsconfig: {
 			title: 'Text Search identifier',
 			type: 'string',
-			format: 'id'
+			format: 'id',
+			nullable: true
 		}
-	}
+	},
+	contents: "text*"
 };
 
 export const content = {
