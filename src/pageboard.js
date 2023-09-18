@@ -395,7 +395,7 @@ module.exports = class Pageboard {
 				type: 'error',
 				data: err.data ?? {
 					method: err.method,
-					messages: err.message
+					message: err.message
 				},
 				content: err.content ?? err.toString()
 			}
