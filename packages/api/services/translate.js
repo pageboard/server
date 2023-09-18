@@ -8,7 +8,10 @@ module.exports = class TranslateService {
 
 	async init() {
 		await this.app.api.add(import('../lib/language.mjs'));
-		this.app.languages = await this.app.run('translate.languages');
+		const list = await this.app.run('translate.available');
+		this.app.languages = Object.fromEntries(
+			list.map(item => [item.data.lang, item])
+		);
 	}
 
 	lang({ site }, { lang } = {}) {
@@ -34,22 +37,34 @@ module.exports = class TranslateService {
 		$lock: true
 	};
 
-	async languages({ Block, trx }, { lang }) {
-		const items = await Block.query(trx).whereSite('shared')
-			.columns({ content: true, lang }).where('block.type', 'language');
-		const obj = {};
-		for (const item of items) {
-			obj[item.data.lang] = item;
-		}
-		return obj;
+	async languages({ site }) {
+		const { languages } = this.app;
+		return {
+			items: site.data.languages?.map(lang => languages[lang]) ?? []
+		};
 	}
 	static languages = {
-		title: 'Initialize languages',
+		title: 'List site languages',
+		$action: 'read'
+	};
+
+	async available({ Block, trx }, { lang }) {
+		// deux usages: savoir quels languages sont disponibles dans pageboard
+		// savoir quels languages sont disponibles dans un site donné
+		if (!lang) {
+			const shared = await Block.query(trx).where('type', 'site').where('id', 'shared').first();
+			lang = shared?.data.languages?.[0];
+		}
+		return Block.query(trx).whereSite('shared')
+			.columns({ content: true, lang }).where('block.type', 'language');
+	}
+	static available = {
+		title: 'List available languages',
 		$lock: true,
 		$global: true,
 		properties: {
 			lang: {
-				title: 'Get Titles in that lang',
+				title: 'Titles language',
 				type: 'string',
 				format: 'lang',
 				nullable: true
@@ -109,7 +124,6 @@ module.exports = class TranslateService {
 			q.resultSize()
 		]);
 		return {
-			languages: site.data.languages.map(lang => this.app.languages[lang]),
 			items,
 			limit,
 			offset,
