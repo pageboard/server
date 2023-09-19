@@ -176,7 +176,7 @@ module.exports = class PrintModule {
 			password: conf.password
 		})).token;
 
-		const { url, options, delivery, response } = block.data;
+		const { options, delivery, response } = block.data;
 
 		const couriers = await agent.fetch(`/data/deliveries-by-courier/${delivery.iso_code}`);
 		const courier = couriers.find(item => {
@@ -191,15 +191,18 @@ module.exports = class PrintModule {
 			}
 		});
 
-		const pdfUrl = new URL(url, req.site.url);
-		// 1. find pdf item
+		const { url, lang, type } = req.call('page.parse', block.data.url);
 		const { item: pdf } = await req.run('block.find', {
 			type: 'pdf',
-			data: {
-				url: pdfUrl.pathname.replace(/\.pdf$/, '')
-			}
+			data: { url, lang }
 		});
 		if (!pdf) throw new HttpError.NotFound('Content PDF not found');
+		if (type && type != "pdf") {
+			throw new HttpError.BadRequest('data.url extension must be "pdf"');
+		}
+		const pdfUrl = new URL(pdf.data.url, req.site.url);
+		if (lang) pdfUrl.pathname += `.${lang}`;
+		pdfUrl.pathname += '.pdf';
 		pdfUrl.searchParams.set('pdf', 'printer');
 		const pdfPaper = pdf.data.paper;
 		const sizeA = convertLengthToMillimiters(pdfPaper.width) || 210;
@@ -214,14 +217,18 @@ module.exports = class PrintModule {
 			runlists: []
 		};
 		if (options.cover.url) {
-			const coverUrl = new URL(options.cover.url, req.site.url);
+			const { url, lang, type } = req.call('page.parse', options.cover.url);
 			const { item: coverPdf } = await req.run('block.find', {
 				type: 'pdf',
-				data: {
-					url: coverUrl.pathname.replace(/\.pdf$/, '')
-				}
+				data: { url, lang }
 			});
 			if (!coverPdf) throw new HttpError.NotFound('Cover PDF not found');
+			if (type && type != "pdf") {
+				throw new HttpError.BadRequest('data.url extension must be "pdf"');
+			}
+			const coverUrl = new URL(coverPdf.data.url, req.site.url);
+			if (lang) coverUrl.pathname += `.${lang}`;
+			coverUrl.pathname += '.pdf';
 			coverUrl.searchParams.set('pdf', 'printer');
 			printProduct.cover_pdf = coverUrl.href;
 			printProduct.runlists.push({
