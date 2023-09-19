@@ -6,11 +6,11 @@ module.exports = class PageService {
 	apiRoutes(app, server) {
 		server.get('/.api/page', async (req, res) => {
 			const { site, query } = req;
-			const { url } = query;
-			query.url = url?.replace(/\.\w+$/, '');
+			const { url, lang, type } = req.call('page.parse', query.url);
 			const isWebmaster = !req.locked(['webmaster']) && query.url == url;
 			const forWebmaster = Boolean(query.nested);
 			delete query.nested;
+
 			const obj = {};
 			if (isWebmaster && !forWebmaster) {
 				obj.item = {
@@ -20,7 +20,9 @@ module.exports = class PageService {
 				};
 				obj.parent = site;
 			} else {
-				Object.assign(obj, await req.run('page.get', query));
+				Object.assign(obj, await req.run('page.get', {
+					url, lang, type
+				}));
 			}
 			obj.commons = app.opts.commons;
 			res.return(obj);
@@ -75,7 +77,7 @@ module.exports = class PageService {
 		});
 	}
 
-	#QueryPage({ site, trx, ref, val, fun }, url, lang) {
+	#QueryPage({ site, trx, ref, val, fun }, { url, lang, type }) {
 		return site.$relatedQuery('children', trx)
 			.columns({
 				lang,
@@ -109,13 +111,32 @@ module.exports = class PageService {
 				q.where(ref("block.data:prefix").castBool(), true);
 			})
 			.orderBy(fun.coalesce(ref("block.data:prefix").castBool(), false), "asc")
-			.whereIn('block.type', Array.from(site.$pkg.pages));
+			.whereIn('block.type', type ? [type] : Array.from(site.$pkg.pages));
 	}
+
+	parse(req, str) {
+		const [, url, lang, type] = str.match(
+			/(.+?)(?:\.([a-z]{2}))?(?:\.([a-z]{3}))?$/
+		);
+		return { url, lang, type };
+	}
+	static parse = {
+		title: 'Parse url',
+		$lock: true,
+		properties: {
+			url: {
+				title: 'Url path',
+				type: 'string',
+				format: 'pathname'
+			}
+		}
+	};
 
 	async get(req, data) {
 		const { site, Href } = req;
-		const { lang } = req.call('translate.lang', { lang: data.lang });
+		const { lang } = req.call('translate.lang', data);
 		if (lang != data.lang) {
+			data.lang = lang;
 			const mapUrl = new URL(req.url, site.url);
 			mapUrl.searchParams.set('lang', lang);
 			req.call('cache.map', mapUrl.pathname + mapUrl.search);
@@ -123,7 +144,7 @@ module.exports = class PageService {
 		const obj = {
 			status: 200
 		};
-		let page = await this.#QueryPage(req, data.url, lang);
+		let page = await this.#QueryPage(req, data);
 		if (!page) {
 			obj.status = 404;
 		} else if (req.locked(page.lock)) {
@@ -131,7 +152,10 @@ module.exports = class PageService {
 		}
 		const wkp = /^\/\.well-known\/(\d{3})$/.exec(data.url);
 		if (obj.status != 200) {
-			page = await this.#QueryPage(req, `/.well-known/${obj.status}`, lang);
+			page = await this.#QueryPage(req, {
+				url: `/.well-known/${obj.status}`,
+				lang: data.lang
+			});
 			if (!page) return Object.assign(obj, {
 				item: { type: 'page' }
 			});
@@ -165,6 +189,7 @@ module.exports = class PageService {
 		required: ['url'],
 		properties: {
 			url: {
+				title: 'URL',
 				type: 'string',
 				format: 'pathname'
 			},
@@ -172,6 +197,13 @@ module.exports = class PageService {
 				title: 'Translate to site lang',
 				type: 'string',
 				format: 'lang',
+				nullable: true,
+				// TODO $ref anyOf site languages initialized by translate.init
+			},
+			type: {
+				title: 'Restrict to type',
+				type: 'string',
+				format: 'id',
 				nullable: true
 			}
 		}
@@ -264,6 +296,7 @@ module.exports = class PageService {
 				default: false
 			},
 			url: {
+				title: 'Url path',
 				type: 'string',
 				format: 'pathname'
 			},

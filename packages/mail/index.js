@@ -292,9 +292,13 @@ module.exports = class MailModule {
 		if (!mailer) {
 			throw new Error("Unknown mailer purpose " + data.purpose);
 		}
+		const { url, lang, type } = req.call('page.parse', data.url);
+		if (type && type != 'mail') {
+			throw new HttpError.BadRequest('data.url extension must be "mail"');
+		}
 		const { item: emailPage } = await req.run('block.find', {
 			type: 'mail',
-			data: { url: data.url }
+			data: { url, lang }
 		});
 		if (!emailPage) throw new HttpError.NotFound("email page missing");
 
@@ -352,6 +356,7 @@ module.exports = class MailModule {
 					emailUrl.searchParams.append(key, val);
 				}
 			}
+			if (lang) emailUrl.pathname += `.${lang}`;
 			emailUrl.pathname += '.mail';
 			const controller = new AbortController();
 			const toId = setTimeout(() => controller.abort(), 10000);
