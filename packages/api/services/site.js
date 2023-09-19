@@ -32,6 +32,17 @@ module.exports = class SiteService {
 			});
 	}
 
+	async find(req) {
+		const item = await this.#QuerySite(req, { id: req.site.id })
+			.throwIfNotFound().columns();
+		return { item };
+	}
+	static find = {
+		title: 'Find Site',
+		$action: 'read',
+		$global: false
+	};
+
 	async get(req, data) {
 		return this.#QuerySite(req, data).throwIfNotFound().columns();
 	}
@@ -197,7 +208,7 @@ module.exports = class SiteService {
 		return site;
 	}
 	static update = {
-		title: 'Update own site',
+		title: 'Update site',
 		$action: 'write',
 		$ref: "/$elements/site",
 		$global: false

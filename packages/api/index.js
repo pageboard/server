@@ -127,7 +127,7 @@ module.exports = class ApiModule {
 				if (err.name == "BadRequestError") {
 					err.data = {
 						method: command,
-						messages: err.message
+						message: err.message
 					};
 					err.content = await this.run(req, 'help.doc', { command, schema });
 				}

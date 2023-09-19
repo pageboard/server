@@ -92,7 +92,10 @@ module.exports = class UploadModule {
 					fileSize: limits.size
 				}
 			}).array('files')(req, req.res, err => {
-				if (err) return reject(err);
+				if (err) {
+					if (parseInt(err.status) != err.status) err.status = 400;
+					return reject(err);
+				}
 				if (req.files == null) {
 					reject(new HttpError.BadRequest("Missing files"));
 				} else {

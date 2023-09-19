@@ -11,21 +11,19 @@ module.exports = class PageService {
 			const isWebmaster = !req.locked(['webmaster']) && query.url == url;
 			const forWebmaster = Boolean(query.nested);
 			delete query.nested;
-			let data;
+			const obj = {};
 			if (isWebmaster && !forWebmaster) {
-				data = {
-					item: {
-						type: 'write',
-						data: {},
-						content: {}
-					},
-					site: site.data
+				obj.item = {
+					type: 'write',
+					data: {},
+					content: {}
 				};
+				obj.parent = site;
 			} else {
-				data = await req.run('page.get', query);
+				Object.assign(obj, await req.run('page.get', query));
 			}
-			data.commons = app.opts.commons;
-			res.return(data);
+			obj.commons = app.opts.commons;
+			res.return(obj);
 		});
 		server.get('/.api/pages', async (req, res) => {
 			const { query, site } = req;
@@ -123,22 +121,8 @@ module.exports = class PageService {
 			req.call('cache.map', mapUrl.pathname + mapUrl.search);
 		}
 		const obj = {
-			status: 200,
-			site: {
-				title: site.data.title,
-				favicon: site.data.favicon,
-				env: site.data.env,
-				version: site.data.version,
-				extra: {
-					// TODO custom properties added by packages go there
-					// e.g. site-verification
-				}
-			},
-			languages: site.data.languages,
-			lang
+			status: 200
 		};
-
-
 		let page = await this.#QueryPage(req, data.url, lang);
 		if (!page) {
 			obj.status = 404;
@@ -161,7 +145,9 @@ module.exports = class PageService {
 			types: Href.mediaTypes
 		});
 		const links = await navigationLinks(req, data.url, page.data.prefix);
+
 		Object.assign(obj, {
+			parent: site,
 			item: page,
 			items: [ ...page.children, ...page.standalones ],
 			links: links,

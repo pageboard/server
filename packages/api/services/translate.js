@@ -8,44 +8,70 @@ module.exports = class TranslateService {
 
 	async init() {
 		await this.app.api.add(import('../lib/language.mjs'));
-		this.app.languages = await this.app.run('translate.languages');
+		const list = await this.app.run('translate.available');
+		this.app.languages = Object.fromEntries(
+			list.map(item => [item.data.lang, item])
+		);
+		this.app.languages.default = list[0];
 	}
 
-	lang({ site }, { lang } = {}) {
-		if (!site.data.languages?.length) {
-			if (lang && lang != site.data.lang) {
-				throw new HttpError.BadRequest("Unsupported lang");
-			}
-			return {
-				tsconfig: 'unaccent'
-			};
-		}
-		if (!lang) {
-			lang = site.data.languages?.[0];
-		} else if (!site.data.languages.includes(lang)) {
-			throw new HttpError.BadRequest("Unsupported lang");
-		}
-		const language = this.app.languages[lang];
-		if (!language) throw new HttpError.BadRequest("Unknown language");
-		return language;
+	lang(req, { lang } = {}) {
+		const { site } = req;
+		if (lang) req.headers['accept-language'] = lang;
+		const availables = [];
+		if (site.data.languages?.length) availables.push(...site.data.languages);
+		else if (site.data.lang) availables.push(site.data.lang);
+		const accepted = req.acceptsLanguages(availables);
+		const language = this.app.languages[accepted ?? 'default'];
+		req.res.set('Content-Language', language.data.lang);
+		return language.data;
 	}
 	static lang = {
 		title: 'Get language',
-		$lock: true
+		$lock: true,
+		properties: {
+			lang: {
+				title: 'Language',
+				type: 'string',
+				format: 'lang',
+				nullable: true
+			}
+		}
 	};
 
-	async languages({ Block, trx }) {
-		const items = await Block.query(trx).columns().where('type', 'language');
-		const obj = {};
-		for (const item of items) {
-			obj[item.data.lang] = item.data;
-		}
-		return obj;
+	async languages({ site }) {
+		const { languages } = this.app;
+		return {
+			items: site.data.languages?.map(lang => languages[lang]) ?? []
+		};
 	}
 	static languages = {
-		title: 'Initialize languages',
+		title: 'List site languages',
+		$action: 'read'
+	};
+
+	async available({ Block, trx }, { lang }) {
+		// deux usages: savoir quels languages sont disponibles dans pageboard
+		// savoir quels languages sont disponibles dans un site donné
+		if (!lang) {
+			const shared = await Block.query(trx).where('type', 'site').where('id', 'shared').first();
+			lang = shared?.data.languages?.[0];
+		}
+		return Block.query(trx).whereSite('shared')
+			.columns({ content: true, lang }).where('block.type', 'language');
+	}
+	static available = {
+		title: 'List available languages',
 		$lock: true,
-		$global: true
+		$global: true,
+		properties: {
+			lang: {
+				title: 'Titles language',
+				type: 'string',
+				format: 'lang',
+				nullable: true
+			}
+		}
 	};
 
 	async initialize({ site, trx, ref, raw, Block }) {
@@ -187,8 +213,8 @@ module.exports = class TranslateService {
 		const body = new URLSearchParams({
 			tag_handling: 'html',
 			preserve_formatting: 1,
-			source_lang: source.translation,
-			target_lang: target.translation
+			source_lang: source.data.translation,
+			target_lang: target.data.translation
 		});
 		for (const row of items) body.append('text', row.source);
 

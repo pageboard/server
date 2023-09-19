@@ -35,6 +35,7 @@ module.exports = class PrerenderModule {
 			'form',
 			'upcache',
 			'equivs',
+			'languages',
 			'remotes'
 		]);
 

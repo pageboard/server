@@ -307,9 +307,6 @@ $BODY$;
 CREATE OR REPLACE FUNCTION content_lang_insert_func() RETURNS trigger
 	LANGUAGE plpgsql
 AS $BODY$
-DECLARE
-	_site type_site_lang;
-	_block block;
 BEGIN
 	UPDATE block SET content = content WHERE _id = NEW.child_id AND type != 'content' AND COALESCE(content, '{}'::jsonb) != '{}'::jsonb;
 	RETURN NEW;
