@@ -216,7 +216,9 @@ module.exports = class TranslateService {
 			source_lang: source.data.translation,
 			target_lang: target.data.translation
 		});
-		for (const row of items) body.append('text', row.source);
+		for (const row of items) {
+			body.append('text', row.source.replaceAll(/>&nbsp;/g, '><nbsp/>'));
+		}
 
 		const res = await fetch(this.opts.url, {
 			method: 'post',
@@ -231,7 +233,7 @@ module.exports = class TranslateService {
 		}
 		const obj = await res.json();
 		for (let i = 0; i < obj.translations.length; i++) {
-			const target = obj.translations[i].text;
+			const target = obj.translations[i].text.replaceAll(/><nbsp\/>/g, '>&nbsp;');
 			await site.$relatedQuery('children', trx)
 				.where('block._id', items[i].target_id)
 				.patch({
