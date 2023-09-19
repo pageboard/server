@@ -8,13 +8,11 @@ module.exports = class ResponseFilter {
 		}
 		if (item) {
 			obj.item = this.#recurse(req, item);
-			if (!obj.item.type) delete obj.items;
+			if (!obj.item?.type) delete obj.items;
 		}
-		if (obj.items) obj.items = obj.items.map(item => {
-			return this.#recurse(req, item);
-		}).filter(item => {
-			return item && item.type;
-		});
+		if (obj.items) obj.items = obj.items
+			.map(item => this.#recurse(req, item))
+			.filter(item => item?.type);
 		return obj;
 	}
 
@@ -23,7 +21,7 @@ module.exports = class ResponseFilter {
 	}
 
 	#recurse(req, item) {
-		if (!item.type) return item;
+		if (!item?.type) return item;
 		const { children, child, parents, parent, items } = item;
 		if (children) {
 			item.children = children.filter(item => {
