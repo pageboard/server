@@ -21,8 +21,8 @@ module.exports = class TranslateService {
 		const availables = [];
 		if (site.data.languages?.length) availables.push(...site.data.languages);
 		else if (site.data.lang) availables.push(site.data.lang);
-		const accepted = req.acceptsLanguages(availables);
-		const language = this.app.languages[accepted ?? 'default'];
+		const accepted = req.acceptsLanguages(availables) ?? 'default';
+		const language = this.app.languages[accepted] ?? this.app.languages.default;
 		req.res.set('Content-Language', language.data.lang);
 		return language.data;
 	}
