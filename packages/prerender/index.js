@@ -44,7 +44,6 @@ module.exports = class PrerenderModule {
 			form: require('./plugins/form'),
 			upcache: require('./plugins/upcache'),
 			render: require('./plugins/render'),
-			languages: require('./plugins/languages'),
 			remotes: require('./plugins/remotes')
 		});
 		dom.defaults.cookies.add("bearer");
