@@ -12,29 +12,31 @@ module.exports = class TranslateService {
 		this.app.languages = Object.fromEntries(
 			list.map(item => [item.data.lang, item])
 		);
+		this.app.languages.default = list[0];
 	}
 
-	lang({ site }, { lang } = {}) {
-		if (!site.data.languages?.length) {
-			if (lang && lang != site.data.lang) {
-				throw new HttpError.BadRequest("Unsupported lang");
-			}
-			return {
-				tsconfig: 'unaccent'
-			};
-		}
-		if (!lang) {
-			lang = site.data.languages?.[0];
-		} else if (!site.data.languages.includes(lang)) {
-			throw new HttpError.BadRequest("Unsupported lang");
-		}
-		const language = this.app.languages[lang];
-		if (!language) throw new HttpError.BadRequest("Unknown language");
+	lang(req, { lang } = {}) {
+		const { site } = req;
+		if (lang) req.headers['accept-language'] = lang;
+		const availables = [];
+		if (site.data.languages?.length) availables.push(...site.data.languages);
+		else if (site.data.lang) availables.push(site.data.lang);
+		const accepted = req.acceptsLanguages(availables);
+		const language = this.app.languages[accepted ?? 'default'];
+		req.res.set('Content-Language', language.data.lang);
 		return language.data;
 	}
 	static lang = {
 		title: 'Get language',
-		$lock: true
+		$lock: true,
+		properties: {
+			lang: {
+				title: 'Language',
+				type: 'string',
+				format: 'lang',
+				nullable: true
+			}
+		}
 	};
 
 	async languages({ site }) {
