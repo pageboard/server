@@ -266,12 +266,10 @@ module.exports = class PrintModule {
 			});
 		}
 
-		// https://api.expresta.com/api/v1/order/sandbox-create for testing orders
-
+		// customs_clearance_by_customer_data: 1
+		// documentation: "https://cdn.expresta.com/common/files/customs-sample-usa.pdf"
 		const order = {
 			customer_reference: block.id,
-			// customs_clearance_by_customer_data: 1,
-			// documentation: "https://cdn.expresta.com/common/files/customs-sample-usa.pdf",
 			delivery: {
 				...delivery,
 				courier: courier?.courier ?? "courier"
@@ -280,7 +278,9 @@ module.exports = class PrintModule {
 		};
 
 		runJob(req, block, async () => {
-			const ret = await agent.fetch("/order/sandbox-create", "post", { data: order });
+			const ret = await agent.fetch(conf.order, "post", {
+				data: order
+			});
 			if (ret.status != "ok") {
 				throw new HttpError.BadRequest(ret.msg);
 			}
