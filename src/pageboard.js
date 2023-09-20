@@ -129,13 +129,14 @@ module.exports = class Pageboard {
 	}
 
 	async run(command, data, { site, grant } = {}) {
-		const req = {
-			res: {
-				locals: {
-					tenant: this.opts.database.tenant
-				}
-			}
-		};
+		const req = Object.setPrototypeOf({
+			headers: {}
+		}, express.request);
+		req.res = Object.setPrototypeOf({
+			headersSent: true,
+			locals: {}
+		}, express.response);
+		req.res.locals.tenant = this.opts.database.tenant;
 		this.domains.extendRequest(req, this);
 		req.user ??= { grants: [] };
 		req.locks ??= [];
