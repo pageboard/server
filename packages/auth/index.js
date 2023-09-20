@@ -23,8 +23,8 @@ module.exports = class AuthModule {
 		}
 	}
 
-	async init() {
-		this.app.api.add(import('./src/schemas.mjs'));
+	async schema() {
+		return import('./src/schemas.mjs');
 	}
 
 	async apiRoutes(app, server) {

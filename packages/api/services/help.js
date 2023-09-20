@@ -10,7 +10,7 @@ module.exports = class HelpService {
 	}
 
 	doc(req, { command, schema }) {
-		return jsonDoc(this.app.api.schemas, command, schema, this.app.opts.cli);
+		return jsonDoc(this.app.schemas, command, schema, this.app.opts.cli);
 	}
 	static doc = {
 		title: 'Get json doc',
