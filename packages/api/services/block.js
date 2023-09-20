@@ -744,6 +744,12 @@ module.exports = class BlockService {
 		$action: 'write',
 		required: ['type'],
 		properties: {
+			id: {
+				title: 'id',
+				type: 'string',
+				format: 'id',
+				nullable: true
+			},
 			type: {
 				title: 'type',
 				type: 'string',
