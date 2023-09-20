@@ -1,4 +1,5 @@
 const { AjvValidator } = require('objection');
+const { omit } = require('objection/lib/utils/objectUtils');
 const Ajv = require('ajv');
 const { _ } = Ajv;
 const AjvKeywords = require('ajv-keywords');
@@ -86,7 +87,10 @@ class AjvValidatorExt extends AjvValidator {
 	}
 
 	compilePatchValidator(jsonSchema) {
-		return super.compilePatchValidator(fixSchema(jsonSchema));
+		const schema = jsonSchemaWithoutRequired(
+			fixSchema(jsonSchema)
+		);
+		return this.ajvNoDefaults.compile(schema);
 	}
 	compileNormalValidator(jsonSchema) {
 		return super.compileNormalValidator(fixSchema(jsonSchema));
@@ -316,3 +320,63 @@ module.exports = class Validation {
 		}
 	}
 };
+
+
+function jsonSchemaWithoutRequired(jsonSchema) {
+	const subSchemaProps = ['anyOf', 'oneOf', 'allOf', 'not', 'then', 'else', 'properties'];
+	return Object.assign(
+		omit(jsonSchema, ['required', ...subSchemaProps]),
+		...subSchemaProps.map((prop) => subSchemaWithoutRequired(jsonSchema, prop)),
+		jsonSchema && jsonSchema.definitions && Object.keys(jsonSchema.definitions).length > 0
+			? {
+				definitions: Object.assign(
+					...Object.keys(jsonSchema.definitions).map((prop) => ({
+						[prop]: jsonSchemaWithoutRequired(jsonSchema.definitions[prop]),
+					})),
+				),
+			}
+			: {},
+		jsonSchema.discriminator && jsonSchema.discriminator.propertyName
+			? { required: [jsonSchema.discriminator.propertyName] }
+			: {},
+	);
+}
+
+function subSchemaWithoutRequired(jsonSchema, prop) {
+	if (jsonSchema[prop]) {
+		if (Array.isArray(jsonSchema[prop])) {
+			const schemaArray = jsonSchemaArrayWithoutRequired(jsonSchema[prop]);
+
+			if (schemaArray.length !== 0) {
+				return {
+					[prop]: schemaArray,
+				};
+			} else {
+				return {};
+			}
+		} else if (jsonSchema.type === 'object' && prop === 'properties') {
+			return {
+				[prop]: Object.fromEntries(
+					Object.entries(jsonSchema[prop]).map(([key, schema]) => [
+						key,
+						jsonSchemaWithoutRequired(schema),
+					]),
+				),
+			};
+		} else {
+			return {
+				[prop]: jsonSchemaWithoutRequired(jsonSchema[prop]),
+			};
+		}
+	} else {
+		return {};
+	}
+}
+
+function jsonSchemaArrayWithoutRequired(jsonSchemaArray) {
+	return jsonSchemaArray.map(jsonSchemaWithoutRequired).filter(isNotEmptyObject);
+}
+
+function isNotEmptyObject(obj) {
+	return Object.keys(obj).length !== 0;
+}
