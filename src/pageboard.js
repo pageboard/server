@@ -37,6 +37,7 @@ module.exports = class Pageboard {
 	#server;
 	#installer;
 	#plugins;
+	schemas = {};
 	services = {};
 	elements = [];
 	directories = [];
@@ -318,6 +319,10 @@ module.exports = class Pageboard {
 	async #initPlugins(type) {
 		const server = this.#server;
 		const init = type ? `${type}Routes` : 'init';
+
+		if (!type) for (const plugin of this.#plugins) {
+			if (plugin.schema) Object.assign(this.schemas, await plugin.schema());
+		}
 
 		for (const plugin of this.#plugins) {
 			if (!plugin[init]) continue;

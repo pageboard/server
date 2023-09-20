@@ -8,8 +8,8 @@ module.exports = class SiteService {
 		this.app = app;
 	}
 
-	async init() {
-		await this.app.api.add(import("../lib/site.mjs"));
+	async schema() {
+		return import("../lib/site.mjs");
 	}
 
 	apiRoutes(app, server) {

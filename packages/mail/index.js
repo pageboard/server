@@ -33,8 +33,8 @@ module.exports = class MailModule {
 		});
 	}
 
-	async init() {
-		await this.app.api.add(import('./lib/mail_job.mjs'));
+	async schema() {
+		return import('./lib/mail_job.mjs');
 	}
 	apiRoutes(app, server) {
 		Object.entries(this.opts).forEach(([purpose, conf]) => {

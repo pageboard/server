@@ -6,8 +6,11 @@ module.exports = class TranslateService {
 		this.opts = opts;
 	}
 
+	async schema() {
+		return import('../lib/language.mjs');
+	}
+
 	async init() {
-		await this.app.api.add(import('../lib/language.mjs'));
 		const list = await this.app.run('translate.available');
 		this.app.languages = Object.fromEntries(
 			list.map(item => [item.data.lang, item])
