@@ -145,7 +145,7 @@ module.exports = class PrintModule {
 		}
 
 		runJob(req, block, async () => {
-			const path = await this.#download(req, url);
+			const path = await this.#download(req, url, this.app.dirs.tmp);
 			try {
 				const ret = await cups.printFile(path, {
 					printer: this.opts.local,
@@ -165,8 +165,7 @@ module.exports = class PrintModule {
 			throw new HttpError.BadRequest("No storage printer");
 		}
 		runJob(req, block, async () => {
-			const path = await this.#download(req, url);
-			await fs.promises.rename(path, Path.join(this.opts.storage, Path.basename(path)));
+			await this.#download(req, url, this.opts.storage);
 			response.status = 200;
 		});
 	}
@@ -216,6 +215,7 @@ module.exports = class PrintModule {
 		const margin = convertLengthToMillimiters(pdfPaper.margin) || 0;
 
 		const printProduct = {
+			pdf: pdfUrl,
 			product_type_id: options.product,
 			binding_id: options.binding,
 			binding_placement: options.binding_placement,
@@ -237,7 +237,7 @@ module.exports = class PrintModule {
 			}
 			coverUrl.searchParams.set('pdf', 'printer');
 
-			printProduct.cover_pdf = coverUrl.href;
+			printProduct.cover_pdf = coverUrl;
 			printProduct.runlists.push({
 				tag: "cover",
 				sides: options.cover.sides,
@@ -247,7 +247,7 @@ module.exports = class PrintModule {
 				bleed: !margin
 			});
 		}
-		printProduct.pdf = pdfUrl.href;
+
 		printProduct.runlists.push({
 			tag: "content",
 			sides: 2,
@@ -278,22 +278,50 @@ module.exports = class PrintModule {
 		};
 
 		runJob(req, block, async () => {
-			const ret = await agent.fetch(conf.order, "post", {
-				data: order
-			});
-			if (ret.status != "ok") {
-				throw new HttpError.BadRequest(ret.msg);
+			const clean = [];
+
+			const pdfRun = await this.#downloadPublic(req, printProduct.pdf);
+			clean.push(pdfRun.path);
+			printProduct.pdf = pdfRun.href;
+
+			if (printProduct.cover_pdf) {
+				const coverRun = await this.#downloadPublic(req, printProduct.cover_pdf);
+				clean.push(coverRun.path);
+				printProduct.cover_pdf = coverRun.href;
 			}
-			block.data.order = {
-				id: ret.order_id,
-				price: ret.total_price
-			};
-			response.status = 200;
+
+			try {
+				const ret = await agent.fetch(conf.order, "post", {
+					data: order
+				});
+				if (ret.status != "ok") {
+					throw new HttpError.BadRequest(ret.msg);
+				}
+				block.data.order = {
+					id: ret.order_id,
+					price: ret.total_price
+				};
+				response.status = 200;
+			} finally {
+				for (const file of clean) await fs.unlink(file);
+			}
 		});
 		return block;
 	}
 
-	async #download(req, url) {
+	async #downloadPublic(req, url) {
+		const { site } = req;
+		const pubDir = Path.join(this.app.dirs.publicCache, site.id);
+		const pubBase = "/.public/" + site.id + "/";
+		await fs.mkdir(pubDir, {
+			recursive: true
+		});
+		const path = await this.#download(req, url, pubDir);
+		const href = (new URL(pubBase + Path.basename(path), site.url)).href;
+		return { href, path };
+	}
+
+	async #download(req, url, to) {
 		const controller = new AbortController();
 		const toId = setTimeout(() => controller.abort(), 100000);
 		const response = await fetch(new URL(url, req.site.url), {
@@ -316,7 +344,7 @@ module.exports = class PrintModule {
 			if (ext != "pdf") {
 				throw new HttpError.BadParams("Cannot print non-pdf file");
 			}
-			path = Path.join(this.app.dirs.tmp, await req.Block.genId()) + "." + ext;
+			path = Path.join(to, await req.Block.genId()) + "." + ext;
 			await pipeline(response.body, fs.createWriteStream(path));
 			return path;
 		} catch (err) {
