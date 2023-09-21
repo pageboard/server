@@ -303,7 +303,7 @@ module.exports = class PrintModule {
 				};
 				response.status = 200;
 			} finally {
-				for (const file of clean) await fs.unlink(file);
+				for (const file of clean) await fs.promises.unlink(file);
 			}
 		});
 		return block;
@@ -313,7 +313,7 @@ module.exports = class PrintModule {
 		const { site } = req;
 		const pubDir = Path.join(this.app.dirs.publicCache, site.id);
 		const pubBase = "/.public/" + site.id + "/";
-		await fs.mkdir(pubDir, {
+		await fs.promises.mkdir(pubDir, {
 			recursive: true
 		});
 		const path = await this.#download(req, url, pubDir);
