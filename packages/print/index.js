@@ -244,7 +244,7 @@ module.exports = class PrintModule {
 				paper_id: options.cover.paper,
 				separation_mode: "CMYK",
 				fold_on: "axis_longer",
-				bleed: !margin
+				bleed: Boolean(margin)
 			});
 		}
 
@@ -255,7 +255,7 @@ module.exports = class PrintModule {
 			separation_mode: "CMYK",
 			size_a: sizeA.toFixed(2),
 			size_b: sizeB.toFixed(2),
-			bleed: !margin
+			bleed: Boolean(margin)
 		});
 
 		const products = [printProduct];
