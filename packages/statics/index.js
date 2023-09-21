@@ -17,11 +17,13 @@ module.exports = class StaticsModule {
 			uploads: app.upload.opts.dir,
 			statics: Path.join(app.dirs.cache, "statics"),
 			files: Path.join(app.dirs.cache, "files"),
+			public: Path.join(app.dirs.cache, "public"),
 			...opts
 		};
 
 		app.dirs.staticsCache = this.opts.statics;
 		app.dirs.filesCache = this.opts.files;
+		app.dirs.publicCache = this.opts.public;
 	}
 
 	fileRoutes(app, server) {
@@ -52,25 +54,35 @@ module.exports = class StaticsModule {
 			}
 			pipeline(response.body, res);
 		});
-
-		server.get("/.files/*",
+		const filesPrefix = '/.files';
+		server.get(filesPrefix + "/*",
 			req => {
 				const { path, site } = req;
-				req.url = site.id + path.substring(7);
+				req.url = site.id + path.substring(filesPrefix.length);
 			},
 			app.cache.tag('app-:site').for(opts.cache.files),
 			serveStatic(opts.files, serveOpts),
 			staticNotFound
 		);
-
-		server.get("/.uploads/*",
+		const uploadsPrefix = '/.uploads';
+		server.get(uploadsPrefix + "/*",
 			req => {
 				const { path, site } = req;
-				req.url = site.id + path.substring(9);
+				req.url = site.id + path.substring(uploadsPrefix.length);
 			},
 			// app does not change the files - do not tag
 			app.cache.for(opts.cache.uploads),
 			serveStatic(opts.uploads, serveOpts),
+			staticNotFound
+		);
+		const publicPrefix = '/.public';
+		server.get(publicPrefix + "/*",
+			req => {
+				const { path, site } = req;
+				req.url = site.id + path.substring(publicPrefix.length);
+			},
+			app.cache.disable(),
+			serveStatic(opts.public, serveOpts),
 			staticNotFound
 		);
 
