@@ -312,12 +312,11 @@ module.exports = class PrintModule {
 	async #downloadPublic(req, url) {
 		const { site } = req;
 		const pubDir = Path.join(this.app.dirs.publicCache, site.id);
-		const pubBase = "/.public/" + site.id + "/";
 		await fs.promises.mkdir(pubDir, {
 			recursive: true
 		});
 		const path = await this.#download(req, url, pubDir);
-		const href = (new URL(pubBase + Path.basename(path), site.url)).href;
+		const href = (new URL("/.public/" + Path.basename(path), site.url)).href;
 		return { href, path };
 	}
 
