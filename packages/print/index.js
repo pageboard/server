@@ -145,7 +145,7 @@ module.exports = class PrintModule {
 		}
 
 		runJob(req, block, async () => {
-			const path = await this.#download(req, url, this.app.dirs.tmp);
+			const { path } = await this.#download(req, url, this.app.dirs.tmp);
 			try {
 				const ret = await cups.printFile(path, {
 					printer: this.opts.local,
@@ -244,7 +244,7 @@ module.exports = class PrintModule {
 				paper_id: options.cover.paper,
 				separation_mode: "CMYK",
 				fold_on: "axis_longer",
-				bleed: !margin
+				bleed: Boolean(margin)
 			});
 		}
 
@@ -255,7 +255,7 @@ module.exports = class PrintModule {
 			separation_mode: "CMYK",
 			size_a: sizeA.toFixed(2),
 			size_b: sizeB.toFixed(2),
-			bleed: !margin
+			bleed: Boolean(margin)
 		});
 
 		const products = [printProduct];
@@ -285,6 +285,20 @@ module.exports = class PrintModule {
 			printProduct.pdf = pdfRun.href;
 
 			if (printProduct.cover_pdf) {
+				// spine api
+				const ret = await agent.fetch('/calculate-spine', {
+					data: {
+						pages_count: pdfRun.count,
+						sides: 2,
+						content_paper_id: options.content.paper,
+						cover_paper_id: options.cover.paper
+					}
+				});
+				if (ret.status != 'ok') {
+					throw new HttpError.BadRequest(ret.msg);
+				}
+				// printProduct.cover_pdf.searchParams.set('spine', ret.spine_width);
+				console.log("spine width is", ret);
 				const coverRun = await this.#downloadPublic(req, printProduct.cover_pdf);
 				clean.push(coverRun.path);
 				printProduct.cover_pdf = coverRun.href;
@@ -315,9 +329,10 @@ module.exports = class PrintModule {
 		await fs.promises.mkdir(pubDir, {
 			recursive: true
 		});
-		const path = await this.#download(req, url, pubDir);
+		const { path, response } = await this.#download(req, url, pubDir);
 		const href = (new URL("/.public/" + Path.basename(path), site.url)).href;
-		return { href, path };
+		const count = response.headers.get('x-page-count');
+		return { href, path, count };
 	}
 
 	async #download(req, url, to) {
@@ -345,7 +360,7 @@ module.exports = class PrintModule {
 			}
 			path = Path.join(to, await req.Block.genId()) + "." + ext;
 			await pipeline(response.body, fs.createWriteStream(path));
-			return path;
+			return { path, response };
 		} catch (err) {
 			try {
 				controller.abort();
