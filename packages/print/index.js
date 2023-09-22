@@ -286,7 +286,7 @@ module.exports = class PrintModule {
 
 			if (printProduct.cover_pdf) {
 				// spine api
-				const ret = await agent.fetch('/calculate-spine', {
+				const ret = await agent.fetch('/calculate-spine', "post", {
 					data: {
 						pages_count: pdfRun.count,
 						sides: 2,
