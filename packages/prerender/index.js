@@ -150,6 +150,9 @@ module.exports = class PrerenderModule {
 				if (preset != "browser") {
 					settings.pdf(preset ?? 'screen');
 				}
+				if (preset == "printer") {
+					settings.pageCount = true;
+				}
 			} else if (online) {
 				// pass to next middleware
 				cspSchemaToPhase(policies, req.schema.csp);
