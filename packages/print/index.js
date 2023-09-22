@@ -286,19 +286,22 @@ module.exports = class PrintModule {
 
 			if (printProduct.cover_pdf) {
 				// spine api
-				const ret = await agent.fetch('/calculate-spine', "post", {
-					data: {
-						pages_count: pdfRun.count,
-						sides: 2,
-						content_paper_id: options.content.paper,
-						cover_paper_id: options.cover.paper
+				if (pdfRun.count) {
+					const ret = await agent.fetch('/calculate-spine', "post", {
+						data: {
+							pages_count: pdfRun.count,
+							sides: 2,
+							content_paper_id: options.content.paper,
+							cover_paper_id: options.cover.paper
+						}
+					});
+					if (ret.status != 'ok') {
+						throw new HttpError.BadRequest(ret.msg);
 					}
-				});
-				if (ret.status != 'ok') {
-					throw new HttpError.BadRequest(ret.msg);
+					printProduct.cover_pdf.searchParams.set('spine', ret.spine_width);
+				} else {
+					console.warn("Missing pdf page count");
 				}
-				// printProduct.cover_pdf.searchParams.set('spine', ret.spine_width);
-				console.log("spine width is", ret);
 				const coverRun = await this.#downloadPublic(req, printProduct.cover_pdf);
 				clean.push(coverRun.path);
 				printProduct.cover_pdf = coverRun.href;
