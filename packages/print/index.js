@@ -209,7 +209,7 @@ module.exports = class PrintModule {
 		}
 		pdfUrl.searchParams.set('pdf', 'printer');
 
-		const { paper } = pdf.data.paper;
+		const { paper } = pdf.data;
 
 		const sizeA = paper.width * (paper.foldWidth ? 2 : 1) + paper.spine;
 		const sizeB = paper.height * (paper.foldHeight ? 2 : 1);
