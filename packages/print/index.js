@@ -209,12 +209,6 @@ module.exports = class PrintModule {
 		}
 		pdfUrl.searchParams.set('pdf', 'printer');
 
-		const { paper } = pdf.data;
-
-		const sizeA = paper.width * (paper.foldWidth ? 2 : 1) + paper.spine;
-		const sizeB = paper.height * (paper.foldHeight ? 2 : 1);
-		const bleed = Boolean(paper.margin);
-
 		const printProduct = {
 			pdf: pdfUrl,
 			product_type_id: options.product,
@@ -239,25 +233,7 @@ module.exports = class PrintModule {
 			coverUrl.searchParams.set('pdf', 'printer');
 
 			printProduct.cover_pdf = coverUrl;
-			printProduct.runlists.push({
-				tag: "cover",
-				sides: options.cover.sides,
-				paper_id: options.cover.paper,
-				separation_mode: "CMYK",
-				fold_on: "axis_longer",
-				bleed
-			});
 		}
-
-		printProduct.runlists.push({
-			tag: "content",
-			sides: 2,
-			paper_id: options.content.paper,
-			separation_mode: "CMYK",
-			size_a: sizeA.toFixed(2),
-			size_b: sizeB.toFixed(2),
-			bleed
-		});
 
 		const products = [printProduct];
 		if (options.additionalProduct) {
@@ -285,6 +261,10 @@ module.exports = class PrintModule {
 			clean.push(pdfRun.path);
 			printProduct.pdf = pdfRun.href;
 
+			const { paper } = pdf.data;
+			const bleed = Boolean(paper.margin);
+			let spine = paper.spine ?? 0;
+
 			if (printProduct.cover_pdf) {
 				// spine api
 				if (pdfRun.count) {
@@ -299,6 +279,7 @@ module.exports = class PrintModule {
 					if (ret.status != 'ok') {
 						throw new HttpError.BadRequest(ret.msg);
 					}
+					spine = parseFloat(ret.spine_width);
 					printProduct.cover_pdf.searchParams.set('spine', ret.spine_width);
 				} else {
 					console.warn("Missing pdf page count");
@@ -306,7 +287,31 @@ module.exports = class PrintModule {
 				const coverRun = await this.#downloadPublic(req, printProduct.cover_pdf);
 				clean.push(coverRun.path);
 				printProduct.cover_pdf = coverRun.href;
+				printProduct.runlists.push({
+					tag: "cover",
+					sides: options.cover.sides,
+					paper_id: options.cover.paper,
+					separation_mode: "CMYK",
+					fold_on: "axis_longer",
+					bleed
+				});
 			}
+
+			if (!bleed && spine) {
+				throw new HttpError.BadRequest("Cannot have cover with spine without margins");
+			}
+
+			const sizeA = paper.width * (paper.foldWidth ? 2 : 1) + spine;
+			const sizeB = paper.height * (paper.foldHeight ? 2 : 1);
+			printProduct.runlists.push({
+				tag: "content",
+				sides: 2,
+				paper_id: options.content.paper,
+				separation_mode: "CMYK",
+				size_a: sizeA.toFixed(2),
+				size_b: sizeB.toFixed(2),
+				bleed
+			});
 
 			try {
 				const ret = await agent.fetch(conf.order, "post", {
