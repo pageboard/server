@@ -4,6 +4,7 @@ const semverRegex = require.lazy('semver-regex');
 const exec = promisify(require('node:child_process').exec);
 const postinstall = require.lazy('postinstall');
 const { promises: fs } = require('node:fs');
+const resolvePkg = require('resolve-pkg');
 
 module.exports = class Installer {
 	opts = {};
@@ -32,16 +33,15 @@ module.exports = class Installer {
 	}
 
 	async #getPkg(pkgDir = null) {
-		const pkgPath = pkgDir != null ? Path.join(pkgDir, 'package.json') : null;
 		const pkg = {
-			dir: pkgDir,
-			path: pkgPath,
 			directories: [],
 			elements: []
 		};
 		if (pkgDir == null) return pkg;
 
-		const obj = await readPkg(pkgPath);
+		pkg.dir = pkgDir;
+		pkg.path = Path.join(pkgDir, 'package.json');
+		const obj = await readPkg(pkg.path);
 		if (!obj) return pkg;
 		pkg.server = obj.pageboard && obj.pageboard.server || null;
 		const deps = Object.keys(obj.dependencies);
@@ -110,9 +110,10 @@ module.exports = class Installer {
 				module
 			];
 		} else {
-			throw new Error("Unknown install.bin option, expected pnpm, yarn, npm, got", bin);
+			throw new Error("Unknown installer.bin option, expected pnpm, yarn, npm", bin);
 		}
 		const command = `${bin} ${args.join(' ')}`;
+
 		try {
 			await exec(command, {
 				cwd: pkg.dir,
@@ -133,12 +134,15 @@ module.exports = class Installer {
 			const npkg = await this.#getPkg(pkg.dir);
 			if (!npkg.name) throw new Error("Installed module has no package name");
 			npkg.server = pkg.server ?? this.app.version;
+			await this.#initModuleStyle(npkg);
 			const result = await runPostinstall(npkg, this.opts);
 			if (result) Log.install(result);
 			if (npkg.server !== pkg.server) await writePkg(npkg);
 			pkg.tag = npkg.tag;
 			pkg.name = npkg.name;
 			pkg.server = npkg.server;
+			pkg.moduleDir = npkg.moduleDir;
+			pkg.nodeModules = npkg.nodeModules;
 		} catch (err) {
 			await fs.rm(pkg.dir, { recursive: true });
 			throw err;
@@ -168,13 +172,15 @@ module.exports = class Installer {
 		const pkg = await this.#getPkg(siteDir);
 		const newTag = pkg.tag == null || pkg.tag != tag;
 		pkg.tag = tag;
+
 		if (pkg.name == null) {
 			pkg.install = true;
 			return pkg;
 		}
+		await this.#initModuleStyle(pkg);
 		pkg.cache = true;
 		try {
-			await fs.access(Path.join(siteDir, 'node_modules', pkg.name, '.git'));
+			await fs.access(Path.join(pkg.moduleDir, '.git'));
 			console.info("detected git module", pkg.name);
 			pkg.cache = false;
 		} catch (ex) {
@@ -185,16 +191,29 @@ module.exports = class Installer {
 		return pkg;
 	}
 
+	async #initModuleStyle(pkg) {
+		const nodeModules = pkg.nodeModules = Path.join(pkg.dir, 'node_modules');
+		pkg.moduleDir = Path.join(nodeModules, pkg.name);
+		try {
+			pkg.moduleDir = await fs.readlink(pkg.moduleDir);
+			if (pkg.moduleDir.startsWith('.pnpm')) {
+				pkg.nodeModules = Path.resolve(nodeModules, Path.join(pkg.moduleDir, '..'));
+			}
+			pkg.moduleDir = Path.resolve(nodeModules, pkg.moduleDir);
+		} catch (ex) {
+			if (ex.code != 'EINVAL') throw ex;
+		}
+	}
+
 	async #populate(site, pkg) {
 		const pair = `${site.id}/${pkg.tag ?? site.data.version}`;
-		const siteModuleDir = Path.join(pkg.dir, 'node_modules', pkg.name);
-		const sitePkg = await readPkg(Path.join(siteModuleDir, "package.json"), true);
+		const sitePkg = await readPkg(Path.join(pkg.moduleDir, "package.json"), true);
 		// configure directories/elements for each dependency
 		await Promise.all(Object.keys(sitePkg.dependencies || {}).map(subMod => {
-			const moduleDir = Path.join(pkg.dir, 'node_modules', subMod);
+			const moduleDir = Path.join(pkg.nodeModules, subMod);
 			return this.config(moduleDir, pair, subMod, pkg);
 		}));
-		await this.config(siteModuleDir, pair, pkg.name, pkg);
+		await this.config(pkg.moduleDir, pair, pkg.name, pkg);
 	}
 
 	async config(moduleDir, id, module, config) {
@@ -322,13 +341,15 @@ async function writePkg(pkg) {
 	return pkg;
 }
 
-async function getDependencies(rootPkg, name, list, deps) {
+async function getDependencies(rootPkg, name, list, deps, level = 0) {
+	if (level == 2) return;
 	if (!deps) deps = {};
-	const dir = Path.join(rootPkg.dir, 'node_modules', name);
+	const dir = resolvePkg(name, { cwd: rootPkg.dir });
 	if (deps[dir]) return;
 	const pkg = await readPkg(Path.join(dir, 'package.json'));
 	// nested dep
-	if (!pkg || deps[dir]) return;
+	if (!pkg) return;
+	pkg.dir = dir;
 	deps[dir] = true;
 
 	const pst = (pkg.scripts && pkg.scripts.postinstall || "").split(' ');
@@ -339,7 +360,7 @@ async function getDependencies(rootPkg, name, list, deps) {
 		rootPkg.server = pkg.pageboard.server;
 	}
 	return Promise.all(Object.keys(pkg.dependencies || {}).map(name => {
-		return getDependencies(rootPkg, name, list, deps);
+		return getDependencies(pkg, name, list, deps, level + 1);
 	}));
 }
 
