@@ -209,10 +209,11 @@ module.exports = class PrintModule {
 		}
 		pdfUrl.searchParams.set('pdf', 'printer');
 
-		const pdfPaper = pdf.data.paper;
-		const sizeA = convertLengthToMillimiters(pdfPaper.width) || 210;
-		const sizeB = convertLengthToMillimiters(pdfPaper.height) || 297;
-		const margin = convertLengthToMillimiters(pdfPaper.margin) || 0;
+		const { paper } = pdf.data.paper;
+
+		const sizeA = paper.width * (paper.foldWidth ? 2 : 1) + paper.spine;
+		const sizeB = paper.height * (paper.foldHeight ? 2 : 1);
+		const bleed = Boolean(paper.margin);
 
 		const printProduct = {
 			pdf: pdfUrl,
@@ -244,7 +245,7 @@ module.exports = class PrintModule {
 				paper_id: options.cover.paper,
 				separation_mode: "CMYK",
 				fold_on: "axis_longer",
-				bleed: Boolean(margin)
+				bleed
 			});
 		}
 
@@ -255,7 +256,7 @@ module.exports = class PrintModule {
 			separation_mode: "CMYK",
 			size_a: sizeA.toFixed(2),
 			size_b: sizeB.toFixed(2),
-			bleed: Boolean(margin)
+			bleed
 		});
 
 		const products = [printProduct];
@@ -375,15 +376,6 @@ module.exports = class PrintModule {
 		}
 	}
 };
-
-
-function convertLengthToMillimiters(str = '') {
-	const num = parseFloat(str);
-	if (Number.isNaN(num)) return 0;
-	const { groups: { unit } } = /\d+(?<unit>\w+)/.exec(str) ?? { groups: {} };
-	if (unit == "cm") return num * 10;
-	else if (unit == "mm") return num;
-}
 
 async function runJob(req, block, job) {
 	const { response } = block.data;
