@@ -88,7 +88,7 @@ module.exports = class HrefService {
 				if (href) {
 					const obj = await req.run('block.search', {
 						parent: {
-							type: Array.from(site.$pkg.pages),
+							type: "page",
 							data: {
 								url: url
 							}
