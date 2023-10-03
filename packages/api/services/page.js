@@ -116,7 +116,7 @@ module.exports = class PageService {
 
 	parse(req, str) {
 		const [, url, lang, type] = str.match(
-			/(.+?)(?:\.([a-z]{2}))?(?:\.([a-z]{3}))?$/
+			/(.+?)(?:\.([a-z]{2}))?(?:\.([a-z]{3,4}))?$/
 		);
 		return { url, lang, type };
 	}
