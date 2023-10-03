@@ -143,6 +143,11 @@ module.exports = class PrerenderModule {
 			plugins: ['upcache', 'render']
 		})).route(({ visible, online, location, settings, policies }, req) => {
 			if (visible) {
+				// render < equivs < pdf to ensure status is changed after render
+				settings.plugins.delete('equivs');
+				settings.plugins.add('equivs');
+				settings.plugins.delete('pdf');
+				settings.plugins.add('pdf');
 				const preset = req.query.pdf;
 				if (preset != null) {
 					location.searchParams.delete('pdf');
