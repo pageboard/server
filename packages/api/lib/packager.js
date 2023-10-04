@@ -70,14 +70,10 @@ module.exports = class Packager {
 				// e.g. "write", "user", "private"
 				standalones.add(name);
 			}
-			if (!el.expressions && !el.inline && el.contents && el.contents.some(item => {
+			if (!el.expressions && (!el.inline || !el.inplace) && el.contents && el.contents.some(item => {
 				return ['inline*', 'text*', 'mail_inline*'].includes(item.nodes);
 			})) {
-				if (el.inplace) {
-					console.warn("element with inline content should not be inplace", el.name);
-				} else {
 					textblocks.add(name);
-				}
 			}
 			eltsMap[name] = el;
 			if (!bundleMap.has(name)) {
