@@ -3,10 +3,7 @@ const Path = require('node:path');
 const { promises: fs } = require('node:fs');
 const { pipeline } = require('node:stream/promises');
 
-const bundlers = {
-	js: require.lazy('postinstall-js'),
-	css: require.lazy('postinstall-css')
-};
+const bundler = require.lazy('postinstall-esbuild');
 
 module.exports = class StaticsModule {
 	static name = 'statics';
@@ -159,7 +156,7 @@ module.exports = class StaticsModule {
 		}
 
 		try {
-			await bundlers[ext](inputs, output, {
+			await bundler(inputs, output, {
 				minify: site.data.env == "production",
 				cache: {
 					dir: this.opts.statics
