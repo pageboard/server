@@ -104,7 +104,7 @@ module.exports = class PrintModule {
 		required: ['printer'],
 		properties: {
 			printer: {
-				$ref: "/$elements/print_job#/properties/printer"
+				$ref: "#/$el/print_job/printer"
 			}
 		}
 	};
@@ -134,7 +134,7 @@ module.exports = class PrintModule {
 	static run = {
 		title: 'Run print task',
 		$action: 'write',
-		$ref: "/$elements/print_job"
+		$ref: "/$def/print_job/properties/data"
 	};
 
 	async #localJob(req, block) {

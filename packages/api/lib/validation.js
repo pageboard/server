@@ -113,7 +113,7 @@ module.exports = class Validation {
 	constructor(app, opts) {
 		this.app = app;
 		const schemas = Object.entries(app.schemas).map(([key, obj]) => {
-			obj.$id = '/$elements/' + key;
+			obj.$id = '/$el/' + key;
 			return fixSchema(obj);
 		});
 

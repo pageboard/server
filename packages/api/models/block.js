@@ -176,8 +176,16 @@ class Block extends Model {
 		if (!block.id) {
 			throw new Error("missing block.id\n" + JSON.stringify(block));
 		}
+		const types = {};
 		const schema = {
 			$id: `/${block.id}/${block.data.version ?? tag}${Block.jsonSchema.$id}`,
+			$def: types,
+			$el: new Proxy(types, {
+				get(types, name) {
+					const obj = types[name];
+					return obj?.properties?.data?.properties;
+				}
+			}),
 			type: 'object',
 			discriminator: { propertyName: "type" },
 			required: ['type'],
@@ -189,7 +197,6 @@ class Block extends Model {
 		const ElementKeywords = [
 			'$lock', 'parents', 'upgrade', 'csp', 'mime', 'templates'
 		];
-		const types = new Map();
 
 		// TODO merge csp for each page bundle
 
@@ -201,6 +208,7 @@ class Block extends Model {
 			const { standalone, properties, required = [], contents } = element;
 
 			const sub = {
+				type: 'object',
 				properties: {}
 			};
 
@@ -237,8 +245,8 @@ class Block extends Model {
 				data: dataSchema,
 				content: contentSchema
 			});
-			types.set(type, sub);
-			schema.oneOf.push(sub);
+			types[type] = sub;
+			schema.oneOf.push({ $ref: `#/$def/${type}` });
 		}
 
 		class DomainBlock extends Block {
@@ -252,7 +260,7 @@ class Block extends Model {
 			static schema(path) {
 				const list = path.split('.');
 				const type = list.shift();
-				let sch = this.#types.get(type);
+				let sch = this.#types[type];
 				for (let i = 0; i < list.length; i++) {
 					sch = sch.properties?.[list[i]];
 					if (!sch) throw new Error("Schema not found: " + path);
