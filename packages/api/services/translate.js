@@ -18,6 +18,13 @@ module.exports = class TranslateService {
 		this.app.languages.default = list[0];
 	}
 
+	apiRoutes(app, server) {
+		server.get("/.api/languages", async (req, res) => {
+			const data = await req.run('translate.languages', req.query);
+			res.return(data);
+		});
+	}
+
 	lang(req, { lang } = {}) {
 		const { site } = req;
 		if (lang) req.headers['accept-language'] = lang;
