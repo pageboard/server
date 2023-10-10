@@ -126,8 +126,10 @@ module.exports = class Packager {
 		const { $pkg } = site;
 		$pkg.aliases = pkg.aliases;
 
-		await Promise.all(Object.entries(pkg.bundles).sort((a, b) => {
+		await Promise.all(Object.entries(pkg.bundles).sort(([na], [nb]) => {
 			// bundle page group before others
+			const a = pkg.eltsMap[na];
+			const b = pkg.eltsMap[nb];
 			if (a.group == "page" && b.group != "page") return -1;
 			else if (b.group == "page" && a.group != "page") return 1;
 			else return 0;
