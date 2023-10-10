@@ -231,11 +231,6 @@ class Block extends Model {
 			} : {
 				type: 'null'
 			};
-			if (element.output) {
-				// temporary compatibility, remove soon
-				element.mime = element.output.mime;
-				delete element.output;
-			}
 
 			if (element.bundle === true) for (const p of ElementKeywords) {
 				if (element[p] != null) sub[p] = element[p];
