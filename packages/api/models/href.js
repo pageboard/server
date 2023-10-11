@@ -22,10 +22,6 @@ class Href extends common.Model {
 			mime: {
 				type: 'string'
 			},
-			visible: {
-				type: 'boolean',
-				default: true
-			},
 			url: {
 				type: 'string',
 				format: 'uri-reference',
