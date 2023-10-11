@@ -83,6 +83,16 @@ export const mail_job = {
 			},
 			$helper: 'href'
 		},
+		lang: {
+			title: 'Language',
+			type: 'string',
+			format: 'lang',
+			nullable: true,
+			$helper: {
+				name: 'datalist',
+				url: '/.api/languages'
+			}
+		},
 		subject: {
 			title: 'Subject',
 			description: 'Defaults to mail page title',

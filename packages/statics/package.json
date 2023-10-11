@@ -1,6 +1,6 @@
 {
   "name": "@pageboard/statics",
-  "version": "0.11.1",
+  "version": "0.14.0",
   "description": "",
   "main": "index.js",
   "scripts": {
@@ -17,8 +17,7 @@
   },
   "homepage": "https://github.com/pageboard/server#readme",
   "dependencies": {
-    "postinstall-css": "^0.9.3",
-    "postinstall-js": "^0.9.3",
+    "postinstall-esbuild": "^0.9.0",
     "serve-static": "^1.15.0"
   }
 }

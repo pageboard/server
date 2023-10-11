@@ -4,7 +4,7 @@ export const language = {
 	properties: {
 		lang: {
 			title: 'Language Code',
-			description: 'RFC 5646 format',
+			description: 'Two-letters code',
 			type: 'string',
 			format: 'lang'
 		},

@@ -12,8 +12,11 @@ const Path = require('node:path');
 const { exists } = require('../../../src/utils');
 
 function fixSchema(schema) {
+	if (schema.$def) for (const type of Object.values(schema.$def)) {
+		fixSchema(type);
+	}
 	Traverse(schema, {
-		cb: (schema) => {
+		cb(schema) {
 			if (schema.properties && schema.type == null) {
 				schema.type = 'object';
 			}
@@ -113,7 +116,7 @@ module.exports = class Validation {
 	constructor(app, opts) {
 		this.app = app;
 		const schemas = Object.entries(app.schemas).map(([key, obj]) => {
-			obj.$id = '/$elements/' + key;
+			obj.$id = '/$el/' + key;
 			return fixSchema(obj);
 		});
 

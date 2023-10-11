@@ -104,7 +104,7 @@ module.exports = class PrintModule {
 		required: ['printer'],
 		properties: {
 			printer: {
-				$ref: "/$elements/print_job#/properties/printer"
+				$ref: "#/$el/print_job/printer"
 			}
 		}
 	};
@@ -134,18 +134,23 @@ module.exports = class PrintModule {
 	static run = {
 		title: 'Run print task',
 		$action: 'write',
-		$ref: "/$elements/print_job"
+		$ref: "/$def/print_job/properties/data"
 	};
 
 	async #localJob(req, block) {
-		const { url, options, response } = block.data;
+		const { url, lang, options, response } = block.data;
+		const pdfUrl = req.call('page.format', {
+			url, lang, ext: 'pdf'
+		});
+		pdfUrl.searchParams.set('pdf', 'printer');
+
 		const list = await cups.getPrinterNames();
 		if (!list.find(name => name == this.opts.local)) {
 			throw new HttpError.NotFound("Printer not found");
 		}
 
 		runJob(req, block, async () => {
-			const { path } = await this.#download(req, url, this.app.dirs.tmp);
+			const { path } = await this.#download(req, pdfUrl, this.app.dirs.tmp);
 			try {
 				const ret = await cups.printFile(path, {
 					printer: this.opts.local,
@@ -160,12 +165,16 @@ module.exports = class PrintModule {
 	}
 
 	async #storageJob(req, block) {
-		const { url, response } = block.data;
+		const { url, lang, response } = block.data;
 		if (!this.opts.storage) {
 			throw new HttpError.BadRequest("No storage printer");
 		}
+		const pdfUrl = req.call('page.format', {
+			url, lang, ext: 'pdf'
+		});
+		pdfUrl.searchParams.set('pdf', 'printer');
 		runJob(req, block, async () => {
-			await this.#download(req, url, this.opts.storage);
+			await this.#download(req, pdfUrl, this.opts.storage);
 			response.status = 200;
 		});
 	}
@@ -195,18 +204,19 @@ module.exports = class PrintModule {
 			}
 		});
 
-		const pdfUrl = new URL(block.data.url, req.site.url);
-		const { url, lang, type } = req.call('page.parse', pdfUrl.pathname);
 		const { item: pdf } = await req.run('block.find', {
 			type: 'pdf',
-			data: { url, lang }
+			data: {
+				url: block.data.url,
+				lang: block.data.lang
+			}
 		});
 		if (!pdf) throw new HttpError.NotFound('Content PDF not found');
-		if (!type) {
-			pdfUrl.pathname += '.pdf';
-		} else if (type != "pdf") {
-			throw new HttpError.BadRequest('data.url extension must be "pdf"');
-		}
+		const pdfUrl = req.call('page.format', {
+			url: block.data.url,
+			lang: block.data.lang,
+			ext: 'pdf'
+		});
 		pdfUrl.searchParams.set('pdf', 'printer');
 
 		const printProduct = {
@@ -218,18 +228,19 @@ module.exports = class PrintModule {
 			runlists: []
 		};
 		if (options.cover.url) {
-			const coverUrl = new URL(options.cover.url, req.site.url);
-			const { url, lang, type } = req.call('page.parse', coverUrl.pathname);
 			const { item: coverPdf } = await req.run('block.find', {
 				type: 'pdf',
-				data: { url, lang }
+				data: {
+					url: options.cover.url,
+					lang: block.data.lang
+				}
 			});
 			if (!coverPdf) throw new HttpError.NotFound('Cover PDF not found');
-			if (!type) {
-				coverUrl.pathname += '.pdf';
-			} else if (type != "pdf") {
-				throw new HttpError.BadRequest('data.url extension must be "pdf"');
-			}
+			const coverUrl = req.call('page.format', {
+				url: options.cover.url,
+				lang: block.data.lang,
+				ext: 'pdf'
+			});
 			coverUrl.searchParams.set('pdf', 'printer');
 
 			printProduct.cover_pdf = coverUrl;

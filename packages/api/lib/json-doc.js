@@ -11,13 +11,13 @@ module.exports = function(schemas, api, schema, formatted) {
 		cb(schema, pointer, root, parentPointer, keyword, parent, name) {
 			const { $ref } = schema;
 			if ($ref) {
-				const prefix = '/$elements/';
+				const prefix = '#/$el/';
 				if ($ref?.startsWith(prefix)) {
 					delete schema.$ref;
-					const [name, rel] = $ref.slice(prefix.length).split("#");
+					const [name, ...rel] = $ref.slice(prefix.length).split("/");
 					let ref = schemas[name];
-					if (rel && ref) {
-						ref = rel.substring(1).split('/').reduce((schema, key) => schema[key], ref);
+					if (ref) {
+						ref = rel.reduce((schema, key) => schema[key], ref);
 					}
 					if (ref) Object.assign(schema, ref);
 					else console.error("$ref not found", $ref);

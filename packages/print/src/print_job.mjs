@@ -17,6 +17,16 @@ export const print_job = {
 			},
 			$helper: 'href'
 		},
+		lang: {
+			title: 'Language',
+			type: 'string',
+			format: 'lang',
+			nullable: true,
+			$helper: {
+				name: 'datalist',
+				url: '/.api/languages'
+			}
+		},
 		printer: {
 			title: 'Printer',
 			description: 'Preconfigured printer type',

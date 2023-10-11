@@ -126,8 +126,10 @@ module.exports = class Packager {
 		const { $pkg } = site;
 		$pkg.aliases = pkg.aliases;
 
-		await Promise.all(Object.entries(pkg.bundles).sort((a, b) => {
+		await Promise.all(Object.entries(pkg.bundles).sort(([na], [nb]) => {
 			// bundle page group before others
+			const a = pkg.eltsMap[na];
+			const b = pkg.eltsMap[nb];
 			if (a.group == "page" && b.group != "page") return -1;
 			else if (b.group == "page" && a.group != "page") return 1;
 			else return 0;
@@ -259,14 +261,23 @@ module.exports = class Packager {
 
 	#listDependencies(
 		pkg, root, el,
-		list = [],
+		list,
 		gDone = new Set()
 	) {
 		const bundleSet = pkg.bundleMap.get(el.name);
 		// elements from other non-page bundles are not included
-		if (bundleSet.has(root.name) || root.group != "page" && bundleSet.size > 0 || el.bundle === true && el.name != root.name || typeof el.bundle == "string" && root.name != el.bundle) {
+		if (
+			list.has(el.name) && el.bundle != root.name
+			||
+			root.group != "page" && bundleSet.size > 0 && !bundleSet.has(root.name)
+			||
+			el.bundle === true && el.name != root.name
+			||
+			typeof el.bundle == "string" && el.bundle != root.name
+		) {
 			return list;
 		}
+
 		bundleSet.add(root.name);
 		const elts = pkg.eltsMap;
 		list.add(el.name);
@@ -293,7 +304,7 @@ module.exports = class Packager {
 				}
 			}
 		} else if (el.name == root.group) {
-			const group = pkg.groups.get(el.name);
+			const group = pkg.groups[root.group];
 			if (group) {
 				gDone.add(el.name);
 				for (const sub of group) {
