@@ -58,28 +58,22 @@ module.exports = class PrerenderModule {
 
 	#requestedRenderingSchema(req, { pathname }) {
 		const { site } = req;
-		let ext = Path.extname(pathname)?.substring(1);
-		let type = 'page';
-		if (ext && site.$pkg.pages.has(ext)) {
-			// is this a known extension
-			type = ext;
-			pathname = pathname.slice(0, -ext.length - 1);
-			ext = null;
+		const { url, lang, ext = 'page' } = req.call('page.parse', { url: pathname });
+		if (!site.$pkg.pages.has(ext)) {
+			pathname = null;
 		}
-		// consume suffix .$lang.$type
-		if (!ext) ext = Path.extname(pathname)?.substring(1);
-		if (ext && site.data.languages?.includes(ext)) {
-			pathname = pathname.slice(0, -ext.length - 1);
+		if (!site.data.languages?.includes(lang)) {
+			pathname = null;
 		}
 		if (this.app.api.validate({
 			type: 'string',
 			format: 'page'
-		}, pathname) === false) {
+		}, url) === false) {
 			pathname = null;
 		}
 		return {
 			pathname,
-			schema: site.$schema(type)
+			schema: pathname != null ? site.$schema(ext) : null
 		};
 	}
 
