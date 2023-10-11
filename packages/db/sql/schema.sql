@@ -107,7 +107,6 @@ CREATE TABLE href (
     _id integer NOT NULL,
     _parent_id integer NOT NULL,
     url character varying(2047) NOT NULL,
-    visible boolean DEFAULT true NOT NULL,
     mime character varying(255) NOT NULL,
     type character varying(255) NOT NULL,
     icon character varying(255),

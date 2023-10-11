@@ -118,11 +118,9 @@ module.exports = class HrefService {
 			q.whereRaw('query @@ href.tsv');
 			q.orderByRaw('ts_rank(href.tsv, query) DESC');
 			q.orderBy(req.ref('href.url'));
-			q.where('href.visible', true);
 			q.orderBy('updated_at', 'desc');
 			items = await q;
 		} else {
-			q.where('href.visible', true);
 			q.orderBy('updated_at', 'desc');
 			items = await q;
 		}
@@ -281,13 +279,8 @@ module.exports = class HrefService {
 	};
 
 	async del(req, data) {
-		const { site, trx } = req;
-		const item = await this.get(req, data).throwIfNotFound();
-		await site.$relatedQuery('hrefs', trx).patchObject({
-			visible: false
-		}).where('_id', item._id);
-		item.visible = false;
-		return { item };
+		const count = await this.get(req, data).delete();
+		return { count };
 	}
 	static del = {
 		title: 'Delete URL',
