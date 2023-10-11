@@ -6,7 +6,7 @@ module.exports = class PageService {
 	apiRoutes(app, server) {
 		server.get('/.api/page', async (req, res) => {
 			const { site, query } = req;
-			const { url, lang, type } = req.call('page.parse', query.url);
+			const { url, lang, ext } = req.call('page.parse', query);
 			const isWebmaster = !req.locked(['webmaster']) && query.url == url;
 			const forWebmaster = Boolean(query.nested);
 			delete query.nested;
@@ -21,7 +21,7 @@ module.exports = class PageService {
 				obj.parent = site;
 			} else {
 				Object.assign(obj, await req.run('page.get', {
-					url, lang, type
+					url, lang, type: ext
 				}));
 			}
 			obj.commons = app.opts.commons;
@@ -114,11 +114,16 @@ module.exports = class PageService {
 			.whereIn('block.type', type ? [type] : Array.from(site.$pkg.pages));
 	}
 
-	parse(req, str) {
-		const [, url, lang, type] = str.match(
-			/(.+?)(?:\.([a-z]{2}))?(?:\.([a-z]{3,4}))?$/
+	parse(req, { url }) {
+		const loc = new URL(url, req.site.url);
+		const [, pathname, lang, ext] = loc.pathname.match(
+			/(.+?)(?:~([a-z]{2}))?(?:\.([a-z]{3,4}))?$/
 		);
-		return { url, lang, type };
+		return {
+			url: pathname + loc.search,
+			lang,
+			ext
+		};
 	}
 	static parse = {
 		title: 'Parse url',
@@ -128,6 +133,36 @@ module.exports = class PageService {
 				title: 'Url path',
 				type: 'string',
 				format: 'pathname'
+			}
+		}
+	};
+
+	format(req, { url, lang, ext }) {
+		const obj = new URL(url, req.site.url);
+		if (lang) obj.pathname += '~' + lang;
+		if (ext) obj.pathname += '.' + ext;
+		return obj;
+	}
+	static format = {
+		title: 'Format url with lang and ext',
+		$lock: true,
+		properties: {
+			url: {
+				title: 'Url path',
+				type: 'string',
+				format: 'pathname'
+			},
+			lang: {
+				title: 'Lang',
+				type: 'string',
+				format: 'lang',
+				nullable: true
+			},
+			ext: {
+				title: 'Extension',
+				type: 'string',
+				pattern: /[a-z]{3,4}/.source,
+				nullable: true
 			}
 		}
 	};

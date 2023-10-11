@@ -292,8 +292,8 @@ module.exports = class MailModule {
 		if (!mailer) {
 			throw new Error("Unknown mailer purpose " + data.purpose);
 		}
-		const { url, lang, type } = req.call('page.parse', data.url);
-		if (type && type != 'mail') {
+		const { url, lang, ext } = req.call('page.parse', data);
+		if (ext && ext != 'mail') {
 			throw new HttpError.BadRequest('data.url extension must be "mail"');
 		}
 		const { item: emailPage } = await req.run('block.find', {
@@ -348,7 +348,11 @@ module.exports = class MailModule {
 		});
 
 		runJob(req, block, async () => {
-			const emailUrl = new URL(emailPage.data.url, site.url);
+			const emailUrl = req.call('page.format', {
+				url: emailPage.data.url,
+				lang,
+				ext: 'mail'
+			});
 			for (const [key, val] of Object.entries(data.body)) {
 				if (Array.isArray(val)) for (const sval of val) {
 					emailUrl.searchParams.append(key, sval);
@@ -356,8 +360,6 @@ module.exports = class MailModule {
 					emailUrl.searchParams.append(key, val);
 				}
 			}
-			if (lang) emailUrl.pathname += `.${lang}`;
-			emailUrl.pathname += '.mail';
 			const controller = new AbortController();
 			const toId = setTimeout(() => controller.abort(), 10000);
 			const response = await fetch(emailUrl, {
