@@ -287,11 +287,9 @@ module.exports = class Packager {
 		if (el.contents) for (const content of el.contents) {
 			if (!content.nodes) continue;
 			for (const word of content.nodes.split(/\W+/).filter(Boolean)) {
-				if (word == root.group) {
-					console.warn("contents contains root group", root.group, el.name);
+				if (word == root.group || word == "text") {
 					continue;
 				}
-				if (word == "text") continue;
 				let group = pkg.groups[word];
 				if (group) {
 					if (gDone.has(word)) continue;
