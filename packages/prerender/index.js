@@ -62,7 +62,7 @@ module.exports = class PrerenderModule {
 		if (!site.$pkg.pages.has(ext)) {
 			pathname = null;
 		}
-		if (!site.data.languages?.includes(lang)) {
+		if (lang && !site.data.languages?.includes(lang)) {
 			pathname = null;
 		}
 		if (this.app.api.validate({
