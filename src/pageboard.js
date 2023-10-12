@@ -114,7 +114,7 @@ module.exports = class Pageboard {
 			this[key] = opts[key];
 			delete opts[key];
 		}
-		this.dev = !opts.cache.enable;
+		this.dev = !opts.cache?.enable;
 		this.opts = opts;
 	}
 
@@ -265,7 +265,6 @@ module.exports = class Pageboard {
 				'X-Frame-Options': 'sameorigin',
 				'X-Content-Type-Options': 'nosniff'
 			};
-			if (this.dev) headers['Cache-Control'] = 'no-store';
 			res.set(headers);
 		});
 		return server;
