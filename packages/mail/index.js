@@ -188,7 +188,7 @@ module.exports = class MailModule {
 		required: ['subject', 'to', 'text'],
 		properties: {
 			purpose: {
-				$ref: "#/$el/mail_job/purpose"
+				$ref: "#/$def/mail_job/properties/purpose"
 			},
 			subject: {
 				title: 'Subject',
