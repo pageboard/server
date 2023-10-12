@@ -14,13 +14,14 @@ module.exports = class UploadModule {
 	constructor(app, opts) {
 		this.app = app;
 		this.opts = opts;
+		console.info("data:", app.dirs.data);
 		if (!opts.dir) {
 			opts.dir = Path.join(app.dirs.data, "uploads");
+		} else {
+			console.info(`uploads: ${opts.dir}`);
 		}
 		app.dirs.uploads = opts.dir;
 		opts.tmp = app.dirs.tmp;
-		console.info(`uploads: ${opts.dir}`);
-		console.info(`tmp dir: ${opts.tmp}`);
 
 		opts.limits = {
 			files: 100,

@@ -30,10 +30,13 @@ module.exports = class CacheModule {
 		return Upcache.tag.disable(...args);
 	}
 	init(app, server) {
-		server.use((req, res, next) => {
-			if (this.app.dev) res.set('Cache-Control', 'no-store');
-			next();
-		});
+		console.info("cache:", this.opts.enable ? 'enabled' : 'disabled');
+		if (!this.opts.enable) {
+			server.use((req, res, next) => {
+				res.set('Cache-Control', 'no-store');
+				next();
+			});
+		}
 	}
 	async apiRoutes(app, server) {
 		try {
