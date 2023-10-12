@@ -74,8 +74,9 @@ module.exports = class Installer {
 				baseEnv[key] = val;
 			}
 		});
-		if (this.app.env == "development" && process.env.SSH_AUTH_SOCK) {
+		if (process.env.SSH_AUTH_SOCK) {
 			// some local setup require to pass this to be able to use ssh keys
+			// for git checkouts on private repositories
 			baseEnv.SSH_AUTH_SOCK = process.env.SSH_AUTH_SOCK;
 		}
 		const { bin, timeout } = this.opts;

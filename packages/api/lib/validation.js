@@ -178,7 +178,7 @@ module.exports = class Validation {
 			onCreateAjv: (ajv) => this.#setupAjv(ajv),
 			options: {
 				...Validation.AjvOptions,
-				strictSchema: this.app.env == "dev" ? "log" : false,
+				strictSchema: "log",
 				validateSchema: false,
 				code: {
 					source: true,
@@ -190,7 +190,7 @@ module.exports = class Validation {
 	#createSettings(opts) {
 		return {
 			...Validation.AjvOptions,
-			strictSchema: this.app.env == "dev" ? "log" : false,
+			strictSchema: "log",
 			validateSchema: true,
 			invalidDefaults: 'log',
 			...opts
