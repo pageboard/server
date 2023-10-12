@@ -218,6 +218,10 @@ module.exports = class Validation {
 			schemaType: "object"
 		});
 		ajv.addKeyword({
+			keyword: '$global',
+			schemaType: "boolean"
+		});
+		ajv.addKeyword({
 			keyword: 'standalone',
 			schemaType: "boolean"
 		});
