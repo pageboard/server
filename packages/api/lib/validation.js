@@ -222,6 +222,22 @@ module.exports = class Validation {
 			schemaType: "boolean"
 		});
 		ajv.addKeyword({
+			keyword: '$def',
+			schemaType: "object"
+		});
+		ajv.addKeyword({
+			keyword: '$el',
+			schemaType: "object"
+		});
+		ajv.addKeyword({
+			keyword: 'csp',
+			schemaType: "object"
+		});
+		ajv.addKeyword({
+			keyword: 'mime',
+			schemaType: "string"
+		});
+		ajv.addKeyword({
 			keyword: 'standalone',
 			schemaType: "boolean"
 		});
