@@ -69,9 +69,6 @@ module.exports = class ApiModule {
 	}
 
 	validate(schema, data, inst) {
-		if (schema.properties && !schema.type) {
-			schema.type = 'object';
-		}
 		try {
 			this.validation.validate(schema, data, inst || {});
 		} catch (err) {
@@ -104,6 +101,7 @@ module.exports = class ApiModule {
 		if (!site && !mod.$global && !schema.$global) {
 			throw new HttpError.BadRequest(`API method ${apiStr} expects a site`);
 		}
+		if (!schema.$id) schema.$id = `/${modName}/${funName}`;
 		return [schema, inst, meth];
 	}
 

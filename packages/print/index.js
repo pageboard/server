@@ -104,7 +104,7 @@ module.exports = class PrintModule {
 		required: ['printer'],
 		properties: {
 			printer: {
-				$ref: "#/$el/print_job/printer"
+				$ref: "#/$def/print_job/properties/printer"
 			}
 		}
 	};

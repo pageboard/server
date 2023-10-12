@@ -115,22 +115,25 @@ module.exports = class Validation {
 
 	constructor(app, opts) {
 		this.app = app;
-		const schemas = Object.entries(app.schemas).map(([key, obj]) => {
-			obj.$id = '/$el/' + key;
-			return fixSchema(obj);
+		this.rootSchema = fixSchema({
+			$def: app.schemas,
+			$el: new Proxy(app.schemas, {
+				get(types, name) {
+					const obj = types[name];
+					return obj?.properties?.data?.properties;
+				}
+			})
 		});
 
 		this.#validatorWithDefaults = this.#setupAjv(
 			new Ajv(this.#createSettings({
-				useDefaults: 'empty',
-				schemas
+				useDefaults: 'empty'
 			}))
 		);
 
 		this.#validatorNoDefaults = this.#setupAjv(
 			new Ajv(this.#createSettings({
-				useDefaults: false,
-				schemas
+				useDefaults: false
 			}))
 		);
 	}
@@ -316,7 +319,7 @@ module.exports = class Validation {
 	validate(schema, data, inst) {
 		if (!schema) return data;
 		if (!inst.validate) {
-			fixSchema(schema);
+			schema = Object.assign(fixSchema(schema), this.rootSchema);
 			if (schema.defaults === false) {
 				inst.validate = this.#validatorNoDefaults.compile(schema);
 			} else {
