@@ -27,6 +27,9 @@ module.exports = class TranslateService {
 
 	lang(req, { lang } = {}) {
 		const { site } = req;
+		if (req.headers['accept-language'] && !req.res.headersSent) {
+			req.res.vary('Accept-Language');
+		}
 		if (lang) req.headers['accept-language'] = lang;
 		const availables = [];
 		if (site.data.languages?.length) availables.push(...site.data.languages);
