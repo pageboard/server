@@ -52,7 +52,6 @@ module.exports = class Pageboard {
 		version: pkgApp.version.split('.').slice(0, 2).join('.'),
 		upstream: null,
 		verbose: false,
-		env: process.env.NODE_ENV || 'development',
 		installer: {
 			bin: 'npm',
 			timeout: 60000
@@ -110,11 +109,12 @@ module.exports = class Pageboard {
 
 		opts.installer.timeout = parseInt(opts.installer.timeout);
 
-		// all these become direct properties
-		for (const key of ['name', 'version', 'env', 'dirs']) {
+		// app direct properties
+		for (const key of ['name', 'version', 'dirs']) {
 			this[key] = opts[key];
 			delete opts[key];
 		}
+		this.dev = !opts.cache.enable;
 		this.opts = opts;
 	}
 
@@ -254,11 +254,8 @@ module.exports = class Pageboard {
 
 	#createServer() {
 		const server = require('./express-async')(express)();
-		// site-specific headers are built by page element and csp filter + prerender
-		server.set("env", this.env);
-		if (this.env == "development") {
-			server.set('json spaces', 2);
-		}
+		server.set("env", this.dev ? 'development' : 'production');
+		if (this.dev) server.set('json spaces', 2);
 		server.disable('x-powered-by');
 		server.enable('trust proxy');
 		server.use((req, res) => {
@@ -268,7 +265,7 @@ module.exports = class Pageboard {
 				'X-Frame-Options': 'sameorigin',
 				'X-Content-Type-Options': 'nosniff'
 			};
-			if (this.env == "development") headers['Cache-Control'] = 'no-store';
+			if (this.dev) headers['Cache-Control'] = 'no-store';
 			res.set(headers);
 		});
 		return server;
@@ -286,14 +283,14 @@ module.exports = class Pageboard {
 			// build js, css, and compile schema validators
 			await this.api.makeBundles(site, pkg);
 			await this.auth.install(site);
-			if (this.env != "development") await this.#installer.clean(site, pkg);
+			if (this.dev == false) await this.#installer.clean(site, pkg);
 			site.data.server = pkg.server ?? this.version;
 			this.domains.release(site);
 			await this.cache.install(site);
 			return site;
 		} catch (err) {
 			if (block.url) this.domains.error(block, err);
-			if (this.env == "development") console.error(err);
+			if (this.dev) console.error(err);
 			throw err;
 		}
 	}
@@ -384,7 +381,7 @@ module.exports = class Pageboard {
 
 	#domainsError(err, req, res, next) {
 		const code = getCode(err);
-		if ((this.env == "development" || code >= 500) && code != 503) {
+		if ((this.dev || code >= 500) && code != 503) {
 			console.error(err);
 		}
 		res.sendStatus(code);
@@ -392,9 +389,7 @@ module.exports = class Pageboard {
 
 	#servicesError(err, req, res, next) {
 		const code = getCode(err);
-		if (this.env == "development") {
-			console.error(err);
-		}
+		if (this.dev) console.error(err);
 		const obj = {
 			status: err.statusCode || err.status || err.code || 400,
 			item: {
@@ -411,7 +406,7 @@ module.exports = class Pageboard {
 
 	#filesError(err, req, res, next) {
 		const code = getCode(err);
-		if ((this.env == "development" || code >= 500) && code != 404) {
+		if ((this.dev || code >= 500) && code != 404) {
 			console.error(err);
 		}
 		if (code >= 400) {
@@ -425,7 +420,7 @@ module.exports = class Pageboard {
 
 	#viewsError(err, req, res, next) {
 		const code = getCode(err);
-		if ((this.env == "development" || code >= 500) && code != 404) {
+		if ((this.dev || code >= 500) && code != 404) {
 			console.error(err);
 		}
 		if (!res.headersSent) {
