@@ -274,13 +274,19 @@ module.exports = class Pageboard {
 		this.domains.hold(block);
 		try {
 			// get configured pkg with paths to elements definitions
+			console.time("install");
 			const pkg = await this.#installer.install(block, this);
+			console.timeEnd("install");
 			// parse and normalize all elements and build site schema
+			console.time("schemas");
 			const site = await this.api.install(block, pkg);
+			console.timeEnd("schemas");
 			// mount paths
 			await this.statics.install(site, pkg);
 			// build js, css, and compile schema validators
+			console.time("bundles");
 			await this.api.makeBundles(site, pkg);
+			console.timeEnd("bundles");
 			await this.auth.install(site);
 			if (this.dev == false) await this.#installer.clean(site, pkg);
 			site.data.server = pkg.server ?? this.version;

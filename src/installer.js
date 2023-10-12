@@ -25,8 +25,6 @@ module.exports = class Installer {
 		const pkg = await this.#decide(site);
 		if (pkg.install) {
 			await this.#install(site, pkg);
-		} else {
-			console.info("skipped installation of:", site.data.module, site.data.version);
 		}
 		await this.#populate(site, pkg);
 		return pkg;
@@ -182,7 +180,7 @@ module.exports = class Installer {
 		pkg.cache = true;
 		try {
 			await fs.access(Path.join(pkg.moduleDir, '.git'));
-			console.info("detected git module", pkg.name);
+			console.info("using git:", pkg.name);
 			pkg.cache = false;
 		} catch (ex) {
 			if (newTag) {
