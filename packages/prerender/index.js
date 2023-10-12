@@ -1,4 +1,3 @@
-const Path = require('node:path');
 const { pipeline } = require('node:stream');
 const http = require('http');
 const https = require('https');

@@ -10,18 +10,12 @@ module.exports = class CacheModule {
 
 	constructor(app, opts) {
 		this.app = app;
-		opts.metafile ??= Path.join(app.dirs.data, 'cache.json');
-		opts.wkp ??= "/.well-known/upcache";
+		this.metafile = Path.join(app.dirs.data, 'cache.json');
+		this.opts = opts;
+		opts.wkp = "/.well-known/upcache";
 		opts.files ??= '1 year';
 		opts.uploads ??= '1 year';
 		opts.icons ??= '1 month';
-		if (!opts.enable) {
-			opts.uploads = null;
-			opts.files = null;
-			opts.icons = null;
-			console.info("static:\tcache disabled for development");
-		}
-		this.opts = opts;
 	}
 	map({ res }, to) {
 		return Upcache.map(res, to);
@@ -35,13 +29,22 @@ module.exports = class CacheModule {
 	disable(...args) {
 		return Upcache.tag.disable(...args);
 	}
+	init(app, server) {
+		console.info("cache:", this.opts.enable ? 'enabled' : 'disabled');
+		if (!this.opts.enable) {
+			server.use((req, res, next) => {
+				res.set('Cache-Control', 'no-store');
+				next();
+			});
+		}
+	}
 	async apiRoutes(app, server) {
 		try {
 			this.data = JSON.parse(
-				await fs.readFile(this.opts.metafile)
+				await fs.readFile(this.metafile)
 			);
 		} catch (err) {
-			console.error("Cannot read", this.opts.metafile);
+			console.error("Cannot read", this.metafile);
 		} finally {
 			if (!this.data) this.data = {};
 		}
@@ -58,9 +61,9 @@ module.exports = class CacheModule {
 		this.#to = setTimeout(async () => {
 			this.#to = null;
 			try {
-				await fs.writeFile(this.opts.metafile, JSON.stringify(this.data));
+				await fs.writeFile(this.metafile, JSON.stringify(this.data));
 			} catch (err) {
-				console.error("Error writing", err.message, this.opts.metafile);
+				console.error("Error writing", err.message, this.metafile);
 			}
 		}, 5000);
 	}

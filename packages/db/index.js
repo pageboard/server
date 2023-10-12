@@ -17,7 +17,6 @@ module.exports = class DatabaseModule {
 		this.opts = opts;
 		if (!opts.dumps) opts.dumps = Path.join(app.dirs.cache, 'dumps');
 		app.dirs.dumps = opts.dumps;
-		if (app.env == "development") opts.asyncStackTraces = true;
 		pg.types.setTypeParser(
 			pg.types.builtins.TIMESTAMPTZ,
 			str => str.split(' ').join('T') + ":00"
@@ -50,8 +49,7 @@ module.exports = class DatabaseModule {
 			tknex = knex({
 				client: 'pg',
 				connection: url,
-				debug: Boolean(Log.sql.enabled),
-				asyncStackTraces: this.opts.asyncStackTraces
+				debug: Boolean(Log.sql.enabled)
 			});
 			tenants.set(tenant, tknex);
 		}
