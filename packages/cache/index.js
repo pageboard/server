@@ -32,10 +32,7 @@ module.exports = class CacheModule {
 	init(app, server) {
 		console.info("cache:", this.opts.enable ? 'enabled' : 'disabled');
 		if (!this.opts.enable) {
-			server.use((req, res, next) => {
-				res.set('Cache-Control', 'no-store');
-				next();
-			});
+			server.get('*', this.disable());
 		}
 	}
 	async apiRoutes(app, server) {
