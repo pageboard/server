@@ -217,6 +217,10 @@ module.exports = class Validation {
 			schemaType: "object"
 		});
 		ajv.addKeyword({
+			keyword: 'templates',
+			schemaType: "object"
+		});
+		ajv.addKeyword({
 			keyword: 'upgrade',
 			schemaType: "object"
 		});
