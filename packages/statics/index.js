@@ -43,7 +43,7 @@ module.exports = class StaticsModule {
 				Object.entries(req.headers).filter(([key]) => !key.startsWith('x-'))
 			);
 			delete headers.host;
-			headers['accept-encoding'] = 'Identity';
+			headers['accept-encoding'] = 'identity';
 
 			const response = await fetch(url.href, { headers });
 			for (const [key, val] of response.headers.entries()) {
