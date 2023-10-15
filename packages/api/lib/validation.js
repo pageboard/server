@@ -43,17 +43,15 @@ class AjvValidatorExt extends AjvValidator {
 		super(opts);
 		this.#cacheDir = opts.cacheDir;
 	}
-	async prepare(jsonSchema, pkg) {
-		const p = this.cache.get(jsonSchema.$id);
-		if (p) {
-			console.warn("Already has cached validators", jsonSchema.$id);
-		}
+	async prepare(mclass, pkg) {
+		const schema = mclass.jsonSchema = fixSchema(mclass.jsonSchema);
 		const cachePath = Path.join(
 			this.#cacheDir,
-			jsonSchema.$id
+			schema.$id
 		);
 		const cacheDir = Path.dirname(cachePath);
 		const obj = {};
+		this.cache.set(schema.$id, obj);
 		await fs.mkdir(Path.join(cacheDir, 'node_modules'), { recursive: true });
 		try {
 			await fs.symlink(Path.join(__dirname, '../node_modules/ajv'), Path.join(cacheDir, 'node_modules', 'ajv'));
@@ -69,7 +67,10 @@ class AjvValidatorExt extends AjvValidator {
 			obj.patchValidator = require(patchPath);
 		} catch (ex) {
 			if (ex.code) console.error(ex);
-			obj.patchValidator = this.compilePatchValidator(jsonSchema);
+			// fixSchema mutates it
+			const patchedSchema = Object.assign({}, schema);
+			patchedSchema.$id += '/patch';
+			obj.patchValidator = this.compilePatchValidator(patchedSchema);
 			const patchCode = ajvStandalone.default(this.ajvNoDefaults, obj.patchValidator);
 			await fs.writeFile(patchPath, patchCode);
 		}
@@ -81,18 +82,49 @@ class AjvValidatorExt extends AjvValidator {
 			obj.normalValidator = require(normalPath);
 		} catch (ex) {
 			if (ex.code) console.error(ex);
-			obj.normalValidator = this.compileNormalValidator(jsonSchema);
+			obj.normalValidator = this.compileNormalValidator(schema);
 			const normalCode = ajvStandalone.default(this.ajv, obj.normalValidator);
 			await fs.writeFile(normalPath, normalCode);
 		}
-		this.cache.set(jsonSchema.$id, obj);
 	}
 
-	compilePatchValidator(jsonSchema) {
-		return super.compilePatchValidator(fixSchema(jsonSchema));
-	}
-	compileNormalValidator(jsonSchema) {
-		return super.compileNormalValidator(fixSchema(jsonSchema));
+	getValidator(modelClass, jsonSchema, isPatchObject) {
+		// Optimization for the common case where jsonSchema is never modified.
+		// In that case we don't need to call the costly createCacheKey function.
+		let validators = this.cache.get(jsonSchema.$id);
+		let validator = null;
+
+		if (!validators) {
+			validators = {
+				// Validator created for the schema object without `required` properties
+				// using the AJV instance that doesn't set default values.
+				patchValidator: null,
+
+				// Validator created for the unmodified schema.
+				normalValidator: null,
+			};
+			this.cache.set(jsonSchema.$id, validators);
+		}
+
+		if (isPatchObject) {
+			validator = validators.patchValidator;
+
+			if (!validator) {
+				const patchSchema = Object.assign({}, jsonSchema);
+				patchSchema.$id = patchSchema.$id + '-patch';
+				validator = this.compilePatchValidator(patchSchema);
+				validators.patchValidator = validator;
+			}
+		} else {
+			validator = validators.normalValidator;
+
+			if (!validator) {
+				validator = this.compileNormalValidator(jsonSchema);
+				validators.normalValidator = validator;
+			}
+		}
+
+		return validator;
 	}
 }
 
@@ -107,10 +139,7 @@ module.exports = class Validation {
 		ownProperties: true,
 		coerceTypes: 'array',
 		removeAdditional: "failing",
-		formats: require('./formats'),
-		serialize(schema) {
-			return schema.$id;
-		}
+		formats: require('./formats')
 	};
 
 	constructor(app, opts) {

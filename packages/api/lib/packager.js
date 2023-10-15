@@ -119,7 +119,7 @@ module.exports = class Packager {
 	async makeSchemas(site, pkg) {
 		const mclass = site.$modelClass;
 		const validator = mclass.getValidator();
-		await validator.prepare(mclass.jsonSchema, pkg);
+		await validator.prepare(mclass, pkg);
 	}
 
 	async makeBundles(site, pkg) {
