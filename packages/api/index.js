@@ -47,6 +47,12 @@ module.exports = class ApiModule {
 		app.responseFilter.register(this);
 		const tenantsLen = Object.keys(app.opts.database.url).length - 1;
 		// api depends on site files, that tag is invalidated in cache install
+		server.get("/.well-known/api.json", ({ site }, res) => {
+			res.redirect(site.$pkg.bundles.get('services').scripts[0]);
+		});
+		server.get("/.api", ({ site }, res) => {
+			res.redirect("/.well-known/api");
+		});
 		server.get('/.api/*',
 			app.cache.tag('app-:site', 'data-:site'),
 			app.cache.tag('db-:tenant').for(`${tenantsLen}day`)
