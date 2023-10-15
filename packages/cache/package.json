@@ -18,6 +18,6 @@
   "homepage": "https://github.com/pageboard/server#readme",
   "dependencies": {
     "fast-json-stable-stringify": "^2.1.0",
-    "upcache": "^2.6.3"
+    "upcache": "^2.7.0"
   }
 }
