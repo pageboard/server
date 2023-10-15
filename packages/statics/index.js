@@ -57,19 +57,11 @@ module.exports = class StaticsModule {
 				const { path, site } = req;
 				req.url = site.id + path.substring(filesPrefix.length);
 			},
-			app.cache.tag('app-:site').for(opts.cache.files),
+			app.cache.tag('app-:site').for({
+				immutable: true,
+				maxAge: opts.cache.files
+			}),
 			serveStatic(opts.files, serveOpts),
-			staticNotFound
-		);
-		const uploadsPrefix = '/.uploads';
-		server.get(uploadsPrefix + "/*",
-			req => {
-				const { path, site } = req;
-				req.url = site.id + path.substring(uploadsPrefix.length);
-			},
-			// app does not change the files - do not tag
-			app.cache.for(opts.cache.uploads),
-			serveStatic(opts.uploads, serveOpts),
 			staticNotFound
 		);
 		const publicPrefix = '/.public';
@@ -84,7 +76,10 @@ module.exports = class StaticsModule {
 		);
 
 		server.get('/favicon.ico',
-			app.cache.tag('data-:site').for(opts.cache.icon),
+			app.cache.tag('data-:site').for({
+				immutable: true,
+				maxAge: opts.cache.icon
+			}),
 			({ site }, res, next) => {
 				if (!site || !site.data.favicon) {
 					res.sendStatus(204);

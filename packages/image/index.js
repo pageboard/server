@@ -58,8 +58,11 @@ module.exports = class ImageModule {
 		server.get(
 			/^\/\.(uploads|files)\//,
 			this.mw,
-			// tag because images are transformed
-			app.cache.tag('app').for(app.cache.opts.uploads),
+			// files are loaded directly and need some headers
+			app.cache.for({
+				immutable: true,
+				maxAge: app.cache.opts.uploads
+			}),
 			this.sharpie(this.opts)
 		);
 	}

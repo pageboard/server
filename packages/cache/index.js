@@ -34,6 +34,8 @@ module.exports = class CacheModule {
 		if (!this.opts.enable) {
 			server.get('*', this.disable());
 		}
+		// all routes must have a app tag
+		server.get('*', Upcache.tag('app'));
 	}
 	async apiRoutes(app, server) {
 		try {
@@ -45,7 +47,6 @@ module.exports = class CacheModule {
 		} finally {
 			if (!this.data) this.data = {};
 		}
-		server.get('*', Upcache.tag('app'));
 		server.post(this.opts.wkp, (req, res, next) => {
 			this.mw(req, res, next);
 		}, (req, res) => {
@@ -96,8 +97,7 @@ module.exports = class CacheModule {
 		let doSave = false;
 		let dobj = this.data;
 		if (!dobj) dobj = this.data = {};
-		// eslint-disable-next-line no-console
-		console.info("Check app configuration changes");
+		console.info("cache check");
 
 		if (!this.hash) {
 			const hash = crypto.createHash('sha256');
@@ -111,8 +111,7 @@ module.exports = class CacheModule {
 			doSave = true;
 			dobj.hash = this.hash;
 			tags.push('app');
-			// eslint-disable-next-line no-console
-			console.info("detected application change");
+			console.info("cache changes app tag");
 		}
 		tags.push('app-:site');
 		this.tag(...tags)(req, res, next);
