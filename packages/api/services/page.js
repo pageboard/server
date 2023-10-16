@@ -58,55 +58,6 @@ module.exports = class PageService {
 			const page = await req.run('page.del', req.query);
 			res.send(page);
 		});
-
-		server.get('/robots.txt', app.cache.tag('data-:site'), async (req, res) => {
-			const txt = await req.run('page.robots');
-			res.type('text/plain');
-			res.send(txt);
-		});
-
-		server.get('/.well-known/sitemap.txt', app.cache.tag('data-:site'), async (req, res) => {
-			const obj = await req.run('page.all', {
-				robot: true,
-				type: ['page']
-			});
-			res.type('text/plain');
-			res.send(app.responseFilter.run(req, obj).items.map(page => {
-				return new URL(page.data.url, req.site.url).href;
-			}).join('\n'));
-		});
-
-		server.get('/.well-known/sitemap.xml', app.cache.tag('data-:site'), async (req, res) => {
-			const obj = await req.run('page.all', {
-				robot: true,
-				type: ['page']
-			});
-			const { items } = app.responseFilter.run(req, obj);
-			const { site } = req;
-			const { languages = [] } = site.data;
-
-			// https://www.sitemaps.org/protocol.html
-			res.type('application/xml');
-
-			const xmlAlt = (href, lang) => {
-				return `<xhtml:link rel="alternate" hreflang="${lang}" href="${href}~${lang}"/>`;
-			};
-
-			const xmlItem = item => {
-				const href = (new URL(item.data.url, site.url)).href;
-				return `<url>
-					<loc>${href}</loc>
-					<lastmod>${item.updated_at.split('T').shift()}</lastmod>
-					${languages.map(lang => xmlAlt(href, lang)).join('\n')}
-				</url>`;
-			};
-
-			res.send(`<?xml version="1.0" encoding="UTF-8"?>
-				<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9" xmlns:xhtml="http://www.w3.org/1999/xhtml">
-					${items.map(item => xmlItem(item)).join('\n')}
-				</urlset>`.replace(/\t+/g, '')
-			);
-		});
 	}
 
 	#QueryPage({ site, trx, ref, val, fun }, { url, lang, type }) {
@@ -346,63 +297,6 @@ module.exports = class PageService {
 		}
 	};
 
-	async all(req, data) {
-		const pages = await listPages(req, req.call('translate.lang', data));
-		const obj = {
-			items: pages
-		};
-		if (data.home) {
-			obj.item = pages.shift();
-			if (obj.item && obj.item.data.url != data.parent) {
-				delete obj.item;
-			}
-		} else {
-			obj.item = {
-				type: 'sitemap',
-				content: {}
-			};
-		}
-		return obj;
-	}
-	static all = {
-		title: 'Site map',
-		$action: 'read',
-		$lock: true,
-		properties: {
-			parent: {
-				title: 'Root pathname',
-				type: 'string',
-				format: 'pathname'
-			},
-			home: {
-				title: 'Returns root as first item',
-				type: 'boolean',
-				default: false
-			},
-			url: {
-				title: 'Url path',
-				type: 'string',
-				format: 'pathname'
-			},
-			drafts: {
-				type: 'boolean',
-				default: false
-			},
-			robot: {
-				type: 'boolean',
-				default: false
-			},
-			type: {
-				type: 'array',
-				items: {
-					type: 'string',
-					format: 'name'
-				},
-				nullable: true
-			}
-		}
-	};
-
 	async save(req, changes) {
 		const { site, trx } = req;
 		changes = {
@@ -587,51 +481,6 @@ module.exports = class PageService {
 		}
 	};
 
-	async ping(req) {
-		const sitemap = new URL("/.well-known/sitemap.xml", req.site.url);
-		const url = new URL("https://www.google.com/ping");
-		url.searchParams.set('sitemap', sitemap.href);
-		const response = await fetch(url);
-		if (!response.ok) throw new HttpError[response.status](response.statusText);
-	}
-	static ping = {
-		title: 'Ping crawlers with new sitemap',
-		$lock: true,
-		$action: 'write'
-	};
-
-	async robots(req, data) {
-		const lines = [];
-		const { site } = req;
-		const { env = site.data.env } = data;
-		if (env == "production") {
-			lines.push(`Sitemap: ${new URL("/.well-known/sitemap.xml", site.url)}`);
-			lines.push('User-agent: *');
-			const pages = await listPages(req, {
-				disallow: true,
-				type: ['page']
-			});
-			for (const page of pages) {
-				lines.push(`Disallow: ${page.data.url}`);
-			}
-		} else {
-			lines.push('User-agent: *');
-			lines.push("Disallow: /");
-		}
-		return lines.join('\n');
-	}
-	static robots = {
-		title: 'Get robots.txt',
-		$lock: true,
-		$action: 'read',
-		properties: {
-			env: {
-				title: 'Environment',
-				type: 'string'
-			}
-		}
-	};
-
 	async relink(req) {
 		const pages = await req.run('page.all');
 		for (const page of pages.items) {
@@ -649,14 +498,114 @@ module.exports = class PageService {
 		$lock: true,
 		$action: 'write'
 	};
+
+	async list({ site, trx, fun, raw, ref }, data) {
+		const q = site.$relatedQuery('children', trx)
+			.columns({ lang: data.lang, content: 'title' })
+			.select(raw("'site' || block.type AS type"))
+			.whereIn('block.type', data.type ?? Array.from(site.$pkg.pages))
+			.where('block.standalone', true);
+
+		if (!data.drafts) {
+			q.whereNotNull(ref('block.data:url'));
+			q.where(function () {
+				this.whereNull(ref('block.data:nositemap'))
+					.orWhereNot(ref('block.data:nositemap'), true);
+			});
+		}
+		if (data.robot) {
+			q.where(function () {
+				this.whereNull(ref('block.data:noindex'))
+					.orWhereNot(ref('block.data:noindex'), true);
+			});
+		}
+		if (data.disallow) {
+			q.where(ref('block.data:noindex'), true);
+		}
+
+		if (data.parent != null) {
+			const regexp = data.home ? `^${data.parent}(/[^/]+)?$` : `^${data.parent}/[^/]+$`;
+			if (data.home) q.orderByRaw("block.data->>'url' = ? DESC", data.parent);
+			q.whereJsonText('block.data:url', '~', regexp)
+				.orderBy(ref('block.data:index'));
+		} else if (data.url) {
+			q.where(fun('starts_with',
+				ref('block.data:url').castText(),
+				data.url
+			));
+		} else {
+			// just return all pages for the sitemap
+		}
+		const items = await q.orderBy(ref('block.data:url'), 'block.updated_at DESC');
+		const obj = {
+			items
+		};
+		if (data.home) {
+			obj.item = items.shift();
+			if (obj.item && obj.item.data.url != data.parent) {
+				delete obj.item;
+			}
+		}
+		return obj;
+	}
+	static list = {
+		title: 'List pages',
+		$lock: true,
+		properties: {
+			lang: {
+				title: 'Lang',
+				type: 'string',
+				format: 'lang',
+				nullable: true
+			},
+			parent: {
+				title: 'Root pathname',
+				type: 'string',
+				format: 'pathname'
+			},
+			home: {
+				title: 'Returns root as first item',
+				type: 'boolean',
+				default: false
+			},
+			url: {
+				title: 'Url path',
+				type: 'string',
+				format: 'pathname'
+			},
+			drafts: {
+				type: 'boolean',
+				default: false
+			},
+			robot: {
+				type: 'boolean',
+				default: false
+			},
+			disallow: {
+				type: 'boolean',
+				default: false
+			},
+			type: {
+				type: 'array',
+				items: {
+					type: 'string',
+					format: 'name'
+				},
+				nullable: true
+			}
+		}
+	};
 };
 
 
-function redUrl(obj) {
-	if (obj.redirect) {
+function shortLink({ data, content }) {
+	const obj = {};
+	if (data.redirect) {
 		obj.url = obj.redirect;
+	} else {
+		obj.url = data.url;
 	}
-	delete obj.redirect;
+	obj.title = content.title;
 	return obj;
 }
 
@@ -667,54 +616,10 @@ function getParents({ site, trx, ref, raw }, url, lang) {
 		urlParents.push(urlParts.slice(0, i + 1).join('/'));
 	}
 	return site.$relatedQuery('children', trx)
-		.select([
-			ref('block.data:url').as('url'),
-			ref('block.data:redirect').as('redirect'),
-			raw(`block_get_content(block._id, :lang, 'title') AS title`, { lang })
-		])
+		.columns({lang, content: 'title'})
 		.whereIn('block.type', Array.from(site.$pkg.pages))
 		.whereJsonText('block.data:url', 'IN', urlParents)
 		.orderByRaw("length(block.data->>'url') DESC");
-}
-
-function listPages({ site, trx, fun, raw, ref }, data) {
-	const q = site.$relatedQuery('children', trx)
-		.columns({lang: data.lang, content: 'title'})
-		.select(raw("'site' || block.type AS type"))
-		.whereIn('block.type', data.type ?? Array.from(site.$pkg.pages))
-		.where('block.standalone', true);
-
-	if (!data.drafts) {
-		q.whereNotNull(ref('block.data:url'));
-		q.where(function () {
-			this.whereNull(ref('block.data:nositemap'))
-				.orWhereNot(ref('block.data:nositemap'), true);
-		});
-	}
-	if (data.robot) {
-		q.where(function () {
-			this.whereNull(ref('block.data:noindex'))
-				.orWhereNot(ref('block.data:noindex'), true);
-		});
-	}
-	if (data.disallow) {
-		q.where(ref('block.data:noindex'), true);
-	}
-
-	if (data.parent != null) {
-		const regexp = data.home ? `^${data.parent}(/[^/]+)?$` : `^${data.parent}/[^/]+$`;
-		if (data.home) q.orderByRaw("block.data->>'url' = ? DESC", data.parent);
-		q.whereJsonText('block.data:url', '~', regexp)
-			.orderBy(ref('block.data:index'));
-	} else if (data.url) {
-		q.where(fun('starts_with',
-			ref('block.data:url').castText(),
-			data.url
-		));
-	} else {
-		// just return all pages for the sitemap
-	}
-	return q.orderBy(ref('block.data:url'), 'block.updated_at DESC');
 }
 
 function stripHostname(site, block) {
@@ -909,29 +814,24 @@ async function applyRelate({ site, trx }, obj) {
 }
 
 async function navigationLinks(req, url, prefix, lang) {
-	const { ref, raw } = req;
-	const [parents, siblings] = await Promise.all([
+	const [parents, { items:siblings }] = await Promise.all([
 		getParents(req, url, lang),
-		prefix ? [] : listPages(req, {
+		prefix ? { items: [] } : req.call('page.list', {
 			lang,
 			drafts: true,
 			parent: url.split('/').slice(0, -1).join('/')
-		}).clearSelect().select([
-			ref('block.data:url').as('url'),
-			ref('block.data:redirect').as('redirect'),
-			raw(`block_get_content(block._id, :lang, 'title') AS title`, { lang })
-		])
+		})
 	]);
 	const links = {};
-	links.up = parents.map(redUrl);
+	links.up = parents.map(shortLink);
 
 	// consider not doing this for prefixed pages
 	let found;
 	const position = siblings.findIndex(item => {
-		const same = item.url == url;
+		const same = item.data.url == url;
 		if (same) {
 			found = true;
-		} else if (!found && url.length > 1 && item.url.startsWith(url)) {
+		} else if (!found && url.length > 1 && item.data.url.startsWith(url)) {
 			found = item.url;
 		}
 		return same;
@@ -940,14 +840,14 @@ async function navigationLinks(req, url, prefix, lang) {
 		links.found = found;
 	}
 	if (position > 0) {
-		links.prev = redUrl(siblings[position - 1]);
+		links.prev = shortLink(siblings[position - 1]);
 	}
 	if (position < siblings.length - 1) {
-		links.next = redUrl(siblings[position + 1]);
+		links.next = shortLink(siblings[position + 1]);
 	}
 	if (siblings.length > 1) {
-		links.first = redUrl(siblings[0]);
-		links.last = redUrl(siblings[siblings.length - 1]);
+		links.first = shortLink(siblings[0]);
+		links.last = shortLink(siblings[siblings.length - 1]);
 	}
 	return links;
 }
