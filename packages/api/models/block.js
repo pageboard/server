@@ -303,14 +303,10 @@ class Block extends Model {
 			async $afterUpdate({ patch, old }, context) {
 				await super.$afterUpdate(context);
 				const url = this.data?.url ?? old?.data?.url;
-				if (!url || url.startsWith('/.')) return;
-				const title = this.data?.title ?? this.content?.title;
+				if (!url || url.startsWith('/.') || !this.content) return;
 				const { req } = context.transaction;
-				if (title == null) try {
-					await req.run('href.del', { url });
-				} catch (ex) {
-					// miss
-				} else try {
+				const { title } = this.content;
+				try {
 					await req.run('href.save', {
 						url,
 						title
@@ -323,8 +319,8 @@ class Block extends Model {
 			async $afterInsert(context) {
 				await super.$afterInsert(context);
 				const { url } = this.data ?? {};
-				if (!url || url.startsWith('/.')) return;
-				const title = this.data?.title ?? this.content?.title;
+				if (!url || url.startsWith('/.') || !this.content) return;
+				const { title } = this.content;
 				if (title == null) return;
 				const { req } = context.transaction;
 				await req.run('href.add', { url });

@@ -198,7 +198,8 @@ module.exports = class HrefService {
 		if (local && !pageUrl.pathname.startsWith('/.')) {
 			// consider it's a page
 			const { item } = await req.run('block.find', {
-				type: site.$pkg.pages,
+				type: Array.from(site.$pkg.pages),
+				content: 'title',
 				data: {
 					url: pageUrl.pathname
 				}
@@ -209,7 +210,7 @@ module.exports = class HrefService {
 			result = {
 				mime: 'text/html; charset=utf-8',
 				type: 'link',
-				title: item.data?.title ?? item.content?.title,
+				title: item.content.title,
 				site: null,
 				pathname: pageUrl.pathname,
 				url: pageUrl.pathname + pageUrl.search
