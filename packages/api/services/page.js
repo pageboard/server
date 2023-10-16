@@ -231,6 +231,7 @@ module.exports = class PageService {
 		return req.run('block.search', {
 			lang,
 			type: 'page',
+			content: 'title',
 			data: {
 				nositemap: data.draft ? undefined : false
 			},
@@ -525,9 +526,10 @@ module.exports = class PageService {
 			q.where(ref('block.data:noindex'), true);
 		}
 
-		if (data.parent != null) {
-			const regexp = data.home ? `^${data.parent}(/[^/]+)?$` : `^${data.parent}/[^/]+$`;
-			if (data.home) q.orderByRaw("block.data->>'url' = ? DESC", data.parent);
+		if (data.prefix != null) {
+			const prefix = data.prefix.replace(/\/$/, '');
+			const regexp = data.home ? `^${prefix}(/[^/]+)?$` : `^${prefix}/[^/]+$`;
+			if (data.home) q.orderByRaw("block.data->>'url' = ? DESC", prefix);
 			q.whereJsonText('block.data:url', '~', regexp)
 				.orderBy(ref('block.data:index'));
 		} else if (data.url) {
@@ -554,19 +556,14 @@ module.exports = class PageService {
 		title: 'List pages',
 		$action: 'read',
 		properties: {
-			lang: {
-				title: 'Lang',
-				type: 'string',
-				format: 'lang',
-				nullable: true
-			},
 			prefix: {
-				title: 'Prefix/',
+				title: 'By url prefix',
 				type: 'string',
-				format: 'pathname'
+				format: 'pathname',
+				$helper: "page"
 			},
 			home: {
-				title: 'Home item is prefix',
+				title: 'Return prefix as item',
 				type: 'boolean',
 				default: false
 			},
@@ -574,6 +571,12 @@ module.exports = class PageService {
 				title: 'Starts with',
 				type: 'string',
 				format: 'pathname'
+			},
+			lang: {
+				title: 'Lang',
+				type: 'string',
+				format: 'lang',
+				nullable: true
 			},
 			drafts: {
 				title: 'With drafts',
