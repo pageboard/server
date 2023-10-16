@@ -235,7 +235,7 @@ module.exports = class PageService {
 			asMap: true,
 			types: Href.mediaTypes
 		});
-		const links = await navigationLinks(req, data.url, page.data.prefix);
+		const links = await navigationLinks(req, data.url, page.data.prefix, lang);
 
 		Object.assign(obj, {
 			parent: site,
@@ -264,8 +264,7 @@ module.exports = class PageService {
 				title: 'Translate to site lang',
 				type: 'string',
 				format: 'lang',
-				nullable: true,
-				// TODO $ref anyOf site languages initialized by translate.init
+				nullable: true
 			},
 			type: {
 				title: 'Restrict to type',
@@ -277,7 +276,9 @@ module.exports = class PageService {
 	};
 
 	async search(req, data) {
+		const { lang } = req.call('translate.lang', data);
 		return req.run('block.search', {
+			lang,
 			type: 'page',
 			data: {
 				nositemap: data.draft ? undefined : false
@@ -292,13 +293,29 @@ module.exports = class PageService {
 		$action: 'read',
 		required: ['text'],
 		properties: {
+			lang: {
+				title: 'Lang',
+				type: 'string',
+				format: 'lang',
+				nullable: true
+			},
 			text: {
 				title: 'Search text',
 				type: 'string',
 				format: 'singleline'
 			},
 			content: {
-				type: 'boolean'
+				title: 'Contents',
+				anyOf: [{
+					const: false,
+					title: 'none'
+				}, {
+					const: true,
+					title: 'all'
+				}, {
+					type: 'string',
+					title: 'custom'
+				}]
 			},
 			limit: {
 				title: 'Limit',
@@ -330,7 +347,7 @@ module.exports = class PageService {
 	};
 
 	async all(req, data) {
-		const pages = await listPages(req, data);
+		const pages = await listPages(req, req.call('translate.lang', data));
 		const obj = {
 			items: pages
 		};
@@ -607,7 +624,7 @@ module.exports = class PageService {
 		for (const page of pages.items) {
 			await req.run('href.add', {
 				url: page.data.url,
-				title: page.data.title
+				title: page.content.title
 			});
 		}
 		return {
@@ -630,7 +647,7 @@ function redUrl(obj) {
 	return obj;
 }
 
-function getParents({ site, trx, ref }, url) {
+function getParents({ site, trx, ref, raw }, url, lang) {
 	const urlParts = url.split('/');
 	const urlParents = ['/'];
 	for (let i = 1; i < urlParts.length - 1; i++) {
@@ -640,7 +657,7 @@ function getParents({ site, trx, ref }, url) {
 		.select([
 			ref('block.data:url').as('url'),
 			ref('block.data:redirect').as('redirect'),
-			ref('block.data:title').as('title')
+			raw(`block_get_content(block._id, :lang, 'title') AS title`, { lang })
 		])
 		.whereIn('block.type', Array.from(site.$pkg.pages))
 		.whereJsonText('block.data:url', 'IN', urlParents)
@@ -649,7 +666,7 @@ function getParents({ site, trx, ref }, url) {
 
 function listPages({ site, trx, fun, raw, ref }, data) {
 	const q = site.$relatedQuery('children', trx)
-		.columns()
+		.columns({lang: data.lang, content: 'title'})
 		.select(raw("'site' || block.type AS type"))
 		.whereIn('block.type', data.type ?? Array.from(site.$pkg.pages))
 		.where('block.standalone', true);
@@ -878,17 +895,18 @@ async function applyRelate({ site, trx }, obj) {
 	}));
 }
 
-async function navigationLinks(req, url, prefix) {
-	const { ref } = req;
+async function navigationLinks(req, url, prefix, lang) {
+	const { ref, raw } = req;
 	const [parents, siblings] = await Promise.all([
-		getParents(req, url),
+		getParents(req, url, lang),
 		prefix ? [] : listPages(req, {
+			lang,
 			drafts: true,
 			parent: url.split('/').slice(0, -1).join('/')
 		}).clearSelect().select([
 			ref('block.data:url').as('url'),
 			ref('block.data:redirect').as('redirect'),
-			ref('block.data:title').as('title')
+			raw(`block_get_content(block._id, :lang, 'title') AS title`, { lang })
 		])
 	]);
 	const links = {};

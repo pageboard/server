@@ -199,10 +199,16 @@ module.exports = class BlockService {
 					`array_remove(array_agg(DISTINCT content_get_headline(:tsconfig, contents.text, search.query)), NULL) AS headlines`, language
 				))
 				.groupBy('block._id');
-			if (data.content) {
+			if (data.content === true) {
+				// find blocks by their direct content
 				qdoc.join('contents', 'block._id', 'contents._id')
 					.join('search', 'contents.tsv', '@@', 'search.query');
+			} else if (typeof data.content == "string") {
+				// find blocks by one of the content by name
+				throw new HttpError.NotImplemented("Search with specific content not implemented");
 			} else {
+				// find blocks by direct content and textblock children contents
+				// TODO add search by direct content (lateral join or something)
 				qdoc.joinRelated('children as child')
 					.whereIn('child.type', site.$pkg.textblocks)
 					.join('contents', 'child._id', 'contents._id')
@@ -242,7 +248,7 @@ module.exports = class BlockService {
 				).as('count')
 			);
 		}
-		if (data.content) {
+		if (data.content === true) {
 			eagers.children = {
 				$relation: 'children',
 				$modify: ['childrenFilter']
@@ -305,7 +311,7 @@ module.exports = class BlockService {
 		if (ids.length) {
 			const hrow = await req.call('href.collect', {
 				ids,
-				content: data.content,
+				content: data.content === true,
 				asMap: true,
 				preview: data.preview,
 				types: Href.mediaTypes
@@ -355,9 +361,17 @@ module.exports = class BlockService {
 				nullable: true
 			},
 			content: {
-				title: 'With content',
-				type: 'boolean',
-				nullable: true
+				title: 'Contents',
+				anyOf: [{
+					const: false,
+					title: 'none'
+				}, {
+					const: true,
+					title: 'all'
+				}, {
+					type: 'string',
+					title: 'custom'
+				}]
 			},
 			text: {
 				title: 'Text search',
@@ -422,9 +436,17 @@ module.exports = class BlockService {
 						}
 					},
 					content: {
-						title: 'With content',
-						type: 'boolean',
-						nullable: true
+						title: 'Contents',
+						anyOf: [{
+							const: false,
+							title: 'none'
+						}, {
+							const: true,
+							title: 'all'
+						}, {
+							type: 'string',
+							title: 'custom'
+						}]
 					},
 					data: {
 						title: 'Select by data',
@@ -507,9 +529,17 @@ module.exports = class BlockService {
 						nullable: true
 					},
 					content: {
-						title: 'With content',
-						type: 'boolean',
-						nullable: true
+						title: 'Contents',
+						anyOf: [{
+							const: false,
+							title: 'none'
+						}, {
+							const: true,
+							title: 'all'
+						}, {
+							type: 'string',
+							title: 'custom'
+						}]
 					},
 					data: {
 						title: 'Select by data',
@@ -573,9 +603,17 @@ module.exports = class BlockService {
 						default: false
 					},
 					content: {
-						title: 'With content',
-						type: 'boolean',
-						default: false
+						title: 'Contents',
+						anyOf: [{
+							const: false,
+							title: 'none'
+						}, {
+							const: true,
+							title: 'all'
+						}, {
+							type: 'string',
+							title: 'custom'
+						}]
 					},
 					data: {
 						title: 'Select by data',

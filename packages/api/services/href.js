@@ -378,7 +378,7 @@ module.exports = class HrefService {
 				default: false
 			},
 			content: {
-				title: 'Collect hrefs in blocks contents',
+				title: 'Within contents',
 				type: 'boolean',
 				default: false
 			},

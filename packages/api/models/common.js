@@ -151,9 +151,17 @@ exports.QueryBuilder = class CommonQueryBuilder extends QueryBuilder {
 				if (!content) continue;
 				if (lang) {
 					cols.push(
-						raw(`(block_get_content(:id:, :lang)).*`, {
+						raw(`(block_get_content(:id:, :lang, :content)).*`, {
 							id: ref('_id').from(table),
-							lang
+							lang,
+							content: content === true ? null : content
+						})
+					);
+					continue;
+				} else if (typeof content == "string") {
+					cols.push(
+						raw(`jsonb_build_object(:content, content[:content:]) AS content`, {
+							content
 						})
 					);
 					continue;
