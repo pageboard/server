@@ -485,9 +485,12 @@ module.exports = class PageService {
 	async relink(req) {
 		const pages = await req.run('page.list');
 		for (const page of pages.items) {
+			if (!page.content.title) {
+				console.error("page has no content.title", page);
+				continue;
+			}
 			await req.run('href.add', {
-				url: page.data.url,
-				title: page.content.title
+				url: page.data.url
 			});
 		}
 		return {
