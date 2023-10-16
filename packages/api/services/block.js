@@ -186,11 +186,21 @@ module.exports = class BlockService {
 					.joinRelated('children')
 					.where('children.type', 'content')
 					.where(ref('children.data:lang').castText(), language.lang)
+					.where(q => {
+						if (typeof data.content == "string") {
+							q.where(ref('children.data:name').castText(), data.content);
+						}
+					})
 				);
 			} else {
 				q.with('contents', Block.query(trx)
 					.select('block._id', 'block.tsv', 'value AS text')
 					.from(raw('block, jsonb_each_text(block.content)'))
+					.where(q => {
+						if (typeof data.content == "string") {
+							q.where('name', data.content);
+						}
+					})
 				);
 			}
 
@@ -206,13 +216,10 @@ module.exports = class BlockService {
 					`array_remove(array_agg(DISTINCT content_get_headline(:tsconfig, contents.text, search.query)), NULL) AS headlines`, language
 				))
 				.groupBy('block._id');
-			if (data.content === true) {
+			if (data.content) {
 				// find blocks by their direct content
 				qdoc.join('contents', 'block._id', 'contents._id')
 					.join('search', 'contents.tsv', '@@', 'search.query');
-			} else if (typeof data.content == "string") {
-				// find blocks by one of the content by name
-				throw new HttpError.NotImplemented("Search with specific content not implemented");
 			} else {
 				// find blocks by direct content and textblock children contents
 				// TODO add search by direct content (lateral join or something)
