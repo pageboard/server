@@ -3,7 +3,7 @@ module.exports = class RobotService {
 
 	apiRoutes(app, server) {
 		server.get('/robots.txt', app.cache.tag('data-:site'), async (req, res) => {
-			const txt = await req.run('page.robots');
+			const txt = await req.run('robot.txt');
 			res.type('text/plain');
 			res.send(txt);
 		});
@@ -65,7 +65,7 @@ module.exports = class RobotService {
 		$action: 'write'
 	};
 
-	async robots(req, data) {
+	async txt(req, data) {
 		const lines = [];
 		const { site } = req;
 		const { env = site.data.env } = data;
@@ -85,7 +85,7 @@ module.exports = class RobotService {
 		}
 		return lines.join('\n');
 	}
-	static robots = {
+	static txt = {
 		title: 'Get robots.txt',
 		$lock: true,
 		$action: 'read',
