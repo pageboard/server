@@ -587,6 +587,19 @@ module.exports = class PageService {
 		}
 	};
 
+	async ping(req) {
+		const sitemap = new URL("/.well-known/sitemap.xml", req.site.url);
+		const url = new URL("https://www.google.com/ping");
+		url.searchParams.set('sitemap', sitemap.href);
+		const response = await fetch(url);
+		if (!response.ok) throw new HttpError[response.status](response.statusText);
+	}
+	static ping = {
+		title: 'Ping crawlers with new sitemap',
+		$lock: true,
+		$action: 'write'
+	};
+
 	async robots(req, data) {
 		const lines = [];
 		const { site } = req;
