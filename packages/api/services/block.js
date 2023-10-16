@@ -202,13 +202,8 @@ module.exports = class BlockService {
 						}
 					})
 				);
-			}
 
-			// FIXME
-			// there are two types of search
-			// block search where one wants to find blocks by their direct content
-			// (e.g. inventory_item)
-			// children block search where one wants to find blocks by their direct content and by their non-standalone children direct contents
+			}
 
 			const qdoc = Block.query(trx).select('block._id')
 				.select(fun.sum(raw('ts_rank(contents.tsv, search.query)')).as('rank'))
