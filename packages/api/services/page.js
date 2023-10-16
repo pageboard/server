@@ -65,7 +65,7 @@ module.exports = class PageService {
 			res.send(txt);
 		});
 
-		server.get('/sitemap.txt', app.cache.tag('data-:site'), async (req, res) => {
+		server.get('/.well-known/sitemap.txt', app.cache.tag('data-:site'), async (req, res) => {
 			const obj = await req.run('page.all', {
 				robot: true,
 				type: ['page']
@@ -74,6 +74,38 @@ module.exports = class PageService {
 			res.send(app.responseFilter.run(req, obj).items.map(page => {
 				return new URL(page.data.url, req.site.url).href;
 			}).join('\n'));
+		});
+
+		server.get('/.well-known/sitemap.xml', app.cache.tag('data-:site'), async (req, res) => {
+			const obj = await req.run('page.all', {
+				robot: true,
+				type: ['page']
+			});
+			const { items } = app.responseFilter.run(req, obj);
+			const { site } = req;
+			const { languages = [] } = site.data;
+
+			// https://www.sitemaps.org/protocol.html
+			res.type('application/xml');
+
+			const xmlAlt = (href, lang) => {
+				return `<xhtml:link rel="alternate" hreflang="${lang}" href="${href}~${lang}"/>`;
+			};
+
+			const xmlItem = item => {
+				const href = (new URL(item.data.url, site.url)).href;
+				return `<url>
+					<loc>${href}</loc>
+					<lastmod>${item.updated_at.split('T').shift()}</lastmod>
+					${languages.map(lang => xmlAlt(href, lang)).join('\n')}
+				</url>`;
+			};
+
+			res.send(`<?xml version="1.0" encoding="UTF-8"?>
+				<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9" xmlns:xhtml="http://www.w3.org/1999/xhtml">
+					${items.map(item => xmlItem(item)).join('\n')}
+				</urlset>`.replace(/\t+/g, '')
+			);
 		});
 	}
 
@@ -543,7 +575,7 @@ module.exports = class PageService {
 		const { site } = req;
 		const { env = site.data.env } = data;
 		if (env == "production") {
-			lines.push(`Sitemap: ${new URL("/sitemap.txt", site.url)}`);
+			lines.push(`Sitemap: ${new URL("/.well-known/sitemap.xml", site.url)}`);
 			lines.push('User-agent: *');
 			const pages = await listPages(req, {
 				disallow: true,
