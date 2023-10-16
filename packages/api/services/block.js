@@ -111,7 +111,8 @@ module.exports = class BlockService {
 
 		if (data.parent) {
 			const parentList = data.parent.parents;
-			// WTF is that ? is it used somewhere ?
+			// this is internal API and instead it should be
+			// an array of data.parent
 			if (parentList && Array.isArray(parentList)) {
 				if (parentList.length) {
 					valid = true;
