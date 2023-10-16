@@ -9,7 +9,7 @@ module.exports = class RobotService {
 		});
 
 		server.get('/.well-known/sitemap.txt', app.cache.tag('data-:site'), async (req, res) => {
-			const obj = await req.run('page.all', {
+			const obj = await req.run('page.list', {
 				robot: true,
 				type: ['page']
 			});
@@ -20,7 +20,7 @@ module.exports = class RobotService {
 		});
 
 		server.get('/.well-known/sitemap.xml', app.cache.tag('data-:site'), async (req, res) => {
-			const obj = await req.run('page.all', {
+			const obj = await req.run('page.list', {
 				robot: true,
 				type: ['page']
 			});

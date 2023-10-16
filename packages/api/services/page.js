@@ -41,7 +41,7 @@ module.exports = class PageService {
 				query.type = ['page'];
 			}
 
-			const action = query.text != null ? 'page.search' : 'page.all';
+			const action = query.text != null ? 'page.search' : 'page.list';
 			const obj = await req.run(action, query);
 			res.return(obj);
 		});
@@ -482,7 +482,7 @@ module.exports = class PageService {
 	};
 
 	async relink(req) {
-		const pages = await req.run('page.all');
+		const pages = await req.run('page.list');
 		for (const page of pages.items) {
 			await req.run('href.add', {
 				url: page.data.url,
@@ -499,9 +499,11 @@ module.exports = class PageService {
 		$action: 'write'
 	};
 
-	async list({ site, trx, fun, raw, ref }, data) {
+	async list(req, data) {
+		const { site, trx, fun, raw, ref } = req;
+		const { lang } = req.call('translate.lang', data);
 		const q = site.$relatedQuery('children', trx)
-			.columns({ lang: data.lang, content: 'title' })
+			.columns({ lang, content: 'title' })
 			.select(raw("'site' || block.type AS type"))
 			.whereIn('block.type', data.type ?? Array.from(site.$pkg.pages))
 			.where('block.standalone', true);
@@ -542,7 +544,7 @@ module.exports = class PageService {
 		};
 		if (data.home) {
 			obj.item = items.shift();
-			if (obj.item && obj.item.data.url != data.parent) {
+			if (obj.item && obj.item.data.url != data.prefix) {
 				delete obj.item;
 			}
 		}
@@ -550,7 +552,7 @@ module.exports = class PageService {
 	}
 	static list = {
 		title: 'List pages',
-		$lock: true,
+		$action: 'read',
 		properties: {
 			lang: {
 				title: 'Lang',
@@ -558,34 +560,38 @@ module.exports = class PageService {
 				format: 'lang',
 				nullable: true
 			},
-			parent: {
-				title: 'Root pathname',
+			prefix: {
+				title: 'Prefix/',
 				type: 'string',
 				format: 'pathname'
 			},
 			home: {
-				title: 'Returns root as first item',
+				title: 'Home item is prefix',
 				type: 'boolean',
 				default: false
 			},
 			url: {
-				title: 'Url path',
+				title: 'Starts with',
 				type: 'string',
 				format: 'pathname'
 			},
 			drafts: {
+				title: 'With drafts',
 				type: 'boolean',
 				default: false
 			},
 			robot: {
+				title: 'Indexable',
 				type: 'boolean',
 				default: false
 			},
 			disallow: {
+				title: 'Non-indexable',
 				type: 'boolean',
 				default: false
 			},
 			type: {
+				title: 'Types',
 				type: 'array',
 				items: {
 					type: 'string',
@@ -819,7 +825,7 @@ async function navigationLinks(req, url, prefix, lang) {
 		prefix ? { items: [] } : req.call('page.list', {
 			lang,
 			drafts: true,
-			parent: url.split('/').slice(0, -1).join('/')
+			prefix: url.split('/').slice(0, -1).join('/')
 		})
 	]);
 	const links = {};
