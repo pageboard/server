@@ -295,6 +295,75 @@ module.exports = class HrefService {
 		}
 	};
 
+	async referrers(req, { url, exclude, limit, offset }) {
+		const { site, trx, ref } = req;
+		const hrefs = site.$hrefs;
+		const qList = q => {
+			const urlQueries = [];
+			for (const [type, list] of Object.entries(hrefs)) {
+				for (const desc of list) {
+					const bq = site.$modelClass.query(trx).from('block')
+						.select('block.id')
+						.where('block.type', type)
+						.whereNotNull(req.ref(`block.data:${desc.path}`));
+					if (desc.array) {
+						bq.where(
+							req.raw("jsonb_typeof(??)", [req.ref(`block.data:${desc.path}`)]),
+							'array'
+						);
+					}
+					urlQueries.push(bq);
+				}
+			}
+			q.union(urlQueries, true);
+		};
+		const q = site.$relatedQuery('children', trx)
+			.with('list', qList)
+			.join('list', 'list.id', 'block.id')
+			.distinct('parents.id', 'parents.type')
+			.where(ref('block.data:url').castText(), url)
+			.joinRelated('parents')
+			.whereNot('parents.type', 'site')
+			.whereNotIn('block.type', Array.from(site.$pkg.pages))
+			.where(q => {
+				if (exclude) q.whereNot('parents.id', exclude);
+			});
+		const [items, count] = await Promise.all([
+			q.limit(limit).offset(offset),
+			q.resultSize()
+		]);
+		return {
+			items,
+			count,
+			offset,
+			limit
+		};
+	}
+	static referrers = {
+		title: 'Referrers',
+		$lock: true,
+		$action: 'read',
+		properties: {
+			url: {
+				title: 'Url',
+				type: 'string',
+				format: 'pathname'
+			},
+			limit: {
+				title: 'Limit',
+				type: 'integer',
+				minimum: 0,
+				maximum: 1000,
+				default: 10
+			},
+			offset: {
+				title: 'Offset',
+				type: 'integer',
+				default: 0
+			}
+		}
+	};
+
 	collect(req, data) {
 		const { site, trx } = req;
 		const hrefs = site.$hrefs;
