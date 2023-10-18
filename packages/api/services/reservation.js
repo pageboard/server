@@ -9,23 +9,25 @@ module.exports = class ReservationService {
 				"reservation.attendees must not be empty"
 			);
 		}
-		const [{ item: settings }, { item: eventDate }] = await Promise.all([
-			req.run('settings.have', { email }),
-			req.run('block.find', {
-				type: 'event_date',
-				id: event_date_id,
-				parents: {
-					type: 'event',
-					first: true
-				}
-			})
-		]);
-		if (user.id !== settings.id) {
+		const { item: eventDate } = await req.run('block.find', {
+			id: event_date_id,
+			type: 'event_date',
+			parents: {
+				type: 'event',
+				first: true
+			}
+		});
+		const { item: settings } = await req.run('settings.have', { email });
+
+		if (user.id !== settings.id && !user.grants.includes('scheduler')) {
 			throw new HttpError.Unauthorized("Wrong user");
 		}
-		if (!eventDate) {
-			throw new HttpError.NotFound("Event date not found");
+		const { parent: event } = eventDate;
+
+		if (eventDateClosed(event, eventDate)) {
+			throw new HttpError.Forbidden("Event date is closed");
 		}
+
 		const parents = [
 			{ type: 'settings', id: settings.id },
 			{ type: 'event_date', id: event_date_id }
@@ -52,15 +54,15 @@ module.exports = class ReservationService {
 		reservation.payment ??= {};
 
 		if (reservation.seats > 0) {
-			const maxSeats = eventDate.data.seats || eventDate.parent.data.seats || 0;
+			const maxSeats = eventDate.data.seats || event.data.seats || 0;
 			if (maxSeats > 0 && total > maxSeats) {
 				throw new HttpError.BadRequest("Cannot reserve this number of seats");
 			}
-			const maxSeatsRes = eventDate.parent.data.maxSeatsReservations;
+			const maxSeatsRes = event.data.maxSeatsReservations;
 			if (maxSeatsRes && reservation.seats > maxSeatsRes) {
 				throw new HttpError.BadRequest("Cannot reserve that much seats at once");
 			}
-			reservation.payment.due = (eventDate.data.price || eventDate.parent.data.price || 0) * reservation.seats;
+			reservation.payment.due = (eventDate.data.price || event.data.price || 0) * reservation.seats;
 		} else {
 			reservation.payment.paid = 0;
 		}
@@ -145,6 +147,7 @@ module.exports = class ReservationService {
 	};
 
 	async save(req, data) {
+		const { user } = req;
 		const { id, ...reservation } = data;
 		if (!reservation.attendees?.length) {
 			throw new HttpError.BadRequest(
@@ -153,7 +156,7 @@ module.exports = class ReservationService {
 		}
 		const { item: eventDate } = await req.run('block.find', {
 			child: {
-				id
+				id,
 			},
 			children: {
 				type: 'event_reservation',
@@ -165,9 +168,19 @@ module.exports = class ReservationService {
 				first: true
 			}
 		});
-		const resa = eventDate.child;
-		if (!resa.type) {
+		const { item: settings } = await req.run('block.find', {
+			child: {
+				id,
+				type: 'event_reservation'
+			},
+			type: 'settings'
+		});
+		if (user.id !== settings.id && !user.grants.includes('scheduler')) {
 			throw new HttpError.Unauthorized("Wrong user");
+		}
+		const { child: resa, parent: event } = eventDate;
+		if (eventDateClosed(event, eventDate)) {
+			throw new HttpError.Forbidden("Event date is closed");
 		}
 		if (reservation.attendees) {
 			reservation.seats = reservation.attendees.length;
@@ -182,15 +195,15 @@ module.exports = class ReservationService {
 		reservation.payment ??= {};
 
 		if (reservation.seats > 0) {
-			const maxSeats = eventDate.data.seats || eventDate.parent.data.seats || 0;
+			const maxSeats = eventDate.data.seats || event.data.seats || 0;
 			if (maxSeats > 0 && total > maxSeats) {
 				throw new HttpError.BadRequest("Cannot reserve this number of seats");
 			}
-			const maxSeatsRes = eventDate.parent.data.maxSeatsReservations;
+			const maxSeatsRes = event.data.maxSeatsReservations;
 			if (maxSeatsRes && reservation.seats > maxSeatsRes) {
 				throw new HttpError.BadRequest("Cannot reserve that much seats at once");
 			}
-			reservation.payment.due = (eventDate.data.price || eventDate.parent.data.price || 0) * reservation.seats;
+			reservation.payment.due = (eventDate.data.price || event.data.price || 0) * reservation.seats;
 		} else {
 			reservation.payment.due = 0;
 		}
@@ -218,35 +231,47 @@ module.exports = class ReservationService {
 		}, this.add.properties)
 	};
 
-	async del({ user, call, trx }, data) {
-		const resa = await call('block.get', {
-			type: 'event_reservation',
-			id: data.reservation
-		}).withGraphFetched('[parents(parentsFilter)]').modifiers({
-			parentsFilter(q) {
-				q.whereIn('block.type', ['event_date', 'settings'])
-					.columns()
-					.orderBy('block.type');
+	async del(req, { reservation: id }) {
+		const { user, trx } = req;
+		const { item: eventDate } = await req.run('block.find', {
+			child: {
+				id,
+			},
+			children: {
+				type: 'event_reservation',
+				first: true
+			},
+			type: 'event_date',
+			parents: {
+				type: 'event',
+				first: true
 			}
 		});
+		const { item: settings } = await req.run('block.find', {
+			child: {
+				id,
+				type: 'event_reservation'
+			},
+			type: 'settings'
+		});
+		if (user.id !== settings.id && !user.grants.includes('scheduler')) {
+			throw new HttpError.Unauthorized("Wrong user");
+		}
+		const { child: resa, parent: event } = eventDate;
+		if (eventDateClosed(event, eventDate)) {
+			throw new HttpError.Forbidden("Event date is closed");
+		}
 		const paid = (resa.data.payment || {}).paid || 0;
 		if (paid !== 0) {
 			throw new HttpError.BadRequest("Reservation has received payments");
 		}
-		const [eventDate, settings] = resa.parents;
-		delete resa.parents;
-		if (user.id !== settings.id && !user.grants.includes('scheduler')) {
-			throw new HttpError.Unauthorized("Wrong user");
-		}
 		if (resa.data.seats == 0) return resa;
 		const total = (eventDate.data.reservations || 0) - resa.data.seats;
-		await Promise.allSettled([
-			eventDate.$query(trx).patchObject({
-				type: eventDate.type,
-				data: { reservations: total }
-			}),
-			resa.$query(trx).delete()
-		]);
+		await resa.$query(trx).delete();
+		await eventDate.$query(trx).patchObject({
+			type: eventDate.type,
+			data: { reservations: total }
+		});
 		return {};
 	}
 	static del = {
@@ -342,6 +367,7 @@ module.exports = class ReservationService {
 			}
 			delete item.settings.user;
 		}
+		eventDate.closed = eventDateClosed(event, eventDate);
 		return { item: eventDate, items };
 	}
 	static search = {
@@ -371,3 +397,14 @@ module.exports = class ReservationService {
 		}
 	};
 };
+
+
+function eventDateClosed(event, eventDate) {
+	const start = Date.parse(eventDate.data.slot.start);
+	const opening = eventDate.data.opening ?? event.data.opening ?? Infinity;
+	const closing = eventDate.data.closing ?? event.data.closing ?? 0;
+	const openAt = start - opening * 3_600_000;
+	const closeAt = start - closing * 3_600_000;
+	const now = Date.now();
+	return openAt <= now && now <= closeAt;
+}
