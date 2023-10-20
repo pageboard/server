@@ -27,7 +27,7 @@ module.exports = class PageService {
 			obj.commons = app.opts.commons;
 			res.return(obj);
 		});
-		server.get('/.api/pages', async (req, res) => {
+		server.get('/.api/pages', app.auth.lock('webmaster'), async (req, res) => {
 			const { query, site } = req;
 			const isWebmaster = !req.locked(['webmaster']);
 			if (isWebmaster) {
@@ -45,17 +45,9 @@ module.exports = class PageService {
 			const obj = await req.run(action, query);
 			res.return(obj);
 		});
-		server.post('/.api/page', app.cache.tag('data-:site'), app.auth.lock('webmaster'), async (req, res) => {
-			const page = await req.run('page.add', req.body);
-			// FIXME use res.return ?
-			res.send(page);
-		});
+
 		server.put('/.api/page', app.cache.tag('data-:site'), app.auth.lock('webmaster'), async (req, res) => {
-			const page = await req.run('page.save', req.body);
-			res.send(page);
-		});
-		server.delete('/.api/page', app.cache.tag('data-:site'), app.auth.lock('webmaster'), async (req, res) => {
-			const page = await req.run('page.del', req.query);
+			const page = await req.run('page.write', req.body);
 			res.send(page);
 		});
 	}
@@ -298,8 +290,8 @@ module.exports = class PageService {
 		}
 	};
 
-	async save(req, changes) {
-		const { site, trx } = req;
+	async write(req, changes) {
+		const { site } = req;
 		changes = {
 			// blocks removed from their standalone parent (grouped by parent)
 			unrelate: {},
@@ -313,17 +305,6 @@ module.exports = class PageService {
 			relate: {},
 			...changes
 		};
-		const pkg = site.$pkg;
-
-		const pages = {};
-		for (const method of ['add', 'update', 'remove']) {
-			pages[method] = changes[method].filter(b => {
-				const alias = pkg.aliases[b.type];
-				if (alias) b.type = alias;
-				return pkg.pages.has(b.type);
-			});
-		}
-		pages.all = [ ...pages.add, ...pages.update ];
 
 		for (const b of changes.add) {
 			stripHostname(site, b);
@@ -331,49 +312,8 @@ module.exports = class PageService {
 		for (const b of changes.update) {
 			stripHostname(site, b);
 		}
-		// this also effectively prevents removing a page and adding a new page
-		// with the same url as the one removed
-		const allUrl = {};
 		const returning = {};
-		const dbPages = await site.$relatedQuery('children', trx)
-			.select('block.id', req.ref('block.data:url').as('url'))
-			.whereIn('block.type', Array.from(pkg.pages))
-			.whereNotNull(req.ref('block.data:url'));
-		for (const page of pages.all) {
-			const { url } = page.data;
-			if (!url) {
-				delete page.data.url;
-				continue;
-			}
-			if (page.data.prefix && !url.endsWith('/')) {
-				throw new HttpError.BadRequest(Text`
-					${page.id} must have url ending with / to be able to match
-				`);
-			} else if (allUrl[url]) {
-				throw new HttpError.BadRequest(Text`
-					${page.id} and ${allUrl[url]} have the same url
-					${url}
-				`);
-			} else if (!page.id) {
-				throw new HttpError.BadRequest(
-					`Page without id: ${url}`
-				);
-			} else {
-				allUrl[url] = page.id;
-			}
-		}
-		for (const dbPage of dbPages) {
-			const id = allUrl[dbPage.url];
-			if (id != null && dbPage.id != id) {
-				throw new HttpError.BadRequest(Text`
-					${id} wants to take ${dbPage.id} url:
-					${dbPage.url}
-				`);
-			}
-		}
 
-		// FIXME use site.$hrefs to track the blocks with href when saving,
-		// and check all new/changed href have matching row in href table
 		await applyUnrelate(req, changes.unrelate);
 		await applyRemove(req, changes.remove, changes.recursive);
 		returning.update = [
@@ -383,8 +323,8 @@ module.exports = class PageService {
 		await applyRelate(req, changes.relate);
 		return returning;
 	}
-	static save = {
-		title: 'Save page',
+	static write = {
+		title: 'Write to page',
 		$lock: true,
 		$action: 'write',
 		properties: {
@@ -419,90 +359,6 @@ module.exports = class PageService {
 		}
 	};
 
-	async add(req, data) {
-		await req.site.$beforeInsert.call(data);
-		const obj = await this.save(req, {
-			add: [data]
-		});
-		return obj.update[0];
-	}
-	static add = {
-		title: 'Add page',
-		$lock: true,
-		$action: 'write',
-		required: ['type', 'data'],
-		properties: {
-			type: {
-				type: 'string'
-			},
-			data: {
-				type: 'object'
-			}
-		}
-	};
-
-
-	async del({ site, trx, Href, run, ref }, data) {
-		const page = await run('block.get', data);
-		const links = site.$relatedQuery('children', trx)
-			.select(
-				'block.id',
-				'block.type',
-				'block.content',
-				ref('parents.id').as('parentId'),
-				ref('parents.data:url').as('parentUrl')
-			)
-			.where(ref('block.data:url').castText(), page.data.url)
-			.joinRelated('parents')
-			.whereNot('parents.type', 'site')
-			.whereNot('parents.id', page.id);
-		if (links.length > 0) {
-			throw new HttpError.Conflict(Text`
-				There are ${links.length} referrers to this page:
-				${JSON.stringify(links, null, ' ')}
-			`);
-		}
-		await Href.query(trx).where('url', page.data.url).del();
-		return run('block.del', {
-			id: page.id,
-			type: page.type
-		});
-	}
-	static del = {
-		title: 'Delete page',
-		$lock: true,
-		$action: 'write',
-		required: ['id'],
-		properties: {
-			id: {
-				title: 'id',
-				type: 'string',
-				format: 'id'
-			}
-		}
-	};
-
-	async relink(req) {
-		const pages = await req.run('page.list');
-		for (const page of pages.items) {
-			if (!page.content.title) {
-				console.error("page has no content.title", page);
-				continue;
-			}
-			await req.run('href.add', {
-				url: page.data.url
-			});
-		}
-		return {
-			count: pages.items.length
-		};
-	}
-	static relink = {
-		title: 'Reprovision all hrefs for pages',
-		$lock: true,
-		$action: 'write'
-	};
-
 	async list(req, data) {
 		const { site, trx, fun, ref } = req;
 		const { lang } = req.call('translate.lang', data);
@@ -513,14 +369,14 @@ module.exports = class PageService {
 
 		if (!data.drafts) {
 			q.whereNotNull(ref('block.data:url'));
-			q.where(function () {
-				this.whereNull(ref('block.data:nositemap'))
+			q.where(q => {
+				q.whereNull(ref('block.data:nositemap'))
 					.orWhereNot(ref('block.data:nositemap'), true);
 			});
 		}
 		if (data.robot) {
-			q.where(function () {
-				this.whereNull(ref('block.data:noindex'))
+			q.where(q => {
+				q.whereNull(ref('block.data:noindex'))
 					.orWhereNot(ref('block.data:noindex'), true);
 			});
 		}
@@ -622,7 +478,7 @@ function shortLink({ data, content }) {
 	return obj;
 }
 
-function getParents({ site, trx, ref, raw }, url, lang) {
+function getParents({ site, trx }, url, lang) {
 	const urlParts = url.split('/');
 	const urlParents = ['/'];
 	for (let i = 1; i < urlParts.length - 1; i++) {
@@ -684,119 +540,32 @@ async function applyAdd({ site, trx, Block }, list) {
 }
 
 async function applyUpdate(req, list) {
-	const blocksMap = {};
 	const updates = [];
 	const { site, trx } = req;
 
 	for await (const block of list) {
-		if (block.id in blocksMap) {
-			block.updated_at = blocksMap[block.id];
-		}
-		if (site.$pkg.pages.has(block.type)) {
-			updates.push(await updatePage(req, block, blocksMap));
-		} else if (!block.updated_at) {
+		if (!block.updated_at) {
 			throw new HttpError.BadRequest(`Block is missing 'updated_at' ${block.id}`);
+		}
+		const row = await site.$relatedQuery('children', trx)
+			.where('block.id', block.id)
+			.where('block.type', block.type)
+			.where(
+				req.raw("date_trunc('milliseconds', block.updated_at)"),
+				req.raw("date_trunc('milliseconds', ?::timestamptz)", [block.updated_at]),
+			)
+			.patch(block)
+			.returning('id', 'updated_at')
+			.first();
+		if (!row) {
+			throw new HttpError.Conflict(
+				`${block.type}:${block.id} last update mismatch ${block.updated_at}`
+			);
 		} else {
-			// simpler path
-			const row = await site.$relatedQuery('children', trx)
-				.where('block.id', block.id)
-				.where('block.type', block.type)
-				.where(
-					req.raw("date_trunc('milliseconds', block.updated_at)"),
-					req.raw("date_trunc('milliseconds', ?::timestamptz)", [block.updated_at]),
-				)
-				.patch(block)
-				.returning('id', 'updated_at')
-				.first();
-			if (!row) {
-				throw new HttpError.Conflict(
-					`${block.type}:${block.id} last update mismatch ${block.updated_at}`
-				);
-			} else {
-				updates.push(row);
-			}
+			updates.push(row);
 		}
 	}
 	return updates;
-}
-
-async function updatePage({
-	site, trx, ref, fun, raw, Block, Href
-}, page, sideEffects) {
-	if (!sideEffects) sideEffects = {};
-	const dbPage = await site.$relatedQuery('children', trx)
-		.where('block.id', page.id)
-		.whereIn('block.type', page.type ? [page.type] : Array.from(site.$pkg.pages))
-		.select('_id', ref('block.data:url').as('url'))
-		.first().throwIfNotFound();
-
-	const hrefs = site.$hrefs;
-	const oldUrl = dbPage.url;
-	const oldUrlStr = oldUrl == null ? '' : oldUrl;
-	const newUrl = page.data.url;
-	if (oldUrl != newUrl) {
-		for (const [type, list] of Object.entries(hrefs)) {
-			for (const desc of list) {
-				if (desc.types.some(type => {
-					return ['image', 'video', 'audio', 'svg'].includes(type);
-				})) continue;
-				const key = 'block.data:' + desc.path;
-				const field = ref(key).castText();
-				// this is a fake query not part of trx
-				const args = field._createRawArgs(Block.query());
-				try {
-					const rows = await site.$relatedQuery('children', trx)
-						.where('block.type', type)
-						.where(function () {
-							// use fn.starts_with
-							this.where(fun('starts_with', field, `${oldUrlStr}/`));
-							if (oldUrl == null) this.orWhereNull(field);
-							else this.orWhere(field, oldUrl);
-						})
-						.patch({
-							type,
-							[key]: raw(
-								`overlay(${args[0]} placing ? from 1 for ${oldUrlStr.length})`,
-								args[1],
-								newUrl
-							)
-						})
-						.returning('block.id', 'block.updated_at');
-					for (const row of rows) {
-						const date = row.updated_at;
-						sideEffects[row.id] = date;
-						if (page.id == row.id) page.updated_at = date;
-					}
-				} catch (err) {
-					console.error(`Error with type: ${type}, key: ${key}`);
-					throw err;
-				}
-			}
-		}
-	}
-
-	await Href.query(trx).where('_parent_id', site._id)
-		.where('type', 'link')
-		.where(function () {
-			this.where(fun('starts_with', 'url', `${oldUrlStr}/`));
-			if (oldUrl == null) this.orWhereNull('url');
-			else this.orWhere('url', oldUrl);
-		}).delete();
-	const row = await site.$relatedQuery('children', trx)
-		.where('block.id', page.id)
-		.where(
-			raw("date_trunc('milliseconds', block.updated_at)"),
-			raw("date_trunc('milliseconds', ?::timestamptz)", [page.updated_at]),
-		)
-		.patch(page)
-		.returning('block.id', 'block.updated_at')
-		.first();
-	if (!row) {
-		throw new HttpError.Conflict(
-			`${page.type}:${page.id} last update mismatch ${page.updated_at}`
-		);
-	}
-	return row;
 }
 
 async function applyRelate({ site, trx }, obj) {
