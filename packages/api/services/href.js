@@ -295,7 +295,7 @@ module.exports = class HrefService {
 		}
 	};
 
-	async referrers(req, { url, exclude, limit, offset }) {
+	async referrers(req, { ids = [], url, limit, offset }) {
 		const { site, trx, ref } = req;
 		const hrefs = site.$hrefs;
 		const qList = q => {
@@ -326,7 +326,7 @@ module.exports = class HrefService {
 			.whereNot('parents.type', 'site')
 			.whereNotIn('block.type', Array.from(site.$pkg.pages))
 			.where(q => {
-				if (exclude) q.whereNot('parents.id', exclude);
+				if (ids.length) q.whereNotIn('parents.id', ids);
 			});
 		const [items, count] = await Promise.all([
 			q.limit(limit).offset(offset),
@@ -344,6 +344,14 @@ module.exports = class HrefService {
 		$lock: true,
 		$action: 'read',
 		properties: {
+			ids: {
+				title: 'Excluding ids',
+				type: 'array',
+				items: {
+					type: 'string',
+					format: 'id'
+				}
+			},
 			url: {
 				title: 'Url',
 				type: 'string',
@@ -360,6 +368,66 @@ module.exports = class HrefService {
 				title: 'Offset',
 				type: 'integer',
 				default: 0
+			}
+		}
+	};
+
+
+	async change({
+		site, trx, ref, fun, raw, Block, Href
+	}, { from, to }) {
+		if (from == to) return; // hum
+		for (const [type, list] of Object.entries(site.$hrefs)) {
+			for (const desc of list) {
+				if (desc.types.some(type => {
+					// just a bug waiting to happen
+					// site.$hrefs should omit unmutable hrefs
+					return ['image', 'video', 'audio', 'svg'].includes(type);
+				})) continue;
+				const key = 'block.data:' + desc.path;
+				const field = ref(key).castText();
+				// this is a fake query not part of trx
+				const args = field._createRawArgs(Block.query());
+
+				await site.$relatedQuery('children', trx)
+					.where('block.type', type)
+					.where(q => {
+						// use fn.starts_with
+						q.where(fun('starts_with', field, `${from}/`));
+						q.orWhere(field, from);
+					})
+					.patch({
+						type,
+						[key]: raw(
+							`overlay(${args[0]} placing ? from 1 for ${from.length})`,
+							args[1],
+							to
+						)
+					});
+			}
+		}
+		await Href.query(trx).where('_parent_id', site._id)
+			.where('type', 'link')
+			.where(q => {
+				q.where(fun('starts_with', 'url', `${from}/`));
+				q.orWhere('url', from);
+			}).patch({
+				url: raw(`overlay(url placing ? from 1 for ${from.length})`, to)
+			});
+	}
+	static change = {
+		title: 'Change',
+		$lock: true,
+		properties: {
+			from: {
+				title: 'From Url',
+				type: 'string',
+				format: 'pathname'
+			},
+			to: {
+				title: 'To Url',
+				type: 'string',
+				format: 'pathname'
 			}
 		}
 	};
