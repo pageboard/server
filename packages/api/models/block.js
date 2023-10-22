@@ -278,7 +278,8 @@ class Block extends Model {
 				standalones: Array.from(standalones),
 				pages: groups.page ?? [],
 				textblocks: Array.from(textblocks),
-				tag
+				tag,
+				dir: pkg.dir
 			};
 
 			get $pkg() {

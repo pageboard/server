@@ -102,14 +102,15 @@ module.exports = class StaticsModule {
 		return pathname;
 	}
 
-	async bundle(site, pkg, list, filename, dry = false) {
+	async bundle(site, list, filename, dry = false) {
 		if (list.length == 0) return [];
 		const suffix = {
 			production: ".min",
 			staging: ".max",
 			dev: ""
 		}[site.data.env] || "";
-		if (!suffix || !pkg.dir || !site.url) {
+		const { dir } = site.$pkg;
+		if (!suffix || !dir || !site.url) {
 			return list;
 		}
 
@@ -121,7 +122,7 @@ module.exports = class StaticsModule {
 		delete fileObj.base;
 		fileObj.name += suffix;
 		const buildFile = Path.format(fileObj);
-		const buildDir = Path.join(pkg.dir, "builds");
+		const buildDir = Path.join(dir, "builds");
 		const buildPath = Path.join(buildDir, buildFile);
 
 		const outList = [];

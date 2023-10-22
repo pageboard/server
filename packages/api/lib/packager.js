@@ -221,8 +221,8 @@ module.exports = class Packager {
 		}
 
 		const [scripts, styles] = await Promise.all([
-			this.app.statics.bundle(site, pkg, scriptsList, `${root}.js`),
-			this.app.statics.bundle(site, pkg, stylesList, `${root}.css`)
+			this.app.statics.bundle(site, scriptsList, `${root}.js`),
+			this.app.statics.bundle(site, stylesList, `${root}.css`)
 		]);
 		// this removes proxies
 		rootEl.scripts = scripts;
@@ -254,7 +254,7 @@ module.exports = class Packager {
 			await fs.writeFile(sourcePath, str);
 		}
 		const paths = await this.app.statics.bundle(
-			site, pkg, [sourceUrl], filename, dry
+			site, [sourceUrl], filename, dry
 		);
 		return paths[0];
 	}

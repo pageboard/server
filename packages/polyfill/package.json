@@ -1,0 +1,28 @@
+{
+  "name": "@pageboard/polyfill",
+  "version": "0.14.0",
+  "description": "polyfill for pageboard",
+  "main": "index.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/pageboard/server.git"
+  },
+  "keywords": [
+    "pageboard",
+    "prerender",
+    "dom"
+  ],
+  "author": "Jérémy Lal <kapouer@melix.org>",
+  "license": "MIT",
+  "bugs": {
+    "url": "https://github.com/pageboard/server/issues"
+  },
+  "homepage": "https://github.com/pageboard/server#readme",
+  "dependencies": {
+    "polyfill-library": "^4.8.0",
+    "toposort": "^2.0.2"
+  }
+}
