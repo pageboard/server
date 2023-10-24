@@ -1,3 +1,5 @@
+const { mergeRecursive } = require('../../../src/utils');
+
 module.exports = class LinksService {
 	static name = 'links';
 
@@ -86,7 +88,7 @@ module.exports = class LinksService {
 
 	async set(req, { prefix, items }) {
 		// 0. get stored pages
-		const { items: olds } = await req.run('sitemap.get', { prefix });
+		const { items: olds } = await req.run('links.get', { prefix });
 		const oldMap = {};
 		for (const item of olds) oldMap[item.id] = item;
 		const itemMap = {};
@@ -107,7 +109,7 @@ module.exports = class LinksService {
 			if (!item) {
 				removals.push(old.id);
 			} else {
-				if (!urls.includes(old.data.url)) {
+				if (!urls.has(old.data.url)) {
 					// old url is not replaced
 					if (item.data.url.split('/').slice(0, -1).join('/') != prefix) {
 						// another prefix - check database
@@ -136,7 +138,7 @@ module.exports = class LinksService {
 
 		for (const id of removals) {
 			const item = oldMap[id];
-			if (urls.includes(item.data.url)) {
+			if (urls.has(item.data.url)) {
 				// new page replace old page with same url
 			} else {
 				const count = await req.run('href.referrers', {
@@ -154,9 +156,16 @@ module.exports = class LinksService {
 			await req.run('href.change', { from: data.url, to: data.redirect });
 			await req.run('block.add', { type: 'redirection', data });
 		}
-		for (const item of updates) {
+		for (const id of updates) {
+			const item = mergeRecursive(oldMap[id], itemMap[id]);
 			await req.run('block.save', item);
 		}
+		return {
+			updates: updates.length,
+			additions: additions.length,
+			removals: removals.length,
+			redirects: redirects.length
+		};
 	}
 	static set = {
 		title: 'Set pages',
