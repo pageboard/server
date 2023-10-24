@@ -9,6 +9,7 @@ module.exports = class StaticsModule {
 	static name = 'statics';
 
 	constructor(app, opts) {
+		this.app = app;
 		this.opts = {
 			cache: app.cache.opts,
 			uploads: app.upload.opts.dir,
@@ -102,8 +103,8 @@ module.exports = class StaticsModule {
 		return pathname;
 	}
 
-	async bundle(site, list, filename, dry = false) {
-		if (list.length == 0) return [];
+	async bundle(site, { inputs, output, dry = false, local = false }) {
+		if (inputs.length == 0) return [];
 		const suffix = {
 			production: ".min",
 			staging: ".max",
@@ -111,10 +112,10 @@ module.exports = class StaticsModule {
 		}[site.data.env] || "";
 		const { dir } = site.$pkg;
 		if (!suffix || !dir || !site.url) {
-			return list;
+			return inputs;
 		}
 
-		const fileObj = Path.parse(filename);
+		const fileObj = Path.parse(output);
 		const ext = fileObj.ext.substring(1);
 		if (ext != "js" && ext != "css") {
 			throw new Error("Bundles only .js or .css extensions");
@@ -126,15 +127,23 @@ module.exports = class StaticsModule {
 		const buildPath = Path.join(buildDir, buildFile);
 
 		const outList = [];
-		const inputs = [];
-		list.forEach(url => {
-			if (/^https?:\/\//.test(url)) outList.push(url);
-			else inputs.push(urlToPath(this.opts.files, site.id, url));
+		const inList = [];
+		inputs.forEach(url => {
+			if (local) {
+				if (url.startsWith(this.app.dirs.app)) inList.push(url);
+				else console.error("file not in project", url);
+			} else if (/^https?:\/\//.test(url)) {
+				outList.push(url);
+			} else {
+				inList.push(urlToPath(this.opts.files, site.id, url));
+			}
 		});
 
 		const outUrl = `/.files/${site.data.version ?? site.$pkg.tag}/${buildFile}`;
-		outList.push(outUrl);
-		const output = urlToPath(this.opts.files, site.id, outUrl);
+		const outPath = urlToPath(this.opts.files, site.id, outUrl);
+		if (local) outList.push(outPath);
+		else outList.push(outUrl);
+
 		if (dry) return outList;
 
 		await fs.mkdir(buildDir, { recursive: true });
@@ -143,8 +152,8 @@ module.exports = class StaticsModule {
 			// not in branch mode, files are already built, use them
 			await fs.stat(buildPath);
 			await Promise.all([
-				fs.copyFile(buildPath, output),
-				fs.copyFile(buildPath + '.map', output + '.map').catch(() => {})
+				fs.copyFile(buildPath, outPath),
+				local ? null : fs.copyFile(buildPath + '.map', outPath + '.map').catch(() => {})
 			]);
 			return outList;
 		} catch (err) {
@@ -152,8 +161,9 @@ module.exports = class StaticsModule {
 		}
 
 		try {
-			await bundler(inputs, output, {
+			await bundler(inList, outPath, {
 				minify: site.data.env == "production",
+				sourceMap: !local,
 				cache: {
 					dir: this.opts.statics
 				},
@@ -166,8 +176,8 @@ module.exports = class StaticsModule {
 			throw err;
 		}
 		await Promise.all([
-			fs.copyFile(output, buildPath),
-			fs.copyFile(output + '.map', buildPath + '.map').catch(() => {})
+			fs.copyFile(outPath, buildPath),
+			local ? null : fs.copyFile(outPath + '.map', buildPath + '.map').catch(() => {})
 		]);
 		return outList;
 	}

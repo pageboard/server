@@ -142,7 +142,7 @@ module.exports = class Packager {
 		$pkg.bundles.set('elements', {
 			priority: -999,
 			scripts: [
-				await this.#bundleSource(site, pkg, null, 'elements', pkg.eltsMap, true)
+				await this.#bundleSource(site, null, 'elements', pkg.eltsMap, true)
 			]
 		});
 		const services = Object.fromEntries(
@@ -155,7 +155,7 @@ module.exports = class Packager {
 
 		$pkg.bundles.set('services', {
 			scripts: [await this.#bundleSource(
-				site, pkg, null, 'services', services
+				site, null, 'services', services
 			)]
 		});
 
@@ -184,7 +184,7 @@ module.exports = class Packager {
 		}
 
 		// actually build elements bundle
-		await this.#bundleSource(site, pkg, null, 'elements', pkg.eltsMap);
+		await this.#bundleSource(site, null, 'elements', pkg.eltsMap);
 
 		// clear up some space
 		delete pkg.eltsMap;
@@ -221,8 +221,8 @@ module.exports = class Packager {
 		}
 
 		const [scripts, styles] = await Promise.all([
-			this.app.statics.bundle(site, scriptsList, `${root}.js`),
-			this.app.statics.bundle(site, stylesList, `${root}.css`)
+			this.app.statics.bundle(site, { inputs: scriptsList, output: `${root}.js` }),
+			this.app.statics.bundle(site, { inputs: stylesList, output: `${root}.css` })
 		]);
 		// this removes proxies
 		rootEl.scripts = scripts;
@@ -234,7 +234,7 @@ module.exports = class Packager {
 		return bundleElts;
 	}
 
-	async #bundleSource(site, pkg, prefix, name, obj, dry = false) {
+	async #bundleSource(site, prefix, name, obj, dry = false) {
 		if (prefix?.startsWith('ext-')) return;
 		const tag = site.data.version ?? site.$pkg.tag;
 		if (tag == null) {
@@ -253,9 +253,11 @@ module.exports = class Packager {
 			await fs.mkdir(Path.dirname(sourcePath), { recursive: true });
 			await fs.writeFile(sourcePath, str);
 		}
-		const paths = await this.app.statics.bundle(
-			site, [sourceUrl], filename, dry
-		);
+		const paths = await this.app.statics.bundle(site, {
+			inputs: [sourceUrl],
+			output: filename,
+			dry
+		});
 		return paths[0];
 	}
 
