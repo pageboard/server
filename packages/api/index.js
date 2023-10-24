@@ -90,7 +90,7 @@ module.exports = class ApiModule {
 		const mod = this.app.services[modName];
 		if (!modName || !mod) {
 			throw new HttpError.BadRequest(Text`
-				Available modules:
+				${modName} module not found:
 				${Object.keys(this.app.services).sort().join(', ')}
 			`);
 		}
@@ -98,7 +98,7 @@ module.exports = class ApiModule {
 		const inst = this.app[modName];
 		const meth = inst[funName];
 		if (!funName || !meth) throw new HttpError.BadRequest(Text`
-			Available methods:
+			${funName} method not found:
 			${Object.getOwnPropertyNames(mod).sort().join(', ')}
 		`);
 		if (!schema) {
