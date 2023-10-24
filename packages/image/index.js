@@ -67,14 +67,6 @@ module.exports = class ImageModule {
 		);
 	}
 
-	serviceRoutes(server) {
-		console.info(`image:\tproxy at /.api/image`);
-		server.get('/.api/image', (req, res, next) => {
-			console.warn("/.api/image is used", req.url);
-			next();
-		}, this.sharpie(this.opts));
-	}
-
 	async thumbnail(url) {
 		let pipeline;
 		if (url.startsWith('file://')) {
