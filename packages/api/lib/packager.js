@@ -5,8 +5,6 @@ const { EltProxy, MapProxy } = require('./proxies');
 const fs = require('node:fs/promises');
 const vm = require.lazy('node:vm');
 const translateJSON = require.lazy('./translate');
-const { mergeRecursive } = require('../../../src/utils');
-
 
 /*
 An element has these properties:
