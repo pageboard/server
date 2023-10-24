@@ -850,9 +850,14 @@ module.exports = class BlockService {
 	};
 
 	async save(req, data) {
-		const block = await this.get(req, data).forUpdate();
+		const block = await this.get(req, { ...data, type: null }).forUpdate();
 		if (!block) {
-			throw new Error(`Block not found for update ${data.id}`);
+			throw new HttpError.NotFound(`Block not found for update ${data.id}`);
+		}
+		if (data.type != block.type) {
+			throw new HttpError.BadRequest(
+				`Cannot change block type ${block.type} to ${data.type}`
+			);
 		}
 		const obj = {
 			type: block.type
