@@ -5,11 +5,7 @@
   "main": "lib/pageboard.js",
   "scripts": {
     "start": "pageboard",
-    "test": "mocha",
-    "postinstall": "postinstall"
-  },
-  "postinstall": {
-    "matchdom": "bundle --format=cjs --name=Matchdom lib/matchdom.js"
+    "test": "mocha"
   },
   "bin": {
     "pageboard": "./bin/pageboard.js"
@@ -58,8 +54,6 @@
     "nestie": "^1.0.3",
     "outdent": "^0.8.0",
     "pad": "^3.2.0",
-    "postinstall": "^0.8.0",
-    "postinstall-bundle": "^0.9.1",
     "pretty-bytes": "^5.6.0",
     "resolve-pkg": "^2.0.0",
     "semver-regex": "^3.1.4",

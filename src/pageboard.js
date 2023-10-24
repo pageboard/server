@@ -20,7 +20,7 @@ util.inspect.defaultOptions.depth = 10;
 
 const cli = require.lazy('./cli');
 const Domains = require.lazy('./domains');
-const { mergeRecursive } = require('./utils');
+const { mergeRecursive, init: initUtils } = require('./utils');
 const Installer = require('./installer');
 const ResponseFilter = require('./filter');
 
@@ -198,6 +198,8 @@ module.exports = class Pageboard {
 		this.#installer = new Installer(this, opts.installer);
 
 		this.responseFilter = new ResponseFilter();
+
+		await initUtils();
 
 		this.#plugins = [];
 		this.#loadPlugins(this.opts);
