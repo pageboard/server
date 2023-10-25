@@ -59,7 +59,7 @@ exports.mergeExpressions = function mergeExpressions(data, expr, obj) {
 	const flatExpr = flattie(expr);
 	obj = Object.assign(obj);
 	let miss = false;
-	const md = new Matchdom(sharedMd, {
+	const md = sharedMd.copy().extend({
 		hooks: {
 			afterAll(ctx, val) {
 				if (val === undefined) miss = true;
