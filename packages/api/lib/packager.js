@@ -58,9 +58,23 @@ module.exports = class Packager {
 		const aliases = {};
 		const textblocks = new Set();
 		const standalones = new Set();
+		const polyfills = new Set();
 		for (const name of names) {
 			const el = { ...elts[name] }; // drop proxy
 			el.name = name;
+			if (el.polyfills) {
+				for (const p of el.polyfills) {
+					if (p.includes('[$lang]')) {
+						const langs = site.data.languages ?? [site.data.lang];
+						for (const lang of langs) {
+							polyfills.add(p.replace('[$lang]', lang));
+						}
+					} else {
+						polyfills.add(p);
+					}
+				}
+				delete el.polyfills;
+			}
 			el.contents = Block.normalizeContentSpec(el.contents);
 			if (!el.contents) delete el.contents;
 			if (el.alias) {
@@ -109,7 +123,7 @@ module.exports = class Packager {
 			}
 		}
 		Object.assign(pkg, {
-			eltsMap, groups, aliases, bundles, standalones, textblocks
+			eltsMap, groups, aliases, bundles, standalones, textblocks, polyfills
 		});
 		return Block.initSite(site, pkg);
 	}
@@ -123,26 +137,8 @@ module.exports = class Packager {
 	async makeBundles(site, pkg) {
 		const { $pkg } = site;
 		$pkg.aliases = pkg.aliases;
+		const { eltsMap } = pkg;
 
-		await Promise.all(Object.entries(pkg.bundles).sort(([na], [nb]) => {
-			// bundle page group before others
-			const a = pkg.eltsMap[na];
-			const b = pkg.eltsMap[nb];
-			if (a.group == "page" && b.group != "page") return -1;
-			else if (b.group == "page" && a.group != "page") return 1;
-			else return 0;
-		}).map(
-			([name, list]) => this.#bundle(
-				site, pkg, name, list
-			)
-		));
-		// just set the path to elements bundle
-		$pkg.bundles.set('elements', {
-			priority: -999,
-			scripts: [
-				await this.#bundleSource(site, null, 'elements', pkg.eltsMap, true)
-			]
-		});
 		const services = Object.fromEntries(
 			Object.entries(this.app.services).map(([key, group]) => {
 				const entries = Object.entries(group)
@@ -153,86 +149,135 @@ module.exports = class Packager {
 
 		$pkg.bundles.set('services', {
 			scripts: [await this.#bundleSource(
-				site, null, 'services', services
+				site, { name: 'services', source: services }
 			)]
 		});
 
-		for (const [, rootEl] of $pkg.bundles) {
-			const dependencies = (rootEl.dependencies ?? [])
-				.map(name => {
-					const b = $pkg.bundles.get(name);
-					if (!b) console.error("Missing bundle", name);
-					return b;
-				});
-			dependencies.push(rootEl);
+		const bundles = Object.entries(pkg.bundles).sort(([na], [nb]) => {
+			// bundle page group before others
+			const a = eltsMap[na];
+			const b = eltsMap[nb];
+			if (a.group == "page" && b.group != "page") return -1;
+			else if (b.group == "page" && a.group != "page") return 1;
+			else return 0;
+		});
+
+		// incorporate polyfills/elements into core scripts
+		eltsMap.core.scripts.unshift(
+			await this.#bundleSource(site, {
+				name: 'polyfills', dry: true
+			}),
+			await this.#bundleSource(site, {
+				name: 'elements', dry: true
+			})
+		);
+
+		// prepare bundles output paths
+		for (const [name, list] of bundles) {
+			// rootEl is a copy of eltsMap[name] with the original scripts
+			const bundleEl = this.#bundle(pkg, name, list);
+			$pkg.bundles.set(name, bundleEl);
+			bundleEl.scripts = await this.app.statics.bundle(site, {
+				inputs: bundleEl.scripts ?? [],
+				output: `${name}.js`,
+				dry: true
+			});
+			bundleEl.stylesheets = await this.app.statics.bundle(site, {
+				inputs: bundleEl.stylesheets ?? [],
+				output: `${name}.css`,
+				dry: true
+			});
+		}
+
+		// concatenate bundles dependencies
+		for (const [name, bundleEl] of $pkg.bundles) {
+			const dependencies = (bundleEl.dependencies ?? [])
+				.concat([name]).map(n => $pkg.bundles.get(n) ?? n);
 			sortPriority(dependencies);
 			const scripts = [];
 			const stylesheets = [];
 			const resources = {};
 			for (const bundle of dependencies) {
-				if (!bundle) continue;
+				if (typeof bundle == "string") {
+					console.warn("Missing dependency", bundle);
+					continue;
+				}
 				if (bundle.scripts) scripts.push(...bundle.scripts);
 				if (bundle.stylesheets) stylesheets.push(...bundle.stylesheets);
 				if (bundle.resources) Object.assign(resources, bundle.resources);
 			}
-			rootEl.scripts = scripts;
-			rootEl.stylesheets = stylesheets;
-			rootEl.resources = resources;
-			delete rootEl.dependencies;
+			bundleEl.scripts = Array.from(new Set(scripts));
+			bundleEl.stylesheets = Array.from(new Set(stylesheets));
+			const el = eltsMap[name];
+			if (el) {
+				bundleEl.orig = { scripts: el.scripts, stylesheets: el.stylesheets };
+				el.scripts = bundleEl.scripts;
+				el.stylesheets = bundleEl.stylesheets;
+				delete el.dependencies;
+			}
 		}
 
-		// actually build elements bundle
-		await this.#bundleSource(site, null, 'elements', pkg.eltsMap);
+		// strip elements
+		for (const el of Object.values(eltsMap)) {
+			if ($pkg.bundles.has(el.name)) continue;
+			delete el.scripts;
+			delete el.stylesheets;
+			delete el.bundle;
+		}
+
+		// create those files
+		await this.#bundleSource(site, {
+			name: 'polyfills',
+			source: await this.app.polyfill.source(Array.from(pkg.polyfills))
+		});
+		await this.#bundleSource(site, {
+			name: 'elements',
+			source: pkg.eltsMap
+		});
+
+		// create bundles
+		for (const [name, bundleEl] of $pkg.bundles) {
+			if (!bundleEl.orig) continue;
+			await Promise.all([
+				this.app.statics.bundle(site, {
+					inputs: bundleEl.orig?.scripts ?? [],
+					output: `${name}.js`
+				}),
+				this.app.statics.bundle(site, {
+					inputs: bundleEl.orig?.stylesheets ?? [],
+					output: `${name}.css`
+				})
+			]);
+			delete bundleEl.orig;
+		}
 
 		// clear up some space
+		delete pkg.polyfills;
 		delete pkg.eltsMap;
 		delete pkg.bundleMap;
 		delete pkg.bundles;
 		delete pkg.aliases;
 	}
 
-	async #bundle(site, pkg, root, cobundles = new Set()) {
+	#bundle(pkg, root, cobundles = new Set()) {
 		const { eltsMap } = pkg;
-		const rootEl = eltsMap[root];
+		const el = eltsMap[root];
 
-		const list = Array.from(this.#listDependencies(
-			pkg, rootEl, rootEl, new Set(cobundles)
-		)).map(n => eltsMap[n]);
-		list.sort((a, b) => {
-			return (a.priority || 0) - (b.priority || 0);
-		});
-		const scriptsList = sortElements(list, 'scripts');
-		const stylesList = sortElements(list, 'stylesheets');
-
-		const bundleElts = {};
-		const bundle = [];
-		for (const el of list) {
-			const copy = { ...el };
-			if (!el.standalone) {
-				delete copy.scripts;
-				delete copy.stylesheets;
-				delete copy.resources;
-			}
-			bundle.push(el.name);
-			bundleElts[el.name] = copy;
-			if (typeof el.bundle == "string") delete el.bundle;
-		}
-
-		const [scripts, styles] = await Promise.all([
-			this.app.statics.bundle(site, { inputs: scriptsList, output: `${root}.js` }),
-			this.app.statics.bundle(site, { inputs: stylesList, output: `${root}.css` })
-		]);
-		// this removes proxies
-		rootEl.scripts = scripts;
-		rootEl.stylesheets = styles;
-		rootEl.resources = { ...rootEl.resources };
-		rootEl.bundle = bundle;
-		site.$pkg.bundles.set(root, rootEl);
-
-		return bundleElts;
+		const bundle = Array.from(this.#listDependencies(
+			pkg, el, el, new Set(cobundles)
+		));
+		// list.sort((a, b) => {
+		// 	return (a.priority || 0) - (b.priority || 0);
+		// });
+		const list = bundle.map(n => eltsMap[n]);
+		el.scripts = sortElements(list, 'scripts');
+		el.stylesheets = sortElements(list, 'stylesheets');
+		el.resources = { ...el.resources };
+		el.bundle = bundle;
+		return { ...el };
 	}
 
-	async #bundleSource(site, prefix, name, obj, dry = false) {
+	async #bundleSource(site, { prefix, name, source, dry }) {
 		if (prefix?.startsWith('ext-')) return;
 		const tag = site.data.version ?? site.$pkg.tag;
 		if (tag == null) {
@@ -242,14 +287,18 @@ module.exports = class Packager {
 		const filename = [prefix, name].filter(Boolean).join('-') + '.js';
 		const sourceUrl = `/.files/${tag}/${filename}`;
 		const sourcePath = this.app.statics.resolve(site.id, sourceUrl);
-		let source = toSource(obj);
-		if (!Array.isArray(obj)) {
-			source = `Object.assign(window.Pageboard.${name} || {}, ${source})`;
+		if (source) {
+			if (typeof source == "object") {
+				source = toSource(source);
+			}
+			source = `window.Pageboard.${name} = ${source};`;
+		} else if (!dry) {
+			throw new Error("Missing source argument");
 		}
-		const str = `window.Pageboard.${name} = ${source};`;
+
 		if (!dry) {
 			await fs.mkdir(Path.dirname(sourcePath), { recursive: true });
-			await fs.writeFile(sourcePath, str);
+			await fs.writeFile(sourcePath, `window.Pageboard ??= {}; ${source}`);
 		}
 		const paths = await this.app.statics.bundle(site, {
 			inputs: [sourceUrl],
