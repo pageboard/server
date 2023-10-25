@@ -1,9 +1,9 @@
 const { join } = require('node:path');
 const crypto = require.lazy('node:crypto');
-const polyfills = require.lazy('polyfill-library');
+const polyfills = require.lazy('@kapouer/polyfill-library');
 const toposort = require.lazy('toposort');
 const polyfillModuleDir = join(
-	require.resolve('polyfill-library'),
+	require.resolve('@kapouer/polyfill-library'),
 	'../..'
 );
 
@@ -14,6 +14,25 @@ module.exports = class PolyfillModule {
 	constructor(app, opts) {
 		this.app = app;
 		this.opts = opts;
+		this.polyfills = {
+			customElements: {
+				source: join(require.resolve('@webreflection/custom-elements'), '../../index.js'),
+				detectSource: `'customElements' in window && (function() {
+					try {
+						const BR = class extends HTMLBRElement {};
+						const is = 'extends-br';
+						customElements.define(is, BR, { extends: 'br' });
+						return document.createElement('br', {is}).outerHTML.indexOf(is) > 0;
+					} catch(e) {
+						return false;
+					}
+				})()`
+			},
+			ElementInternals: {
+				source: require.resolve('element-internals-polyfill'),
+				detectSource: `'ElementInternals' in window`
+			}
+		};
 	}
 
 	async fileRoutes(app, server) {
@@ -28,9 +47,11 @@ module.exports = class PolyfillModule {
 				try {
 					const list = req.query.features?.split('+') ?? [];
 					if (!list.length) throw new HttpError.BadRequest("No features requested");
-					const inputs = list.map(name => join(
-						polyfillModuleDir, 'polyfills/__dist', name, "raw.js"
-					));
+					const inputs = list.map(name => {
+						return this.polyfills[name]?.source ?? join(
+							polyfillModuleDir, 'polyfills/__dist', name, "raw.js"
+						);
+					});
 					if (inputs.length == 0) {
 						res.sendStatus(204);
 						return;
@@ -52,6 +73,11 @@ module.exports = class PolyfillModule {
 			}
 		);
 	}
+
+	async getPolyfill(name) {
+		return this.polyfills[name] ?? polyfills.describePolyfill(name);
+	}
+
 	async getFeatures(targetedFeatures) {
 		const warnings = {
 			unknown: []
@@ -72,7 +98,7 @@ module.exports = class PolyfillModule {
 
 		await Promise.all(
 			Array.from(flatList).map(async featureName => {
-				const polyfill = await polyfills.describePolyfill(featureName);
+				const polyfill = await this.getPolyfill(featureName);
 				if (!polyfill) {
 					warnings.unknown.push(featureName);
 				} else {
@@ -103,7 +129,7 @@ module.exports = class PolyfillModule {
 		let source = '{';
 		const features = await this.getFeatures(list);
 		await Promise.all(features.map(async name => {
-			const polyfill = await polyfills.describePolyfill(name);
+			const polyfill = await this.getPolyfill(name);
 			source += `"${name}": (${polyfill.detectSource}),`;
 		}));
 		source += '}';
