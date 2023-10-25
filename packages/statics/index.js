@@ -65,6 +65,7 @@ module.exports = class StaticsModule {
 			serveStatic(opts.files, serveOpts),
 			staticNotFound
 		);
+
 		const publicPrefix = '/.public';
 		server.get(publicPrefix + "/*",
 			req => {
@@ -127,18 +128,6 @@ module.exports = class StaticsModule {
 		const buildPath = Path.join(buildDir, buildFile);
 
 		const outList = [];
-		const inList = [];
-		inputs.forEach(url => {
-			if (local) {
-				if (url.startsWith(this.app.dirs.app)) inList.push(url);
-				else console.error("file not in project", url);
-			} else if (/^https?:\/\//.test(url)) {
-				outList.push(url);
-			} else {
-				inList.push(urlToPath(this.opts.files, site.id, url));
-			}
-		});
-
 		const outUrl = `/.files/${site.data.version ?? site.$pkg.tag}/${buildFile}`;
 		const outPath = urlToPath(this.opts.files, site.id, outUrl);
 		if (local) outList.push(outPath);
@@ -151,14 +140,29 @@ module.exports = class StaticsModule {
 		if (site.data.version) try {
 			// not in branch mode, files are already built, use them
 			await fs.stat(buildPath);
-			await Promise.all([
-				fs.copyFile(buildPath, outPath),
-				local ? null : fs.copyFile(buildPath + '.map', outPath + '.map').catch(() => {})
-			]);
+			try {
+				await fs.stat(outPath);
+			} catch (err) {
+				await Promise.all([
+					fs.copyFile(buildPath, outPath),
+					local ? null : fs.copyFile(buildPath + '.map', outPath + '.map').catch(() => { })
+				]);
+			}
 			return outList;
 		} catch (err) {
 			// pass
 		}
+		const inList = [];
+		inputs.forEach(url => {
+			if (local) {
+				if (url.startsWith(this.app.dirs.app)) inList.push(url);
+				else console.error("file not in project", url);
+			} else if (/^https?:\/\//.test(url)) {
+				outList.push(url);
+			} else {
+				inList.push(urlToPath(this.opts.files, site.id, url));
+			}
+		});
 
 		try {
 			await bundler(inList, outPath, {
