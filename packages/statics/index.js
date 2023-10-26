@@ -121,6 +121,9 @@ module.exports = class StaticsModule {
 		if (ext != "js" && ext != "css") {
 			throw new Error("Bundles only .js or .css extensions");
 		}
+		if (this.opts.browsers[ext] == null) {
+			throw new Error(`Set statics.browsers.${ext} to a browserslist query`);
+		}
 		delete fileObj.base;
 		fileObj.name += suffix;
 		const buildFile = Path.format(fileObj);
@@ -158,7 +161,7 @@ module.exports = class StaticsModule {
 				if (url.startsWith(this.app.dirs.app)) inList.push(url);
 				else console.error("file not in project", url);
 			} else if (/^https?:\/\//.test(url)) {
-				outList.push(url);
+				inList.push(url);
 			} else {
 				inList.push(urlToPath(this.opts.files, site.id, url));
 			}
@@ -171,7 +174,7 @@ module.exports = class StaticsModule {
 				cache: {
 					dir: this.opts.statics
 				},
-				browsers: this.opts.browsers
+				browsers: this.opts.browsers[ext]
 			});
 		} catch(err) {
 			delete err.input;
