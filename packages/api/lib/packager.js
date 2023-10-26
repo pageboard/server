@@ -266,9 +266,6 @@ module.exports = class Packager {
 		const bundle = Array.from(this.#listDependencies(
 			pkg, el, el, new Set(cobundles)
 		));
-		// list.sort((a, b) => {
-		// 	return (a.priority || 0) - (b.priority || 0);
-		// });
 		const list = bundle.map(n => eltsMap[n]);
 		el.scripts = sortElements(list, 'scripts');
 		el.stylesheets = sortElements(list, 'stylesheets');
