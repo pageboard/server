@@ -37,9 +37,15 @@ module.exports = class Packager {
 		Log.imports("installing", id, elements, directories);
 		const allDirs = id ? [ ...this.app.directories, ...directories ] : directories;
 		const allElts = id ? [ ...this.app.elements, ...elements ] : elements;
-
-		sortPriority(allDirs);
-		sortPriority(allElts);
+		const subSort = function (a, b) {
+			if (a.path && b.path) {
+				return Path.basename(a.path).localeCompare(Path.basename(b.path));
+			} else {
+				return 0;
+			}
+		};
+		sortPriority(allDirs, subSort);
+		sortPriority(allElts, subSort);
 
 		const bundleMap = pkg.bundleMap = new Map();
 		const elts = Object.assign({}, this.app.schemas);
@@ -267,6 +273,10 @@ module.exports = class Packager {
 			pkg, el, el, new Set(cobundles)
 		));
 		const list = bundle.map(n => eltsMap[n]);
+		sortPriority(list, (a, b) => {
+			if (a.name && b.name) return a.name.localeCompare(b.name);
+			else return 0;
+		});
 		el.scripts = sortElements(list, 'scripts');
 		el.stylesheets = sortElements(list, 'stylesheets');
 		el.resources = { ...el.resources };
@@ -361,12 +371,12 @@ module.exports = class Packager {
 	}
 };
 
-function sortPriority(list) {
+function sortPriority(list, subSort) {
 	list.sort((a, b) => {
 		const pa = a.priority || 0;
 		const pb = b.priority || 0;
 		if (pa == pb) {
-			if (a.path && b.path) return Path.basename(a.path).localeCompare(Path.basename(b.path));
+			if (subSort) return subSort(a, b);
 			else return 0;
 		}
 		if (pa < pb) return -1;
