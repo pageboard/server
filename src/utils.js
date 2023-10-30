@@ -95,14 +95,14 @@ function dset(obj, keys, val) {
 
 function empty(key) {
 	if (key == null || key === "") return {};
-	key = +key;
+	key = Number(key);
 	return key === key ? [] : {};
 }
 
 function nestie(input, glue) {
 	glue = glue || '.';
-	var arr, tmp, output;
-	var i = 0, k, key;
+	let arr, tmp, output;
+	let i = 0, k, key;
 
 	for (k in input) {
 		tmp = output; // reset
