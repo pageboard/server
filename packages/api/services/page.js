@@ -360,7 +360,7 @@ module.exports = class PageService {
 	};
 
 	async list(req, data) {
-		const { site, trx, fun, ref } = req;
+		const { site, trx, fun, ref, raw } = req;
 		const { lang } = req.call('translate.lang', data);
 		const q = site.$relatedQuery('children', trx)
 			.columns({ lang, content: 'title' })
@@ -387,9 +387,9 @@ module.exports = class PageService {
 		if (data.prefix != null) {
 			const prefix = data.prefix.replace(/\/$/, '');
 			const regexp = data.home ? `^${prefix}(/[^/]+)?$` : `^${prefix}/[^/]+$`;
-			if (data.home) q.orderByRaw("block.data->>'url' = ? DESC", prefix);
+			if (data.home) q.orderByRaw(raw("block.data->>'url' = ? DESC", prefix));
 			q.whereJsonText('block.data:url', '~', regexp)
-				.orderBy(ref('block.data:index'));
+				.orderBy(ref('block.data:index').castInt());
 			const parents = await getParents(req, prefix, lang);
 			obj.links = {
 				up: parents.map(shortLink)
@@ -402,7 +402,8 @@ module.exports = class PageService {
 		} else {
 			// just return all pages for the sitemap
 		}
-		q.orderBy(ref('block.data:url'), 'block.updated_at DESC');
+		q.orderBy(ref('block.data:url'));
+		q.orderBy(ref('block.updated_at'), 'DESC');
 		const items = obj.items = await q;
 		if (data.home) {
 			obj.item = items.shift();
