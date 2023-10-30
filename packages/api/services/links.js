@@ -86,7 +86,7 @@ module.exports = class LinksService {
 		}
 	};
 
-	async set(req, { prefix, items }) {
+	async set(req, { prefix, items = [] }) {
 		// 0. get stored pages
 		const { items: olds } = await req.run('links.get', { prefix });
 		const oldMap = {};
