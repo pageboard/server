@@ -144,7 +144,7 @@ module.exports = class LinksService {
 			if (urls.has(item.data.url)) {
 				// new page replace old page with same url
 			} else {
-				const count = await req.run('href.referrers', {
+				const { count } = await req.run('href.referrers', {
 					url: item.data.url,
 					ids: removals,
 					limit: 0
