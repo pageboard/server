@@ -92,7 +92,10 @@ module.exports = class LinksService {
 		const oldMap = {};
 		for (const item of olds) oldMap[item.id] = item;
 		const itemMap = {};
-		for (const item of items) itemMap[item.id] = item;
+		items.forEach((item, i) => {
+			item.data.index = i;
+			itemMap[item.id] = item;
+		});
 
 		const urls = new Set(items.map(item => item.data.url));
 		if (urls.size != items.length) {
