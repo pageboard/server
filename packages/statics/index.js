@@ -1,7 +1,6 @@
 const serveStatic = require.lazy('serve-static');
 const Path = require('node:path');
 const { promises: fs } = require('node:fs');
-const { pipeline } = require('node:stream/promises');
 
 const bundler = require.lazy('postinstall-esbuild');
 
