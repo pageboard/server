@@ -11,7 +11,7 @@ const morgan = require.lazy('morgan');
 const pad = require.lazy('pad');
 const prettyBytes = require.lazy('pretty-bytes');
 const http = require.lazy('node:http');
-const { promises: fs, readFileSync } = require('node:fs');
+const { promises: fs, readFileSync, createWriteStream } = require('node:fs');
 const { once } = require.lazy('node:events');
 const xdg = require('xdg-basedir');
 const toml = require('toml');
@@ -138,6 +138,10 @@ module.exports = class Pageboard {
 			headersSent: true,
 			locals: {}
 		}, express.response);
+		req.res.setHeader = () => { };
+		req.res.attachment = filename => {
+			return createWriteStream(filename);
+		};
 		req.res.locals.tenant = this.opts.database.tenant;
 		this.domains.extendRequest(req, this);
 		req.user ??= { grants: [] };
