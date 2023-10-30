@@ -864,8 +864,16 @@ module.exports = class BlockService {
 		};
 
 		if (!Object.isEmpty(data.data)) obj.data = data.data;
-		if (!Object.isEmpty(data.lock)) obj.lock = data.lock;
 		if (!Object.isEmpty(data.content)) obj.content = data.content;
+
+		if (data.lock !== undefined) {
+			if (req.locked(data.lock ?? []) || req.locked(block.lock ?? [])) {
+				throw HttpError.Unauthorized("Missing permissions to change locks");
+			} else {
+				obj.lock = data.lock;
+			}
+		}
+
 		return {
 			item: await block.$query(req.trx).patchObject(obj).returning('*')
 		};
