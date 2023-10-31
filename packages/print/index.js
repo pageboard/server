@@ -312,8 +312,8 @@ module.exports = class PrintModule {
 				throw new HttpError.BadRequest("Cannot have cover with spine without margins");
 			}
 
-			const sizeA = paper.width * (paper.foldWidth ? 2 : 1) + spine;
-			const sizeB = paper.height * (paper.foldHeight ? 2 : 1);
+			const sizeA = paper.width * (paper.fold?.width ? 2 : 1) + (paper.fold?.width ?? 0);
+			const sizeB = paper.height;
 			printProduct.runlists.push({
 				tag: "content",
 				sides: 2,
