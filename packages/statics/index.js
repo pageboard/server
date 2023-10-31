@@ -101,8 +101,8 @@ module.exports = class StaticsModule {
 		if (ext != "js" && ext != "css") {
 			throw new Error("Bundles only .js or .css extensions");
 		}
-		if (this.opts.browsers[ext] == null) {
-			throw new Error(`Set statics.browsers.${ext} to a browserslist query`);
+		if (this.opts[ext] == null) {
+			throw new Error(`Set statics.${ext} to a browserslist query`);
 		}
 		delete fileObj.base;
 		fileObj.name += suffix;
@@ -154,7 +154,7 @@ module.exports = class StaticsModule {
 				cache: {
 					dir: this.opts.statics
 				},
-				browsers: this.opts.browsers[ext]
+				browsers: this.opts[ext]
 			});
 		} catch(err) {
 			delete err.input;
