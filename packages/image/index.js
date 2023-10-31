@@ -58,18 +58,13 @@ module.exports = class ImageModule {
 		server.get(
 			/^\/\.(uploads|files)\//,
 			this.mw,
-			// tag because images are transformed
-			app.cache.tag('app').for(app.cache.opts.uploads),
+			// files are loaded directly and need some headers
+			app.cache.for({
+				immutable: true,
+				maxAge: app.cache.opts.uploads
+			}),
 			this.sharpie(this.opts)
 		);
-	}
-
-	serviceRoutes(server) {
-		console.info(`image:\tproxy at /.api/image`);
-		server.get('/.api/image', (req, res, next) => {
-			console.warn("/.api/image is used", req.url);
-			next();
-		}, this.sharpie(this.opts));
 	}
 
 	async thumbnail(url) {

@@ -16,7 +16,7 @@ module.exports = class ApiModule {
 	static name = 'api';
 	static priority = -1;
 	static plugins = [
-		'help', 'user', 'site', 'archive', 'settings', 'page',
+		'help', 'user', 'site', 'archive', 'settings', 'page', 'links',
 		'block', 'href', 'form', 'query',	'reservation', 'translate'
 	].map(name => Path.join(__dirname, 'services', name));
 
@@ -47,6 +47,12 @@ module.exports = class ApiModule {
 		app.responseFilter.register(this);
 		const tenantsLen = Object.keys(app.opts.database.url).length - 1;
 		// api depends on site files, that tag is invalidated in cache install
+		server.get("/.well-known/api.json", ({ site }, res) => {
+			res.redirect(site.$pkg.bundles.get('services').scripts[0]);
+		});
+		server.get("/.api", ({ site }, res) => {
+			res.redirect("/.well-known/api");
+		});
 		server.get('/.api/*',
 			app.cache.tag('app-:site', 'data-:site'),
 			app.cache.tag('db-:tenant').for(`${tenantsLen}day`)
@@ -84,7 +90,7 @@ module.exports = class ApiModule {
 		const mod = this.app.services[modName];
 		if (!modName || !mod) {
 			throw new HttpError.BadRequest(Text`
-				Available modules:
+				${modName} module not found:
 				${Object.keys(this.app.services).sort().join(', ')}
 			`);
 		}
@@ -92,7 +98,7 @@ module.exports = class ApiModule {
 		const inst = this.app[modName];
 		const meth = inst[funName];
 		if (!funName || !meth) throw new HttpError.BadRequest(Text`
-			Available methods:
+			${funName} method not found:
 			${Object.getOwnPropertyNames(mod).sort().join(', ')}
 		`);
 		if (!schema) {

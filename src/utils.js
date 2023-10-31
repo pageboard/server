@@ -1,29 +1,41 @@
 // const { nestie } = require.lazy('nestie');
 const { flattie } = require.lazy('flattie');
 const dget = require.lazy('dlv');
-const {
-	Matchdom, TextPlugin, ArrayPlugin, OpsPlugin, NumPlugin, DatePlugin
-} = require('../lib/matchdom');
 const getSlug = require.lazy('speakingurl');
 const { access } = require('node:fs/promises');
 
-const sharedMd = new Matchdom(TextPlugin, ArrayPlugin, OpsPlugin, NumPlugin, DatePlugin, {
-	formats: {
-		as: {
-			slug: (ctx, str) => getSlug(str, { custom: { "_": "-" } }),
-			query: (ctx, obj) => {
-				if (!obj) return obj;
-				const q = new URLSearchParams();
-				for (const [key, val] of Object.entries(obj)) {
-					if (Array.isArray(val)) for (const item of val) q.append(key, item);
-					else if (val !== null) q.append(key, val);
+let sharedMd;
+
+exports.init = async () => {
+	const {
+		Matchdom, TextPlugin, ArrayPlugin, OpsPlugin, NumPlugin, DatePlugin, RepeatPlugin
+	} = await import('matchdom');
+	sharedMd = new Matchdom(
+		TextPlugin,
+		ArrayPlugin,
+		OpsPlugin,
+		NumPlugin,
+		DatePlugin,
+		RepeatPlugin,
+		{
+			formats: {
+				as: {
+					slug: (ctx, str) => getSlug(str, { custom: { "_": "-" } }),
+					query: (ctx, obj) => {
+						if (!obj) return obj;
+						const q = new URLSearchParams();
+						for (const [key, val] of Object.entries(obj)) {
+							if (Array.isArray(val)) for (const item of val) q.append(key, item);
+							else if (val !== null) q.append(key, val);
+						}
+						const ser = q.toString();
+						return ser ? `?${ser}` : '';
+					}
 				}
-				const ser = q.toString();
-				return ser ? `?${ser}` : '';
 			}
 		}
-	}
-});
+	);
+};
 
 exports.dget = dget;
 exports.dset = dset;
@@ -47,7 +59,7 @@ exports.mergeExpressions = function mergeExpressions(data, expr, obj) {
 	const flatExpr = flattie(expr);
 	obj = Object.assign(obj);
 	let miss = false;
-	const md = new Matchdom(sharedMd, {
+	const md = sharedMd.copy().extend({
 		hooks: {
 			afterAll(ctx, val) {
 				if (val === undefined) miss = true;
@@ -83,14 +95,14 @@ function dset(obj, keys, val) {
 
 function empty(key) {
 	if (key == null || key === "") return {};
-	key = +key;
+	key = Number(key);
 	return key === key ? [] : {};
 }
 
 function nestie(input, glue) {
 	glue = glue || '.';
-	var arr, tmp, output;
-	var i = 0, k, key;
+	let arr, tmp, output;
+	let i = 0, k, key;
 
 	for (k in input) {
 		tmp = output; // reset

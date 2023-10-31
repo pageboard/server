@@ -79,9 +79,12 @@ CREATE INDEX IF NOT EXISTS block_content_name_lang ON block (
 	(data->>'lang')
 ) WHERE type='content';
 
+DROP FUNCTION IF EXISTS block_get_content(INTEGER, TEXT);
+
 CREATE OR REPLACE FUNCTION block_get_content (
 	block_id INTEGER,
-	_lang TEXT
+	_lang TEXT,
+	_content TEXT DEFAULT NULL
 ) RETURNS type_content_translated
 	LANGUAGE sql
 	PARALLEL SAFE
@@ -98,6 +101,7 @@ FROM (
 	FROM relation AS r, block
 	WHERE r.parent_id = block_id AND block._id = r.child_id
 	AND block.type = 'content' AND block.data->>'lang' = _lang
+	AND (CASE WHEN _content IS NOT NULL THEN block.data->>'name' = _content ELSE TRUE END)
 ) AS contents
 $BODY$;
 

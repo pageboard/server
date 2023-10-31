@@ -1,4 +1,4 @@
-const { createReadStream, createWriteStream } = require('node:fs');
+const { createReadStream } = require('node:fs');
 const Path = require('node:path');
 const { Deferred } = require.lazy('class-deferred');
 const ndjson = require.lazy('ndjson');
@@ -36,19 +36,11 @@ module.exports = class ArchiveService {
 			users: 0,
 			blocks: 0,
 			hrefs: 0,
-			orphaned
+			orphaned,
+			file: Path.basename(filepath)
 		};
-
-		let out;
-		if (res.attachment) {
-			counts.file = Path.basename(filepath);
-			res.type('application/x-ndjson');
-			res.attachment(counts.file);
-			out = res;
-		} else {
-			counts.file = Path.resolve(this.app.cwd, filepath);
-			out = createWriteStream(counts.file);
-		}
+		res.type('application/x-ndjson');
+		const out = res.attachment(counts.file) ?? res;
 
 		const finished = new Deferred();
 		out.once('finish', finished.resolve);

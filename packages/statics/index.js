@@ -1,7 +1,6 @@
 const serveStatic = require.lazy('serve-static');
 const Path = require('node:path');
 const { promises: fs } = require('node:fs');
-const { pipeline } = require('node:stream/promises');
 
 const bundler = require.lazy('postinstall-esbuild');
 
@@ -9,6 +8,7 @@ module.exports = class StaticsModule {
 	static name = 'statics';
 
 	constructor(app, opts) {
+		this.app = app;
 		this.opts = {
 			cache: app.cache.opts,
 			uploads: app.upload.opts.dir,
@@ -32,46 +32,20 @@ module.exports = class StaticsModule {
 			fallthrough: true
 		};
 
-		server.get('*', app.cache.tag('remotes'), async (req, res, next) => {
-			const host = req.get('X-Proxy-Host');
-			if (!host) return next();
-			res.vary('X-Proxy-Host');
-			const url = new URL(req.url, req.site.url);
-			url.port = '';
-			url.host = host;
-			const headers = Object.fromEntries(
-				Object.entries(req.headers).filter(([key]) => !key.startsWith('x-'))
-			);
-			delete headers.host;
-			headers['accept-encoding'] = 'Identity';
-
-			const response = await fetch(url.href, { headers });
-			for (const [key, val] of response.headers.entries()) {
-				res.set(key, val);
-			}
-			pipeline(response.body, res);
-		});
 		const filesPrefix = '/.files';
 		server.get(filesPrefix + "/*",
 			req => {
 				const { path, site } = req;
 				req.url = site.id + path.substring(filesPrefix.length);
 			},
-			app.cache.tag('app-:site').for(opts.cache.files),
+			app.cache.tag('app-:site').for({
+				immutable: true,
+				maxAge: opts.cache.files
+			}),
 			serveStatic(opts.files, serveOpts),
 			staticNotFound
 		);
-		const uploadsPrefix = '/.uploads';
-		server.get(uploadsPrefix + "/*",
-			req => {
-				const { path, site } = req;
-				req.url = site.id + path.substring(uploadsPrefix.length);
-			},
-			// app does not change the files - do not tag
-			app.cache.for(opts.cache.uploads),
-			serveStatic(opts.uploads, serveOpts),
-			staticNotFound
-		);
+
 		const publicPrefix = '/.public';
 		server.get(publicPrefix + "/*",
 			req => {
@@ -84,7 +58,10 @@ module.exports = class StaticsModule {
 		);
 
 		server.get('/favicon.ico',
-			app.cache.tag('data-:site').for(opts.cache.icon),
+			app.cache.tag('data-:site').for({
+				immutable: true,
+				maxAge: opts.cache.icon
+			}),
 			({ site }, res, next) => {
 				if (!site || !site.data.favicon) {
 					res.sendStatus(204);
@@ -107,38 +84,38 @@ module.exports = class StaticsModule {
 		return pathname;
 	}
 
-	async bundle(site, pkg, list, filename, dry = false) {
-		if (list.length == 0) return [];
+	async bundle(site, { inputs, output, dry = false, local = false }) {
+		if (inputs.length == 0) return [];
 		const suffix = {
 			production: ".min",
 			staging: ".max",
 			dev: ""
 		}[site.data.env] || "";
-		if (!suffix || !pkg.dir || !site.url) {
-			return list;
+		const { dir } = site.$pkg;
+		if (!suffix || !dir || !site.url) {
+			return inputs;
 		}
 
-		const fileObj = Path.parse(filename);
+		const fileObj = Path.parse(output);
 		const ext = fileObj.ext.substring(1);
 		if (ext != "js" && ext != "css") {
 			throw new Error("Bundles only .js or .css extensions");
 		}
+		if (this.opts.browsers[ext] == null) {
+			throw new Error(`Set statics.browsers.${ext} to a browserslist query`);
+		}
 		delete fileObj.base;
 		fileObj.name += suffix;
 		const buildFile = Path.format(fileObj);
-		const buildDir = Path.join(pkg.dir, "builds");
+		const buildDir = Path.join(dir, "builds");
 		const buildPath = Path.join(buildDir, buildFile);
 
 		const outList = [];
-		const inputs = [];
-		list.forEach(url => {
-			if (/^https?:\/\//.test(url)) outList.push(url);
-			else inputs.push(urlToPath(this.opts.files, site.id, url));
-		});
-
 		const outUrl = `/.files/${site.data.version ?? site.$pkg.tag}/${buildFile}`;
-		outList.push(outUrl);
-		const output = urlToPath(this.opts.files, site.id, outUrl);
+		const outPath = urlToPath(this.opts.files, site.id, outUrl);
+		if (local) outList.push(outPath);
+		else outList.push(outUrl);
+
 		if (dry) return outList;
 
 		await fs.mkdir(buildDir, { recursive: true });
@@ -146,22 +123,38 @@ module.exports = class StaticsModule {
 		if (site.data.version) try {
 			// not in branch mode, files are already built, use them
 			await fs.stat(buildPath);
-			await Promise.all([
-				fs.copyFile(buildPath, output),
-				fs.copyFile(buildPath + '.map', output + '.map').catch(() => {})
-			]);
+			try {
+				await fs.stat(outPath);
+			} catch (err) {
+				await Promise.all([
+					fs.copyFile(buildPath, outPath),
+					local ? null : fs.copyFile(buildPath + '.map', outPath + '.map').catch(() => { })
+				]);
+			}
 			return outList;
 		} catch (err) {
 			// pass
 		}
+		const inList = [];
+		inputs.forEach(url => {
+			if (local) {
+				if (url.startsWith(this.app.dirs.app)) inList.push(url);
+				else console.error("file not in project", url);
+			} else if (/^https?:\/\//.test(url)) {
+				inList.push(url);
+			} else {
+				inList.push(urlToPath(this.opts.files, site.id, url));
+			}
+		});
 
 		try {
-			await bundler(inputs, output, {
+			await bundler(inList, outPath, {
 				minify: site.data.env == "production",
+				sourceMap: !local,
 				cache: {
 					dir: this.opts.statics
 				},
-				browsers: this.opts.browsers
+				browsers: this.opts.browsers[ext]
 			});
 		} catch(err) {
 			delete err.input;
@@ -170,8 +163,8 @@ module.exports = class StaticsModule {
 			throw err;
 		}
 		await Promise.all([
-			fs.copyFile(output, buildPath),
-			fs.copyFile(output + '.map', buildPath + '.map').catch(() => {})
+			fs.copyFile(outPath, buildPath),
+			local ? null : fs.copyFile(outPath + '.map', buildPath + '.map').catch(() => {})
 		]);
 		return outList;
 	}

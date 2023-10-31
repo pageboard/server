@@ -90,13 +90,6 @@ class Block extends Model {
 		}
 	};
 
-	async $beforeInsert(q) {
-		await super.$beforeInsert(q);
-		if (!this.id) {
-			this.id = await Block.genId();
-		}
-	}
-
 	static normalizeContentSpec(contents) {
 		if (!contents) return;
 		if (contents === true) return [];
@@ -278,7 +271,8 @@ class Block extends Model {
 				standalones: Array.from(standalones),
 				pages: groups.page ?? [],
 				textblocks: Array.from(textblocks),
-				tag
+				tag,
+				dir: pkg.dir
 			};
 
 			get $pkg() {
@@ -289,7 +283,11 @@ class Block extends Model {
 				Object.assign(copy.$pkg, this.$pkg);
 				return copy;
 			}
+			async $beforeInsert(q) {
+				await super.$beforeInsert(q);
+			}
 			$beforeValidate(jsonSchema, json) {
+				if (json.id === null) delete json.id;
 				super.$beforeValidate(jsonSchema, json);
 				const props = this.$schema(json.type)?.properties ?? {};
 				if (props.content?.type == 'null' && json.content) {
@@ -303,14 +301,10 @@ class Block extends Model {
 			async $afterUpdate({ patch, old }, context) {
 				await super.$afterUpdate(context);
 				const url = this.data?.url ?? old?.data?.url;
-				if (!url || url.startsWith('/.')) return;
-				const title = this.data?.title ?? this.content?.title;
+				if (!url || url.startsWith('/.') || !this.content) return;
 				const { req } = context.transaction;
-				if (title == null) try {
-					await req.run('href.del', { url });
-				} catch (ex) {
-					// miss
-				} else try {
+				const { title } = this.content;
+				try {
 					await req.run('href.save', {
 						url,
 						title
@@ -323,8 +317,8 @@ class Block extends Model {
 			async $afterInsert(context) {
 				await super.$afterInsert(context);
 				const { url } = this.data ?? {};
-				if (!url || url.startsWith('/.')) return;
-				const title = this.data?.title ?? this.content?.title;
+				if (!url || url.startsWith('/.') || !this.content) return;
+				const { title } = this.content;
 				if (title == null) return;
 				const { req } = context.transaction;
 				await req.run('href.add', { url });
@@ -341,6 +335,13 @@ class Block extends Model {
 		const site = new DomainBlock();
 		Object.assign(site, block);
 		return site;
+	}
+
+	async $beforeInsert(q) {
+		await super.$beforeInsert(q);
+		if (!this.id) {
+			this.id = await Block.genId();
+		}
 	}
 }
 

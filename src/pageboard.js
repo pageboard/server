@@ -11,7 +11,7 @@ const morgan = require.lazy('morgan');
 const pad = require.lazy('pad');
 const prettyBytes = require.lazy('pretty-bytes');
 const http = require.lazy('node:http');
-const { promises: fs, readFileSync } = require('node:fs');
+const { promises: fs, readFileSync, createWriteStream } = require('node:fs');
 const { once } = require.lazy('node:events');
 const xdg = require('xdg-basedir');
 const toml = require('toml');
@@ -20,7 +20,7 @@ util.inspect.defaultOptions.depth = 10;
 
 const cli = require.lazy('./cli');
 const Domains = require.lazy('./domains');
-const { mergeRecursive } = require('./utils');
+const { mergeRecursive, init: initUtils } = require('./utils');
 const Installer = require('./installer');
 const ResponseFilter = require('./filter');
 
@@ -72,6 +72,7 @@ module.exports = class Pageboard {
 			"@pageboard/image",
 			"@pageboard/inspector",
 			"@pageboard/mail",
+			"@pageboard/polyfill",
 			"@pageboard/prerender",
 			"@pageboard/print",
 			"@pageboard/upload",
@@ -137,6 +138,10 @@ module.exports = class Pageboard {
 			headersSent: true,
 			locals: {}
 		}, express.response);
+		req.res.setHeader = () => { };
+		req.res.attachment = filename => {
+			return createWriteStream(filename);
+		};
 		req.res.locals.tenant = this.opts.database.tenant;
 		this.domains.extendRequest(req, this);
 		req.user ??= { grants: [] };
@@ -197,6 +202,8 @@ module.exports = class Pageboard {
 		this.#installer = new Installer(this, opts.installer);
 
 		this.responseFilter = new ResponseFilter();
+
+		await initUtils();
 
 		this.#plugins = [];
 		this.#loadPlugins(this.opts);

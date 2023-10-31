@@ -111,7 +111,8 @@ module.exports = class BlockService {
 
 		if (data.parent) {
 			const parentList = data.parent.parents;
-			// WTF is that ? is it used somewhere ?
+			// this is internal API and instead it should be
+			// an array of data.parent
 			if (parentList && Array.isArray(parentList)) {
 				if (parentList.length) {
 					valid = true;
@@ -163,7 +164,13 @@ module.exports = class BlockService {
 			q.joinRelated('children', { alias: 'child' });
 			q.whereObject(data.child, data.child.type, 'child');
 		} else if (data.text) {
-			q.with('search', Block.query(trx)
+			if (data.text.endsWith('*')) q.with('search', Block.query(trx)
+				.select(ref('to_tsquery').as('query'))
+				.from(raw(`to_tsquery('unaccent', :text)`, {
+					text: data.text.replace(/\*$/, ':*')
+				}))
+			);
+			else q.with('search', Block.query(trx)
 				.select(ref('websearch_to_tsquery').as('query'))
 				.from(raw(`websearch_to_tsquery(:tsconfig, :text)`, {
 					text: data.text,
@@ -179,19 +186,24 @@ module.exports = class BlockService {
 					.joinRelated('children')
 					.where('children.type', 'content')
 					.where(ref('children.data:lang').castText(), language.lang)
+					.where(q => {
+						if (typeof data.content == "string") {
+							q.where(ref('children.data:name').castText(), data.content);
+						}
+					})
 				);
 			} else {
 				q.with('contents', Block.query(trx)
 					.select('block._id', 'block.tsv', 'value AS text')
 					.from(raw('block, jsonb_each_text(block.content)'))
+					.where(q => {
+						if (typeof data.content == "string") {
+							q.where('name', data.content);
+						}
+					})
 				);
-			}
 
-			// FIXME
-			// there are two types of search
-			// block search where one wants to find blocks by their direct content
-			// (e.g. inventory_item)
-			// children block search where one wants to find blocks by their direct content and by their non-standalone children direct contents
+			}
 
 			const qdoc = Block.query(trx).select('block._id')
 				.select(fun.sum(raw('ts_rank(contents.tsv, search.query)')).as('rank'))
@@ -200,9 +212,12 @@ module.exports = class BlockService {
 				))
 				.groupBy('block._id');
 			if (data.content) {
+				// find blocks by their direct content
 				qdoc.join('contents', 'block._id', 'contents._id')
 					.join('search', 'contents.tsv', '@@', 'search.query');
 			} else {
+				// find blocks by direct content and textblock children contents
+				// TODO add search by direct content (lateral join or something)
 				qdoc.joinRelated('children as child')
 					.whereIn('child.type', site.$pkg.textblocks)
 					.join('contents', 'child._id', 'contents._id')
@@ -242,7 +257,7 @@ module.exports = class BlockService {
 				).as('count')
 			);
 		}
-		if (data.content) {
+		if (data.content === true) {
 			eagers.children = {
 				$relation: 'children',
 				$modify: ['childrenFilter']
@@ -305,7 +320,7 @@ module.exports = class BlockService {
 		if (ids.length) {
 			const hrow = await req.call('href.collect', {
 				ids,
-				content: data.content,
+				content: data.content === true,
 				asMap: true,
 				preview: data.preview,
 				types: Href.mediaTypes
@@ -355,9 +370,17 @@ module.exports = class BlockService {
 				nullable: true
 			},
 			content: {
-				title: 'With content',
-				type: 'boolean',
-				nullable: true
+				title: 'Contents',
+				anyOf: [{
+					const: false,
+					title: 'none'
+				}, {
+					const: true,
+					title: 'all'
+				}, {
+					type: 'string',
+					title: 'custom'
+				}]
 			},
 			text: {
 				title: 'Text search',
@@ -422,9 +445,17 @@ module.exports = class BlockService {
 						}
 					},
 					content: {
-						title: 'With content',
-						type: 'boolean',
-						nullable: true
+						title: 'Contents',
+						anyOf: [{
+							const: false,
+							title: 'none'
+						}, {
+							const: true,
+							title: 'all'
+						}, {
+							type: 'string',
+							title: 'custom'
+						}]
 					},
 					data: {
 						title: 'Select by data',
@@ -507,9 +538,17 @@ module.exports = class BlockService {
 						nullable: true
 					},
 					content: {
-						title: 'With content',
-						type: 'boolean',
-						nullable: true
+						title: 'Contents',
+						anyOf: [{
+							const: false,
+							title: 'none'
+						}, {
+							const: true,
+							title: 'all'
+						}, {
+							type: 'string',
+							title: 'custom'
+						}]
 					},
 					data: {
 						title: 'Select by data',
@@ -573,9 +612,17 @@ module.exports = class BlockService {
 						default: false
 					},
 					content: {
-						title: 'With content',
-						type: 'boolean',
-						default: false
+						title: 'Contents',
+						anyOf: [{
+							const: false,
+							title: 'none'
+						}, {
+							const: true,
+							title: 'all'
+						}, {
+							type: 'string',
+							title: 'custom'
+						}]
 					},
 					data: {
 						title: 'Select by data',
@@ -803,17 +850,30 @@ module.exports = class BlockService {
 	};
 
 	async save(req, data) {
-		const block = await this.get(req, data).forUpdate();
+		const block = await this.get(req, { ...data, type: null }).forUpdate();
 		if (!block) {
-			throw new Error(`Block not found for update ${data.id}`);
+			throw new HttpError.NotFound(`Block not found for update ${data.id}`);
+		}
+		if (data.type != block.type) {
+			throw new HttpError.BadRequest(
+				`Cannot change block type ${block.type} to ${data.type}`
+			);
 		}
 		const obj = {
 			type: block.type
 		};
 
 		if (!Object.isEmpty(data.data)) obj.data = data.data;
-		if (!Object.isEmpty(data.lock)) obj.lock = data.lock;
 		if (!Object.isEmpty(data.content)) obj.content = data.content;
+
+		if (data.lock !== undefined) {
+			if (req.locked(data.lock ?? []) || req.locked(block.lock ?? [])) {
+				throw HttpError.Unauthorized("Missing permissions to change locks");
+			} else {
+				obj.lock = data.lock;
+			}
+		}
+
 		return {
 			item: await block.$query(req.trx).patchObject(obj).returning('*')
 		};

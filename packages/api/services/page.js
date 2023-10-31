@@ -27,7 +27,7 @@ module.exports = class PageService {
 			obj.commons = app.opts.commons;
 			res.return(obj);
 		});
-		server.get('/.api/pages', async (req, res) => {
+		server.get('/.api/pages', app.auth.lock('webmaster'), async (req, res) => {
 			const { query, site } = req;
 			const isWebmaster = !req.locked(['webmaster']);
 			if (isWebmaster) {
@@ -41,39 +41,14 @@ module.exports = class PageService {
 				query.type = ['page'];
 			}
 
-			const action = query.text != null ? 'page.search' : 'page.all';
+			const action = query.text != null ? 'page.search' : 'page.list';
 			const obj = await req.run(action, query);
 			res.return(obj);
 		});
-		server.post('/.api/page', app.cache.tag('data-:site'), app.auth.lock('webmaster'), async (req, res) => {
-			const page = await req.run('page.add', req.body);
-			// FIXME use res.return ?
-			res.send(page);
-		});
+
 		server.put('/.api/page', app.cache.tag('data-:site'), app.auth.lock('webmaster'), async (req, res) => {
-			const page = await req.run('page.save', req.body);
+			const page = await req.run('page.write', req.body);
 			res.send(page);
-		});
-		server.delete('/.api/page', app.cache.tag('data-:site'), app.auth.lock('webmaster'), async (req, res) => {
-			const page = await req.run('page.del', req.query);
-			res.send(page);
-		});
-
-		server.get('/robots.txt', app.cache.tag('data-:site'), async (req, res) => {
-			const txt = await req.run('page.robots');
-			res.type('text/plain');
-			res.send(txt);
-		});
-
-		server.get('/sitemap.txt', app.cache.tag('data-:site'), async (req, res) => {
-			const obj = await req.run('page.all', {
-				robot: true,
-				type: ['page']
-			});
-			res.type('text/plain');
-			res.send(app.responseFilter.run(req, obj).items.map(page => {
-				return new URL(page.data.url, req.site.url).href;
-			}).join('\n'));
 		});
 	}
 
@@ -203,7 +178,7 @@ module.exports = class PageService {
 			asMap: true,
 			types: Href.mediaTypes
 		});
-		const links = await navigationLinks(req, data.url, page.data.prefix);
+		const links = await navigationLinks(req, data.url, page.data.prefix, lang);
 
 		Object.assign(obj, {
 			parent: site,
@@ -232,8 +207,7 @@ module.exports = class PageService {
 				title: 'Translate to site lang',
 				type: 'string',
 				format: 'lang',
-				nullable: true,
-				// TODO $ref anyOf site languages initialized by translate.init
+				nullable: true
 			},
 			type: {
 				title: 'Restrict to type',
@@ -245,8 +219,11 @@ module.exports = class PageService {
 	};
 
 	async search(req, data) {
+		const { lang } = req.call('translate.lang', data);
 		return req.run('block.search', {
+			lang,
 			type: 'page',
+			content: 'title',
 			data: {
 				nositemap: data.draft ? undefined : false
 			},
@@ -260,13 +237,29 @@ module.exports = class PageService {
 		$action: 'read',
 		required: ['text'],
 		properties: {
+			lang: {
+				title: 'Lang',
+				type: 'string',
+				format: 'lang',
+				nullable: true
+			},
 			text: {
 				title: 'Search text',
 				type: 'string',
 				format: 'singleline'
 			},
 			content: {
-				type: 'boolean'
+				title: 'Contents',
+				anyOf: [{
+					const: false,
+					title: 'none'
+				}, {
+					const: true,
+					title: 'all'
+				}, {
+					type: 'string',
+					title: 'custom'
+				}]
 			},
 			limit: {
 				title: 'Limit',
@@ -297,65 +290,8 @@ module.exports = class PageService {
 		}
 	};
 
-	async all(req, data) {
-		const pages = await listPages(req, data);
-		const obj = {
-			items: pages
-		};
-		if (data.home) {
-			obj.item = pages.shift();
-			if (obj.item && obj.item.data.url != data.parent) {
-				delete obj.item;
-			}
-		} else {
-			obj.item = {
-				type: 'sitemap',
-				content: {}
-			};
-		}
-		return obj;
-	}
-	static all = {
-		title: 'Site map',
-		$action: 'read',
-		$lock: true,
-		properties: {
-			parent: {
-				title: 'Root pathname',
-				type: 'string',
-				format: 'pathname'
-			},
-			home: {
-				title: 'Returns root as first item',
-				type: 'boolean',
-				default: false
-			},
-			url: {
-				title: 'Url path',
-				type: 'string',
-				format: 'pathname'
-			},
-			drafts: {
-				type: 'boolean',
-				default: false
-			},
-			robot: {
-				type: 'boolean',
-				default: false
-			},
-			type: {
-				type: 'array',
-				items: {
-					type: 'string',
-					format: 'name'
-				},
-				nullable: true
-			}
-		}
-	};
-
-	async save(req, changes) {
-		const { site, trx } = req;
+	async write(req, changes) {
+		const { site } = req;
 		changes = {
 			// blocks removed from their standalone parent (grouped by parent)
 			unrelate: {},
@@ -369,17 +305,6 @@ module.exports = class PageService {
 			relate: {},
 			...changes
 		};
-		const pkg = site.$pkg;
-
-		const pages = {};
-		for (const method of ['add', 'update', 'remove']) {
-			pages[method] = changes[method].filter(b => {
-				const alias = pkg.aliases[b.type];
-				if (alias) b.type = alias;
-				return pkg.pages.has(b.type);
-			});
-		}
-		pages.all = [ ...pages.add, ...pages.update ];
 
 		for (const b of changes.add) {
 			stripHostname(site, b);
@@ -387,49 +312,8 @@ module.exports = class PageService {
 		for (const b of changes.update) {
 			stripHostname(site, b);
 		}
-		// this also effectively prevents removing a page and adding a new page
-		// with the same url as the one removed
-		const allUrl = {};
 		const returning = {};
-		const dbPages = await site.$relatedQuery('children', trx)
-			.select('block.id', req.ref('block.data:url').as('url'))
-			.whereIn('block.type', Array.from(pkg.pages))
-			.whereNotNull(req.ref('block.data:url'));
-		for (const page of pages.all) {
-			const { url } = page.data;
-			if (!url) {
-				delete page.data.url;
-				continue;
-			}
-			if (page.data.prefix && !url.endsWith('/')) {
-				throw new HttpError.BadRequest(Text`
-					${page.id} must have url ending with / to be able to match
-				`);
-			} else if (allUrl[url]) {
-				throw new HttpError.BadRequest(Text`
-					${page.id} and ${allUrl[url]} have the same url
-					${url}
-				`);
-			} else if (!page.id) {
-				throw new HttpError.BadRequest(
-					`Page without id: ${url}`
-				);
-			} else {
-				allUrl[url] = page.id;
-			}
-		}
-		for (const dbPage of dbPages) {
-			const id = allUrl[dbPage.url];
-			if (id != null && dbPage.id != id) {
-				throw new HttpError.BadRequest(Text`
-					${id} wants to take ${dbPage.id} url:
-					${dbPage.url}
-				`);
-			}
-		}
 
-		// FIXME use site.$hrefs to track the blocks with href when saving,
-		// and check all new/changed href have matching row in href table
 		await applyUnrelate(req, changes.unrelate);
 		await applyRemove(req, changes.remove, changes.recursive);
 		returning.update = [
@@ -439,8 +323,8 @@ module.exports = class PageService {
 		await applyRelate(req, changes.relate);
 		return returning;
 	}
-	static save = {
-		title: 'Save page',
+	static write = {
+		title: 'Write to page',
 		$lock: true,
 		$action: 'write',
 		properties: {
@@ -475,184 +359,137 @@ module.exports = class PageService {
 		}
 	};
 
-	async add(req, data) {
-		await req.site.$beforeInsert.call(data);
-		const obj = await this.save(req, {
-			add: [data]
-		});
-		return obj.update[0];
-	}
-	static add = {
-		title: 'Add page',
-		$lock: true,
-		$action: 'write',
-		required: ['type', 'data'],
-		properties: {
-			type: {
-				type: 'string'
-			},
-			data: {
-				type: 'object'
-			}
-		}
-	};
+	async list(req, data) {
+		const { site, trx, fun, ref, raw } = req;
+		const { lang } = req.call('translate.lang', data);
+		const q = site.$relatedQuery('children', trx)
+			.columns({ lang, content: 'title' })
+			.whereIn('block.type', data.type ?? Array.from(site.$pkg.pages))
+			.where('block.standalone', true);
 
-
-	async del({ site, trx, Href, run, ref }, data) {
-		const page = await run('block.get', data);
-		const links = site.$relatedQuery('children', trx)
-			.select(
-				'block.id',
-				'block.type',
-				'block.content',
-				ref('parents.id').as('parentId'),
-				ref('parents.data:url').as('parentUrl')
-			)
-			.where(ref('block.data:url').castText(), page.data.url)
-			.joinRelated('parents')
-			.whereNot('parents.type', 'site')
-			.whereNot('parents.id', page.id);
-		if (links.length > 0) {
-			throw new HttpError.Conflict(Text`
-				There are ${links.length} referrers to this page:
-				${JSON.stringify(links, null, ' ')}
-			`);
-		}
-		await Href.query(trx).where('url', page.data.url).del();
-		return run('block.del', {
-			id: page.id,
-			type: page.type
-		});
-	}
-	static del = {
-		title: 'Delete page',
-		$lock: true,
-		$action: 'write',
-		required: ['id'],
-		properties: {
-			id: {
-				title: 'id',
-				type: 'string',
-				format: 'id'
-			}
-		}
-	};
-
-	async robots(req, data) {
-		const lines = [];
-		const { site } = req;
-		const { env = site.data.env } = data;
-		if (env == "production") {
-			lines.push(`Sitemap: ${new URL("/sitemap.txt", site.url)}`);
-			lines.push('User-agent: *');
-			const pages = await listPages(req, {
-				disallow: true,
-				type: ['page']
+		if (!data.drafts) {
+			q.whereNotNull(ref('block.data:url'));
+			q.where(q => {
+				q.whereNull(ref('block.data:nositemap'))
+					.orWhereNot(ref('block.data:nositemap'), true);
 			});
-			for (const page of pages) {
-				lines.push(`Disallow: ${page.data.url}`);
-			}
-		} else {
-			lines.push('User-agent: *');
-			lines.push("Disallow: /");
 		}
-		return lines.join('\n');
+		if (data.robot) {
+			q.where(q => {
+				q.whereNull(ref('block.data:noindex'))
+					.orWhereNot(ref('block.data:noindex'), true);
+			});
+		}
+		if (data.disallow) {
+			q.where(ref('block.data:noindex'), true);
+		}
+		const obj = {};
+		if (data.prefix != null) {
+			const prefix = data.prefix.replace(/\/$/, '');
+			const regexp = data.home ? `^${prefix}(/[^/]+)?$` : `^${prefix}/[^/]+$`;
+			if (data.home) q.orderByRaw(raw("block.data->>'url' = ? DESC", prefix));
+			q.whereJsonText('block.data:url', '~', regexp)
+				.orderBy(ref('block.data:index').castInt());
+			const parents = await getParents(req, prefix, lang);
+			obj.links = {
+				up: parents.map(shortLink)
+			};
+		} else if (data.url) {
+			q.where(fun('starts_with',
+				ref('block.data:url').castText(),
+				data.url
+			));
+		} else {
+			// just return all pages for the sitemap
+		}
+		q.orderBy(ref('block.data:url'));
+		q.orderBy(ref('block.updated_at'), 'DESC');
+		const items = obj.items = await q;
+		if (data.home) {
+			obj.item = items.shift();
+			if (obj.item && obj.item.data.url != data.prefix) {
+				delete obj.item;
+			}
+		}
+		return obj;
 	}
-	static robots = {
-		title: 'Get robots.txt',
-		$lock: true,
+	static list = {
+		title: 'List pages',
 		$action: 'read',
 		properties: {
-			env: {
-				title: 'Environment',
-				type: 'string'
+			prefix: {
+				title: 'By url prefix',
+				type: 'string',
+				format: 'pathname',
+				$helper: "page"
+			},
+			home: {
+				title: 'Return prefix as item',
+				type: 'boolean',
+				default: false
+			},
+			url: {
+				title: 'Starts with',
+				type: 'string',
+				format: 'pathname'
+			},
+			lang: {
+				title: 'Lang',
+				type: 'string',
+				format: 'lang',
+				nullable: true
+			},
+			drafts: {
+				title: 'With drafts',
+				type: 'boolean',
+				default: false
+			},
+			robot: {
+				title: 'Indexable',
+				type: 'boolean',
+				default: false
+			},
+			disallow: {
+				title: 'Non-indexable',
+				type: 'boolean',
+				default: false
+			},
+			type: {
+				title: 'Types',
+				type: 'array',
+				items: {
+					type: 'string',
+					format: 'name'
+				},
+				nullable: true
 			}
 		}
-	};
-
-	async relink(req) {
-		const pages = await req.run('page.all');
-		for (const page of pages.items) {
-			await req.run('href.add', {
-				url: page.data.url,
-				title: page.data.title
-			});
-		}
-		return {
-			count: pages.items.length
-		};
-	}
-	static relink = {
-		title: 'Reprovision all hrefs for pages',
-		$lock: true,
-		$action: 'write'
 	};
 };
 
 
-function redUrl(obj) {
-	if (obj.redirect) {
+function shortLink({ data, content }) {
+	const obj = {};
+	if (data.redirect) {
 		obj.url = obj.redirect;
+	} else {
+		obj.url = data.url;
 	}
-	delete obj.redirect;
+	obj.title = content.title;
 	return obj;
 }
 
-function getParents({ site, trx, ref }, url) {
+function getParents({ site, trx }, url, lang) {
 	const urlParts = url.split('/');
 	const urlParents = ['/'];
 	for (let i = 1; i < urlParts.length - 1; i++) {
 		urlParents.push(urlParts.slice(0, i + 1).join('/'));
 	}
 	return site.$relatedQuery('children', trx)
-		.select([
-			ref('block.data:url').as('url'),
-			ref('block.data:redirect').as('redirect'),
-			ref('block.data:title').as('title')
-		])
+		.columns({lang, content: 'title'})
 		.whereIn('block.type', Array.from(site.$pkg.pages))
 		.whereJsonText('block.data:url', 'IN', urlParents)
 		.orderByRaw("length(block.data->>'url') DESC");
-}
-
-function listPages({ site, trx, fun, raw, ref }, data) {
-	const q = site.$relatedQuery('children', trx)
-		.columns()
-		.select(raw("'site' || block.type AS type"))
-		.whereIn('block.type', data.type ?? Array.from(site.$pkg.pages))
-		.where('block.standalone', true);
-
-	if (!data.drafts) {
-		q.whereNotNull(ref('block.data:url'));
-		q.where(function () {
-			this.whereNull(ref('block.data:nositemap'))
-				.orWhereNot(ref('block.data:nositemap'), true);
-		});
-	}
-	if (data.robot) {
-		q.where(function () {
-			this.whereNull(ref('block.data:noindex'))
-				.orWhereNot(ref('block.data:noindex'), true);
-		});
-	}
-	if (data.disallow) {
-		q.where(ref('block.data:noindex'), true);
-	}
-
-	if (data.parent != null) {
-		const regexp = data.home ? `^${data.parent}(/[^/]+)?$` : `^${data.parent}/[^/]+$`;
-		if (data.home) q.orderByRaw("block.data->>'url' = ? DESC", data.parent);
-		q.whereJsonText('block.data:url', '~', regexp)
-			.orderBy(ref('block.data:index'));
-	} else if (data.url) {
-		q.where(fun('starts_with',
-			ref('block.data:url').castText(),
-			data.url
-		));
-	} else {
-		// just return all pages for the sitemap
-	}
-	return q.orderBy(ref('block.data:url'), 'block.updated_at DESC');
 }
 
 function stripHostname(site, block) {
@@ -704,119 +541,32 @@ async function applyAdd({ site, trx, Block }, list) {
 }
 
 async function applyUpdate(req, list) {
-	const blocksMap = {};
 	const updates = [];
 	const { site, trx } = req;
 
 	for await (const block of list) {
-		if (block.id in blocksMap) {
-			block.updated_at = blocksMap[block.id];
-		}
-		if (site.$pkg.pages.has(block.type)) {
-			updates.push(await updatePage(req, block, blocksMap));
-		} else if (!block.updated_at) {
+		if (!block.updated_at) {
 			throw new HttpError.BadRequest(`Block is missing 'updated_at' ${block.id}`);
+		}
+		const row = await site.$relatedQuery('children', trx)
+			.where('block.id', block.id)
+			.where('block.type', block.type)
+			.where(
+				req.raw("date_trunc('milliseconds', block.updated_at)"),
+				req.raw("date_trunc('milliseconds', ?::timestamptz)", [block.updated_at]),
+			)
+			.patch(block)
+			.returning('id', 'updated_at')
+			.first();
+		if (!row) {
+			throw new HttpError.Conflict(
+				`${block.type}:${block.id} last update mismatch ${block.updated_at}`
+			);
 		} else {
-			// simpler path
-			const row = await site.$relatedQuery('children', trx)
-				.where('block.id', block.id)
-				.where('block.type', block.type)
-				.where(
-					req.raw("date_trunc('milliseconds', block.updated_at)"),
-					req.raw("date_trunc('milliseconds', ?::timestamptz)", [block.updated_at]),
-				)
-				.patch(block)
-				.returning('id', 'updated_at')
-				.first();
-			if (!row) {
-				throw new HttpError.Conflict(
-					`${block.type}:${block.id} last update mismatch ${block.updated_at}`
-				);
-			} else {
-				updates.push(row);
-			}
+			updates.push(row);
 		}
 	}
 	return updates;
-}
-
-async function updatePage({
-	site, trx, ref, fun, raw, Block, Href
-}, page, sideEffects) {
-	if (!sideEffects) sideEffects = {};
-	const dbPage = await site.$relatedQuery('children', trx)
-		.where('block.id', page.id)
-		.whereIn('block.type', page.type ? [page.type] : Array.from(site.$pkg.pages))
-		.select('_id', ref('block.data:url').as('url'))
-		.first().throwIfNotFound();
-
-	const hrefs = site.$hrefs;
-	const oldUrl = dbPage.url;
-	const oldUrlStr = oldUrl == null ? '' : oldUrl;
-	const newUrl = page.data.url;
-	if (oldUrl != newUrl) {
-		for (const [type, list] of Object.entries(hrefs)) {
-			for (const desc of list) {
-				if (desc.types.some(type => {
-					return ['image', 'video', 'audio', 'svg'].includes(type);
-				})) continue;
-				const key = 'block.data:' + desc.path;
-				const field = ref(key).castText();
-				// this is a fake query not part of trx
-				const args = field._createRawArgs(Block.query());
-				try {
-					const rows = await site.$relatedQuery('children', trx)
-						.where('block.type', type)
-						.where(function () {
-							// use fn.starts_with
-							this.where(fun('starts_with', field, `${oldUrlStr}/`));
-							if (oldUrl == null) this.orWhereNull(field);
-							else this.orWhere(field, oldUrl);
-						})
-						.patch({
-							type,
-							[key]: raw(
-								`overlay(${args[0]} placing ? from 1 for ${oldUrlStr.length})`,
-								args[1],
-								newUrl
-							)
-						})
-						.returning('block.id', 'block.updated_at');
-					for (const row of rows) {
-						const date = row.updated_at;
-						sideEffects[row.id] = date;
-						if (page.id == row.id) page.updated_at = date;
-					}
-				} catch (err) {
-					console.error(`Error with type: ${type}, key: ${key}`);
-					throw err;
-				}
-			}
-		}
-	}
-
-	await Href.query(trx).where('_parent_id', site._id)
-		.where('type', 'link')
-		.where(function () {
-			this.where(fun('starts_with', 'url', `${oldUrlStr}/`));
-			if (oldUrl == null) this.orWhereNull('url');
-			else this.orWhere('url', oldUrl);
-		}).delete();
-	const row = await site.$relatedQuery('children', trx)
-		.where('block.id', page.id)
-		.where(
-			raw("date_trunc('milliseconds', block.updated_at)"),
-			raw("date_trunc('milliseconds', ?::timestamptz)", [page.updated_at]),
-		)
-		.patch(page)
-		.returning('block.id', 'block.updated_at')
-		.first();
-	if (!row) {
-		throw new HttpError.Conflict(
-			`${page.type}:${page.id} last update mismatch ${page.updated_at}`
-		);
-	}
-	return row;
 }
 
 async function applyRelate({ site, trx }, obj) {
@@ -846,29 +596,25 @@ async function applyRelate({ site, trx }, obj) {
 	}));
 }
 
-async function navigationLinks(req, url, prefix) {
-	const { ref } = req;
-	const [parents, siblings] = await Promise.all([
-		getParents(req, url),
-		prefix ? [] : listPages(req, {
+async function navigationLinks(req, url, prefix, lang) {
+	const [parents, { items:siblings }] = await Promise.all([
+		getParents(req, url, lang),
+		prefix ? { items: [] } : req.call('page.list', {
+			lang,
 			drafts: true,
-			parent: url.split('/').slice(0, -1).join('/')
-		}).clearSelect().select([
-			ref('block.data:url').as('url'),
-			ref('block.data:redirect').as('redirect'),
-			ref('block.data:title').as('title')
-		])
+			prefix: url.split('/').slice(0, -1).join('/')
+		})
 	]);
 	const links = {};
-	links.up = parents.map(redUrl);
+	links.up = parents.map(shortLink);
 
 	// consider not doing this for prefixed pages
 	let found;
 	const position = siblings.findIndex(item => {
-		const same = item.url == url;
+		const same = item.data.url == url;
 		if (same) {
 			found = true;
-		} else if (!found && url.length > 1 && item.url.startsWith(url)) {
+		} else if (!found && url.length > 1 && item.data.url.startsWith(url)) {
 			found = item.url;
 		}
 		return same;
@@ -877,14 +623,14 @@ async function navigationLinks(req, url, prefix) {
 		links.found = found;
 	}
 	if (position > 0) {
-		links.prev = redUrl(siblings[position - 1]);
+		links.prev = shortLink(siblings[position - 1]);
 	}
 	if (position < siblings.length - 1) {
-		links.next = redUrl(siblings[position + 1]);
+		links.next = shortLink(siblings[position + 1]);
 	}
 	if (siblings.length > 1) {
-		links.first = redUrl(siblings[0]);
-		links.last = redUrl(siblings[siblings.length - 1]);
+		links.first = shortLink(siblings[0]);
+		links.last = shortLink(siblings[siblings.length - 1]);
 	}
 	return links;
 }
