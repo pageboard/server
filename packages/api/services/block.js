@@ -365,7 +365,6 @@ module.exports = class BlockService {
 			},
 			preview: {
 				title: 'Preview',
-				description: 'With preview',
 				type: 'boolean',
 				nullable: true
 			},
