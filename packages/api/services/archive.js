@@ -25,11 +25,19 @@ module.exports = class ArchiveService {
 		);
 	}
 
-	async export(req, { file, ids = [] }) {
+	async export(req, { file, ids = [], urls = [] }) {
 		const { site, trx, res, ref, fun } = req;
 		const { id } = site;
 		const lang = site.data.languages?.length == 0 ? req.call('translate.lang') : null;
 		const filepath = file ?? `${id}-${fileStamp()}.ndjson`;
+
+		if (urls.length) {
+			const urlIds = await site.$relatedQuery('children', trx)
+				.select('block.id')
+				.whereIn('block.type', Array.from(site.$pkg.pages))
+				.whereJsonText('block.data:url', 'IN', urls);
+			ids.push(...urlIds.map(item => item.id));
+		}
 		const { orphaned } = await site.$query(trx)
 			.select(fun('block_delete_orphans', ref('block._id')).as('orphaned'));
 		const counts = {
@@ -153,6 +161,14 @@ module.exports = class ArchiveService {
 				items: {
 					type: "string",
 					format: 'id'
+				}
+			},
+			urls: {
+				title: 'List of url',
+				type: 'array',
+				items: {
+					type: "string",
+					format: 'page'
 				}
 			}
 		}
