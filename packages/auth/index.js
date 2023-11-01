@@ -52,7 +52,7 @@ module.exports = class AuthModule {
 				id: user.id,
 				grants: user.grants
 			}, {
-				hostname: site.url.hostname,
+				issuer: site.url.hostname,
 				maxAge,
 				...this.opts
 			}),
@@ -152,6 +152,18 @@ module.exports = class AuthModule {
 		list.forEach(lock => {
 			const lockIndex = grantsMap[lock] || -1;
 			if (lock.startsWith('id-')) {
+				// FIXME reconsider this
+				// the id-:id permission should be a special permission called "self"
+				// (and that keyword is used in schemas, but allow old id-:id for a while
+				// rename $lock to locks (support that in the packager to allow smooth transition)
+				// note that this isn't a change that must be made here,
+				// it must be made when saving a block to DB schema.locks self -> block.locks = [id-${user.id}]s
+				// locks: ['self', 'users'] for accounts managers
+				// locks: ['self'] for really private data
+				// a user MUST HAVE the grant that matches the permission in locks
+				// no fancy stuff about higher permissions
+				// just give the user the permissions to allow. A webmaster might not be able to read "users"
+				// however a webmaster can have the "grants" permission which allows to grant oneself lesser permissions
 				if (`id-${user.id}` == lock) granted = true;
 				lock = 'id-:id';
 			} else if ((lockIndex > minLevel) || !cannotEscalate && grants.includes(lock)) {
