@@ -130,7 +130,7 @@ module.exports = class PolyfillModule {
 		const features = await this.getFeatures(list);
 		await Promise.all(features.map(async name => {
 			const polyfill = await this.getPolyfill(name);
-			source += `"${name}": (${polyfill.detectSource}),`;
+			source += `"${name}": (${polyfill.detectSource.trim()}),`;
 		}));
 		source += '}';
 		return source;
