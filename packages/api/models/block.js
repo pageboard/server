@@ -249,6 +249,7 @@ class Block extends Model {
 				const list = path.split('.');
 				const type = list.shift();
 				let sch = this.#types[type];
+				if (list.length == 0 && sch) sch.name = type;
 				for (let i = 0; i < list.length; i++) {
 					sch = sch.properties?.[list[i]];
 					if (!sch) throw new Error("Schema not found: " + path);
