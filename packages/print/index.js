@@ -274,7 +274,6 @@ module.exports = class PrintModule {
 
 			const { paper } = pdf.data;
 			const bleed = Boolean(paper.margin);
-			let spine = paper.spine ?? 0;
 
 			if (printProduct.cover_pdf) {
 				// spine api
@@ -290,8 +289,9 @@ module.exports = class PrintModule {
 					if (ret.status != 'ok') {
 						throw new HttpError.BadRequest(ret.msg);
 					}
-					spine = parseFloat(ret.spine_width);
-					printProduct.cover_pdf.searchParams.set('spine', ret.spine_width);
+					paper.fold ??= {};
+					paper.fold.width = parseFloat(ret.spine_width);
+					printProduct.cover_pdf.searchParams.set('foldWidth', paper.fold.width);
 				} else {
 					console.warn("Missing pdf page count");
 				}
@@ -306,10 +306,6 @@ module.exports = class PrintModule {
 					fold_on: "axis_longer",
 					bleed
 				});
-			}
-
-			if (!bleed && spine) {
-				throw new HttpError.BadRequest("Cannot have cover with spine without margins");
 			}
 
 			const sizeA = paper.width * (paper.fold?.width ? 2 : 1) + (paper.fold?.width ?? 0);
