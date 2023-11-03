@@ -1,4 +1,4 @@
-module.exports = function(page, settings, req, res) {
+module.exports = function (page, settings, req, res) {
 	settings.track = async function() {
 		const { Page } = window;
 		if (!Page) {
