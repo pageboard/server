@@ -57,7 +57,6 @@ exports.flatten = function (obj) {
 exports.mergeExpressions = function mergeExpressions(data, expr, obj) {
 	// only actually fused expressions in expr go into data
 	const flatExpr = flattie(expr);
-	obj = Object.assign(obj);
 	let miss = false;
 	const md = sharedMd.copy().extend({
 		hooks: {
@@ -70,9 +69,10 @@ exports.mergeExpressions = function mergeExpressions(data, expr, obj) {
 
 	for (const [key, val] of Object.entries(flatExpr)) {
 		if (!val || typeof val != "string") continue;
-		obj.$default = dget(data, key);
+		const copy = structuredClone(obj);
+		copy.$default = dget(data, key);
 		miss = false;
-		const fused = md.merge(val, obj);
+		const fused = md.merge(val, copy);
 		if (!miss && fused != null) dset(data, key, fused);
 	}
 	return data;
