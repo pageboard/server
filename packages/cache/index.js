@@ -47,11 +47,11 @@ module.exports = class CacheModule {
 		} finally {
 			if (!this.data) this.data = {};
 		}
-		server.post(this.opts.wkp, (req, res, next) => {
-			this.mw(req, res, next);
-		}, (req, res) => {
-			res.sendStatus(204);
-		});
+		server.post(
+			this.opts.wkp,
+			(req, res, next) => this.mw(req, res, next),
+			(req, res) => res.sendStatus(204)
+		);
 	}
 
 	#save() {

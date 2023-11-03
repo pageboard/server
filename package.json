@@ -76,8 +76,14 @@
       "!/tests",
       "node_modules/"
     ],
-    "overrides": [
-      {
+    "overrides": [{
+      "files": [
+        "*.mjs"
+      ],
+      "parserOptions": {
+        "sourceType": "module"
+      }
+    }, {
         "files": [
           "tests/*.test.js"
         ],
