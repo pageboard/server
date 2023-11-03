@@ -304,9 +304,7 @@ module.exports = class PrintModule {
 					paper_id: options.cover.paper,
 					separation_mode: "CMYK",
 					fold_on: "axis_longer",
-					bleed,
-					size_a: (paper.width * (paper.fold?.width ? 2 : 1) + (paper.fold?.width ?? 0)).toFixed(2),
-					size_b: paper.height.toFixed(2)
+					bleed
 				});
 			}
 			printProduct.runlists.push({
