@@ -130,6 +130,7 @@ module.exports = class PrerenderModule {
 	}
 
 	#callPdfMw(...args) {
+		pdf.presets.prepress.pageCount = true;
 		if (!this.#pdfMw) this.#pdfMw = dom(pdf({
 			plugins: ['upcache', 'render']
 		})).route(({ visible, online, location, settings, policies }, req) => {
