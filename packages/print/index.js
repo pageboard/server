@@ -217,7 +217,7 @@ module.exports = class PrintModule {
 			lang: block.data.lang,
 			ext: 'pdf'
 		});
-		pdfUrl.searchParams.set('pdf', 'printer');
+		pdfUrl.searchParams.set('pdf', 'prepress');
 
 		const printProduct = {
 			pdf: pdfUrl,
@@ -241,7 +241,7 @@ module.exports = class PrintModule {
 				lang: block.data.lang,
 				ext: 'pdf'
 			});
-			coverUrl.searchParams.set('pdf', 'printer');
+			coverUrl.searchParams.set('pdf', 'prepress');
 
 			printProduct.cover_pdf = coverUrl;
 		}
@@ -304,19 +304,18 @@ module.exports = class PrintModule {
 					paper_id: options.cover.paper,
 					separation_mode: "CMYK",
 					fold_on: "axis_longer",
-					bleed
+					bleed,
+					size_a: (paper.width * (paper.fold?.width ? 2 : 1) + (paper.fold?.width ?? 0)).toFixed(2),
+					size_b: paper.height.toFixed(2)
 				});
 			}
-
-			const sizeA = paper.width * (paper.fold?.width ? 2 : 1) + (paper.fold?.width ?? 0);
-			const sizeB = paper.height;
 			printProduct.runlists.push({
 				tag: "content",
 				sides: 2,
 				paper_id: options.content.paper,
 				separation_mode: "CMYK",
-				size_a: sizeA.toFixed(2),
-				size_b: sizeB.toFixed(2),
+				size_a: paper.width.toFixed(2),
+				size_b: paper.height.toFixed(2),
 				bleed
 			});
 
