@@ -39,6 +39,8 @@ module.exports = class PrerenderModule {
 
 		Object.assign(dom.plugins, {
 			serialize: require('./plugins/serialize'),
+			nopreload: require('./plugins/nopreload'),
+			inlinestyle: require('./plugins/inlinestyle'),
 			form: require('./plugins/form'),
 			upcache: require('./plugins/upcache'),
 			render: require('./plugins/render')
@@ -194,6 +196,10 @@ module.exports = class PrerenderModule {
 			const { settings, policies } = phase;
 			if (phase.visible) {
 				const { plugins } = settings;
+				if (schema.name == "mail") {
+					plugins.add('nopreload');
+					plugins.add('inlinestyle');
+				}
 				plugins.add('serialize');
 				settings.enabled = true;
 			} else if (phase.online) {
