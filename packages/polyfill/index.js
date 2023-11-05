@@ -17,10 +17,17 @@ module.exports = class PolyfillModule {
 		this.polyfills = {
 			customElements: {
 				source: join(require.resolve('@webreflection/custom-elements'), '../../index.js'),
-				detectSource: `'customElements' in window && (function() {
+				detectSource: `'customElements' in window`
+			},
+			customElementsBuiltin: {
+				dependencies: ['customElements'],
+				source: join(require.resolve('@webreflection/custom-elements-builtin'), '../../index.js'),
+				// do not load this one if the other one is going to be loaded
+				detectSource: `(function() {
+					if (!('customElements' in window)) return true;
 					try {
 						const BR = class extends HTMLBRElement {};
-						const is = 'extends-br';
+						const is = 'test-pf-x-br';
 						customElements.define(is, BR, { extends: 'br' });
 						return document.createElement('br', {is}).outerHTML.indexOf(is) > 0;
 					} catch(e) {
