@@ -39,6 +39,7 @@ module.exports = class PrerenderModule {
 
 		Object.assign(dom.plugins, {
 			serialize: require('./plugins/serialize'),
+			polyfill: require('./plugins/polyfill'),
 			nopreload: require('./plugins/nopreload'),
 			inlinestyle: require('./plugins/inlinestyle'),
 			form: require('./plugins/form'),
@@ -167,6 +168,7 @@ module.exports = class PrerenderModule {
 				plugins.add('redirect');
 				plugins.add('preloads');
 				plugins.add('hidden');
+				plugins.add('polyfill');
 				plugins.add('serialize');
 				if (site.data.env == "dev" || !req.locked(['webmaster'])) {
 					settings.enabled = false;
