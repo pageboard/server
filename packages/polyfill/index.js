@@ -54,7 +54,8 @@ module.exports = class PolyfillModule {
 				try {
 					const list = req.query.features?.split('+') ?? [];
 					if (!list.length) throw new HttpError.BadRequest("No features requested");
-					const inputs = list.map(name => {
+					const features = await this.getFeatures(list);
+					const inputs = features.map(name => {
 						return this.polyfills[name]?.source ?? join(
 							polyfillModuleDir, 'polyfills/__dist', name, "raw.js"
 						);
@@ -85,7 +86,7 @@ module.exports = class PolyfillModule {
 		return this.polyfills[name] ?? polyfills.describePolyfill(name);
 	}
 
-	async getFeatures(targetedFeatures) {
+	async getFeatures(targetedFeatures, detectMap = false) {
 		const warnings = {
 			unknown: []
 		};
@@ -112,9 +113,14 @@ module.exports = class PolyfillModule {
 					featureNodes.push(featureName);
 					if (polyfill.dependencies) {
 						for (const depName of polyfill.dependencies) {
-							if (depName in targetedFeatures) {
+							const dep = await this.getPolyfill(depName);
+							if (!dep) {
+								warnings.unknown.push(dep);
+							} else if (detectMap == Boolean(dep.detectSource)) {
+								featureNodes.push(depName);
 								featureEdges.push([depName, featureName]);
 							}
+
 						}
 					}
 				}
@@ -134,7 +140,7 @@ module.exports = class PolyfillModule {
 
 	async source(list) {
 		let source = '{';
-		const features = await this.getFeatures(list);
+		const features = await this.getFeatures(list, true);
 		await Promise.all(features.map(async name => {
 			const polyfill = await this.getPolyfill(name);
 			source += `"${name}": (${polyfill.detectSource.trim()}),`;
