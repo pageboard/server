@@ -53,11 +53,17 @@ class AjvValidatorExt extends AjvValidator {
 		const obj = {};
 		this.cache.set(schema.$id, obj);
 		await fs.mkdir(Path.join(cacheDir, 'node_modules'), { recursive: true });
-		await Promise.all(["ajv", "ajv-keywords", "ajv-formats"].map(async mod => {
+		await fs.mkdir(Path.join(cacheDir, 'lib'), { recursive: true });
+		await Promise.all([
+			"node_modules/ajv",
+			"node_modules/ajv-keywords",
+			"node_modules/ajv-formats",
+			"./lib/formats.js"
+		].map(async mod => {
 			try {
 				await fs.symlink(
-					Path.join(__dirname, '../node_modules', mod),
-					Path.join(cacheDir, 'node_modules', mod)
+					Path.join(__dirname, '..', mod),
+					Path.join(cacheDir, mod)
 				);
 			} catch (ex) {
 				if (ex.code != 'EEXIST') throw ex;
@@ -223,7 +229,10 @@ module.exports = class Validation {
 				validateSchema: false,
 				code: {
 					source: true,
-					formats: _`Object.assign(require("ajv-formats/dist/formats").fullFormats, require(${Path.resolve(__dirname, './formats.js')}))`
+					formats: _`Object.assign(
+						require("ajv-formats/dist/formats").fullFormats,
+						require('./lib/formats')
+					)`
 				}
 			}
 		});
