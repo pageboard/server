@@ -117,18 +117,9 @@ module.exports = class Domains {
 			host.queue.push(() => {
 				return app.install(site);
 			});
-			host.upcache = new Deferred();
-			host.queue.push(() => {
-				return host.upcache;
-			});
 		}
 		const isPost = req.method == "POST";
-		if (path == wk.cache && isPost) {
-			if (host.upcache) {
-				host.upcache.resolve();
-			}
-			return null; // 204
-		} else if (path == wk.status && !isPost) {
+		if (path == wk.status && !isPost) {
 			if (host.state != READY && host.state != PARKED) {
 				throw new HttpError.ServiceUnavailable("Site is not ready");
 			} else {
@@ -136,19 +127,20 @@ module.exports = class Domains {
 					errors: host.errors
 				};
 			}
-		}
-		await host.queue.idle();
-		if (host.state == PARKED) {
-			throw new HttpError.ServiceUnavailable("Site is parked");
-		}
+		} else {
+			await host.queue.idle();
+			if (host.state == PARKED) {
+				throw new HttpError.ServiceUnavailable("Site is parked");
+			}
 
-		await this.#initSite(host, req, res);
+			await this.#initSite(host, req, res);
 
-		const version = site.data.server || app.version;
-		if (version != app.version) {
-			res.set('X-Pageboard-Peer', app.opts.upstreams[version]);
-			if (req.method == "GET") {
-				res.redirect(307, req.url);
+			const version = site.data.server || app.version;
+			if (version != app.version) {
+				res.set('X-Pageboard-Peer', app.opts.upstreams[version]);
+				if (req.method == "GET") {
+					res.redirect(307, req.url);
+				}
 			}
 		}
 	}
