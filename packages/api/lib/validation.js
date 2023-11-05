@@ -53,20 +53,27 @@ class AjvValidatorExt extends AjvValidator {
 		const obj = {};
 		this.cache.set(schema.$id, obj);
 		await fs.mkdir(Path.join(cacheDir, 'node_modules'), { recursive: true });
-		try {
-			await fs.symlink(Path.join(__dirname, '../node_modules/ajv'), Path.join(cacheDir, 'node_modules', 'ajv'));
-			await fs.symlink(Path.join(__dirname, '../node_modules/ajv-keywords'), Path.join(cacheDir, 'node_modules', 'ajv-keywords'));
-		} catch (ex) {
-			if (ex.code != 'EEXIST') throw ex;
-		}
+		await Promise.all(["ajv", "ajv-keywords", "ajv-formats"].map(async mod => {
+			try {
+				await fs.symlink(
+					Path.join(__dirname, '../node_modules', mod),
+					Path.join(cacheDir, 'node_modules', mod)
+				);
+			} catch (ex) {
+				if (ex.code != 'EEXIST') throw ex;
+			}
+		}));
+
 		const patchPath = cachePath + '-patch.js';
 		try {
 			if (!pkg.cache || !(await exists(patchPath))) {
 				throw new Error();
 			}
-			obj.patchValidator = require(patchPath);
+			const fn = require(patchPath);
+			if (typeof fn != "function") throw new Error();
+			obj.patchValidator = fn;
 		} catch (ex) {
-			if (ex.code) console.error(ex);
+			if (ex.message) console.error(ex);
 			// fixSchema mutates it
 			const patchedSchema = Object.assign({}, schema);
 			patchedSchema.$id += '/patch';
@@ -79,9 +86,11 @@ class AjvValidatorExt extends AjvValidator {
 			if (!pkg.cache || !(await exists(normalPath))) {
 				throw new Error();
 			}
-			obj.normalValidator = require(normalPath);
+			const fn = require(normalPath);
+			if (typeof fn != "function") throw new Error();
+			obj.normalValidator = fn;
 		} catch (ex) {
-			if (ex.code) console.error(ex);
+			if (ex.message) console.error(ex);
 			obj.normalValidator = this.compileNormalValidator(schema);
 			const normalCode = ajvStandalone.default(this.ajv, obj.normalValidator);
 			await fs.writeFile(normalPath, normalCode);
@@ -214,7 +223,7 @@ module.exports = class Validation {
 				validateSchema: false,
 				code: {
 					source: true,
-					formats: _`require('${Path.resolve(__dirname, './formats')}')`
+					formats: _`Object.assign(require("ajv-formats/dist/formats").fullFormats, require(${Path.resolve(__dirname, './formats.js')}))`
 				}
 			}
 		});
