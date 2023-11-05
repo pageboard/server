@@ -384,7 +384,7 @@ module.exports = class MailModule {
 	static send = {
 		title: 'Send email',
 		$action: 'write',
-		$ref: "/$def/mail_job/properties/data"
+		$ref: "#/$def/mail_job/properties/data"
 	};
 };
 
