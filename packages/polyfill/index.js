@@ -17,10 +17,17 @@ module.exports = class PolyfillModule {
 		this.polyfills = {
 			customElements: {
 				source: join(require.resolve('@webreflection/custom-elements'), '../../index.js'),
-				detectSource: `'customElements' in window && (function() {
+				detectSource: `'customElements' in window`
+			},
+			customElementsBuiltin: {
+				dependencies: ['customElements'],
+				source: join(require.resolve('@webreflection/custom-elements-builtin'), '../../index.js'),
+				// do not load this one if the other one is going to be loaded
+				detectSource: `(function() {
+					if (!('customElements' in window)) return true;
 					try {
 						const BR = class extends HTMLBRElement {};
-						const is = 'extends-br';
+						const is = 'test-pf-x-br';
 						customElements.define(is, BR, { extends: 'br' });
 						return document.createElement('br', {is}).outerHTML.indexOf(is) > 0;
 					} catch(e) {
@@ -47,7 +54,8 @@ module.exports = class PolyfillModule {
 				try {
 					const list = req.query.features?.split('+') ?? [];
 					if (!list.length) throw new HttpError.BadRequest("No features requested");
-					const inputs = list.map(name => {
+					const features = await this.getFeatures(list);
+					const inputs = features.map(name => {
 						return this.polyfills[name]?.source ?? join(
 							polyfillModuleDir, 'polyfills/__dist', name, "raw.js"
 						);
@@ -78,7 +86,7 @@ module.exports = class PolyfillModule {
 		return this.polyfills[name] ?? polyfills.describePolyfill(name);
 	}
 
-	async getFeatures(targetedFeatures) {
+	async getFeatures(targetedFeatures, detectMap = false) {
 		const warnings = {
 			unknown: []
 		};
@@ -105,9 +113,14 @@ module.exports = class PolyfillModule {
 					featureNodes.push(featureName);
 					if (polyfill.dependencies) {
 						for (const depName of polyfill.dependencies) {
-							if (depName in targetedFeatures) {
+							const dep = await this.getPolyfill(depName);
+							if (!dep) {
+								warnings.unknown.push(dep);
+							} else if (detectMap == Boolean(dep.detectSource)) {
+								featureNodes.push(depName);
 								featureEdges.push([depName, featureName]);
 							}
+
 						}
 					}
 				}
@@ -127,7 +140,7 @@ module.exports = class PolyfillModule {
 
 	async source(list) {
 		let source = '{';
-		const features = await this.getFeatures(list);
+		const features = await this.getFeatures(list, true);
 		await Promise.all(features.map(async name => {
 			const polyfill = await this.getPolyfill(name);
 			source += `"${name}": (${polyfill.detectSource.trim()}),`;
