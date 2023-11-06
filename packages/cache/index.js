@@ -97,7 +97,6 @@ module.exports = class CacheModule {
 		let doSave = false;
 		let dobj = this.data;
 		if (!dobj) dobj = this.data = {};
-		console.info("cache check");
 
 		if (!this.hash) {
 			const hash = crypto.createHash('sha256');
