@@ -6,9 +6,10 @@ module.exports = async function (page, settings, req, res) {
 			const { text, ranges } = item;
 			if (text == null) console.warn("No coverage for", item);
 			else return ranges.map(range => {
-				const part = text.slice(range.start, range.end).trim();
-				if (/^[^{}]+$/.test(part)) return ''; // @media only screen { } -> "only screen "
-				else return part;
+				if (range.start > 6 && text.slice(range.start - 7, range.start) == "@media ") {
+					range.start -= 7;
+				}
+				return text.slice(range.start, range.end).trim();
 			}).join('\n');
 		}).join('\n');
 
@@ -23,14 +24,15 @@ module.exports = async function (page, settings, req, res) {
 			effectiveSheet.replaceSync(styles);
 			document.adoptedStyleSheets.push(effectiveSheet);
 			const nodeList = new Set();
-			for (const rule of effectiveSheet.cssRules) {
-				if (!rule.selectorText) {
-					console.warn("ignore", rule);
-					continue;
+			function process(rule) {
+				if (rule.cssRules?.length) for (const sub of rule.cssRules) process(sub);
+				else if (!rule.selectorText) {
+					console.warn("inlinestyle plugin ignores", rule);
+					return;
 				}
 				const nodes = document.querySelectorAll(rule.selectorText);
 				if (nodes.length == 0) {
-					continue;
+					return;
 				}
 				const { style } = rule;
 				const props = cssProperties(style.cssText);
@@ -44,6 +46,9 @@ module.exports = async function (page, settings, req, res) {
 					}
 					for (const p of props) node.cssProperties.add(p);
 				}
+			}
+			for (const rule of effectiveSheet.cssRules) {
+				process(rule);
 			}
 			for (const node of nodeList) {
 				const styles = node.computedStyleMap();
