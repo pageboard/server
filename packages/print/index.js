@@ -227,6 +227,7 @@ module.exports = class PrintModule {
 			amount: 1,
 			runlists: []
 		};
+		let coverPaper;
 		if (options.cover.url) {
 			const { item: coverPdf } = await req.run('block.find', {
 				type: 'pdf',
@@ -236,6 +237,7 @@ module.exports = class PrintModule {
 				}
 			});
 			if (!coverPdf) throw new HttpError.NotFound('Cover PDF not found');
+			coverPaper = coverPdf.data.paper;
 			const coverUrl = req.call('page.format', {
 				url: options.cover.url,
 				lang: block.data.lang,
@@ -273,7 +275,6 @@ module.exports = class PrintModule {
 			printProduct.pdf = pdfRun.href;
 
 			const { paper } = pdf.data;
-			const bleed = Boolean(paper.margin);
 
 			if (printProduct.cover_pdf) {
 				// spine api
@@ -304,17 +305,19 @@ module.exports = class PrintModule {
 					paper_id: options.cover.paper,
 					separation_mode: "CMYK",
 					fold_on: "axis_longer",
-					bleed
+					bleed: coverPaper.trim
 				});
 			}
+			const width = paper.width - (paper.trim ? 2 * paper.margin : 0);
+			const height = paper.height - (paper.trim ? 2 * paper.margin : 0);
 			printProduct.runlists.push({
 				tag: "content",
 				sides: 2,
 				paper_id: options.content.paper,
 				separation_mode: "CMYK",
-				size_a: paper.width.toFixed(2),
-				size_b: paper.height.toFixed(2),
-				bleed
+				size_a: width.toFixed(2),
+				size_b: height.toFixed(2),
+				bleed: paper.trim
 			});
 
 			try {
