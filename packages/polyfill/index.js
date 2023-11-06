@@ -120,7 +120,6 @@ module.exports = class PolyfillModule {
 								featureNodes.push(depName);
 								featureEdges.push([depName, featureName]);
 							}
-
 						}
 					}
 				}
