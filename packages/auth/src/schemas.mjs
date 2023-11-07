@@ -150,4 +150,12 @@ export const settings = {
 	}
 };
 
-
+export const otp = {
+	title: 'OTP Key Uri',
+	bundle: 'user',
+	properties: {
+		uri: {
+			type: 'string'
+		}
+	}
+};

@@ -300,9 +300,6 @@ module.exports = class LoginModule {
 				errorCorrectionLevel: 'L'
 			});
 		} else {
-			item.data.qrcode = await qrcode.toDataURL(item.data.uri, {
-				errorCorrectionLevel: 'L'
-			});
 			return { item };
 		}
 	}

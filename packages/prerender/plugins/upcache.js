@@ -8,7 +8,7 @@ module.exports = function upcachePlugin(page, settings, req, res) {
 			const tags = await response.headerValue('X-Upcache-Tag');
 			if (tags) for (const str of tags.split(',')) tagSet.add(str.trim());
 		} catch (ex) {
-			console.error(ex);
+			// pass
 		}
 	});
 	page.on('idle', () => {
