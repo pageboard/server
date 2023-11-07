@@ -364,6 +364,7 @@ module.exports = class MailModule {
 			const toId = setTimeout(() => controller.abort(), 10000);
 			const response = await fetch(emailUrl, {
 				headers: {
+					accept: 'application/json',
 					cookie: req.get('cookie')
 				},
 				signal: controller.signal

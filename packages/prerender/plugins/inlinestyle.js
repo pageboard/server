@@ -25,9 +25,11 @@ module.exports = async function (page, settings, req, res) {
 			document.adoptedStyleSheets.push(effectiveSheet);
 			const nodeList = new Set();
 			function process(rule) {
-				if (rule.cssRules?.length) for (const sub of rule.cssRules) process(sub);
-				else if (!rule.selectorText) {
-					console.warn("inlinestyle plugin ignores", rule);
+				if (rule.cssRules?.length) {
+					for (const sub of rule.cssRules) process(sub);
+				} else if (!rule.media && !rule.selectorText) {
+					// not a group but what, then ?
+					console.warn("inlinestyle plugin ignores", rule.conditionText, rule.cssText);
 					return;
 				}
 				const nodes = document.querySelectorAll(rule.selectorText);

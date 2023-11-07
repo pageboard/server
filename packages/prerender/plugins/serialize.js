@@ -17,11 +17,12 @@ module.exports = function (page, settings, req, res) {
 		}
 	};
 	page.on('idle', async () => {
-		const obj = await page.evaluate(async () => {
+		const requestedType = req.accepts(['html', 'json']);
+		const obj = await page.evaluate(async type => {
 			const { Page: state } = window;
 			try {
 				if (state.constructor.serialize) {
-					return state.constructor.serialize(state);
+					return state.constructor.serialize(state, type);
 				} else return {
 					mime: "text/html",
 					body: '<!DOCTYPE html>\n' + document.documentElement.outerHTML
@@ -29,13 +30,13 @@ module.exports = function (page, settings, req, res) {
 			} catch (err) {
 				console.error(err.toString(), err.stack);
 			}
-		});
-		if (!obj) throw new HttpError.BadRequest("Empty response");
-		if (obj.mime && obj.mime != "text/html") {
+		}, requestedType);
+		if (!obj?.mime) throw new HttpError.BadRequest("Invalid serialization");
+		if (obj.mime != "text/html") {
 			// browsers revalidate only html by default
 			res.append("Cache-Control", "must-revalidate");
 		}
-		if (obj.mime) res.type(obj.mime);
+		res.type(obj.mime);
 		res.send(obj.body);
 	});
 };
