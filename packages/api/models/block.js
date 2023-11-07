@@ -172,7 +172,7 @@ class Block extends Model {
 		const types = {};
 		const schema = {
 			$id: `/${block.id}/${block.data.version ?? tag}${Block.jsonSchema.$id}`,
-			$def: types,
+			definitions: types,
 			$el: new Proxy(types, {
 				get(types, name) {
 					const obj = types[name];
@@ -234,7 +234,7 @@ class Block extends Model {
 				content: contentSchema
 			});
 			types[type] = sub;
-			schema.oneOf.push({ $ref: `#/$def/${type}` });
+			schema.oneOf.push({ $ref: `#/definitions/${type}` });
 		}
 
 		class DomainBlock extends Block {

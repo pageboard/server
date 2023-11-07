@@ -12,7 +12,7 @@ const Path = require('node:path');
 const { exists } = require('../../../src/utils');
 
 function fixSchema(schema) {
-	if (schema.$def) for (const type of Object.values(schema.$def)) {
+	if (schema.definitions) for (const type of Object.values(schema.definitions)) {
 		fixSchema(type);
 	}
 	Traverse(schema, {
@@ -87,6 +87,7 @@ class AjvValidatorExt extends AjvValidator {
 			const patchCode = ajvStandalone.default(this.ajvNoDefaults, obj.patchValidator);
 			await fs.writeFile(patchPath, patchCode);
 		}
+
 		const normalPath = cachePath + '-normal.js';
 		try {
 			if (!pkg.cache || !(await exists(normalPath))) {
@@ -160,7 +161,7 @@ module.exports = class Validation {
 	constructor(app, opts) {
 		this.app = app;
 		this.rootSchema = fixSchema({
-			$def: app.schemas,
+			definitions: app.schemas,
 			$el: new Proxy(app.schemas, {
 				get(types, name) {
 					const obj = types[name];
@@ -274,10 +275,6 @@ module.exports = class Validation {
 		ajv.addKeyword({
 			keyword: '$global',
 			schemaType: "boolean"
-		});
-		ajv.addKeyword({
-			keyword: '$def',
-			schemaType: "object"
 		});
 		ajv.addKeyword({
 			keyword: '$el',
