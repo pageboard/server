@@ -285,10 +285,6 @@ module.exports = class Validation {
 			schemaType: "object"
 		});
 		ajv.addKeyword({
-			keyword: 'mime',
-			schemaType: "string"
-		});
-		ajv.addKeyword({
 			keyword: 'standalone',
 			schemaType: "boolean"
 		});

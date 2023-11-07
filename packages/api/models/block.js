@@ -188,7 +188,7 @@ class Block extends Model {
 
 		const hrefs = {};
 		const ElementKeywords = [
-			'$lock', 'parents', 'upgrade', 'csp', 'mime', 'templates'
+			'$lock', 'parents', 'upgrade', 'csp', 'templates'
 		];
 
 		// TODO merge csp for each page bundle

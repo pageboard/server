@@ -10,7 +10,7 @@ module.exports = class PrerenderModule {
 
 	#pdfMw;
 	#htmlMw;
-	#fullMw;
+	#mailMw;
 
 	constructor(app, opts) {
 		this.app = app;
@@ -88,7 +88,7 @@ module.exports = class PrerenderModule {
 
 		if (pathname == null || schema == null) {
 			if (req.accepts(['image/*', 'json', 'html']) != 'html') {
-				throw new HttpError.NotFound("Malformed path");
+				throw new HttpError.NotAcceptable("Malformed path");
 			} else {
 				const url = new URL('/.well-known/404', site.url);
 				const agent = url.protocol == "https:" ? https : http;
@@ -123,12 +123,12 @@ module.exports = class PrerenderModule {
 
 		req.schema = schema;
 
-		if (schema.mime == "application/pdf") {
+		if (schema.name == "pdf") {
 			this.#callPdfMw(req, res, next);
-		} else if (!schema.mime || schema.mime == "text/html") {
-			this.#callHtmlMw(req, res, next);
+		} else if (schema.name == "mail") {
+			this.#callMailMw(req, res, next);
 		} else {
-			this.#callFullMw(req, res, next);
+			this.#callHtmlMw(req, res, next);
 		}
 	}
 
@@ -164,7 +164,6 @@ module.exports = class PrerenderModule {
 			const { settings, online, visible } = phase;
 			if (visible) {
 				const { plugins } = settings;
-				res.type("text/html");
 				plugins.add('redirect');
 				plugins.add('preloads');
 				plugins.add('hidden');
@@ -190,18 +189,16 @@ module.exports = class PrerenderModule {
 		return this.#htmlMw(...args);
 	}
 
-	#callFullMw(...args) {
-		if (!this.#fullMw) this.#fullMw = dom(handler => {
+	#callMailMw(...args) {
+		if (!this.#mailMw) this.#mailMw = dom(handler => {
 			handler.online.enabled = true;
 		}).route((phase, req, res) => {
 			const { schema } = req;
 			const { settings, policies } = phase;
 			if (phase.visible) {
 				const { plugins } = settings;
-				if (schema.name == "mail") {
-					plugins.add('nopreload');
-					plugins.add('inlinestyle');
-				}
+				plugins.add('nopreload');
+				plugins.add('inlinestyle');
 				plugins.add('serialize');
 				settings.enabled = true;
 			} else if (phase.online) {
@@ -209,7 +206,7 @@ module.exports = class PrerenderModule {
 				cspSchemaToPhase(policies, schema.csp);
 			}
 		});
-		return this.#fullMw(...args);
+		return this.#mailMw(...args);
 	}
 
 	source({ site }, res) {
