@@ -321,7 +321,7 @@ module.exports = class Pageboard {
 			Log.core("init dir", dir);
 			if (key == "tmp") {
 				// clean up pageboard tmp dir
-				await fs.rm(dir, { recursive: true });
+				await fs.rm(dir, { recursive: true, force: true });
 			}
 			await fs.mkdir(dir, { recursive: true });
 		}
