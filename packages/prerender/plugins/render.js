@@ -7,7 +7,8 @@ module.exports = function render(page, settings, req, res) {
 			const result = { status, statusText };
 			if (status == 200) {
 				const all = await Promise.all(state.scope.reveals ?? []);
-				const errors = all.filter(url => Boolean(url));
+				const errors = all.filter(e => e?.type == "error" && e.target?.currentSrc)
+					.map(e => e.target.currentSrc);
 				if (errors.length) {
 					result.status = 400;
 					result.statusText = "Missing resources:\n" + errors.join('\n');
