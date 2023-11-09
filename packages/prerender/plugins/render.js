@@ -6,7 +6,7 @@ module.exports = function render(page, settings, req, res) {
 			const { status, statusText } = state;
 			const result = { status, statusText };
 			if (status == 200) {
-				const all = await Promise.all(state.scope.reveals);
+				const all = await Promise.all(state.scope.reveals ?? []);
 				const errors = all.filter(url => Boolean(url));
 				if (errors.length) {
 					result.status = 400;
