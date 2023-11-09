@@ -6,11 +6,11 @@ module.exports = function render(page, settings, req, res) {
 			const { status, statusText } = state;
 			const result = { status, statusText };
 			if (status == 200) {
-				const all = await Promise.allSettled(state.scope.reveals);
-				const errors = all.filter(({ reason }) => Boolean(reason));
+				const all = await Promise.all(state.scope.reveals);
+				const errors = all.filter(url => Boolean(url));
 				if (errors.length) {
 					result.status = 400;
-					result.statusText = "Missing resources:\n" + errors.map(({ reason }) => reason.message).join('\n');
+					result.statusText = "Missing resources:\n" + errors.join('\n');
 				}
 			}
 			return result;
