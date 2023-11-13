@@ -378,8 +378,11 @@ module.exports = class BlockService {
 					title: 'all'
 				}, {
 					type: 'string',
-					title: 'custom'
-				}]
+					title: 'custom',
+				}],
+				$filter: {
+					name: 'element-content'
+				}
 			},
 			text: {
 				title: 'Text search',
@@ -416,7 +419,11 @@ module.exports = class BlockService {
 				title: 'Select language',
 				type: 'string',
 				format: 'lang',
-				nullable: true
+				nullable: true,
+				$helper: {
+					name: 'datalist',
+					url: '/.api/languages'
+				}
 			},
 			parent: {
 				title: 'Filter by parent',
@@ -453,8 +460,11 @@ module.exports = class BlockService {
 							title: 'all'
 						}, {
 							type: 'string',
-							title: 'custom'
-						}]
+							title: 'custom',
+						}],
+						$filter: {
+							name: 'element-content'
+						}
 					},
 					data: {
 						title: 'Select by data',
@@ -546,8 +556,11 @@ module.exports = class BlockService {
 							title: 'all'
 						}, {
 							type: 'string',
-							title: 'custom'
-						}]
+							title: 'custom',
+						}],
+						$filter: {
+							name: 'element-content'
+						}
 					},
 					data: {
 						title: 'Select by data',
@@ -620,8 +633,11 @@ module.exports = class BlockService {
 							title: 'all'
 						}, {
 							type: 'string',
-							title: 'custom'
-						}]
+							title: 'custom',
+						}],
+						$filter: {
+							name: 'element-content'
+						}
 					},
 					data: {
 						title: 'Select by data',

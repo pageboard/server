@@ -258,8 +258,11 @@ module.exports = class PageService {
 					title: 'all'
 				}, {
 					type: 'string',
-					title: 'custom'
-				}]
+					title: 'custom',
+				}],
+				$filter: {
+					name: 'element-content'
+				}
 			},
 			limit: {
 				title: 'Limit',
