@@ -335,22 +335,16 @@ module.exports = class BlockService {
 		required: ['type'],
 		properties: {
 			id: {
-				title: 'Select by id',
-				anyOf: [{ /* because nullable does not have priority */
-					type: 'null'
-				}, {
-					type: "string",
+				title: 'Select by ids',
+				type: 'array',
+				nullable: true,
+				items: {
+					type: 'string',
 					format: 'id'
-				}, {
-					type: 'array',
-					items: {
-						type: 'string',
-						format: 'id'
-					}
-				}]
+				}
 			},
 			type: {
-				title: 'Select by type',
+				title: 'Select by types',
 				type: 'array',
 				items: {
 					type: 'string',
