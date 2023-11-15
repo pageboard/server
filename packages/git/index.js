@@ -178,7 +178,7 @@ function parseRefs(str) {
 	const [url, spec] = str.split('#');
 	const obj = { url	};
 	if (spec) {
-		if (/^[a-z0-9]{8,}$/.test(spec) || /^v?\d+\.\d+/.test(spec)) {
+		if (/^[a-z0-9]{7,}$/.test(spec) || /^v?\d+\.\d+/.test(spec)) {
 			obj.commit = spec;
 		} else if (spec.startsWith('semver:')) {
 			obj.range = semver.validRange(spec.substring(7));
