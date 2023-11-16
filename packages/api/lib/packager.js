@@ -230,6 +230,7 @@ module.exports = class Packager {
 			delete el.stylesheets;
 			delete el.bundle;
 		}
+		pkg.eltsMap.core.bundles = Array.from($pkg.bundles.keys());
 
 		// create those files
 		await this.#bundleSource(site, {
