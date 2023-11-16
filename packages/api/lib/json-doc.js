@@ -24,6 +24,7 @@ module.exports = function(schemas, api, schema, formatted) {
 				}
 			}
 			if (keyword == "properties") {
+				if (parentPointer?.startsWith('/definitions/')) return;
 				const required = (parent && parent.required || []).includes(name);
 				let type = schema.type;
 				if (typeof type != "string") {
