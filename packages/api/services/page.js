@@ -252,14 +252,17 @@ module.exports = class PageService {
 				title: 'Contents',
 				anyOf: [{
 					const: false,
-					title: 'none'
+					title: 'No'
 				}, {
 					const: true,
-					title: 'all'
+					title: 'All'
 				}, {
 					type: 'string',
-					title: 'custom'
-				}]
+					title: 'Custom',
+				}],
+				$filter: {
+					name: 'element-content'
+				}
 			},
 			limit: {
 				title: 'Limit',

@@ -82,7 +82,7 @@ class AjvValidatorExt extends AjvValidator {
 			if (ex.message) console.error(ex);
 			// fixSchema mutates it
 			const patchedSchema = Object.assign({}, schema);
-			patchedSchema.$id += '/patch';
+			patchedSchema.$id += '-patch';
 			obj.patchValidator = this.compilePatchValidator(patchedSchema);
 			const patchCode = ajvStandalone.default(this.ajvNoDefaults, obj.patchValidator);
 			await fs.writeFile(patchPath, patchCode);

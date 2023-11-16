@@ -335,22 +335,16 @@ module.exports = class BlockService {
 		required: ['type'],
 		properties: {
 			id: {
-				title: 'Select by id',
-				anyOf: [{ /* because nullable does not have priority */
-					type: 'null'
-				}, {
-					type: "string",
+				title: 'Select by ids',
+				type: 'array',
+				nullable: true,
+				items: {
+					type: 'string',
 					format: 'id'
-				}, {
-					type: 'array',
-					items: {
-						type: 'string',
-						format: 'id'
-					}
-				}]
+				}
 			},
 			type: {
-				title: 'Select by type',
+				title: 'Select by types',
 				type: 'array',
 				items: {
 					type: 'string',
@@ -372,14 +366,17 @@ module.exports = class BlockService {
 				title: 'Contents',
 				anyOf: [{
 					const: false,
-					title: 'none'
+					title: 'No'
 				}, {
 					const: true,
-					title: 'all'
+					title: 'All'
 				}, {
 					type: 'string',
-					title: 'custom'
-				}]
+					title: 'Custom',
+				}],
+				$filter: {
+					name: 'element-content'
+				}
 			},
 			text: {
 				title: 'Text search',
@@ -416,7 +413,11 @@ module.exports = class BlockService {
 				title: 'Select language',
 				type: 'string',
 				format: 'lang',
-				nullable: true
+				nullable: true,
+				$helper: {
+					name: 'datalist',
+					url: '/.api/languages'
+				}
 			},
 			parent: {
 				title: 'Filter by parent',
@@ -447,14 +448,17 @@ module.exports = class BlockService {
 						title: 'Contents',
 						anyOf: [{
 							const: false,
-							title: 'none'
+							title: 'No'
 						}, {
 							const: true,
-							title: 'all'
+							title: 'All'
 						}, {
 							type: 'string',
-							title: 'custom'
-						}]
+							title: 'Custom',
+						}],
+						$filter: {
+							name: 'element-content'
+						}
 					},
 					data: {
 						title: 'Select by data',
@@ -540,14 +544,17 @@ module.exports = class BlockService {
 						title: 'Contents',
 						anyOf: [{
 							const: false,
-							title: 'none'
+							title: 'No'
 						}, {
 							const: true,
-							title: 'all'
+							title: 'All'
 						}, {
 							type: 'string',
-							title: 'custom'
-						}]
+							title: 'Custom',
+						}],
+						$filter: {
+							name: 'element-content'
+						}
 					},
 					data: {
 						title: 'Select by data',
@@ -614,14 +621,17 @@ module.exports = class BlockService {
 						title: 'Contents',
 						anyOf: [{
 							const: false,
-							title: 'none'
+							title: 'No'
 						}, {
 							const: true,
-							title: 'all'
+							title: 'All'
 						}, {
 							type: 'string',
-							title: 'custom'
-						}]
+							title: 'Custom',
+						}],
+						$filter: {
+							name: 'element-content'
+						}
 					},
 					data: {
 						title: 'Select by data',

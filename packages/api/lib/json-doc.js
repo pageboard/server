@@ -11,7 +11,7 @@ module.exports = function(schemas, api, schema, formatted) {
 		cb(schema, pointer, root, parentPointer, keyword, parent, name) {
 			const { $ref } = schema;
 			if ($ref) {
-				const prefix = '#/$el/';
+				const prefix = '#/definitions/';
 				if ($ref?.startsWith(prefix)) {
 					delete schema.$ref;
 					const [name, ...rel] = $ref.slice(prefix.length).split("/");
