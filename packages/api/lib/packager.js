@@ -107,7 +107,7 @@ module.exports = class Packager {
 				bundles[name] ??= new Set();
 			} else if (el.bundle) {
 				bundles[el.bundle] ??= new Set();
-				bundles[el.bundle].add(el.name);
+				bundles[el.bundle].add(name);
 				rootList.add(el.bundle);
 			}
 			if (el.intl) {
