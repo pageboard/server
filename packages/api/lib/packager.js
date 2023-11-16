@@ -229,6 +229,7 @@ module.exports = class Packager {
 			delete el.scripts;
 			delete el.stylesheets;
 			delete el.bundle;
+			if (Object.isEmpty(el.resources)) delete el.resources;
 		}
 		pkg.eltsMap.core.bundles = Array.from($pkg.bundles.keys());
 
