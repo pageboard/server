@@ -339,8 +339,6 @@ module.exports = class Packager {
 		bundleSet.add(root.name);
 		const elts = pkg.eltsMap;
 		list.add(el.name);
-		// when listing dependencies, do not include elements from other bundles
-		// -> other bundles are known
 
 		if (el.contents) for (const content of el.contents) {
 			if (!content.nodes) continue;
