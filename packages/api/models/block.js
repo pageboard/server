@@ -173,12 +173,6 @@ class Block extends Model {
 		const schema = {
 			$id: `/${block.id}/${block.data.version ?? tag}${Block.jsonSchema.$id}`,
 			definitions: types,
-			$el: new Proxy(types, {
-				get(types, name) {
-					const obj = types[name];
-					return obj?.properties?.data?.properties;
-				}
-			}),
 			type: 'object',
 			discriminator: { propertyName: "type" },
 			required: ['type'],

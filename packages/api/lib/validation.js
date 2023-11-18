@@ -161,13 +161,7 @@ module.exports = class Validation {
 	constructor(app, opts) {
 		this.app = app;
 		this.rootSchema = fixSchema({
-			definitions: app.schemas,
-			$el: new Proxy(app.schemas, {
-				get(types, name) {
-					const obj = types[name];
-					return obj?.properties?.data?.properties;
-				}
-			})
+			definitions: app.schemas
 		});
 
 		this.#validatorWithDefaults = this.#setupAjv(
@@ -275,10 +269,6 @@ module.exports = class Validation {
 		ajv.addKeyword({
 			keyword: '$global',
 			schemaType: "boolean"
-		});
-		ajv.addKeyword({
-			keyword: '$el',
-			schemaType: "object"
 		});
 		ajv.addKeyword({
 			keyword: 'csp',
