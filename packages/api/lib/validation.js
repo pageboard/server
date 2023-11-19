@@ -158,10 +158,11 @@ module.exports = class Validation {
 		formats: require('./formats')
 	};
 
-	constructor(app, opts) {
-		this.app = app;
+	constructor(schemas, { filesCache }) {
+		this.cacheDir = filesCache;
+
 		this.rootSchema = fixSchema({
-			definitions: app.schemas
+			definitions: schemas
 		});
 
 		this.#validatorWithDefaults = this.#setupAjv(
@@ -216,7 +217,7 @@ module.exports = class Validation {
 	}
 	createValidator() {
 		return new AjvValidatorExt({
-			cacheDir: this.app.dirs.filesCache,
+			cacheDir: this.cacheDir,
 			onCreateAjv: (ajv) => this.#setupAjv(ajv),
 			options: {
 				...Validation.AjvOptions,

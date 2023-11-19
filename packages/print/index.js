@@ -19,7 +19,7 @@ module.exports = class PrintModule {
 		this.opts.fetch = withCache(fetch);
 	}
 
-	async schema() {
+	async elements() {
 		const list = [];
 		if (this.opts.local) list.push({
 			const: 'local',
@@ -104,7 +104,7 @@ module.exports = class PrintModule {
 		required: ['printer'],
 		properties: {
 			printer: {
-				$ref: "#/definitions/print_job/properties/printer"
+				$ref: "#/definitions/print_job/properties/data/properties/printer"
 			}
 		}
 	};

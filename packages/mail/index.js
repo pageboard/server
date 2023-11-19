@@ -33,7 +33,7 @@ module.exports = class MailModule {
 		});
 	}
 
-	async schema() {
+	async elements() {
 		return import('./lib/mail_job.mjs');
 	}
 	apiRoutes(app, server) {
@@ -188,7 +188,7 @@ module.exports = class MailModule {
 		required: ['subject', 'to', 'text'],
 		properties: {
 			purpose: {
-				$ref: "#/definitions/mail_job/properties/purpose"
+				$ref: "#/definitions/mail_job/properties/data/properties/purpose"
 			},
 			subject: {
 				title: 'Subject',

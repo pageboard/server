@@ -66,6 +66,52 @@ class Block extends Model {
 		'_id'
 	];
 
+	static elementToSchema(el) {
+		const blockProps = this.jsonSchema.properties;
+		const ElementKeywords = [
+			'$lock', 'parents', 'upgrade', 'csp', 'templates'
+		];
+		const {
+			standalone, properties, required = [], contents, name
+		} = el;
+		if (!name) {
+			throw new Error("Missing element name: " + JSON.stringify(el));
+		}
+		const schema = {
+			type: 'object',
+			properties: {}
+		};
+
+		const standProp = standalone
+			? { standalone: { ...blockProps.standalone, default: true } }
+			: {};
+
+		const dataSchema = properties ? {
+			type: 'object',
+			properties,
+			required
+		} : {
+			type: 'null'
+		};
+		const contentSchema = contents ? {
+			type: 'object',
+			properties: contentsNames(contents),
+			additionalProperties: contents.length == 0 ? true : false
+		} : {
+			type: 'null'
+		};
+
+		if (el.bundle === true) for (const p of ElementKeywords) {
+			if (el[p] != null) schema[p] = el[p];
+		}
+		Object.assign(schema.properties, blockProps, standProp, {
+			type: { const: name },
+			data: dataSchema,
+			content: contentSchema
+		});
+		return schema;
+	}
+
 	static genId(length) {
 		// similar function defined in pageboard-write#store.js
 		if (!length) length = 8;
@@ -178,56 +224,14 @@ class Block extends Model {
 			required: ['type'],
 			oneOf: []
 		};
-		const blockProps = Block.jsonSchema.properties;
-
 		const hrefs = {};
-		const ElementKeywords = [
-			'$lock', 'parents', 'upgrade', 'csp', 'templates'
-		];
-
 		// TODO merge csp for each page bundle
 
 		for (const [type, element] of Object.entries(eltsMap)) {
 			const hrefsList = [];
 			findHrefs(element, hrefsList);
 			if (hrefsList.length) hrefs[type] = hrefsList;
-
-			const { standalone, properties, required = [], contents } = element;
-
-			const sub = {
-				type: 'object',
-				properties: {}
-			};
-
-			const standProp = standalone
-				? { standalone: { ...blockProps.standalone, default: true } }
-				: {};
-
-			const dataSchema = properties ? {
-				type: 'object',
-				properties,
-				required
-			} : {
-				type: 'null'
-			};
-
-			const contentSchema = contents ? {
-				type: 'object',
-				properties: contentsNames(contents),
-				additionalProperties: contents.length == 0 ? true : false
-			} : {
-				type: 'null'
-			};
-
-			if (element.bundle === true) for (const p of ElementKeywords) {
-				if (element[p] != null) sub[p] = element[p];
-			}
-			Object.assign(sub.properties, blockProps, standProp, {
-				type: { const: type },
-				data: dataSchema,
-				content: contentSchema
-			});
-			types[type] = sub;
+			types[type] = Block.elementToSchema(element);
 			schema.oneOf.push({ $ref: `#/definitions/${type}` });
 		}
 

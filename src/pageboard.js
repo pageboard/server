@@ -37,10 +37,8 @@ module.exports = class Pageboard {
 	#server;
 	#installer;
 	#plugins;
-	schemas = {};
+	elements = {};
 	services = {};
-	elements = [];
-	directories = [];
 	cwd = process.cwd();
 
 	static parse(args) {
@@ -162,6 +160,8 @@ module.exports = class Pageboard {
 				}
 			}
 			req.site = siteInst;
+		} else {
+			await this.api.install({ id: "*", data: {} });
 		}
 		return this.api.run(req, command, data);
 	}
@@ -332,7 +332,9 @@ module.exports = class Pageboard {
 		const init = type ? `${type}Routes` : 'init';
 
 		if (!type) for (const plugin of this.#plugins) {
-			if (plugin.schema) Object.assign(this.schemas, await plugin.schema());
+			if (typeof plugin.elements == "function") Object.assign(
+				this.elements, await plugin.elements()
+			);
 		}
 
 		for (const plugin of this.#plugins) {

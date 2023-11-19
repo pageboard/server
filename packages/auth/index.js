@@ -23,8 +23,8 @@ module.exports = class AuthModule {
 		}
 	}
 
-	async schema() {
-		return import('./src/schemas.mjs');
+	async elements() {
+		return import('./src/elements.mjs');
 	}
 
 	async apiRoutes(app, server) {
