@@ -29,14 +29,12 @@ module.exports = class Packager {
 		this.app = app;
 		this.Block = Block;
 	}
-	async run(site, pkg) {
-		const { elements = [], directories = [] } = pkg || {};
+	async run(site, pkg = {}) {
+		const { elements = [], directories = [] } = pkg;
 		const { Block } = this;
 		if (!site) console.warn("no site in packager.run");
 		const id = site ? site.id : null;
 		Log.imports("installing", id, elements, directories);
-		const allDirs = id ? [ ...this.app.directories, ...directories ] : directories;
-		const allElts = id ? [ ...this.app.elements, ...elements ] : elements;
 		const subSort = function (a, b) {
 			if (a.path && b.path) {
 				return Path.basename(a.path).localeCompare(Path.basename(b.path));
@@ -44,17 +42,17 @@ module.exports = class Packager {
 				return 0;
 			}
 		};
-		sortPriority(allDirs, subSort);
-		sortPriority(allElts, subSort);
+		sortPriority(directories, subSort);
+		sortPriority(elements, subSort);
 
 		const bundleMap = pkg.bundleMap = new Map();
-		const elts = Object.assign({}, this.app.schemas);
-		const names = Object.keys(this.app.schemas);
+		const elts = Object.assign({}, this.app.elements);
+		const names = Object.keys(this.app.elements);
 		const context = {};
-		for (const eltObj of allElts) {
+		for (const eltObj of elements) {
 			const { path } = eltObj;
 			const buf = await fs.readFile(path);
-			const mount = getMountPath(path, id, allDirs);
+			const mount = getMountPath(path, id, directories);
 			Object.assign(context, { mount, path });
 			loadFromFile(buf, elts, names, context);
 		}
@@ -231,7 +229,6 @@ module.exports = class Packager {
 			delete el.bundle;
 			if (Object.isEmpty(el.resources)) delete el.resources;
 		}
-		pkg.eltsMap.core.bundles = Array.from($pkg.bundles.keys());
 
 		// create those files
 		await this.#bundleSource(site, {

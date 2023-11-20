@@ -6,7 +6,7 @@ module.exports = class TranslateService {
 		this.opts = opts;
 	}
 
-	async schema() {
+	async elements() {
 		return import('../lib/language.mjs');
 	}
 

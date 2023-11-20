@@ -37,17 +37,18 @@ module.exports = class Upgrader {
 		const schema = this.DomainBlock.schema(block.type);
 		if (schema == null) {
 			console.warn("Unknown type", block.type, block.id);
-			block.type = '_';
-			delete block.data;
-			delete block.content;
+			return;
 		} else {
 			fixContentProperties(
 				schema.properties.content?.properties,
 				block.content
 			);
 		}
-		if (block.children) for (const child of block.children) {
-			this.process(child, block);
+
+		if (block.children) {
+			block.children = block.children.filter(
+				child => this.process(child, block)
+			);
 		}
 		this.afterEach(block);
 		return block;

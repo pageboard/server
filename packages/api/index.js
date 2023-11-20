@@ -38,7 +38,13 @@ module.exports = class ApiModule {
 
 	get validation() {
 		if (!this.#validation) {
-			this.#validation = new Validation(this.app, this.opts);
+			const defs = {};
+			for (const [name, el] of Object.entries(this.app.elements)) {
+				el.name = name;
+				el.contents = Block.normalizeContentSpec(el.contents);
+				defs[name] = Block.elementToSchema(el);
+			}
+			this.#validation = new Validation(defs, this.app.dirs);
 		}
 		return this.#validation;
 	}
@@ -116,7 +122,7 @@ module.exports = class ApiModule {
 		const [schema, mod, meth] = this.getService(req, command);
 		data = mergeRecursive({}, data);
 		Log.api("run %s:\n%O", command, data);
-		if (schema.properties) {
+		if (schema.properties || schema.$ref) {
 			try {
 				this.validate(schema, data, meth);
 			} catch (err) {

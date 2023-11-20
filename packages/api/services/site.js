@@ -8,7 +8,7 @@ module.exports = class SiteService {
 		this.app = app;
 	}
 
-	async schema() {
+	async elements() {
 		return import("../lib/site.mjs");
 	}
 

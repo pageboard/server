@@ -158,16 +158,11 @@ module.exports = class Validation {
 		formats: require('./formats')
 	};
 
-	constructor(app, opts) {
-		this.app = app;
+	constructor(schemas, { filesCache }) {
+		this.cacheDir = filesCache;
+
 		this.rootSchema = fixSchema({
-			definitions: app.schemas,
-			$el: new Proxy(app.schemas, {
-				get(types, name) {
-					const obj = types[name];
-					return obj?.properties?.data?.properties;
-				}
-			})
+			definitions: schemas
 		});
 
 		this.#validatorWithDefaults = this.#setupAjv(
@@ -222,7 +217,7 @@ module.exports = class Validation {
 	}
 	createValidator() {
 		return new AjvValidatorExt({
-			cacheDir: this.app.dirs.filesCache,
+			cacheDir: this.cacheDir,
 			onCreateAjv: (ajv) => this.#setupAjv(ajv),
 			options: {
 				...Validation.AjvOptions,
@@ -275,10 +270,6 @@ module.exports = class Validation {
 		ajv.addKeyword({
 			keyword: '$global',
 			schemaType: "boolean"
-		});
-		ajv.addKeyword({
-			keyword: '$el',
-			schemaType: "object"
 		});
 		ajv.addKeyword({
 			keyword: 'csp',

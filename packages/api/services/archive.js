@@ -313,7 +313,7 @@ module.exports = class ArchiveService {
 		for (let obj of list) {
 			try {
 				obj = await upgrader.process(obj);
-				await afterEachStandalone(obj);
+				if (obj) await afterEachStandalone(obj);
 			} catch (err) {
 				err.message = `${obj.id} ${obj.type}: ${err.message}`;
 				if (err.name == "ValidationError") {
