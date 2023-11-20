@@ -217,7 +217,7 @@ module.exports = class PrintModule {
 			lang: block.data.lang,
 			ext: 'pdf'
 		});
-		pdfUrl.searchParams.set('pdf', 'prepress');
+		pdfUrl.searchParams.set('pdf', 'printer');
 
 		const printProduct = {
 			pdf: pdfUrl,
@@ -243,7 +243,7 @@ module.exports = class PrintModule {
 				lang: block.data.lang,
 				ext: 'pdf'
 			});
-			coverUrl.searchParams.set('pdf', 'prepress');
+			coverUrl.searchParams.set('pdf', 'printer');
 
 			printProduct.cover_pdf = coverUrl;
 		}
