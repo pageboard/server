@@ -229,7 +229,6 @@ module.exports = class Packager {
 			delete el.bundle;
 			if (Object.isEmpty(el.resources)) delete el.resources;
 		}
-		pkg.eltsMap.core.bundles = Array.from($pkg.bundles.keys());
 
 		// create those files
 		await this.#bundleSource(site, {
