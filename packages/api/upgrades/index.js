@@ -56,6 +56,8 @@ module.exports = class Upgrader {
 	upgrade(block, parent) {
 		const mod = this.module;
 		if (!mod) return block;
+		block.content ??= {};
+		block.data ??= {};
 		if (mod.any) {
 			block = mod.any.call(this, block) ?? block;
 		}

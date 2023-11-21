@@ -13,3 +13,24 @@ exports.pdf = function ({ data }) {
 	if (data.paper.margin) data.paper.margin = parseFloat(data.paper.margin);
 	if (data.paper.spine) data.paper.margin = parseFloat(data.paper.spine);
 };
+
+exports.any = function ({ type, data, content }) {
+	if (['page', 'pdf', 'mail'].includes(type)) {
+		if (data.title != null) {
+			content.title = data.title;
+			delete data.title;
+		}
+		if (data.description != null) {
+			content.description = data.description;
+			delete data.title;
+		}
+	}
+	if (type.startsWith('input_')) {
+		if (data.placeholder != null) {
+			if (!content.label) {
+				content.label = data.placeholder;
+			}
+			delete data.placeholder;
+		}
+	}
+};

@@ -167,24 +167,22 @@ module.exports = class LoginModule {
 	}
 
 	async grant(req, data) {
-		const { user = {} } = req;
+		const { user } = req;
 		const verified = await this.#verifyToken(req, data);
 		if (!verified) throw new HttpError.BadRequest("Bad token");
 		const { item: settings } = await req.run('settings.find', {
 			email: data.email
 		});
-		const prevGrants = user?.grants ?? [];
-		req.user = Object.assign(user, {
-			id: settings.id,
-			grants: settings.data?.grants ?? []
-		});
+		const { grants } = user;
+		user.id = settings.id;
+		user.grants = settings.data?.grants ?? [];
 		if (user.grants.length == 0) user.grants.push('user');
 		const locks = data.grant ? [data.grant] : [];
 		if (req.locked(locks)) {
 			throw new HttpError.Forbidden("User has insufficient grants");
 		}
 		user.grants = locks;
-		req.granted = prevGrants.join(',') != user.grants.join(',');
+		req.granted = grants.join(',') != user.grants.join(',');
 		return {
 			item: settings,
 			cookies: {

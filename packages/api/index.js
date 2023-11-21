@@ -203,7 +203,7 @@ module.exports = class ApiModule {
 		}
 		// client needs to know what keys are supposed to be available
 		obj.grants = Object.fromEntries(
-			(req.user.grants ?? []).map(grant => [grant, true])
+			req.user.grants.map(grant => [grant, true])
 		);
 		if (obj.status) {
 			const code = Number.parseInt(obj.status);

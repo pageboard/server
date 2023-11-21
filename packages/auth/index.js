@@ -124,7 +124,7 @@ module.exports = class AuthModule {
 	lock(...list) {
 		return (req, res, next) => {
 			if (this.locked(req, list)) {
-				const status = (req.user.grants || []).length == 0 ? 401 : 403;
+				const status = req.user.grants.length == 0 ? 401 : 403;
 				res.status(status);
 				res.send({ locks: req.locks });
 			} else {
@@ -142,7 +142,7 @@ module.exports = class AuthModule {
 		else if (list.length == 0) return false;
 
 		let minLevel = Infinity;
-		const grants = user.grants || [];
+		const { grants } = user;
 		const grantsMap = site.$pkg.grants;
 		for (const grant of grants) {
 			minLevel = Math.min(grantsMap[grant] || Infinity, minLevel);
