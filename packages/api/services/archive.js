@@ -215,7 +215,7 @@ module.exports = class ArchiveService {
 			return upgrader.beforeEach(obj);
 		};
 		const afterEachStandalone = async obj => {
-			if (types.includes(obj.type)) return;
+			if (obj.type && types.includes(obj.type)) return;
 			if (!obj.id) {
 				counts.hrefs++;
 				return site.$relatedQuery('hrefs', trx).insert(obj).onConflict(['_parent_id', 'url']).ignore();
@@ -312,7 +312,7 @@ module.exports = class ArchiveService {
 
 		for (let obj of list) {
 			try {
-				obj = await upgrader.process(obj);
+				if (obj.type && obj.id) obj = await upgrader.process(obj);
 				if (obj) await afterEachStandalone(obj);
 			} catch (err) {
 				err.message = `${obj.id} ${obj.type}: ${err.message}`;
