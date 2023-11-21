@@ -22,7 +22,7 @@ exports.any = function ({ type, data, content }) {
 		}
 		if (data.description != null) {
 			content.description = data.description;
-			delete data.title;
+			delete data.description;
 		}
 	}
 	if (type.startsWith('input_')) {
