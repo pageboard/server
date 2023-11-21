@@ -38,6 +38,22 @@ module.exports = class PolyfillModule {
 			ElementInternals: {
 				source: require.resolve('element-internals-polyfill'),
 				detectSource: `'ElementInternals' in window`
+			},
+			SubmitEvent: {
+				source: require.resolve('event-submitter-polyfill'),
+				detectSource: `'SubmitEvent' in window`
+			},
+			FormDataSubmitter: {
+				dependencies: ['SubmitEvent'],
+				source: require.resolve('formdata-submitter-polyfill'),
+				detectSource: `(function() {
+					try {
+						new window.FormData(undefined, "!");
+						return false;
+					} catch(e) {
+						return true;
+					}
+				})()`
 			}
 		};
 	}
