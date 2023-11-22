@@ -154,7 +154,7 @@ module.exports = class Validation {
 		discriminator: true,
 		ownProperties: true,
 		coerceTypes: 'array',
-		removeAdditional: "failing",
+		removeAdditional: false,
 		formats: require('./formats')
 	};
 
