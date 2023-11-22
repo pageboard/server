@@ -48,7 +48,7 @@ module.exports = class PolyfillModule {
 				source: require.resolve('formdata-submitter-polyfill'),
 				detectSource: `(function() {
 					try {
-						new window.FormData(undefined, "!");
+						new FormData(undefined, "");
 						return false;
 					} catch(e) {
 						return true;
