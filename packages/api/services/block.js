@@ -928,11 +928,11 @@ module.exports = class BlockService {
 
 	async del({ site, trx, fun, ref }, data) {
 		const types = data.type ? [data.type] : site.$pkg.standalones;
-		const { count } = await site.$relatedQuery('children', trx)
+		const row = await site.$relatedQuery('children', trx)
 			.select(fun('recursive_delete', ref('block._id'), false).as('count'))
 			.where('block.id', data.id)
-			.whereIn('block.type', types);
-		return { count };
+			.whereIn('block.type', types).first();
+		return { count: row?.count ?? 0 };
 	}
 	static del = {
 		title: 'Delete block',

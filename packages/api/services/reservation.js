@@ -25,7 +25,7 @@ module.exports = class ReservationService {
 		const { parent: event } = eventDate;
 
 		if (eventDateClosed(event, eventDate)) {
-			throw new HttpError.Forbidden("Event date is closed");
+			throw new HttpError.BadRequest("Event date is closed");
 		}
 
 		const parents = [
@@ -180,7 +180,7 @@ module.exports = class ReservationService {
 		}
 		const { child: resa, parent: event } = eventDate;
 		if (eventDateClosed(event, eventDate)) {
-			throw new HttpError.Forbidden("Event date is closed");
+			throw new HttpError.BadRequest("Event date is closed");
 		}
 		if (reservation.attendees) {
 			reservation.seats = reservation.attendees.length;
@@ -259,7 +259,7 @@ module.exports = class ReservationService {
 		}
 		const { child: resa, parent: event } = eventDate;
 		if (eventDateClosed(event, eventDate)) {
-			throw new HttpError.Forbidden("Event date is closed");
+			throw new HttpError.BadRequest("Event date is closed");
 		}
 		const paid = (resa.data.payment || {}).paid || 0;
 		if (paid !== 0) {
@@ -367,7 +367,7 @@ module.exports = class ReservationService {
 			}
 			delete item.settings.user;
 		}
-		eventDate.closed = eventDateClosed(event, eventDate);
+		eventDate.closed = eventDateClosed(eventDate.parent, eventDate);
 		return { item: eventDate, items };
 	}
 	static search = {

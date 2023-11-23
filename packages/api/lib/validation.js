@@ -154,7 +154,6 @@ module.exports = class Validation {
 		discriminator: true,
 		ownProperties: true,
 		coerceTypes: 'array',
-		removeAdditional: "failing",
 		formats: require('./formats')
 	};
 
@@ -167,12 +166,14 @@ module.exports = class Validation {
 
 		this.#validatorWithDefaults = this.#setupAjv(
 			new Ajv(this.#createSettings({
+				removeAdditional: false,
 				useDefaults: 'empty'
 			}))
 		);
 
 		this.#validatorNoDefaults = this.#setupAjv(
 			new Ajv(this.#createSettings({
+				removeAdditional: false,
 				useDefaults: false
 			}))
 		);
@@ -223,6 +224,7 @@ module.exports = class Validation {
 				...Validation.AjvOptions,
 				strictSchema: "log",
 				validateSchema: false,
+				removeAdditional: "failing",
 				code: {
 					source: true,
 					formats: _`Object.assign(
