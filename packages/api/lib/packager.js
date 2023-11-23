@@ -109,7 +109,7 @@ module.exports = class Packager {
 				rootList.add(el.bundle);
 			}
 			if (el.intl) {
-				const { lang } = site.data;
+				const lang = site.data.languages?.[0];
 				if (lang) {
 					const i8dict = el.intl[lang];
 					const i8keys = el.intl.keys;
