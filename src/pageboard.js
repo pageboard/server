@@ -154,9 +154,9 @@ module.exports = class Pageboard {
 					})
 				);
 				if (siteInst.data.domains?.length > 0) {
-					siteInst.url = new URL(`https://${siteInst.data.domains[0]}`);
+					siteInst.$url = new URL(`https://${siteInst.data.domains[0]}`);
 				} else {
-					siteInst.url = new URL(`https://${site}.${req.opts.domain}:${req.opts.port}`);
+					siteInst.$url = new URL(`https://${site}.${req.opts.domain}:${req.opts.port}`);
 				}
 			}
 			req.site = siteInst;

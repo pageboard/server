@@ -4,6 +4,11 @@ exports.site = function ({ data }) {
 		if (data[key] != null) data.extra[key] = data[key];
 		delete data[key];
 	}
+	data.languages ??= [];
+	if (data.lang && data.languages.length == 0) {
+		data.languages.push(data.lang);
+		delete data.lang;
+	}
 };
 
 exports.pdf = function ({ data }) {

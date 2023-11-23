@@ -71,7 +71,7 @@ module.exports = class LoginModule {
 
 	async send(req, data) {
 		const { site } = req;
-		if (!site.url) {
+		if (!site.$url) {
 			throw new HttpError.BadRequest("login.send requires a hostname. Use login.link");
 		}
 		const token = await this.#generate(req, data);
@@ -98,7 +98,7 @@ module.exports = class LoginModule {
 				${tokenStr}
 
 				Ce message est envoyé depuis
-				${site.url.href}
+				${site.$url.href}
 
 				Si vous n'avez pas demandé ce code, vous pouvez ignorer ce message.`;
 		} else {
@@ -107,7 +107,7 @@ module.exports = class LoginModule {
 				${tokenStr}
 
 				This message is sent from
-				${site.url.href}
+				${site.$url.href}
 
 				If you didn't ask this code, you can ignore this message.`;
 		}

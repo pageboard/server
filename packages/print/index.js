@@ -207,7 +207,7 @@ module.exports = class PrintModule {
 		const { item: pdf } = await req.run('block.find', {
 			type: 'pdf',
 			data: {
-				url: new URL(block.data.url, req.site.url).pathname,
+				url: new URL(block.data.url, req.site.$url).pathname,
 				lang: block.data.lang
 			}
 		});
@@ -232,7 +232,7 @@ module.exports = class PrintModule {
 			const { item: coverPdf } = await req.run('block.find', {
 				type: 'pdf',
 				data: {
-					url: new URL(options.cover.url, req.site.url).pathname,
+					url: new URL(options.cover.url, req.site.$url).pathname,
 					lang: block.data.lang
 				}
 			});
@@ -346,7 +346,7 @@ module.exports = class PrintModule {
 			recursive: true
 		});
 		const { path, response } = await this.#download(req, url, pubDir);
-		const href = (new URL("/.public/" + Path.basename(path), site.url)).href;
+		const href = (new URL("/.public/" + Path.basename(path), site.$url)).href;
 		const count = response.headers.get('x-page-count');
 		return { href, path, count };
 	}
@@ -354,7 +354,7 @@ module.exports = class PrintModule {
 	async #download(req, url, to) {
 		const controller = new AbortController();
 		const toId = setTimeout(() => controller.abort(), 100000);
-		const response = await fetch(new URL(url, req.site.url), {
+		const response = await fetch(new URL(url, req.site.$url), {
 			headers: {
 				cookie: req.get('cookie')
 			},

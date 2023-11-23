@@ -186,6 +186,9 @@ module.exports = class SiteService {
 	async update(req, data) {
 		const oldSite = req.site;
 		const { data: initial } = oldSite;
+		if (data.languages?.length === 0 && !data.lang) {
+			data.languages.push(this.app.languages.default);
+		}
 		const languagesChanged = data.languages !== undefined &&
 			(data.languages ?? []).join(' ')
 			!=
@@ -201,8 +204,8 @@ module.exports = class SiteService {
 			type: site.type,
 			data: site.data
 		});
+		req.site = site;
 		if (languagesChanged || toMulti || toMono) {
-			req.site = site;
 			await req.run('translate.initialize');
 		}
 		return site;

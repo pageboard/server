@@ -166,8 +166,8 @@ module.exports = class MailModule {
 		data.headers = { ...mailer.headers };
 		if (req.site.id) data.tag = req.site.id;
 		if (data.attachments) data.attachments = data.attachments.filter(obj => {
-			const url = new URL(obj.href, req.site.url);
-			return url.host == req.site.url.host;
+			const url = new URL(obj.href, req.site.$url);
+			return url.host == req.site.$url.host;
 		});
 		Log.mail("mail.to", data);
 		try {

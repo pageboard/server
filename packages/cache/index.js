@@ -72,7 +72,7 @@ module.exports = class CacheModule {
 			return;
 		}
 		setTimeout(async () => {
-			const url = new URL(this.opts.wkp, site.url);
+			const url = new URL(this.opts.wkp, site.$url);
 			const controller = new AbortController();
 			const toId = setTimeout(() => controller.abort(), 10000);
 			try {
