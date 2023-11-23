@@ -52,7 +52,7 @@ module.exports = class AuthModule {
 				id: user.id,
 				grants: user.grants
 			}, {
-				issuer: site.url.hostname,
+				issuer: site.$url.hostname,
 				maxAge,
 				...this.opts
 			}),

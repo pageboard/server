@@ -185,7 +185,7 @@ module.exports = class ApiModule {
 			const cookieParams = {
 				httpOnly: true,
 				sameSite: true,
-				secure: req.site.url.protocol == "https:",
+				secure: req.site.$url.protocol == "https:",
 				path: '/'
 			};
 			for (const [key, cookie] of Object.entries(obj.cookies)) {

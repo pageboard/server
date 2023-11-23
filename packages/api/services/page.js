@@ -90,7 +90,7 @@ module.exports = class PageService {
 	}
 
 	parse(req, { url }) {
-		const loc = new URL(url, req.site.url);
+		const loc = new URL(url, req.site.$url);
 		const [, pathname, lang, ext] = loc.pathname.match(
 			/(.+?)(?:~([a-z]{2}))?(?:\.([a-z]{3,4}))?$/
 		);
@@ -113,7 +113,7 @@ module.exports = class PageService {
 	};
 
 	format(req, { url, lang, ext }) {
-		const obj = new URL(url, req.site.url);
+		const obj = new URL(url, req.site.$url);
 		if (lang) obj.pathname += '~' + lang;
 		if (ext) obj.pathname += '.' + ext;
 		return obj;
@@ -147,7 +147,7 @@ module.exports = class PageService {
 		const { lang } = req.call('translate.lang', data);
 		if (lang != data.lang) {
 			data.lang = lang;
-			const mapUrl = new URL(req.url, site.url);
+			const mapUrl = new URL(req.url, site.$url);
 			mapUrl.searchParams.set('lang', lang);
 			req.call('cache.map', mapUrl.pathname + mapUrl.search);
 		}
@@ -501,8 +501,8 @@ function stripHostname(site, block) {
 	for (const desc of list) {
 		const url = jsonPath.get(block.data, desc.path);
 		if (url) {
-			const objUrl = new URL(url, site.url);
-			if (objUrl.hostname == site.url.hostname) {
+			const objUrl = new URL(url, site.$url);
+			if (objUrl.hostname == site.$url.hostname) {
 				jsonPath.set(block.data, desc.path, objUrl.pathname + objUrl.search + objUrl.hash);
 			}
 		}

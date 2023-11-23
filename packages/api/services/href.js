@@ -187,7 +187,7 @@ module.exports = class HrefService {
 	async #add(req, data) {
 		const { site, trx, Href } = req;
 		let local = false;
-		const siteUrl = site.url ?? new URL(`https://${site.id}.localhost.localdomain`);
+		const siteUrl = site.$url ?? new URL(`https://${site.id}.localhost.localdomain`);
 		const pageUrl = new URL(data.url, siteUrl);
 		if (siteUrl.hostname == pageUrl.hostname) {
 			data.url = pageUrl.pathname + pageUrl.search;

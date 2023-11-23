@@ -112,7 +112,7 @@ module.exports = class Domains {
 		if (host.state == INIT) {
 			host.state = BUSY;
 			host.queue.push(() => {
-				return this.#resolvableHost(site.url.hostname, host);
+				return this.#resolvableHost(site.$url.hostname, host);
 			});
 			host.queue.push(() => {
 				return app.install(site);
@@ -174,7 +174,7 @@ module.exports = class Domains {
 	async #initSite(host, req, res) {
 		const origSite = this.siteById[host.id];
 		const site = origSite.$clone();
-		site.url = new URL(origSite.url);
+		site.$url = new URL(origSite.$url);
 		const { tenant } = res.locals;
 		if (tenant) {
 			if (!host.tenants[tenant]) {
@@ -182,7 +182,7 @@ module.exports = class Domains {
 				host.tenants[tenant] = tsite._id;
 			}
 			site._id = host.tenants[tenant];
-			site.url.hostname = req.hostname;
+			site.$url.hostname = req.hostname;
 			site.data = {
 				...site.data,
 				env: 'dev',
@@ -197,7 +197,7 @@ module.exports = class Domains {
 				const { host } = this.#initHost(req);
 				await host.queue.idle();
 				req.tag('data-:site');
-				res.redirect(308, site.url.href + req.url);
+				res.redirect(308, site.$url.href + req.url);
 			}
 		}
 		req.site = site;
@@ -271,10 +271,10 @@ module.exports = class Domains {
 		const host = this.hostById[id];
 		host.by = req.headers['x-forwarded-by'];
 
-		site.url = new URL("http://a.a");
-		site.url.protocol = req.protocol;
-		site.url.hostname = castArray(site.data.domains)[0] || req.hostname;
-		site.url.port = portFromHost(req.headers.host);
+		site.$url = new URL("http://a.a");
+		site.$url.protocol = req.protocol;
+		site.$url.hostname = castArray(site.data.domains)[0] || req.hostname;
+		site.$url.port = portFromHost(req.headers.host);
 		return { host, site };
 	}
 
@@ -300,7 +300,7 @@ module.exports = class Domains {
 	}
 
 	hold(site) {
-		if (!site.url || site.data.env == "production" && site.$pkg) {
+		if (!site.$url || site.data.env == "production" && site.$pkg) {
 			// installed site in production
 			return;
 		}
@@ -315,7 +315,7 @@ module.exports = class Domains {
 
 		if (!site.data.domains) site.data.domains = [];
 		const old = this.siteById[site.id];
-		site.url ??= old?.url;
+		site.$url ??= old?.$url;
 		this.#idByDomainUpdate(site, old);
 		this.siteById[site.id] = site;
 

@@ -17,7 +17,7 @@ module.exports = class LinksService {
 			});
 			res.type('text/plain');
 			res.send(app.responseFilter.run(req, obj).items.map(page => {
-				return new URL(page.data.url, req.site.url).href;
+				return new URL(page.data.url, req.site.$url).href;
 			}).join('\n'));
 		});
 
@@ -38,7 +38,7 @@ module.exports = class LinksService {
 			};
 
 			const xmlItem = item => {
-				const href = (new URL(item.data.url, site.url)).href;
+				const href = (new URL(item.data.url, site.$url)).href;
 				return `<url>
 					<loc>${href}</loc>
 					<lastmod>${item.updated_at.split('T').shift()}</lastmod>
@@ -59,7 +59,7 @@ module.exports = class LinksService {
 		const { site } = req;
 		const { env = site.data.env } = data;
 		if (env == "production") {
-			lines.push(`Sitemap: ${new URL("/.well-known/sitemap.xml", site.url)}`);
+			lines.push(`Sitemap: ${new URL("/.well-known/sitemap.xml", site.$url)}`);
 			lines.push('User-agent: *');
 			const { items } = await req.call('page.list', {
 				disallow: true,

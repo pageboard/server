@@ -90,7 +90,7 @@ module.exports = class PrerenderModule {
 			if (req.accepts(['image/*', 'json', 'html']) != 'html') {
 				throw new HttpError.NotAcceptable("Malformed path");
 			} else {
-				const url = new URL('/.well-known/404', site.url);
+				const url = new URL('/.well-known/404', site.$url);
 				const agent = url.protocol == "https:" ? https : http;
 				const subReq = agent.request(url, {
 					headers: req.headers,
@@ -115,7 +115,7 @@ module.exports = class PrerenderModule {
 				}
 			});
 			if (invalid) {
-				const redUrl = new URL(pathname, site.url);
+				const redUrl = new URL(pathname, site.$url);
 				for (const key in query) redUrl.searchParams.append(key, query[key]);
 				return res.redirect(redUrl);
 			}

@@ -60,7 +60,7 @@ module.exports = class GitModule {
 			mail.subject = `Pageboard deployed ${site.id} at version ${site.data.version}`;
 			mail.text = Text`
 						The version is immediately available at
-						${site.url.href}
+						${site.$url.href}
 					`;
 
 		} catch (err) {
