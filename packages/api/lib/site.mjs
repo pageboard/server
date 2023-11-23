@@ -101,6 +101,9 @@ export const site = {
 		extra: {
 			title: 'Extra settings',
 			type: 'object',
+			additionalProperties: {
+				type: 'string'
+			},
 			properties: {}
 		}
 	}

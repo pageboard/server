@@ -195,7 +195,8 @@ module.exports = class ArchiveService {
 	};
 
 	async import(req, { file, reset, idMap, types = [] }) {
-		const { site, trx, Block } = req;
+		const { trx, Block } = req;
+		let { site } = req;
 		const counts = {
 			users: 0,
 			blocks: 0,
@@ -242,7 +243,10 @@ module.exports = class ArchiveService {
 			} else if (obj.type == "site") {
 				if (reset) {
 					await req.run('site.empty', { id: req.site.id });
-					site.data = (await req.run('site.update', obj.data)).data;
+					Object.assign(obj.data, reset);
+					delete obj.data.server;
+					site = await req.run('site.update', obj.data);
+					upgrader.DomainBlock = site.$modelClass;
 				}
 			} else if (obj.type == "user") {
 				try {
@@ -371,9 +375,9 @@ module.exports = class ArchiveService {
 				default: {}
 			},
 			reset: {
-				title: 'Empty site and write settings',
-				type: 'boolean',
-				default: false
+				title: 'Erase all and save site settings',
+				type: 'object',
+				$ref: "#/definitions/site/properties/data"
 			},
 			excludes: {
 				title: 'Excluded types',

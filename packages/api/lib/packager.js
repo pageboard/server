@@ -167,7 +167,7 @@ module.exports = class Packager {
 		});
 
 		// incorporate polyfills/elements into core scripts
-		eltsMap.core.scripts.unshift(
+		if (eltsMap.core) eltsMap.core.scripts.unshift(
 			await this.#bundleSource(site, {
 				name: 'polyfills', dry: true
 			}),
@@ -286,10 +286,7 @@ module.exports = class Packager {
 	async #bundleSource(site, { prefix, name, source, dry }) {
 		if (prefix?.startsWith('ext-')) return;
 		const tag = site.data.version ?? site.$pkg.tag;
-		if (tag == null) {
-			console.error("Cannot do a bundle without version/tag", site.id);
-			return;
-		}
+		if (tag == null) return;
 		const filename = [prefix, name].filter(Boolean).join('-') + '.js';
 		const sourceUrl = `/.files/${tag}/${filename}`;
 		const sourcePath = this.app.statics.resolve(site.id, sourceUrl);
