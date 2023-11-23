@@ -130,6 +130,26 @@ module.exports = class ArchiveService {
 			for (const content of contents) {
 				jstream.write(content);
 			}
+			if (ids.length) {
+				const contents = await site.$relatedQuery('children', trx)
+					.with('parents', site.$relatedQuery('children', trx)
+						.select('children._id')
+						.joinRelated('parents')
+						.joinRelated('children')
+						.whereNot('parents.type', 'site')
+						.whereIn('parents.id', ids)
+						.select(fun('array_agg', ref('block.id')).as('parents'))
+						.groupBy('children._id')
+					)
+					.join('parents', 'parents._id', 'block._id')
+					.select('parents.parents')
+					.where('block.type', 'content')
+					.columns();
+				counts.contents = contents.length;
+				for (const content of contents) {
+					jstream.write(content);
+				}
+			}
 		}
 
 		const hrefs = await req.run('href.collect', {
@@ -174,7 +194,7 @@ module.exports = class ArchiveService {
 		}
 	};
 
-	async import(req, { file, empty, idMap, types = [], languages }) {
+	async import(req, { file, reset, idMap, types = [] }) {
 		const { site, trx, Block } = req;
 		const counts = {
 			users: 0,
@@ -220,10 +240,9 @@ module.exports = class ArchiveService {
 				counts.hrefs++;
 				return site.$relatedQuery('hrefs', trx).insert(obj).onConflict(['_parent_id', 'url']).ignore();
 			} else if (obj.type == "site") {
-				if (empty) await req.run('site.empty', { id: req.site.id });
-				if (languages && obj.data.languages) {
-					site.data.languages = obj.data.languages;
-					await req.run('site.update', site.data);
+				if (reset) {
+					await req.run('site.empty', { id: req.site.id });
+					site.data = (await req.run('site.update', obj.data)).data;
 				}
 			} else if (obj.type == "user") {
 				try {
@@ -351,15 +370,10 @@ module.exports = class ArchiveService {
 				additionalProperties: { type: 'string' },
 				default: {}
 			},
-			empty: {
-				title: 'Empty before',
+			reset: {
+				title: 'Empty site and write settings',
 				type: 'boolean',
 				default: false
-			},
-			languages: {
-				title: 'Import languages',
-				type: 'boolean',
-				default: true
 			},
 			excludes: {
 				title: 'Excluded types',
