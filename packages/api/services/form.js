@@ -60,42 +60,7 @@ module.exports = class FormService {
 
 		Log.api("form params", params, user, data.query);
 
-		const body = {};
-
-		if (params.type && Array.isArray(params.type) == false && !(reqBody.data && reqBody.id) && Object.keys(reqBody).length > 0) {
-			// TODO remove this whole thing
-			const el = site.$schema(params.type);
-			if (!el) {
-				throw new HttpError.BadRequest("Unknown element type " + params.type);
-			}
-			body.data = {};
-			for (const key of Object.keys(el.properties.data?.properties ?? {})) {
-				const val = reqBody[key];
-				if (val !== undefined) {
-					mergeRecursive(body.data, { [key]: val });
-					delete reqBody[key];
-				}
-			}
-			// this should be removed - only expressions should be used to achieve this
-			for (const key of Object.keys(el.properties)) {
-				const mkey = '$' + key;
-				const mval = reqBody[mkey];
-				if (mval !== undefined) {
-					body[key] = mval;
-				} else {
-					const val = reqBody[key];
-					if (val !== undefined) {
-						console.warn(`Use $${key} for setting el.properties[key]`);
-						body[key] = val;
-					}
-				}
-			}
-		} else {
-			Object.assign(body, reqBody);
-		}
-		mergeRecursive(body, params);
-
-		return run(method, body);
+		return run(method, params);
 	}
 	static submit = {
 		title: 'Form submit',

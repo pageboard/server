@@ -398,7 +398,11 @@ async function runJob(req, block, job) {
 		response.status = ex.statusCode ?? 500;
 		response.text = ex.message;
 	} finally {
-		await req.run('block.save', block);
+		await req.run('block.save', {
+			id: block.id,
+			type: block.type,
+			data: block.data
+		});
 	}
 }
 
