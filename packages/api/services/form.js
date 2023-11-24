@@ -60,7 +60,7 @@ module.exports = class FormService {
 
 		Log.api("form params", params, user, data.query);
 
-		const body = {};
+		let body = {};
 
 		if (params.type && Array.isArray(params.type) == false && !(reqBody.data && reqBody.id) && Object.keys(reqBody).length > 0) {
 			// TODO remove this whole thing
@@ -90,10 +90,10 @@ module.exports = class FormService {
 					}
 				}
 			}
+			mergeRecursive(body, params);
 		} else {
-			Object.assign(body, reqBody);
+			body = params;
 		}
-		mergeRecursive(body, params);
 
 		return run(method, body);
 	}
