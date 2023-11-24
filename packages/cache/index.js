@@ -67,7 +67,7 @@ module.exports = class CacheModule {
 	}
 
 	install(site) {
-		if (!site?.url) {
+		if (!site?.$url) {
 			console.info("No url to invalidate the cache", site?.id);
 			return;
 		}
