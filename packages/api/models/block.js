@@ -9,46 +9,68 @@ class Block extends Model {
 
 	static idColumn = '_id';
 
+	static jsonSchemaParents = {
+		title: 'parents',
+		type: 'array',
+		items: {
+			type: 'object',
+			properties: {
+				type: {
+					title: 'type',
+					type: 'string',
+					format: 'name',
+					nullable: true
+				},
+				id: {
+					title: 'id',
+					type: 'string',
+					format: 'id',
+					nullable: true
+				}
+			}
+		},
+		$filter: 'relation'
+	};
+
 	static jsonSchema = {
 		type: 'object',
 		$id: '/blocks',
 		properties: {
 			id: {
-				title: 'ID',
+				title: 'id',
 				type: 'string',
 				format: 'id'
 			},
 			type: {
-				title: 'Type',
+				title: 'type',
 				type: 'string',
 				format: 'name'
 			},
 			data: {
-				title: 'Datas',
-				type: 'object'
+				title: 'data',
+				type: 'object',
+				nullable: true
 			},
 			expr: {
-				title: 'Expressions',
+				title: 'expr',
 				type: 'object',
 				nullable: true
 			},
 			content: {
-				title: 'Contents',
+				title: 'content',
 				type: 'object',
+				nullable: true,
 				additionalProperties: { type: 'string' }
 			},
 			standalone: { // a standalone block can have 0 or multiple parents
-				title: 'Standalone',
 				type: 'boolean',
 				default: false
 			},
 			updated_at: {
-				title: 'Last Update',
 				format: 'date-time',
 				type: 'string'
 			},
 			lock: {
-				title: 'Locks',
 				type: 'array',
 				nullable: true,
 				items: {
