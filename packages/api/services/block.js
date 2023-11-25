@@ -728,9 +728,7 @@ module.exports = class BlockService {
 		required: ['id'],
 		properties: {
 			id: {
-				title: 'source',
-				type: 'string',
-				format: 'id',
+				...Block.jsonSchema.properties.id,
 				$helper: {
 					name: 'block',
 					filter: {
@@ -738,49 +736,31 @@ module.exports = class BlockService {
 					}
 				}
 			},
-			parents: {
-				title: 'parents',
-				type: 'array',
-				items: {
-					type: 'object',
-					properties: {
-						type: {
-							title: 'type',
-							type: 'string',
-							format: 'name',
-							// semafor#convert only coerces empty strings to null if nullable
-							// however it should just "undefine" empty strings
-							nullable: true
-						},
-						id: {
-							title: 'id',
-							type: 'string',
-							format: 'id',
-							nullable: true
-						}
-					}
-				},
-				$filter: 'relation'
-			},
-			data: { // updated by element filter
-				title: 'data',
-				type: 'object',
-				nullable: true
-			},
-			expr: {
-				title: 'expr',
-				type: 'object',
-				nullable: true
-			}
+			parents: Block.jsonSchemaParents,
+			data: Block.jsonSchema.properties.data,
+			// content ?
+			expr: Block.jsonSchema.properties.expr // not sure it's useful
 		}
 	};
 
-	async add({ site, trx, Block }, data) {
+	async add(req, data) {
+		const { site, Block, trx } = req;
+		const obj = {
+			type: data.type
+		};
+		if (!Object.isEmpty(data.data)) obj.data = data.data;
+		if (!Object.isEmpty(data.content)) obj.content = data.content;
+		if (data.lock !== undefined) {
+			if (req.locked(data.lock ?? [])) {
+				throw HttpError.Unauthorized("Missing permissions to set locks");
+			} else {
+				obj.lock = data.lock;
+			}
+		}
 		const parents = data.parents ?? [];
-		delete data.parents;
 
 		const block = await site.$relatedQuery('children', trx)
-			.insert(data).returning(Block.columns);
+			.insert(obj).returning(Block.columns);
 
 		const newParents = parents.filter(item => item.id != null)
 			.map(item => [item.id, item.type]);
@@ -792,7 +772,7 @@ module.exports = class BlockService {
 				await block.$relatedQuery('parents', trx).relate(ids);
 			}
 		}
-		return block;
+		return { item: block };
 	}
 	static add = {
 		title: 'Add a block',
@@ -800,61 +780,17 @@ module.exports = class BlockService {
 		$action: 'write',
 		required: ['type'],
 		properties: {
-			id: {
-				title: 'id',
-				type: 'string',
-				format: 'id',
-				nullable: true
-			},
 			type: {
-				title: 'type',
-				type: 'string',
-				format: 'name',
+				...Block.jsonSchema.properties.type,
 				$filter: {
 					name: 'element',
-					standalone: true,
-					contentless: true
+					standalone: true
 				}
 			},
-			parents: {
-				title: 'parents',
-				type: 'array',
-				items: {
-					type: 'object',
-					properties: {
-						type: {
-							title: 'type',
-							type: 'string',
-							format: 'name',
-							// semafor#convert only coerces empty strings to null if nullable
-							// however it should just "undefine" empty strings
-							nullable: true
-						},
-						id: {
-							title: 'id',
-							type: 'string',
-							format: 'id',
-							nullable: true
-						}
-					}
-				},
-				$filter: 'relation'
-			},
-			data: { // updated by element filter
-				title: 'data',
-				type: 'object',
-				nullable: true
-			},
-			content: {
-				title: 'content',
-				type: 'object',
-				nullable: true
-			},
-			expr: {
-				title: 'expr',
-				type: 'object',
-				nullable: true
-			}
+			data: Block.jsonSchema.properties.data,
+			content: Block.jsonSchema.properties.content,
+			parents: Block.jsonSchemaParents,
+			lock: Block.jsonSchema.properties.lock
 		}
 	};
 
@@ -893,35 +829,16 @@ module.exports = class BlockService {
 		$action: 'write',
 		required: ['id', 'type'],
 		properties: {
-			id: {
-				title: 'id',
-				type: 'string',
-				format: 'id'
-			},
+			id: Block.jsonSchema.properties.id,
 			type: {
-				title: 'type',
-				type: 'string',
-				format: 'name',
+				...Block.jsonSchema.properties.type,
 				$filter: {
 					name: 'element',
 					standalone: true
 				}
 			},
-			data: {
-				title: 'data',
-				type: 'object',
-				nullable: true
-			},
-			content: {
-				title: 'content',
-				type: 'object',
-				nullable: true
-			},
-			expr: {
-				title: 'expr',
-				type: 'object',
-				nullable: true
-			},
+			data: Block.jsonSchema.properties.data,
+			content: Block.jsonSchema.properties.content,
 			lock: Block.jsonSchema.properties.lock
 		}
 	};
@@ -940,19 +857,12 @@ module.exports = class BlockService {
 		$action: 'write',
 		required: ['id'],
 		properties: {
-			id: {
-				title: 'id',
-				type: 'string',
-				format: 'id'
-			},
+			id: Block.jsonSchema.properties.id,
 			type: {
-				title: 'type',
-				type: 'string',
-				format: 'name',
+				...Block.jsonSchema.properties.type,
 				$filter: {
 					name: 'element',
-					standalone: true,
-					contentless: true
+					standalone: true
 				}
 			}
 		}

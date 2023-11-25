@@ -161,10 +161,21 @@ module.exports = class LinksService {
 		}
 		for (const id of updates) {
 			const item = mergeRecursive({}, oldMap[id], itemMap[id]);
-			await req.run('block.save', item);
+			await req.run('block.save', {
+				id: item.id,
+				type: item.type,
+				data: item.data,
+				content: item.content
+			});
+
 		}
 		for (const id of additions) {
-			await req.run('block.add', itemMap[id]);
+			const item = itemMap[id];
+			await req.run('block.add', {
+				type: item.type,
+				data: item.data,
+				content: item.content
+			});
 		}
 		return {
 			updates: updates.length,

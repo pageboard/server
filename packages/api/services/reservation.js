@@ -211,7 +211,12 @@ module.exports = class ReservationService {
 
 		Object.assign(resa.data, reservation);
 
-		const sresa = await req.run('block.save', resa);
+		const sresa = await req.run('block.save', {
+			id: resa.id,
+			type: resa.type,
+			data: resa.data,
+			content: resa.content
+		});
 		await eventDate.$query(req.trx).patchObject({
 			type: eventDate.type,
 			data: { reservations: total }
@@ -298,7 +303,12 @@ module.exports = class ReservationService {
 		if (!resa.data.payment.due) resa.data.payment.due = 0;
 		if (!resa.data.payment.paid) resa.data.payment.paid = 0;
 		resa.data.payment.paid += data.amount;
-		return run('block.save', resa);
+		return run('block.save', {
+			id: resa.id,
+			type: resa.type,
+			data: resa.data,
+			content: resa.content
+		});
 	}
 	static pay = {
 		title: 'Pay reservation',
