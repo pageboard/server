@@ -233,7 +233,10 @@ class Block extends Model {
 	};
 
 	static initSite(block, pkg) {
-		const { eltsMap, groups, tag, standalones, textblocks } = pkg;
+		const {
+			eltsMap, groups, tag,
+			standalones, textblocks, hashtargets
+		} = pkg;
 		if (!block.id) {
 			throw new Error("missing block.id\n" + JSON.stringify(block));
 		}
@@ -292,6 +295,7 @@ class Block extends Model {
 				standalones: Array.from(standalones),
 				pages: groups.page ?? [],
 				textblocks: Array.from(textblocks),
+				hashtargets: Array.from(hashtargets),
 				tag,
 				dir: pkg.dir
 			};
