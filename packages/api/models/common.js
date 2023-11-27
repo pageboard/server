@@ -391,7 +391,7 @@ function asPaths(obj, ret, pre, first, schemas) {
 		}
 		const schem = schemas?.find(
 			item => item.properties?.[key]
-		)?.properties[key];
+		)?.properties?.[key];
 		if (!schem && schemas?.length) {
 			// refuse extra conditions
 			delete obj[key];
