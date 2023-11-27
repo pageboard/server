@@ -390,7 +390,7 @@ function asPaths(obj, ret, pre, first, schemas) {
 			obj[key] = val;
 		}
 		const schem = schemas?.find(
-			item => item.properties?.[key]
+			item => item?.properties?.[key]
 		)?.properties?.[key];
 		if (!schem && schemas?.length) {
 			// refuse extra conditions
