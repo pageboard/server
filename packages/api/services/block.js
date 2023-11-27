@@ -128,9 +128,9 @@ module.exports = class BlockService {
 				delete data.parent.parents;
 			}
 			if (Object.keys(data.parent).length) {
-				if (!data.parent.type) {
-					if (parents?.type?.length == 1) {
-						data.parent.type = parents.type[0];
+				if (!data.parent.type?.length) {
+					if (parents?.type?.length) {
+						data.parent.type = parents.type;
 					} else {
 						throw new HttpError.BadRequest("Missing parent.type");
 					}
@@ -154,9 +154,9 @@ module.exports = class BlockService {
 			if (data.text) {
 				throw new HttpError.BadRequest("Cannot join by child and search by text");
 			}
-			if (!data.child.type) {
-				if (children?.type?.length == 1) {
-					data.child.type = children.type[0];
+			if (!data.child.type?.length) {
+				if (children?.type?.length) {
+					data.child.type = children.type;
 				} else {
 					throw new HttpError.BadRequest("Missing child.type");
 				}
@@ -312,9 +312,8 @@ module.exports = class BlockService {
 			offset: data.offset,
 			limit: data.limit
 		};
-		if (data.parent?.type) obj.item = (await this.find(req, {
+		if (data.parent?.type?.length) obj.item = (await this.find(req, {
 			...data.parent,
-			type: [data.parent.type],
 			lang: language.lang
 		})).item;
 		if (ids.length) {
@@ -434,14 +433,18 @@ module.exports = class BlockService {
 						}]
 					},
 					type: {
-						title: 'Select by type',
+						title: 'Select by types',
 						nullable: true,
-						type: 'string',
-						format: 'name',
+						type: 'array',
+						items: {
+							type: 'string',
+							format: 'name'
+						},
 						$filter: {
 							name: 'element',
 							standalone: true,
-							contentless: true
+							contentless: true,
+							multiple: true
 						}
 					},
 					content: {
@@ -489,14 +492,18 @@ module.exports = class BlockService {
 						}]
 					},
 					type: {
-						title: 'Select by type',
+						title: 'Select by types',
 						nullable: true,
-						type: 'string',
-						format: 'name',
+						type: 'array',
+						items: {
+							type: 'string',
+							format: 'name'
+						},
 						$filter: {
 							name: 'element',
 							standalone: true,
-							contentless: true
+							contentless: true,
+							multiple: true
 						}
 					},
 					data: {
@@ -521,7 +528,7 @@ module.exports = class BlockService {
 						}]
 					},
 					type: {
-						title: 'Select by type',
+						title: 'Select by types',
 						nullable: true,
 						type: 'array',
 						items: {
@@ -598,7 +605,7 @@ module.exports = class BlockService {
 						}]
 					},
 					type: {
-						title: 'Select by type',
+						title: 'Select by types',
 						nullable: true,
 						type: 'array',
 						items: {

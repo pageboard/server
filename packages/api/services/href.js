@@ -88,12 +88,12 @@ module.exports = class HrefService {
 				if (href) {
 					const obj = await req.run('block.search', {
 						parent: {
-							type: "page",
+							type: Array.from(site.$pkg.pages),
 							data: {
 								url: url
 							}
 						},
-						type: "heading",
+						type: Array.from(site.$pkg.hashtargets),
 						offset: data.offset,
 						limit: data.limit,
 						data: {

@@ -200,15 +200,14 @@ exports.QueryBuilder = class CommonQueryBuilder extends QueryBuilder {
 		this.addOperation(patchObjectOperation, [obj]);
 		return this;
 	}
-	whereObject(obj, type, alias) {
+	whereObject(obj, types, alias) {
 		const mClass = this.modelClass();
-		if (Array.isArray(type)) {
-			if (type.length == 1) type = type[0];
-			else type = null;
-		}
-		const schema = type ? mClass.schema(type) : null;
+		if (types == null) types = [];
+		else if (typeof types == "string") types = [types];
+
+		const schemas = types.map(type => mClass.schema(type));
 		const table = alias || this.tableRefFor(mClass);
-		const refs = asPaths(obj, {}, table, true, schema);
+		const refs = asPaths(obj, {}, table, true, schemas);
 
 		for (const [k, cond] of Object.entries(refs)) {
 			// FIXME
@@ -381,8 +380,7 @@ function whereCond(q, key, value) {
 	}
 }
 
-function asPaths(obj, ret, pre, first, schema) {
-	const props = schema?.properties ?? {};
+function asPaths(obj, ret, pre, first, schemas) {
 	const dateTimes = ["date-time", "date"];
 	Object.keys(obj).forEach(str => {
 		let val = obj[str];
@@ -391,8 +389,10 @@ function asPaths(obj, ret, pre, first, schema) {
 			delete obj[str];
 			obj[key] = val;
 		}
-		const schem = props[key];
-		if (!schem && schema) {
+		const schem = schemas?.find(
+			item => item.properties?.[key]
+		)?.properties[key];
+		if (!schem && schemas?.length) {
 			// refuse extra conditions
 			delete obj[key];
 			return;
@@ -471,7 +471,7 @@ function asPaths(obj, ret, pre, first, schema) {
 			};
 			else ret[cur] = val;
 		} else if (typeof val == "object") {
-			asPaths(val, ret, cur + (first ? ':' : ''), false, schem);
+			asPaths(val, ret, cur + (first ? ':' : ''), false, [schem]);
 		}
 	});
 	return ret;
