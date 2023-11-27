@@ -93,7 +93,7 @@ module.exports = class HrefService {
 								url: url
 							}
 						},
-						type: ["heading", "link"],
+						type: Array.from(site.$pkg.hashtargets),
 						offset: data.offset,
 						limit: data.limit,
 						data: {

@@ -61,6 +61,7 @@ module.exports = class Packager {
 		const bundles = {};
 		const aliases = {};
 		const textblocks = new Set();
+		const hashtargets = new Set();
 		const standalones = new Set();
 		const polyfills = new Set();
 		for (const name of names) {
@@ -85,6 +86,10 @@ module.exports = class Packager {
 				aliases[name] = el.alias;
 			} else if (el.standalone && !el.virtual) {
 				standalones.add(name);
+			}
+			if (el.properties?.id?.format == "grant") {
+				// we have a linkable ref
+				hashtargets.add(name);
 			}
 			if (!el.expressions && (!el.inline || !el.inplace) && el.contents && el.contents.some(item => {
 				return ['inline*', 'text*', 'mail_inline*'].includes(item.nodes);
@@ -127,7 +132,8 @@ module.exports = class Packager {
 			}
 		}
 		Object.assign(pkg, {
-			eltsMap, groups, aliases, bundles, standalones, textblocks, polyfills
+			eltsMap, groups, aliases, bundles,
+			standalones, textblocks, hashtargets, polyfills
 		});
 		return Block.initSite(site, pkg);
 	}
