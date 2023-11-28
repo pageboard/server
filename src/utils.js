@@ -73,7 +73,7 @@ exports.mergeExpressions = function mergeExpressions(data, expr, obj) {
 		copy.$default = dget(data, key);
 		miss = false;
 		const fused = md.merge(val, copy);
-		if (!miss && fused != null) dset(data, key, fused);
+		if (!miss && fused !== undefined) dset(data, key, fused);
 	}
 	return data;
 };
