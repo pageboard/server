@@ -216,7 +216,8 @@ module.exports = class LinksService {
 				title: 'Url prefix',
 				type: 'string',
 				format: 'pathname',
-				$helper: "page"
+				$helper: "page",
+				nullable: true
 			}
 		}
 	};
