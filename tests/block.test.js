@@ -123,7 +123,7 @@ suite('block', function () {
 			type: 'page', data: { url: '/test' }
 		}, 'test');
 
-		const b2 = await app.run('block.save', {
+		const { item: b2 } = await app.run('block.save', {
 			id: b1.id,
 			type: 'page',
 			data: { url: '/test2' }
@@ -138,7 +138,7 @@ suite('block', function () {
 		}, 'test');
 
 		const body = '<main><p>test body</p></main>';
-		const b2 = await app.run('block.save', {
+		const { item: b2 } = await app.run('block.save', {
 			id: b1.id,
 			type: 'page',
 			content: { body }
