@@ -787,6 +787,7 @@ module.exports = class BlockService {
 		$action: 'write',
 		required: ['type'],
 		properties: {
+			id: Block.jsonSchema.properties.id,
 			type: {
 				...Block.jsonSchema.properties.type,
 				$filter: {
