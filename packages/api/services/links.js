@@ -165,16 +165,17 @@ module.exports = class LinksService {
 				id: item.id,
 				type: item.type,
 				data: item.data,
-				content: item.content
+				content: item.content,
+				lock: item.lock
 			});
-
 		}
 		for (const id of additions) {
 			const item = itemMap[id];
 			await req.run('block.add', {
 				type: item.type,
 				data: item.data,
-				content: item.content
+				content: item.content,
+				lock: item.lock
 			});
 		}
 		return {
