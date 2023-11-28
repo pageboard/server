@@ -19,11 +19,11 @@ suite('query', function () {
 
 
 	test('query block', async function () {
-		const page = await app.run('block.add', {
+		const { item: page } = await app.run('block.add', {
 			type: 'page',
 			data: { url: '/test' }
 		}, 'test');
-		const fetch = await app.run('block.add', {
+		const { item: fetch } = await app.run('block.add', {
 			type: 'fetch',
 			data: {
 				action: {
@@ -52,7 +52,7 @@ suite('query', function () {
 	});
 
 	test('query date by partial date', async function () {
-		const eventDate = await app.run('block.add', {
+		const { item: eventDate } = await app.run('block.add', {
 			type: 'event_date',
 			data: {
 				slot: {
@@ -61,7 +61,7 @@ suite('query', function () {
 				}
 			}
 		}, 'test');
-		const fetch = await app.run('block.add', {
+		const { item: fetch } = await app.run('block.add', {
 			type: 'fetch',
 			data: {
 				action: {
@@ -104,7 +104,7 @@ suite('query', function () {
 
 
 	test('query slot by partial date', async function () {
-		const eventDate = await app.run('block.add', {
+		const { item: eventDate } = await app.run('block.add', {
 			type: 'event_date',
 			data: {
 				slot: {
@@ -113,7 +113,7 @@ suite('query', function () {
 				}
 			}
 		}, 'test');
-		const fetch = await app.run('block.add', {
+		const { item: fetch } = await app.run('block.add', {
 			type: 'fetch',
 			data: {
 				action: {
@@ -147,7 +147,7 @@ suite('query', function () {
 	});
 
 	test('query date by date range', async function () {
-		const eventDate = await app.run('block.add', {
+		const { item: eventDate } = await app.run('block.add', {
 			type: 'event_date',
 			data: {
 				slot: {
@@ -156,7 +156,7 @@ suite('query', function () {
 				}
 			}
 		}, 'test');
-		const fetch = await app.run('block.add', {
+		const { item: fetch } = await app.run('block.add', {
 			type: 'fetch',
 			data: {
 				action: {
@@ -198,7 +198,7 @@ suite('query', function () {
 	});
 
 	test('query date slot by date', async function () {
-		const eventDate = await app.run('block.add', {
+		const { item: eventDate } = await app.run('block.add', {
 			type: 'event_date',
 			data: {
 				slot: {
@@ -207,7 +207,7 @@ suite('query', function () {
 				}
 			}
 		}, 'test');
-		const fetch = await app.run('block.add', {
+		const { item: fetch } = await app.run('block.add', {
 			type: 'fetch',
 			data: {
 				action: {
@@ -247,7 +247,7 @@ suite('query', function () {
 	});
 
 	test('query date slot by date range', async function () {
-		const eventDate = await app.run('block.add', {
+		const { item: eventDate } = await app.run('block.add', {
 			type: 'event_date',
 			data: {
 				slot: {
@@ -256,7 +256,7 @@ suite('query', function () {
 				}
 			}
 		}, 'test');
-		const fetch = await app.run('block.add', {
+		const { item: fetch } = await app.run('block.add', {
 			type: 'fetch',
 			data: {
 				action: {

@@ -66,7 +66,7 @@ module.exports = class ReservationService {
 		} else {
 			reservation.payment.paid = 0;
 		}
-		const resa = await req.run('block.add', {
+		const { item: resa } = await req.run('block.add', {
 			type: 'event_reservation',
 			data: reservation,
 			parents: parents,
