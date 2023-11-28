@@ -1,5 +1,4 @@
 const {
-	mergeRecursive,
 	mergeExpressions,
 	unflatten
 } = require('../../../src/utils');
