@@ -51,7 +51,9 @@ class PatchObjectOperation extends UpdateOperation {
 	onBuildKnex(knexBuilder, builder) {
 		// this works only if $formatDatabaseJson does not stringify objects
 		const json = this.model.$toDatabaseJson(builder);
-		const jsonPaths = asPaths(json, {}, "", true);
+		const jsonPaths = asPaths(json, {}, "", true, [
+			this.model.$schema()
+		]);
 		const convertedJson = convertFieldExpressionsToRaw(
 			builder, this.model, jsonPaths
 		);
@@ -409,8 +411,8 @@ function asPaths(obj, ret, pre, first, schemas) {
 		} else {
 			cur = key;
 		}
-		const curProps = schem?.properties ?? {};
-		const curType = schem?.type;
+		const curProps = schem.properties ?? {};
+		const curType = schem.type;
 		const propKeys = Object.keys(curProps);
 		if (
 			val && (
