@@ -389,9 +389,7 @@ module.exports = class PageService {
 		const obj = {};
 		if (data.prefix != null) {
 			const prefix = data.prefix.replace(/\/$/, '');
-			const regexp = data.home ? `^${prefix}(/[^/]+)?$` : `^${prefix}/[^/]+$`;
-			if (data.home) q.orderByRaw(raw("block.data->>'url' = ? DESC", prefix));
-			q.whereJsonText('block.data:url', '~', regexp)
+			q.whereJsonText('block.data:url', '~', `^${prefix}/[^/]*$`)
 				.orderBy(ref('block.data:index').castInt());
 			const parents = await getParents(req, prefix, lang);
 			obj.links = {
@@ -407,13 +405,7 @@ module.exports = class PageService {
 		}
 		q.orderBy(ref('block.data:url'));
 		q.orderBy(ref('block.updated_at'), 'DESC');
-		const items = obj.items = await q;
-		if (data.home) {
-			obj.item = items.shift();
-			if (obj.item && obj.item.data.url != data.prefix) {
-				delete obj.item;
-			}
-		}
+		obj.items = await q;
 		return obj;
 	}
 	static list = {
@@ -424,12 +416,8 @@ module.exports = class PageService {
 				title: 'By url prefix',
 				type: 'string',
 				format: 'pathname',
-				$helper: "page"
-			},
-			home: {
-				title: 'Return prefix as item',
-				type: 'boolean',
-				default: false
+				$helper: "page",
+				nullable: true
 			},
 			url: {
 				title: 'Starts with',
