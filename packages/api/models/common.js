@@ -451,6 +451,8 @@ function asPaths(obj, ret, pre, first, schemas) {
 					const range = dateRange(val);
 					if (range) {
 						val = range;
+					} else {
+						val = new Date(val);
 					}
 				}
 			} else if (curType == "boolean" && typeof val != "boolean") {
@@ -482,7 +484,9 @@ function asPaths(obj, ret, pre, first, schemas) {
 function dateRange(val) {
 	let start, end;
 	if (typeof val == "string") {
-		[start, end] = partialDateRange(val);
+		const range = partialDateRange(val);
+		if (range) [start, end] = range;
+		else return;
 	} else if (Array.isArray(val) && val.length == 2) {
 		let start = new Date(val[0]);
 		let end = new Date(val[1]);
@@ -506,6 +510,7 @@ function dateRange(val) {
 
 function partialDateRange(val) {
 	const parts = val.split('P');
+	if (parts[0].includes('T')) return;
 	const start = new Date(parts[0]);
 	if (Number.isNaN(start.getTime())) return;
 	let end;
