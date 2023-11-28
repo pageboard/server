@@ -17,7 +17,7 @@ suite('block', function () {
 	});
 
 	test('add block', async function () {
-		const b = await app.run('block.add', {
+		const { item: b } = await app.run('block.add', {
 			type: 'page', data: { url: '/test' }
 		}, 'test');
 		const c = await app.run('block.get', {
@@ -40,7 +40,7 @@ suite('block', function () {
 	});
 
 	test('fill block', async function () {
-		const b1 = await app.run('block.add', {
+		const { item: b1 } = await app.run('block.add', {
 			type: 'page', data: { url: '/testfill' }
 		}, 'test');
 
@@ -87,7 +87,7 @@ suite('block', function () {
 	});
 
 	test('clone block', async function () {
-		const src = await app.run('block.add', {
+		const { item: src } = await app.run('block.add', {
 			type: 'page', data: { url: '/test' }
 		}, 'test');
 		await app.run('block.fill', {
@@ -119,7 +119,7 @@ suite('block', function () {
 	});
 
 	test('save block', async function () {
-		const b1 = await app.run('block.add', {
+		const { item: b1 } = await app.run('block.add', {
 			type: 'page', data: { url: '/test' }
 		}, 'test');
 
@@ -133,7 +133,7 @@ suite('block', function () {
 	});
 
 	test('save block with content', async function () {
-		const b1 = await app.run('block.add', {
+		const { item: b1 } = await app.run('block.add', {
 			type: 'page', data: { url: '/test' }
 		}, 'test');
 
@@ -148,7 +148,7 @@ suite('block', function () {
 	});
 
 	test('delete block', async function () {
-		const b1 = await app.run('block.add', {
+		const { item: b1 } = await app.run('block.add', {
 			type: 'page', data: { url: '/test' }
 		}, 'test');
 

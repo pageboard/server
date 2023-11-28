@@ -111,8 +111,9 @@ module.exports = class PrintModule {
 
 	async run(req, data) {
 		const response = {};
-		const block = await req.run('block.add', {
-			id: await req.Block.genId(7), // w/a remote#customer_reference limit
+		const { item: block } = await req.run('block.add', {
+			// w/a remote#customer_reference limit
+			id: await req.Block.genId(7),
 			type: 'print_job',
 			data: { ...data, response }
 		});

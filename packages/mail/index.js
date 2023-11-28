@@ -342,7 +342,7 @@ module.exports = class MailModule {
 			};
 		}));
 
-		const block = await req.run('block.add', {
+		const { item: block } = await req.run('block.add', {
 			type: 'mail_job',
 			data: { ...data, response: {} }
 		});
