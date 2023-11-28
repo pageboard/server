@@ -211,17 +211,16 @@ module.exports = class ReservationService {
 
 		Object.assign(resa.data, reservation);
 
-		const sresa = await req.run('block.save', {
+		await eventDate.$query(req.trx).patchObject({
+			type: eventDate.type,
+			data: { reservations: total }
+		});
+		return req.run('block.save', {
 			id: resa.id,
 			type: resa.type,
 			data: resa.data,
 			content: resa.content
 		});
-		await eventDate.$query(req.trx).patchObject({
-			type: eventDate.type,
-			data: { reservations: total }
-		});
-		return sresa;
 	}
 	static save = {
 		title: 'Save reservation',
@@ -292,8 +291,8 @@ module.exports = class ReservationService {
 		}
 	};
 
-	async pay({ run }, data) {
-		const resa = await run('block.get', {
+	async pay(req, data) {
+		const resa = await req.run('block.get', {
 			type: 'event_reservation',
 			id: data.reservation
 		});
@@ -303,7 +302,7 @@ module.exports = class ReservationService {
 		if (!resa.data.payment.due) resa.data.payment.due = 0;
 		if (!resa.data.payment.paid) resa.data.payment.paid = 0;
 		resa.data.payment.paid += data.amount;
-		return run('block.save', {
+		return req.run('block.save', {
 			id: resa.id,
 			type: resa.type,
 			data: resa.data,
