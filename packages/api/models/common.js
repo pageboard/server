@@ -51,7 +51,9 @@ class PatchObjectOperation extends UpdateOperation {
 	onBuildKnex(knexBuilder, builder) {
 		// this works only if $formatDatabaseJson does not stringify objects
 		const json = this.model.$toDatabaseJson(builder);
-		const jsonPaths = asPaths(json, {}, "", true);
+		const jsonPaths = asPaths(json, {}, "", true, [
+			this.model.$schema()
+		]);
 		const convertedJson = convertFieldExpressionsToRaw(
 			builder, this.model, jsonPaths
 		);
@@ -409,8 +411,8 @@ function asPaths(obj, ret, pre, first, schemas) {
 		} else {
 			cur = key;
 		}
-		const curProps = schem?.properties ?? {};
-		const curType = schem?.type;
+		const curProps = schem.properties ?? {};
+		const curType = schem.type;
 		const propKeys = Object.keys(curProps);
 		if (
 			val && (
@@ -449,6 +451,8 @@ function asPaths(obj, ret, pre, first, schemas) {
 					const range = dateRange(val);
 					if (range) {
 						val = range;
+					} else {
+						val = new Date(val);
 					}
 				}
 			} else if (curType == "boolean" && typeof val != "boolean") {
@@ -480,7 +484,9 @@ function asPaths(obj, ret, pre, first, schemas) {
 function dateRange(val) {
 	let start, end;
 	if (typeof val == "string") {
-		[start, end] = partialDateRange(val);
+		const range = partialDateRange(val);
+		if (range) [start, end] = range;
+		else return;
 	} else if (Array.isArray(val) && val.length == 2) {
 		let start = new Date(val[0]);
 		let end = new Date(val[1]);
@@ -504,6 +510,7 @@ function dateRange(val) {
 
 function partialDateRange(val) {
 	const parts = val.split('P');
+	if (parts[0].includes('T')) return;
 	const start = new Date(parts[0]);
 	if (Number.isNaN(start.getTime())) return;
 	let end;

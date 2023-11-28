@@ -200,7 +200,7 @@ module.exports = class SiteService {
 		mergeRecursive(oldSite.data, data);
 
 		const site = await this.app.install(oldSite);
-		await site.$query(req.trx).patchObject({
+		await oldSite.$query(req.trx).patchObject({
 			type: site.type,
 			data: site.data
 		});
