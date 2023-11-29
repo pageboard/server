@@ -368,6 +368,9 @@ class Block extends Model {
 			this.id = await Block.genId();
 		}
 	}
+	$schema() {
+		return Block.jsonSchema;
+	}
 }
 
 module.exports = Block;
