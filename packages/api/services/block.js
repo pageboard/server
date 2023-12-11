@@ -1033,19 +1033,43 @@ function filterSub(q, data, language) {
 	const orders = data.order || [];
 	orders.push('created_at');
 	const seen = {};
+	let group = { list: [] };
+	const groups = [group];
 	for (const order of orders) {
 		const { col, dir } = parseOrder(q, 'block', order);
+		group.dir ??= dir;
 		if (seen[col.expression]) continue;
 		seen[col.expression] = true;
 		const val = dget(data, order);
 		if (Array.isArray(val)) {
-			q.orderByRaw(q.raw(
+			group.sql = q.raw(
 				'array_position(??, ?) ' + dir,
 				q.val(val).asArray().castTo('text[]'),
 				q.ref(col).castText()
-			));
+			);
+			group = { list: [] };
+			groups.push(group);
 		} else {
-			q.orderBy(col, dir);
+			if (dir != group.dir) {
+				group = { dir, list: [] };
+				groups.push(group);
+			}
+			group.list.push(col);
+		}
+	}
+	for (const { sql, list, dir } of groups) {
+		if (sql) {
+			q.orderByRaw(sql);
+		} else if (list.length == 1) {
+			q.orderBy(list[0], dir);
+		} else if (list.length > 1) {
+			let args;
+			if (list.every(item => item.isPlainColumnRef)) {
+				args = list;
+			} else {
+				args = list.map(col => col.castText());
+			}
+			q.orderBy(Block.fn.coalesce(...args), dir);
 		}
 	}
 	if (data.offset < 0) {

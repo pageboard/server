@@ -401,7 +401,11 @@ function contentsNames(list) {
 function findHrefs(schema, list, root, array) {
 	if (!schema.properties || schema.virtual) return;
 	for (const [key, prop] of Object.entries(schema.properties)) {
-		if (!prop) throw new Error("Missing prop:" + key);
+		if (!prop) {
+			console.warn("Missing property:", key, "in schema:", schema.name);
+			console.warn('It happens when a property has been set to null');
+			continue;
+		}
 		let path;
 		if (array) path = root;
 		else if (root) path = `${root}.${key}`;
