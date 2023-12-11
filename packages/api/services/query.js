@@ -22,10 +22,15 @@ module.exports = class SearchService {
 		});
 	}
 
-	async query({ site, run, locked, user }, data) {
-		const form = await run('block.get', {
-			id: data.id
-		});
+	async query({ site, run, user, locked, trx, ref }, data) {
+		const form = await site.$relatedQuery('children', trx)
+			.where('block.id', data.id)
+			.orWhere(q => {
+				q.where('block.type', 'fetch');
+				q.where(ref('block.data:name').castText(), data.id);
+			})
+			.orderBy('id')
+			.first().throwIfNotFound();
 		if (locked(form.lock)) {
 			throw new HttpError.Unauthorized("Check user permissions");
 		}
