@@ -91,6 +91,12 @@ export const print_job = {
 					type: 'integer',
 					nullable: true
 				},
+				discount: {
+					title: 'Discount Code',
+					type: 'string',
+					format: 'singleline',
+					nullable: true
+				},
 				cover: {
 					title: 'Cover',
 					type: 'object',
