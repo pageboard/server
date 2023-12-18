@@ -31,20 +31,43 @@ module.exports = class ApiModule {
 			migrations: [Path.join(__dirname, 'migrations')]
 		};
 
-		Href.createValidator = Block.createValidator = () => {
+		Href.createValidator = () => {
+			return this.validation.createValidator();
+		};
+
+		Block.createValidator = () => {
 			return this.validation.createValidator();
 		};
 	}
 
 	get validation() {
 		if (!this.#validation) {
-			const defs = {};
+			const blocks = {
+				$id: '/blocks',
+				type: 'object',
+				definitions: {},
+				required: ['type'],
+				discriminator: { propertyName: 'type' },
+				oneOf: []
+			};
 			for (const [name, el] of Object.entries(this.app.elements)) {
 				el.name = name;
 				el.contents = Block.normalizeContentSpec(el.contents);
-				defs[name] = Block.elementToSchema(el);
+				blocks.definitions[name] = Block.elementToSchema(el);
+				blocks.oneOf.push({ $ref: `#/definitions/${name}` });
 			}
-			this.#validation = new Validation(defs, this.app.dirs);
+
+			const services = {
+				$id: '/services',
+				type: 'object',
+				definitions: this.app.servicesDefinitions,
+				required: ['method'],
+				discriminator: { propertyName: "method" },
+				oneOf: Object.keys(this.app.servicesDefinitions).map(name => ({
+					$ref: '#/definitions/' + name
+				}))
+			};
+			this.#validation = new Validation(services, blocks, this.app.dirs);
 		}
 		return this.#validation;
 	}
@@ -80,18 +103,21 @@ module.exports = class ApiModule {
 		return this.#packager.makeBundles(site, pkg);
 	}
 
-	validate(schema, data, inst) {
+	check(data) {
 		try {
-			this.validation.validate(schema, data, inst || {});
+			this.validation.validate(data);
+			return true;
 		} catch (err) {
-			if (!inst) return false;
-			else throw err;
+			return false;
 		}
-		if (!inst) return true;
-		else return data;
 	}
 
-	getService({ site }, apiStr) {
+	validate(data) {
+		this.validation.validate(data);
+		return data;
+	}
+
+	getService(apiStr, onlySchema) {
 		const [modName, funName] = (apiStr || "").split('.');
 		const mod = this.app.services[modName];
 		if (!modName || !mod) {
@@ -100,42 +126,26 @@ module.exports = class ApiModule {
 				${Object.keys(this.app.services).sort().join(', ')}
 			`);
 		}
-		const schema = mod[funName];
 		const inst = this.app[modName];
-		const meth = inst[funName];
-		if (!funName || !meth) throw new HttpError.BadRequest(Text`
+		if (!funName || !inst[funName]) throw new HttpError.BadRequest(Text`
 			${funName} method not found:
 			${Object.getOwnPropertyNames(mod).sort().join(', ')}
 		`);
-		if (!schema) {
-			throw new HttpError.BadRequest(`Internal api method ${apiStr}`);
-		}
-		if (!site && !mod.$global && !schema.$global) {
-			throw new HttpError.BadRequest(`API method ${apiStr} expects a site`);
-		}
-		if (!schema.$id) schema.$id = `/${modName}/${funName}`;
-		return [schema, inst, meth];
+		if (onlySchema) return mod[funName];
+		else return (req, data) => inst[funName](req, data);
 	}
 
-	async run(req = {}, command, data = {}) {
+	async run(req = {}, method, parameters = {}) {
 		const { app } = this;
-		const [schema, mod, meth] = this.getService(req, command);
-		data = mergeRecursive({}, data);
-		Log.api("run %s:\n%O", command, data);
-		if (schema.properties || schema.$ref) {
-			try {
-				this.validate(schema, data, meth);
-			} catch (err) {
-				if (err.name == "BadRequestError") {
-					err.data = {
-						method: command,
-						message: err.message
-					};
-					err.content = await this.run(req, 'help.doc', { command, schema });
-				}
-				throw err;
-			}
-		}
+		const service = this.getService(method);
+		Log.api("run %s:\n%O", method, parameters);
+		const data = {
+			method,
+			parameters: mergeRecursive({}, parameters)
+		};
+		if (req.site) data.site = req.site;
+		this.validate(data);
+
 		// start a transaction on set trx object on site
 		let hadTrx = false;
 		const { locals = { } } = req.res || { };
@@ -148,20 +158,18 @@ module.exports = class ApiModule {
 		}
 		Object.assign(req, { Block, Href, ref, val, raw, fun });
 
-		const args = [req, data];
-
 		try {
-			const obj = await meth.apply(mod, args);
+			const obj = await service(req, data.parameters);
 			if (!hadTrx && req.trx && !req.trx.isCompleted()) {
 				await req.trx.commit();
 			}
 			return obj;
 		} catch(err) {
-			Log.api("error %s:\n%O", command, err);
+			Log.api("error %s:\n%O", method, err);
 			if (!hadTrx && !req.trx.isCompleted()) {
 				await req.trx.rollback();
 			}
-			if (!err.method) err.method = command;
+			if (!err.method) err.method = method;
 			throw err;
 		} finally {
 			if (req.trx && req.trx.isCompleted()) {

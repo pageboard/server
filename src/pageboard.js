@@ -39,6 +39,7 @@ module.exports = class Pageboard {
 	#plugins;
 	elements = {};
 	services = {};
+	servicesDefinitions = {};
 	cwd = process.cwd();
 
 	static parse(args) {
@@ -350,14 +351,34 @@ module.exports = class Pageboard {
 			const { services } = this;
 			const service = services[name] ?? {};
 			let defined = false;
-			for (const key of Object.getOwnPropertyNames(constructor)) {
+			for (const key of Object.getOwnPropertyNames(Object.getPrototypeOf(plugin))) {
+				if (key == 'constructor') continue;
 				const desc = constructor[key];
-				if (!key.startsWith('$')) {
-					if (desc == null || typeof desc != "object") continue;
-					if (typeof plugin[key] != "function") continue;
-					defined = true;
-				}
+				if (!desc) continue;
+				const func = plugin[key];
+				if (typeof func != "function") continue;
 				service[key] = desc;
+				defined = true;
+				const method = `${name}.${key}`;
+				const schema = {
+					type: 'object',
+					properties: {
+						method: {
+							const: method
+						},
+						parameters: desc
+					}
+				};
+				if ((desc.$global ?? constructor.$global) !== true) {
+					schema.required = ['site'];
+					schema.properties.site = {
+						type: 'object',
+						properties: {},
+						additionalProperties: true
+					};
+				}
+				delete desc.$global;
+				this.servicesDefinitions[method] = schema;
 			}
 			if (!services[name] && defined) {
 				services[name] = service;
@@ -414,7 +435,7 @@ module.exports = class Pageboard {
 					method: err.method,
 					message: err.message
 				},
-				content: err.content ?? err.toString()
+				content: err.content ?? err.toString() // FIXME content is multilang ?
 			}
 		};
 		if (!res.headersSent) res.status(code).send(obj);
@@ -427,7 +448,8 @@ module.exports = class Pageboard {
 		}
 		if (code >= 400) {
 			this.log(req, res, () => {
-				res.sendStatus(code);
+				res.status(code);
+				res.send("");
 			});
 		} else {
 			res.sendStatus(code);

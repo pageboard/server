@@ -82,7 +82,7 @@ class AjvValidatorExt extends AjvValidator {
 			if (ex.message) console.error(ex);
 			// fixSchema mutates it
 			const patchedSchema = Object.assign({}, schema);
-			patchedSchema.$id += '-patch';
+			//patchedSchema.$id += '-patch';
 			obj.patchValidator = this.compilePatchValidator(patchedSchema);
 			const patchCode = ajvStandalone.default(this.ajvNoDefaults, obj.patchValidator);
 			await fs.writeFile(patchPath, patchCode);
@@ -127,7 +127,7 @@ class AjvValidatorExt extends AjvValidator {
 
 			if (!validator) {
 				const patchSchema = Object.assign({}, jsonSchema);
-				patchSchema.$id = patchSchema.$id + '-patch';
+				//patchSchema.$id = patchSchema.$id + '-patch';
 				validator = this.compilePatchValidator(patchSchema);
 				validators.patchValidator = validator;
 			}
@@ -145,8 +145,7 @@ class AjvValidatorExt extends AjvValidator {
 }
 
 module.exports = class Validation {
-	#validatorWithDefaults;
-	#validatorNoDefaults;
+	#servicesValidator;
 
 	static AjvOptions = {
 		$data: true,
@@ -157,24 +156,17 @@ module.exports = class Validation {
 		formats: require('./formats')
 	};
 
-	constructor(schemas, { filesCache }) {
+	constructor(services, blocks, { filesCache }) {
 		this.cacheDir = filesCache;
 
-		this.rootSchema = fixSchema({
-			definitions: schemas
-		});
+		this.blocks = fixSchema(blocks);
+		this.services = fixSchema(services);
 
-		this.#validatorWithDefaults = this.#setupAjv(
+		this.#servicesValidator = this.#setupAjv(
 			new Ajv(this.#createSettings({
 				removeAdditional: false,
-				useDefaults: 'empty'
-			}))
-		);
-
-		this.#validatorNoDefaults = this.#setupAjv(
-			new Ajv(this.#createSettings({
-				removeAdditional: false,
-				useDefaults: false
+				useDefaults: 'empty',
+				schemas: [this.blocks, this.services]
 			}))
 		);
 	}
@@ -222,9 +214,11 @@ module.exports = class Validation {
 			onCreateAjv: (ajv) => this.#setupAjv(ajv),
 			options: {
 				...Validation.AjvOptions,
+				schemas: [this.services],
 				strictSchema: "log",
 				validateSchema: false,
 				removeAdditional: "failing",
+				invalidDefaults: 'log',
 				code: {
 					source: true,
 					formats: _`Object.assign(
@@ -268,10 +262,6 @@ module.exports = class Validation {
 		ajv.addKeyword({
 			keyword: 'upgrade',
 			schemaType: "object"
-		});
-		ajv.addKeyword({
-			keyword: '$global',
-			schemaType: "boolean"
 		});
 		ajv.addKeyword({
 			keyword: 'csp',
@@ -353,24 +343,14 @@ module.exports = class Validation {
 		return ajv;
 	}
 
-	validate(schema, data, inst) {
-		if (!schema) return data;
-		if (!inst.validate) {
-			schema = Object.assign(fixSchema(schema), this.rootSchema);
-			if (schema.defaults === false) {
-				inst.validate = this.#validatorNoDefaults.compile(schema);
-			} else {
-				inst.validate = this.#validatorWithDefaults.compile(schema);
-			}
-		}
-		// coerceTypes mutates data
-		if (inst.validate(data)) {
+	validate(data) {
+		if (this.#servicesValidator.validate('/services', data)) {
 			return data;
 		} else {
 			const messages = betterAjvErrors({
-				schema,
+				schema: this.services,
 				data,
-				errors: inst.validate.errors
+				errors: this.#servicesValidator.errors
 			});
 			const str = '\n' + messages.map(
 				item => ' ' + item.message.replaceAll(/\{base\}/g, 'data')

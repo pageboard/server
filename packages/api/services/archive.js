@@ -377,7 +377,7 @@ module.exports = class ArchiveService {
 			reset: {
 				title: 'Erase all and save site settings',
 				type: 'object',
-				$ref: "#/definitions/site/properties/data"
+				$ref: "/blocks#/definitions/site/properties/data"
 			},
 			excludes: {
 				title: 'Excluded types',

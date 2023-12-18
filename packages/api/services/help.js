@@ -41,7 +41,7 @@ module.exports = class HelpService {
 				)
 			};
 		} else {
-			schema = this.app.api.getService(req, command)[0];
+			schema = this.app.api.getService(command, true);
 		}
 		return this.doc(req, { command, schema });
 	}

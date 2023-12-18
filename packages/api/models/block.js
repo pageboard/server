@@ -242,7 +242,7 @@ class Block extends Model {
 		}
 		const types = {};
 		const schema = {
-			$id: `/${block.id}/${block.data.version ?? tag}${Block.jsonSchema.$id}`,
+			$id: Block.jsonSchema.$id,
 			definitions: types,
 			type: 'object',
 			discriminator: { propertyName: "type" },
