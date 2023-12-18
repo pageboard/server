@@ -122,8 +122,7 @@ class Block extends Model {
 		} : {
 			type: 'null'
 		};
-
-		if (el.bundle === true) for (const p of ElementKeywords) {
+		for (const p of ElementKeywords) {
 			if (el[p] != null) schema[p] = el[p];
 		}
 		Object.assign(schema.properties, blockProps, standProp, {
