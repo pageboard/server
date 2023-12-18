@@ -152,7 +152,7 @@ module.exports = class Packager {
 		const services = Object.fromEntries(
 			Object.entries(this.app.services).map(([key, group]) => {
 				const entries = Object.entries(group)
-					.filter(([, service]) => service.$lock !== true);
+					.filter(([, service]) => service.$lock !== true && service.$action);
 				if (entries.length) return [key, Object.fromEntries(entries)];
 			}).filter(x => Boolean(x))
 		);
