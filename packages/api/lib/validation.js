@@ -231,6 +231,7 @@ module.exports = class Validation {
 				invalidDefaults: 'log',
 				code: {
 					source: true,
+					optimize: false,
 					formats: _`Object.assign(
 						require("ajv-formats/dist/formats").fullFormats,
 						require('./lib/formats')
