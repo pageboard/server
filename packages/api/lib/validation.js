@@ -379,7 +379,7 @@ module.exports = class Validation {
 				errors: this.#servicesValidator.errors
 			});
 			const str = '\n' + messages.map(
-				item => ' ' + item.message.replaceAll(/\{base\}/g, 'data')
+				item => ' ' + item.message + ' at: ' + item.path.replaceAll(/\{base\}/g, 'data')
 			).join('\n');
 			throw new HttpError.BadRequest(str);
 		}
