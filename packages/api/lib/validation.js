@@ -28,8 +28,20 @@ function fixSchema(schema) {
 				if (schema.format || schema.pattern) {
 					schema.coerce = true;
 				}
-			} else if ('const' in schema) {
+			} else if ('const' in schema && typeof schema.const == "number") {
 				schema.coerce = true;
+			} else if (schema.oneOf?.length > 1) {
+				let bools = 0;
+				let strings = 0;
+				let nulls = 0;
+				for (const item of schema.oneOf) {
+					if (item.type == "string") strings++;
+					else if (typeof item.const == "boolean") bools++;
+					else if (item.type == "null") nulls++;
+				}
+				if (strings == 1 && bools >= 1 && strings + bools + nulls == schema.oneOf.length) {
+					schema.coerce = true;
+				}
 			}
 		}
 	});
@@ -305,13 +317,28 @@ module.exports = class Validation {
 				const { format } = parentSchema;
 				const { parentData, parentDataProperty } = it;
 
-				if ('const' in parentSchema && typeof parentSchema.const == "number") {
+				if (parentSchema.type == 'array') {
+					gen.if(_`${data} instanceof Set`, () => {
+						gen.assign(_`${parentData}[${parentDataProperty}]`, _`Array.from(${data})`);
+					});
+				} else if ('const' in parentSchema && typeof parentSchema.const == "number") {
 					gen.if(_`typeof ${data} == "string" && ${data} != null`, () => {
 						const num = gen.const("num", _`Number(${data})`);
 						gen.if(_`!Number.isNaN(${num})`, () => {
 							gen.assign(_`${parentData}[${parentDataProperty}]`, num);
 						});
 					});
+				} else if (parentSchema.oneOf?.length > 1) {
+					const expr = gen.let('expr');
+					const hasNull = parentSchema.oneOf.find(item => item.type == "null");
+					gen
+						.if(_`typeof ${data} == 'string' && ['true', 'false'].includes(${data})`)
+						.code(_`${expr} = ${data} == 'true'`)
+						.elseIf(_`${data} == null`)
+						.code(hasNull ? _`null` : _`false`)
+						.else()
+						.code(_`${expr} = ${data}`);
+					gen.assign(_`${parentData}[${parentDataProperty}]`, expr);
 				} else if (parentSchema.type == "string") {
 					if (parentSchema.default !== undefined) {
 						gen.if(_`${data} === ""`, () => {
