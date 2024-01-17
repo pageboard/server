@@ -149,18 +149,19 @@ module.exports = class Packager {
 		$pkg.aliases = pkg.aliases;
 		const { eltsMap } = pkg;
 
-		const services = Object.fromEntries(
-			Object.entries(this.app.services).map(([key, group]) => {
-				const entries = Object.entries(group)
-					.filter(([, service]) => service.$lock !== true && service.$action);
-				if (entries.length) return [key, Object.fromEntries(entries)];
-			}).filter(x => Boolean(x))
-		);
+		const { services } = this.app.api.validation;
+		const definitions = {};
+		for (const [name, service] of Object.entries(services.definitions)) {
+			if (service.$lock !== true && service.$action) {
+				definitions[name] = service;
+			}
+		}
 
 		$pkg.bundles.set('services', {
-			scripts: [await this.#bundleSource(
-				site, { name: 'services', source: services }
-			)]
+			scripts: [await this.#bundleSource(site, {
+				name: 'services',
+				source: definitions
+			})]
 		});
 
 		const bundles = Object.entries(pkg.bundles).sort(([na], [nb]) => {

@@ -34,7 +34,7 @@ class Block extends Model {
 
 	static jsonSchema = {
 		type: 'object',
-		$id: '/blocks',
+		$id: '/elements',
 		properties: {
 			id: {
 				title: 'id',
@@ -251,6 +251,7 @@ class Block extends Model {
 		const hrefs = {};
 		// TODO merge csp for each page bundle
 
+		// rootSchema has already been merged into eltsMap
 		for (const [type, element] of Object.entries(eltsMap)) {
 			const hrefsList = [];
 			findHrefs(element, hrefsList);

@@ -43,7 +43,7 @@ module.exports = class ApiModule {
 	get validation() {
 		if (!this.#validation) {
 			const blocks = {
-				$id: '/blocks',
+				$id: '/elements',
 				type: 'object',
 				definitions: {},
 				required: ['type'],
@@ -117,7 +117,7 @@ module.exports = class ApiModule {
 		return data;
 	}
 
-	getService(apiStr, onlySchema) {
+	getService(apiStr) {
 		const [modName, funName] = (apiStr || "").split('.');
 		const mod = this.app.services[modName];
 		if (!modName || !mod) {
@@ -131,19 +131,23 @@ module.exports = class ApiModule {
 			${funName} method not found:
 			${Object.getOwnPropertyNames(mod).sort().join(', ')}
 		`);
-		if (onlySchema) return mod[funName];
-		else return (req, data) => inst[funName](req, data);
+		return [
+			this.app.servicesDefinitions[apiStr],
+			(req, data) => inst[funName](req, data)
+		];
 	}
 
 	async run(req = {}, method, parameters = {}) {
 		const { app } = this;
-		const service = this.getService(method);
+		const [schema, service] = this.getService(method);
 		Log.api("run %s:\n%O", method, parameters);
 		const data = {
 			method,
 			parameters: mergeRecursive({}, parameters)
 		};
-		if (req.site) data.site = req.site;
+		if (!schema.$global && !req.site) {
+			throw new HttpError.BadRequest(method + ' expects site to be defined');
+		}
 		this.validate(data);
 
 		// start a transaction on set trx object on site

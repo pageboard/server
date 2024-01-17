@@ -284,19 +284,13 @@ module.exports = class Pageboard {
 		this.domains.hold(block);
 		try {
 			// get configured pkg with paths to elements definitions
-			console.time("install");
 			const pkg = await this.#installer.install(block, this);
-			console.timeEnd("install");
 			// parse and normalize all elements and build site schema
-			console.time("schemas");
 			const site = await this.api.install(block, pkg);
-			console.timeEnd("schemas");
 			// mount paths
 			await this.statics.install(site, pkg);
 			// build js, css, and compile schema validators
-			console.time("bundles");
 			await this.api.makeBundles(site, pkg);
-			console.timeEnd("bundles");
 			await this.auth.install(site);
 			if (this.dev == false) await this.#installer.clean(site, pkg);
 			site.data.server = pkg.server ?? this.version;
@@ -361,23 +355,25 @@ module.exports = class Pageboard {
 				defined = true;
 				const method = `${name}.${key}`;
 				const schema = {
+					title: desc.title,
 					type: 'object',
 					properties: {
 						method: {
+							title: 'Method',
 							const: method
 						},
-						parameters: desc
+						parameters: { ...desc, title: 'Parameters' }
 					}
 				};
-				if ((desc.$global ?? constructor.$global) !== true) {
-					schema.required = ['site'];
-					schema.properties.site = {
-						type: 'object',
-						properties: {},
-						additionalProperties: true
-					};
+				if (desc.$global == null && constructor.$global != null) {
+					desc.$global = constructor.$global;
 				}
-				delete desc.$global;
+				for (const name of ['$action', '$global', '$lock', 'title', 'description']) {
+					if (desc[name] != null) {
+						schema[name] = desc[name];
+						delete desc[name];
+					}
+				}
 				this.servicesDefinitions[method] = schema;
 			}
 			if (!services[name] && defined) {

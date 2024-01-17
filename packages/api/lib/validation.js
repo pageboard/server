@@ -26,10 +26,10 @@ function fixSchema(schema) {
 				}
 			} else if (schema.type == "string") {
 				if (schema.format || schema.pattern) {
-					schema.coerce = true;
+					schema.$coerce = true;
 				}
 			} else if ('const' in schema && typeof schema.const == "number") {
-				schema.coerce = true;
+				schema.$coerce = true;
 			} else if (schema.oneOf?.length > 1) {
 				let bools = 0;
 				let strings = 0;
@@ -40,7 +40,7 @@ function fixSchema(schema) {
 					else if (item.type == "null") nulls++;
 				}
 				if (strings == 1 && bools >= 1 && strings + bools + nulls == schema.oneOf.length) {
-					schema.coerce = true;
+					schema.$coerce = true;
 				}
 			}
 		}
@@ -171,14 +171,32 @@ module.exports = class Validation {
 
 		this.blocks = fixSchema(blocks);
 		this.services = fixSchema(services);
+		this.readServices = this.#keepDefinitions(this.services, '$action', 'read');
+		this.writeServices = this.#keepDefinitions(this.services, '$action', 'write');
 
 		this.#servicesValidator = this.#setupAjv(
 			new Ajv(this.#createSettings({
 				removeAdditional: false,
 				useDefaults: 'empty',
-				schemas: [this.blocks, this.services]
+				schemas: [this.blocks, this.services, this.readServices, this.writeServices]
 			}))
 		);
+	}
+	#keepDefinitions(schema, key, val) {
+		schema = { ...schema };
+		const { definitions } = schema;
+		delete schema.definitions;
+		const list = [];
+		for (const item of schema.oneOf) {
+			const name = item.$ref.split('/').pop();
+			const def = definitions[name];
+			if (def[key] == val) {
+				list.push({$ref: schema.$id + item.$ref});
+			}
+		}
+		schema.oneOf = list;
+		schema.$id += `?${key}=${val}`;
+		return schema;
 	}
 	#setupAjv(ajv) {
 		AjvFormats(ajv);
@@ -212,7 +230,7 @@ module.exports = class Validation {
 				type: "number"
 			},
 		});
-		// otherwise the `format` keyword would validate before `coerce`
+		// otherwise the `format` keyword would validate before `$coerce`
 		// https://github.com/epoberezkin/ajv/issues/986
 		const rules = ajv.RULES.types.string.rules;
 		rules.unshift(rules.pop());
@@ -224,7 +242,7 @@ module.exports = class Validation {
 			onCreateAjv: (ajv) => this.#setupAjv(ajv),
 			options: {
 				...Validation.AjvOptions,
-				schemas: [this.services],
+				schemas: [this.services, this.readServices, this.writeServices],
 				strictSchema: "log",
 				validateSchema: false,
 				removeAdditional: "failing",
@@ -251,10 +269,12 @@ module.exports = class Validation {
 	}
 	#customKeywords(ajv) {
 		ajv.addKeyword({
+			// used for preparing schema for semafor in write module
 			keyword: '$filter',
 			schemaType: ["string", "object"]
 		});
 		ajv.addKeyword({
+			// used for adding widgets to semafor in write module
 			keyword: '$helper',
 			schemaType: ["string", "object"]
 		});
@@ -263,10 +283,12 @@ module.exports = class Validation {
 			schemaType: "number"
 		});
 		ajv.addKeyword({
+			// used by block API
 			keyword: 'parents',
 			schemaType: "object"
 		});
 		ajv.addKeyword({
+			// API templates fields, allows fusing data into expr
 			keyword: 'templates',
 			schemaType: "object"
 		});
@@ -275,39 +297,57 @@ module.exports = class Validation {
 			schemaType: "object"
 		});
 		ajv.addKeyword({
+			// adds Content-Security-Policy headers
 			keyword: 'csp',
 			schemaType: "object"
 		});
 		ajv.addKeyword({
+			// defines if that type of element can be without parent
 			keyword: 'standalone',
 			schemaType: "boolean"
 		});
 		ajv.addKeyword({
-			keyword: 'output',
-			schemaType: "object"
+			keyword: 'unique',
+			schemaType: "array"
 		});
 		ajv.addKeyword({
+			// required permissions to view that element or its properties
 			keyword: '$lock',
 			schemaType: ["object", "boolean"]
 		});
 		ajv.addKeyword({
+			// a service is either reading or writing data
 			keyword: '$action',
-			schemaType: "string"
+			metaSchema: {
+				enum: ['read', 'write']
+			}
 		});
 		ajv.addKeyword({
+			// sets if it does not depend on a site instance
+			keyword: '$global',
+			schemaType: "boolean"
+		});
+		ajv.addKeyword({
+			// icon for write toolbar
 			keyword: 'icon',
 			schemaType: "string"
 		});
 		ajv.addKeyword({
+			// elements can have context:
+			// https://prosemirror.net/docs/ref/#model.ParseRule.context
+			// elements properties can have context,
+			// in which case the property is shown in write form iif its block
+			// satisfies the given ancestor type
 			keyword: 'context',
 			schemaType: "string"
 		});
 		ajv.addKeyword({
+			// defines prosemirror schema for element content
 			keyword: 'content',
 			schemaType: ["object", "string"]
 		});
 		ajv.addKeyword({
-			keyword: 'coerce',
+			keyword: '$coerce',
 			modifying: true,
 			schemaType: 'boolean',
 			errors: false,
@@ -379,7 +419,14 @@ module.exports = class Validation {
 				errors: this.#servicesValidator.errors
 			});
 			const str = '\n' + messages.map(
-				item => ' ' + item.message + ' at: ' + item.path.replaceAll(/\{base\}/g, 'data')
+				item => {
+					const repl = item.message.replaceAll(/\{base\}/g, 'data');
+					if (repl != item.message) {
+						return ' ' + repl;
+					} else {
+						return ' ' + item.message + ' at: ' + item.path.replaceAll(/\{base\}/g, 'data');
+					}
+				}
 			).join('\n');
 			throw new HttpError.BadRequest(str);
 		}

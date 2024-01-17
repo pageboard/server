@@ -190,7 +190,7 @@ module.exports = class MailModule {
 		required: ['subject', 'to', 'text'],
 		properties: {
 			purpose: {
-				$ref: "/blocks#/definitions/mail_job/properties/data/properties/purpose"
+				$ref: "/elements#/definitions/mail_job/properties/data/properties/purpose"
 			},
 			subject: {
 				title: 'Subject',
@@ -387,7 +387,7 @@ module.exports = class MailModule {
 	static send = {
 		title: 'Send email',
 		$action: 'write',
-		$ref: "/blocks#/definitions/mail_job/properties/data"
+		$ref: "/elements#/definitions/mail_job/properties/data"
 	};
 };
 

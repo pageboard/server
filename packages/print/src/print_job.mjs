@@ -33,7 +33,8 @@ export const print_job = {
 			type: 'string'
 		},
 		response: {
-			title: 'Response',
+			title: 'Job response',
+			$filter: 'hide',
 			type: 'object',
 			properties: {
 				status: {
@@ -49,7 +50,8 @@ export const print_job = {
 			}
 		},
 		order: {
-			title: 'Order',
+			title: 'Order response',
+			$filter: 'hide',
 			type: 'object',
 			nullable: true,
 			properties: {

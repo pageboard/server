@@ -66,7 +66,7 @@ module.exports = class PrerenderModule {
 			pathname = null;
 		}
 		if (this.app.api.check({
-			method: 'page.parse', parameters: { url }, site: req.site
+			method: 'page.parse', parameters: { url }
 		}) === false) {
 			pathname = null;
 		}
