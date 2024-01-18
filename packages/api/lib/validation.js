@@ -30,16 +30,16 @@ function fixSchema(schema) {
 				}
 			} else if ('const' in schema && typeof schema.const == "number") {
 				schema.$coerce = true;
-			} else if (schema.oneOf?.length > 1) {
+			} else if (schema.anyOf?.length > 1) {
 				let bools = 0;
 				let strings = 0;
 				let nulls = 0;
-				for (const item of schema.oneOf) {
+				for (const item of schema.anyOf) {
 					if (item.type == "string") strings++;
 					else if (typeof item.const == "boolean") bools++;
 					else if (item.type == "null") nulls++;
 				}
-				if (strings == 1 && bools >= 1 && strings + bools + nulls == schema.oneOf.length) {
+				if (strings == 1 && bools >= 1 && strings + bools + nulls == schema.anyOf.length) {
 					schema.$coerce = true;
 				}
 			}
@@ -369,9 +369,9 @@ module.exports = class Validation {
 							gen.assign(_`${parentData}[${parentDataProperty}]`, num);
 						});
 					});
-				} else if (parentSchema.oneOf?.length > 1) {
+				} else if (parentSchema.anyOf?.length > 1) {
 					const expr = gen.let('expr');
-					const hasNull = parentSchema.oneOf.find(item => item.type == "null");
+					const hasNull = parentSchema.anyOf.find(item => item.type == "null");
 					gen
 						.if(_`typeof ${data} == 'string' && ['true', 'false'].includes(${data})`)
 						.assign(expr, _`${data} == 'true'`)

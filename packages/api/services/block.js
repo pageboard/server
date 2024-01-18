@@ -361,7 +361,7 @@ module.exports = class BlockService {
 			},
 			content: {
 				title: 'Contents',
-				oneOf: [{
+				anyOf: [{
 					const: false,
 					title: 'No'
 				}, {
