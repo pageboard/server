@@ -168,10 +168,10 @@ module.exports = class Validation {
 		formats: require('./formats')
 	};
 
-	constructor(services, blocks, { filesCache }) {
+	constructor(services, elements, { filesCache }) {
 		this.cacheDir = filesCache;
 
-		this.blocks = fixSchema(blocks);
+		this.elements = fixSchema(elements);
 		this.services = fixSchema(services);
 		this.readServices = this.#keepDefinitions(this.services, '$action', 'read');
 		this.writeServices = this.#keepDefinitions(this.services, '$action', 'write');
@@ -180,7 +180,7 @@ module.exports = class Validation {
 			new Ajv(this.#createSettings({
 				removeAdditional: false,
 				useDefaults: 'empty',
-				schemas: [this.blocks, this.services, this.readServices, this.writeServices]
+				schemas: [this.services, this.elements, this.readServices, this.writeServices]
 			}))
 		);
 	}
@@ -412,14 +412,17 @@ module.exports = class Validation {
 		return ajv;
 	}
 
-	validate(data) {
-		if (this.#servicesValidator.validate('/services', data)) {
+	validate(data, site) {
+		const validator = site ?
+			site.$modelClass.getValidator().ajv
+			: this.#servicesValidator;
+		if (validator.validate('/services', data)) {
 			return data;
 		} else {
 			const messages = betterAjvErrors({
 				schema: this.services,
 				data,
-				errors: this.#servicesValidator.errors
+				errors: validator.errors
 			});
 			const str = '\n' + messages.map(
 				item => {

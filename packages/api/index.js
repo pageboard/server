@@ -42,7 +42,7 @@ module.exports = class ApiModule {
 
 	get validation() {
 		if (!this.#validation) {
-			const blocks = {
+			const elements = {
 				$id: '/elements',
 				type: 'object',
 				definitions: {},
@@ -53,8 +53,8 @@ module.exports = class ApiModule {
 			for (const [name, el] of Object.entries(this.app.elements)) {
 				el.name = name;
 				el.contents = Block.normalizeContentSpec(el.contents);
-				blocks.definitions[name] = Block.elementToSchema(el);
-				blocks.oneOf.push({ $ref: `#/definitions/${name}` });
+				elements.definitions[name] = Block.elementToSchema(el);
+				elements.oneOf.push({ $ref: `#/definitions/${name}` });
 			}
 
 			const services = {
@@ -67,7 +67,7 @@ module.exports = class ApiModule {
 					$ref: '#/definitions/' + name
 				}))
 			};
-			this.#validation = new Validation(services, blocks, this.app.dirs);
+			this.#validation = new Validation(services, elements, this.app.dirs);
 		}
 		return this.#validation;
 	}
@@ -103,17 +103,17 @@ module.exports = class ApiModule {
 		return this.#packager.makeBundles(site, pkg);
 	}
 
-	check(data) {
+	check(data, site) {
 		try {
-			this.validation.validate(data);
+			this.validation.validate(data, site);
 			return true;
 		} catch (err) {
 			return false;
 		}
 	}
 
-	validate(data) {
-		this.validation.validate(data);
+	validate(data, site) {
+		this.validation.validate(data, site);
 		return data;
 	}
 
@@ -148,7 +148,7 @@ module.exports = class ApiModule {
 		if (!schema.$global && !req.site) {
 			throw new HttpError.BadRequest(method + ' expects site to be defined');
 		}
-		this.validate(data);
+		this.validate(data, req.site);
 
 		// start a transaction on set trx object on site
 		let hadTrx = false;
