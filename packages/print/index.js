@@ -104,7 +104,7 @@ module.exports = class PrintModule {
 		required: ['printer'],
 		properties: {
 			printer: {
-				$ref: "#/definitions/print_job/properties/data/properties/printer"
+				$ref: "/elements#/definitions/print_job/properties/data/properties/printer"
 			}
 		}
 	};
@@ -135,7 +135,7 @@ module.exports = class PrintModule {
 	static run = {
 		title: 'Run print task',
 		$action: 'write',
-		$ref: "#/definitions/print_job/properties/data"
+		$ref: "/elements#/definitions/print_job/properties/data"
 	};
 
 	async #localJob(req, block) {
@@ -228,6 +228,9 @@ module.exports = class PrintModule {
 			amount: 1,
 			runlists: []
 		};
+		if (options.discount_code) {
+			printProduct.discount_code = options.discount;
+		}
 		let coverPaper;
 		if (options.cover.url) {
 			const { item: coverPdf } = await req.run('block.find', {

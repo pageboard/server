@@ -207,14 +207,8 @@ module.exports = class LoginModule {
 				pattern: /^[\s\d]{1,10}$/.source
 			},
 			grant: {
-				title: 'Grant',
-				type: 'string',
-				format: 'grant',
-				nullable: true,
-				$filter: {
-					name: 'schema',
-					path: 'settings.properties.grants.items'
-				}
+				title: 'Grants',
+				$ref: "/elements#/definitions/settings/properties/data/properties/grants"
 			},
 			maxAge: {
 				title: 'Max Age',

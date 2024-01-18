@@ -39,6 +39,7 @@ module.exports = class Pageboard {
 	#plugins;
 	elements = {};
 	services = {};
+	servicesDefinitions = {};
 	cwd = process.cwd();
 
 	static parse(args) {
@@ -283,19 +284,13 @@ module.exports = class Pageboard {
 		this.domains.hold(block);
 		try {
 			// get configured pkg with paths to elements definitions
-			console.time("install");
 			const pkg = await this.#installer.install(block, this);
-			console.timeEnd("install");
 			// parse and normalize all elements and build site schema
-			console.time("schemas");
 			const site = await this.api.install(block, pkg);
-			console.timeEnd("schemas");
 			// mount paths
 			await this.statics.install(site, pkg);
 			// build js, css, and compile schema validators
-			console.time("bundles");
 			await this.api.makeBundles(site, pkg);
-			console.timeEnd("bundles");
 			await this.auth.install(site);
 			if (this.dev == false) await this.#installer.clean(site, pkg);
 			site.data.server = pkg.server ?? this.version;
@@ -350,14 +345,36 @@ module.exports = class Pageboard {
 			const { services } = this;
 			const service = services[name] ?? {};
 			let defined = false;
-			for (const key of Object.getOwnPropertyNames(constructor)) {
+			for (const key of Object.getOwnPropertyNames(Object.getPrototypeOf(plugin))) {
+				if (key == 'constructor') continue;
 				const desc = constructor[key];
-				if (!key.startsWith('$')) {
-					if (desc == null || typeof desc != "object") continue;
-					if (typeof plugin[key] != "function") continue;
-					defined = true;
-				}
+				if (!desc) continue;
+				const func = plugin[key];
+				if (typeof func != "function") continue;
 				service[key] = desc;
+				defined = true;
+				const method = `${name}.${key}`;
+				const schema = {
+					title: desc.title,
+					type: 'object',
+					properties: {
+						method: {
+							title: 'Method',
+							const: method
+						},
+						parameters: { ...desc, title: 'Parameters' }
+					}
+				};
+				if (desc.$global == null && constructor.$global != null) {
+					desc.$global = constructor.$global;
+				}
+				for (const name of ['$action', '$global', '$lock', 'title', 'description']) {
+					if (desc[name] != null) {
+						schema[name] = desc[name];
+						delete desc[name];
+					}
+				}
+				this.servicesDefinitions[method] = schema;
 			}
 			if (!services[name] && defined) {
 				services[name] = service;
@@ -414,7 +431,7 @@ module.exports = class Pageboard {
 					method: err.method,
 					message: err.message
 				},
-				content: err.content ?? err.toString()
+				content: err.content ?? err.toString() // FIXME content is multilang ?
 			}
 		};
 		if (!res.headersSent) res.status(code).send(obj);
@@ -427,7 +444,8 @@ module.exports = class Pageboard {
 		}
 		if (code >= 400) {
 			this.log(req, res, () => {
-				res.sendStatus(code);
+				res.status(code);
+				res.send("");
 			});
 		} else {
 			res.sendStatus(code);

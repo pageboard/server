@@ -5,7 +5,8 @@ export const mail_job = {
 	required: ['url', 'to'],
 	properties: {
 		response: {
-			title: 'Response',
+			title: 'Job response',
+			$filter: 'hide',
 			type: 'object',
 			properties: {
 				status: {

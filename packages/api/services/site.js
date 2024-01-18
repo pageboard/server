@@ -156,7 +156,7 @@ module.exports = class SiteService {
 				format: 'id'
 			},
 			data: {
-				$ref: "#/definitions/site/properties/data"
+				$ref: "/elements#/definitions/site/properties/data"
 			}
 		}
 	};
@@ -178,7 +178,7 @@ module.exports = class SiteService {
 				format: 'id'
 			},
 			data: {
-				$ref: "#/definitions/site/properties/data"
+				$ref: "/elements#/definitions/site/properties/data"
 			}
 		}
 	};
@@ -213,7 +213,7 @@ module.exports = class SiteService {
 	static update = {
 		title: 'Update site',
 		$action: 'write',
-		$ref: "#/definitions/site/properties/data",
+		$ref: "/elements#/definitions/site/properties/data",
 		$global: false
 	};
 

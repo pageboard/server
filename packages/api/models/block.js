@@ -34,7 +34,7 @@ class Block extends Model {
 
 	static jsonSchema = {
 		type: 'object',
-		$id: '/blocks',
+		$id: '/elements',
 		properties: {
 			id: {
 				title: 'id',
@@ -122,8 +122,7 @@ class Block extends Model {
 		} : {
 			type: 'null'
 		};
-
-		if (el.bundle === true) for (const p of ElementKeywords) {
+		for (const p of ElementKeywords) {
 			if (el[p] != null) schema[p] = el[p];
 		}
 		Object.assign(schema.properties, blockProps, standProp, {
@@ -242,7 +241,7 @@ class Block extends Model {
 		}
 		const types = {};
 		const schema = {
-			$id: `/${block.id}/${block.data.version ?? tag}${Block.jsonSchema.$id}`,
+			$id: Block.jsonSchema.$id,
 			definitions: types,
 			type: 'object',
 			discriminator: { propertyName: "type" },
@@ -252,6 +251,7 @@ class Block extends Model {
 		const hrefs = {};
 		// TODO merge csp for each page bundle
 
+		// rootSchema has already been merged into eltsMap
 		for (const [type, element] of Object.entries(eltsMap)) {
 			const hrefsList = [];
 			findHrefs(element, hrefsList);

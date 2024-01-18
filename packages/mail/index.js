@@ -84,7 +84,8 @@ module.exports = class MailModule {
 		title: 'Process report-to email',
 		$lock: true,
 		$action: 'write',
-		additionalProperties: true
+		additionalProperties: true,
+		properties: { /* TODO */ }
 	};
 
 	async receive(req, data) {
@@ -136,7 +137,8 @@ module.exports = class MailModule {
 		title: 'Receive email',
 		$lock: true,
 		$action: 'write',
-		additionalProperties: true
+		additionalProperties: true,
+		properties: { /* TODO */ }
 	};
 
 	async to(req, data) {
@@ -188,7 +190,7 @@ module.exports = class MailModule {
 		required: ['subject', 'to', 'text'],
 		properties: {
 			purpose: {
-				$ref: "#/definitions/mail_job/properties/data/properties/purpose"
+				$ref: "/elements#/definitions/mail_job/properties/data/properties/purpose"
 			},
 			subject: {
 				title: 'Subject',
@@ -385,7 +387,7 @@ module.exports = class MailModule {
 	static send = {
 		title: 'Send email',
 		$action: 'write',
-		$ref: "#/definitions/mail_job/properties/data"
+		$ref: "/elements#/definitions/mail_job/properties/data"
 	};
 };
 

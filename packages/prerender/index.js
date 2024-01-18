@@ -65,10 +65,9 @@ module.exports = class PrerenderModule {
 		if (lang && !site.data.languages?.includes(lang)) {
 			pathname = null;
 		}
-		if (this.app.api.validate({
-			type: 'string',
-			format: 'page'
-		}, url) === false) {
+		if (this.app.api.check({
+			method: 'page.parse', parameters: { url }
+		}) === false) {
 			pathname = null;
 		}
 		return {

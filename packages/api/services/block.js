@@ -93,8 +93,6 @@ module.exports = class BlockService {
 	};
 
 	async search(req, data) {
-		// TODO data.id or data.parent.id or data.child.id must be set
-		// currently the check filterSub -> boolean is only partially applied
 		const { site, trx, ref, raw, fun, Block, Href } = req;
 		const language = req.call('translate.lang', data);
 		let { parents } = data;

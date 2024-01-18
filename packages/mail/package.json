@@ -19,7 +19,7 @@
   "dependencies": {
     "addressparser": "^1.0.1",
     "busboy": "^1.6.0",
-    "nodemailer": "^6.9.6",
+    "nodemailer": "^6.9.7",
     "nodemailer-postmark-transport": "^5.2.1"
   }
 }
