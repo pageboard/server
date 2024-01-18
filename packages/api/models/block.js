@@ -240,7 +240,7 @@ class Block extends Model {
 			throw new Error("missing block.id\n" + JSON.stringify(block));
 		}
 		const types = {};
-		const schema = {
+		const elements = {
 			$id: Block.jsonSchema.$id,
 			definitions: types,
 			type: 'object',
@@ -257,7 +257,7 @@ class Block extends Model {
 			findHrefs(element, hrefsList);
 			if (hrefsList.length) hrefs[type] = hrefsList;
 			types[type] = Block.elementToSchema(element);
-			schema.oneOf.push({ $ref: `#/definitions/${type}` });
+			elements.oneOf.push({ $ref: `#/definitions/${type}` });
 		}
 
 		class DomainBlock extends Block {
@@ -265,7 +265,7 @@ class Block extends Model {
 			static uniqueTag() {
 				return this.jsonSchema.$id;
 			}
-			static jsonSchema = schema;
+			static jsonSchema = elements;
 
 			static #types = types;
 			static schema(path) {
