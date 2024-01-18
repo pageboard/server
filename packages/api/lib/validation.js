@@ -84,6 +84,12 @@ class AjvValidatorExt extends AjvValidator {
 			}
 		}));
 
+		// schema compilation works but rebuilding ajv instance with $ref does not
+		obj.normalValidator = this.compileNormalValidator(schema);
+		const patchedSchema = Object.assign({}, schema);
+		obj.patchValidator = this.compilePatchValidator(patchedSchema);
+
+		/*
 		const patchPath = cachePath + '-patch.js';
 		try {
 			if (!pkg.cache || !(await exists(patchPath))) {
@@ -115,6 +121,7 @@ class AjvValidatorExt extends AjvValidator {
 			const normalCode = ajvStandalone.default(this.ajv, obj.normalValidator);
 			await fs.writeFile(normalPath, normalCode);
 		}
+		*/
 	}
 
 	getValidator(modelClass, jsonSchema, isPatchObject) {
