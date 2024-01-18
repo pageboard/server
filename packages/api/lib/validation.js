@@ -59,6 +59,8 @@ class AjvValidatorExt extends AjvValidator {
 		const schema = mclass.jsonSchema = fixSchema(mclass.jsonSchema);
 		const cachePath = Path.join(
 			this.#cacheDir,
+			pkg.name,
+			pkg.tag,
 			schema.$id
 		);
 		const cacheDir = Path.dirname(cachePath);
