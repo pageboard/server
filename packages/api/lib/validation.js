@@ -374,11 +374,12 @@ module.exports = class Validation {
 					const hasNull = parentSchema.oneOf.find(item => item.type == "null");
 					gen
 						.if(_`typeof ${data} == 'string' && ['true', 'false'].includes(${data})`)
-						.code(_`${expr} = ${data} == 'true'`)
+						.assign(expr, _`${data} == 'true'`)
 						.elseIf(_`${data} == null`)
-						.code(hasNull ? _`null` : _`false`)
+						.assign(expr, hasNull ? _`null` : _`false`)
 						.else()
-						.code(_`${expr} = ${data}`);
+						.assign(expr, _`${data}`)
+						.endIf();
 					gen.assign(_`${parentData}[${parentDataProperty}]`, expr);
 				} else if (parentSchema.type == "string") {
 					if (parentSchema.default !== undefined) {
