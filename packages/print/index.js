@@ -34,7 +34,7 @@ module.exports = class PrintModule {
 			title: 'Remote'
 		});
 		const { print_job } = await import('./src/print_job.mjs');
-		if (list.length == 0) print_job.properties.printer.anyOf = list;
+		if (list.length > 0) print_job.properties.printer.anyOf = list;
 		else console.info("print: disabled");
 		return { print_job };
 	}
