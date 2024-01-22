@@ -46,8 +46,8 @@ module.exports = class Packager {
 		sortPriority(elements, subSort);
 
 		const bundleMap = pkg.bundleMap = new Map();
-		const elts = Object.assign({}, this.app.elements);
-		const names = Object.keys(this.app.elements);
+		const elts = structuredClone(this.app.elements);
+		const names = Object.keys(elts);
 		const context = {};
 		for (const eltObj of elements) {
 			const { path } = eltObj;
