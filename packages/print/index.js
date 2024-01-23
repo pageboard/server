@@ -175,7 +175,8 @@ module.exports = class PrintModule {
 		});
 		pdfUrl.searchParams.set('pdf', 'printer');
 		runJob(req, block, async () => {
-			await this.#download(req, pdfUrl, this.opts.storage);
+			const { path } = await this.#download(req, pdfUrl, this.app.dirs.tmp);
+			await fs.promises.rename(path, Path.join(this.opts.storage, Path.basename(path)));
 			response.status = 200;
 		});
 	}
