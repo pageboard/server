@@ -305,10 +305,11 @@ module.exports = class BlockService {
 		}
 
 		const obj = {
-			items: rows,
+			lang: language.lang,
 			count,
 			offset: data.offset,
-			limit: data.limit
+			limit: data.limit,
+			items: rows
 		};
 		if (data.parent?.type?.length) obj.item = (await this.find(req, {
 			...data.parent,
@@ -676,7 +677,7 @@ module.exports = class BlockService {
 		data.limit = 1;
 		data.offset = 0;
 		const obj = await this.search(req, data);
-		const ret = { hrefs: obj.hrefs };
+		const ret = { hrefs: obj.hrefs, lang: obj.lang };
 		if (obj.items.length == 0) ret.status = 404;
 		else ret.item = obj.items[0];
 		return ret;
