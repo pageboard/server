@@ -294,13 +294,12 @@ module.exports = class MailModule {
 		if (!mailer) {
 			throw new Error("Unknown mailer purpose " + data.purpose);
 		}
-		const { url, lang, ext } = req.call('page.parse', data);
-		if (ext && ext != 'mail') {
-			throw new HttpError.BadRequest('data.url extension must be "mail"');
-		}
 		const { item: emailPage } = await req.run('block.find', {
 			type: 'mail',
-			data: { url, lang }
+			data: {
+				url: new URL(data.url, req.site.$url).pathname,
+				lang: data.lang
+			}
 		});
 		if (!emailPage) throw new HttpError.NotFound("email page missing");
 
@@ -352,7 +351,7 @@ module.exports = class MailModule {
 		runJob(req, block, async () => {
 			const emailUrl = req.call('page.format', {
 				url: emailPage.data.url,
-				lang,
+				lang: data.lang,
 				ext: 'mail'
 			});
 			for (const [key, val] of Object.entries(data.body)) {
