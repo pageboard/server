@@ -3,6 +3,9 @@ export const print_job = {
 	required: ['url', 'printer'],
 	bundle: true,
 	standalone: true,
+	$lock: {
+		'data.options.discount': 'webmaster'
+	},
 	properties: {
 		url: {
 			title: 'PDF page',
