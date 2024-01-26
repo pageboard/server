@@ -111,13 +111,13 @@ module.exports = class PrintModule {
 
 	async again(req, data) {
 		const block = await req.run('block.get', data);
-		const { response } = block.data;
+		const { response, printer } = block.data;
 		let job;
-		if (data.printer == "remote") {
+		if (printer == "remote") {
 			job = this.#remoteJob;
-		} else if (data.printer == "storage") {
+		} else if (printer == "storage") {
 			job = this.#storageJob;
-		} else if (data.printer == "local") {
+		} else if (printer == "local") {
 			job = this.#localJob;
 		}
 		await runJob(req, block, (req, block) => job.call(this, req, block));
@@ -140,19 +140,19 @@ module.exports = class PrintModule {
 	};
 
 	async run(req, data) {
-		const response = {};
 		const { item: block } = await req.run('block.add', {
 			// w/a remote#customer_reference limit
 			id: await req.Block.genId(7),
 			type: 'print_job',
-			data: { ...data, response }
+			data: { ...data, response: {} }
 		});
+		const { response, printer } = block.data;
 		let job;
-		if (data.printer == "remote") {
+		if (printer == "remote") {
 			job = this.#remoteJob;
-		} else if (data.printer == "storage") {
+		} else if (printer == "storage") {
 			job = this.#storageJob;
-		} else if (data.printer == "local") {
+		} else if (printer == "local") {
 			job = this.#localJob;
 		}
 		await runJob(req, block, (req, block) => job.call(this, req, block));
