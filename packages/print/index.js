@@ -110,7 +110,7 @@ module.exports = class PrintModule {
 	};
 
 	async again(req, data) {
-		const { item: block } = await req.run('block.get', data);
+		const block = await req.run('block.get', data);
 		const { response } = block.data;
 		let job;
 		if (data.printer == "remote") {
