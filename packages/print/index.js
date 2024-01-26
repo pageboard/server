@@ -109,6 +109,36 @@ module.exports = class PrintModule {
 		}
 	};
 
+	async again(req, data) {
+		const { item: block } = await req.run('block.get', data);
+		const { response } = block.data;
+		let job;
+		if (data.printer == "remote") {
+			job = this.#remoteJob;
+		} else if (data.printer == "storage") {
+			job = this.#storageJob;
+		} else if (data.printer == "local") {
+			job = this.#localJob;
+		}
+		await runJob(req, block, (req, block) => job.call(this, req, block));
+		if (response.status != null && response.status != 200) {
+			throw new HttpError[response.status](response.text);
+		}
+		return block;
+	}
+	static again = {
+		title: 'Rerun print task',
+		$action: 'write',
+		required: ['id'],
+		properties: {
+			id: {
+				title: 'id',
+				type: 'string',
+				format: 'id'
+			}
+		}
+	};
+
 	async run(req, data) {
 		const response = {};
 		const { item: block } = await req.run('block.add', {
