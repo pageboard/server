@@ -401,7 +401,7 @@ async function runJob(req, block, job) {
 		return result;
 	} catch (ex) {
 		block.data.response.status = ex.statusCode ?? 500;
-		block.data.response.text = ex.message;
+		block.data.response.text = ex.message ?? null;
 	} finally {
 		await req.run('block.save', {
 			id: block.id,
