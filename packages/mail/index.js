@@ -380,6 +380,7 @@ module.exports = class MailModule {
 			mailOpts.attachments = mailObj.attachments;
 			await req.run('mail.to', mailOpts);
 			block.data.response.status = 200;
+			block.data.response.text = 'OK';
 		});
 		return block;
 	}
