@@ -367,6 +367,7 @@ module.exports = class PrintModule {
 					price: ret.total_price
 				};
 				response.status = 200;
+				response.text = 'OK';
 			} finally {
 				for (const file of clean) await fs.promises.unlink(file);
 			}
