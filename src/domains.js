@@ -161,9 +161,34 @@ module.exports = class Domains {
 
 		req.locked = list => app.auth.locked(req, list);
 		req.tag = (...args) => app.cache.tag(...args)(req, res);
+
 		if (!req.get) req.get = str => {
 			console.info("Cannot use req.get in cli mode");
 			return null;
+		};
+
+		req.try = async (block, job) => {
+			const { response } = block.data;
+			try {
+				const result = await job(req, block);
+				response.status = 200;
+				response.text = 'OK';
+				return result;
+			} catch (ex) {
+				response.status = ex.statusCode ?? 500;
+				response.text = ex.message ?? null;
+				throw ex;
+			} finally {
+				await req.run('block.save', {
+					id: block.id,
+					type: block.type,
+					data: block.data
+				});
+			}
+		};
+		req.afters = [];
+		req.postpone = fn => {
+			req.afters.push(fn);
 		};
 
 		res.return = data => {
