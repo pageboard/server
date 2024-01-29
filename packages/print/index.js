@@ -200,6 +200,30 @@ module.exports = class PrintModule {
 		}));
 	}
 
+	async couriers(req, { iso_code }) {
+		const { remote: conf } = this.opts;
+		if (!conf) throw new HttpError.BadRequest("No remote printer");
+		const agent = new BearerAgent(this.opts, conf.url);
+
+		agent.bearer = (await agent.fetch("/login", "post", {
+			email: conf.email,
+			password: conf.password
+		})).token;
+
+		return agent.fetch(`/data/deliveries-by-courier/${iso_code}`);
+	}
+	static couriers = {
+		title: 'List couriers',
+		$action: 'read',
+		$global: true,
+		required: ['iso_code'],
+		properties: {
+			iso_code: {
+				$ref: "/elements#/definitions/print_job/properties/data/properties/delivery/properties/iso_code"
+			}
+		}
+	};
+
 	async #remoteJob(req, block) {
 		const { remote: conf } = this.opts;
 		if (!conf) throw new HttpError.BadRequest("No remote printer");
