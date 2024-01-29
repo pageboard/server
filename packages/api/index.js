@@ -183,10 +183,15 @@ module.exports = class ApiModule {
 				if (hadTrx) {
 					req.trx = await transaction.start(app.database.tenant(locals.tenant));
 				} else {
-					// end of everything
+					// top-lost run call
 					delete req.trx;
-					for (const fn of req.afters) {
-						await fn();
+					const { afters } = req;
+					if (afters) {
+						Promise.resolve().then(async () => {
+							while (afters.length) {
+								await afters.shift()();
+							}
+						});
 					}
 				}
 			}
