@@ -387,7 +387,7 @@ module.exports = class MailModule {
 	};
 
 	async again(req, data) {
-		const { item: block } = await req.run('block.get', data);
+		const block = await req.run('block.get', data);
 		await req.try(block, (req, block) => this.#sendJob(req, block));
 		return block;
 	}
