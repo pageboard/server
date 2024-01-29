@@ -240,7 +240,7 @@ module.exports = class PrintModule {
 		const couriers = await agent.fetch(`/data/deliveries-by-courier/${delivery.iso_code}`);
 		obj.courier = findCourier(couriers, delivery.courier)?.courier;
 		if (!obj.courier) throw new HttpError.NotFound(
-			`No courier found for ${delivery.iso_code}`
+			`No courier found for "${delivery.courier}" to "${delivery.iso_code}"`
 		);
 
 		const { item: pdf } = await req.run('block.find', {
@@ -438,19 +438,8 @@ module.exports = class PrintModule {
 
 function findCourier(list, type) {
 	const name = {
-		express: 'express',
-		standard: 'courier'
+		express: 'courier',
+		standard: 'letter'
 	}[type];
-	const item = list.find(item => item.courier.includes(name));
-	if (!item) {
-		if (type != 'express') {
-			return findCourier(list, 'standard');
-		}
-		else {
-			console.warn("Couldn't find courier, using first in the list", list[0]);
-			return list[0];
-		}
-	} else {
-		return item;
-	}
+	return list.find(item => item.courier.includes(name));
 }
