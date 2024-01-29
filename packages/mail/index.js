@@ -349,7 +349,7 @@ module.exports = class MailModule {
 
 		const mailObj = await response.json();
 		Object.assign(mailOpts, {
-			subject: data.subject || mailObj.title,
+			subject: mailObj.title,
 			html: mailObj.html,
 			text: mailObj.text,
 			attachments: mailObj.attachments

@@ -93,12 +93,6 @@ export const mail_job = {
 				name: 'datalist',
 				url: '/.api/languages'
 			}
-		},
-		subject: {
-			title: 'Subject',
-			description: 'Defaults to mail page title',
-			type: 'string',
-			nullable: true
 		}
 	}
 };
