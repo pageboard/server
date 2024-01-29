@@ -152,13 +152,16 @@ module.exports = class ApiModule {
 
 		// start a transaction on set trx object on site
 		let hadTrx = false;
-		const { locals = { } } = req.res || { };
+		const { locals = {} } = req.res || {};
+		if (req.trx?.isCompleted()) {
+			req.trx = null;
+		}
 
 		if (req.trx) {
 			hadTrx = true;
 		} else {
 			req.trx = await transaction.start(app.database.tenant(locals.tenant));
-			req.trx.req = req;
+			req.trx.req = req; // needed by objection hooks
 		}
 		Object.assign(req, { Block, Href, ref, val, raw, fun });
 
