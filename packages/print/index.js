@@ -111,19 +111,13 @@ module.exports = class PrintModule {
 
 	async again(req, data) {
 		const block = await req.run('block.get', data);
-		const { response, printer } = block.data;
-		let job;
-		if (printer == "remote") {
-			job = this.#remoteJob;
-		} else if (printer == "storage") {
-			job = this.#storageJob;
-		} else if (printer == "local") {
-			job = this.#localJob;
-		}
-		await runJob(req, block, (req, block) => job.call(this, req, block));
-		if (response.status != null && response.status != 200) {
-			throw new HttpError[response.status](response.text);
-		}
+		const job = {
+			remote: this.#remoteJob,
+			storage: this.#storageJob,
+			local: this.#localJob
+		}[block.data.printer];
+
+		await req.try(block, (req, block) => job.call(this, req, block));
 		return block;
 	}
 	static again = {
@@ -146,19 +140,13 @@ module.exports = class PrintModule {
 			type: 'print_job',
 			data: { ...data, response: {} }
 		});
-		const { response, printer } = block.data;
-		let job;
-		if (printer == "remote") {
-			job = this.#remoteJob;
-		} else if (printer == "storage") {
-			job = this.#storageJob;
-		} else if (printer == "local") {
-			job = this.#localJob;
-		}
-		await runJob(req, block, (req, block) => job.call(this, req, block));
-		if (response.status != null && response.status != 200) {
-			throw new HttpError[response.status](response.text);
-		}
+		const job = {
+			remote: this.#remoteJob,
+			storage: this.#storageJob,
+			local: this.#localJob
+		}[block.data.printer];
+
+		await req.try(block, (req, block) => job.call(this, req, block));
 		return block;
 	}
 
@@ -169,7 +157,7 @@ module.exports = class PrintModule {
 	};
 
 	async #localJob(req, block) {
-		const { url, lang, options, response } = block.data;
+		const { url, lang, options } = block.data;
 		const pdfUrl = req.call('page.format', {
 			url, lang, ext: 'pdf'
 		});
@@ -180,7 +168,7 @@ module.exports = class PrintModule {
 			throw new HttpError.NotFound("Printer not found");
 		}
 
-		runJob(req, block, async () => {
+		req.postpone(() => req.try(block, async () => {
 			const { path } = await this.#download(req, pdfUrl, this.app.dirs.tmp);
 			try {
 				const ret = await cups.printFile(path, {
@@ -188,15 +176,14 @@ module.exports = class PrintModule {
 					printerOptions: options
 				});
 				if (ret.stdout) console.info(ret.stdout);
-				response.status = 200;
 			} finally {
 				await fs.promises.unlink(path);
 			}
-		});
+		}));
 	}
 
 	async #storageJob(req, block) {
-		const { url, lang, response } = block.data;
+		const { url, lang } = block.data;
 		if (!this.opts.storage) {
 			throw new HttpError.BadRequest("No storage printer");
 		}
@@ -204,11 +191,13 @@ module.exports = class PrintModule {
 			url, lang, ext: 'pdf'
 		});
 		pdfUrl.searchParams.set('pdf', 'printer');
-		runJob(req, block, async () => {
+		req.postpone(() => req.try(block, async () => {
 			const { path } = await this.#download(req, pdfUrl, this.app.dirs.tmp);
-			await fs.promises.rename(path, Path.join(this.opts.storage, Path.basename(path)));
-			response.status = 200;
-		});
+			await fs.promises.rename(
+				path,
+				Path.join(this.opts.storage, Path.basename(path))
+			);
+		}));
 	}
 
 	async #remoteJob(req, block) {
@@ -221,20 +210,14 @@ module.exports = class PrintModule {
 			password: conf.password
 		})).token;
 
-		const { options, delivery, response } = block.data;
+		const { options, delivery } = block.data;
+		const obj = { agent };
 
 		const couriers = await agent.fetch(`/data/deliveries-by-courier/${delivery.iso_code}`);
-		const courier = couriers.find(item => {
-			if (delivery.courier == "express") {
-				if (item.courier.includes("express")) {
-					return item;
-				}
-			} else if (delivery.courier == "standard") {
-				if (item.courier == "courier" || item.courier.includes("courier")) {
-					return item;
-				}
-			}
-		});
+		obj.courier = findCourier(couriers, delivery.courier)?.courier;
+		if (!obj.courier) throw new HttpError.NotFound(
+			`No courier found for ${delivery.iso_code}`
+		);
 
 		const { item: pdf } = await req.run('block.find', {
 			type: 'pdf',
@@ -244,6 +227,25 @@ module.exports = class PrintModule {
 			}
 		});
 		if (!pdf) throw new HttpError.NotFound('Content PDF not found');
+		obj.pdf = pdf;
+		if (options.cover.url) {
+			const { item: coverPdf } = await req.run('block.find', {
+				type: 'pdf',
+				data: {
+					url: new URL(options.cover.url, req.site.$url).pathname,
+					lang: block.data.lang
+				}
+			});
+			if (!coverPdf) throw new HttpError.NotFound('Cover PDF not found');
+			obj.coverPdf = coverPdf;
+		}
+
+		req.fork((req, block) => this.#remoteCall(req, block, obj), block);
+		return block;
+	}
+
+	async #remoteCall(req, block, { agent, pdf, coverPdf, courier }) {
+		const { options } = block.data;
 		const pdfUrl = req.call('page.format', {
 			url: block.data.url,
 			lang: block.data.lang,
@@ -259,30 +261,18 @@ module.exports = class PrintModule {
 			amount: 1,
 			runlists: []
 		};
-		if (options.discount_code) {
-			printProduct.discount_code = options.discount;
-		}
-		let coverPaper;
-		if (options.cover.url) {
-			const { item: coverPdf } = await req.run('block.find', {
-				type: 'pdf',
-				data: {
-					url: new URL(options.cover.url, req.site.$url).pathname,
-					lang: block.data.lang
-				}
-			});
-			if (!coverPdf) throw new HttpError.NotFound('Cover PDF not found');
-			coverPaper = coverPdf.data.paper;
+		if (coverPdf) {
 			const coverUrl = req.call('page.format', {
 				url: options.cover.url,
 				lang: block.data.lang,
 				ext: 'pdf'
 			});
 			coverUrl.searchParams.set('pdf', 'printer');
-
 			printProduct.cover_pdf = coverUrl;
 		}
-
+		if (options.discount_code) {
+			printProduct.discount_code = options.discount;
+		}
 		const products = [printProduct];
 		if (options.additionalProduct) {
 			products.push({
@@ -296,83 +286,79 @@ module.exports = class PrintModule {
 		const order = {
 			customer_reference: block.id,
 			delivery: {
-				...delivery,
-				courier: courier?.courier ?? "courier"
+				...block.data.delivery,
+				courier
 			},
 			products
 		};
+		const clean = [];
 
-		runJob(req, block, async () => {
-			const clean = [];
+		const pdfRun = await this.#downloadPublic(req, printProduct.pdf);
+		clean.push(pdfRun.path);
+		printProduct.pdf = pdfRun.href;
 
-			const pdfRun = await this.#downloadPublic(req, printProduct.pdf);
-			clean.push(pdfRun.path);
-			printProduct.pdf = pdfRun.href;
+		const { paper } = pdf.data;
 
-			const { paper } = pdf.data;
-
-			if (printProduct.cover_pdf) {
-				// spine api
-				if (pdfRun.count) {
-					const ret = await agent.fetch('/calculate-spine', "post", {
-						data: {
-							pages_count: pdfRun.count,
-							sides: 2,
-							content_paper_id: options.content.paper,
-							cover_paper_id: options.cover.paper
-						}
-					});
-					if (ret.status != 'ok') {
-						throw new HttpError.BadRequest(ret.msg);
+		if (printProduct.cover_pdf) {
+			// spine api
+			if (pdfRun.count) {
+				const ret = await agent.fetch('/calculate-spine', "post", {
+					data: {
+						pages_count: pdfRun.count,
+						sides: 2,
+						content_paper_id: options.content.paper,
+						cover_paper_id: options.cover.paper
 					}
-					paper.fold ??= {};
-					paper.fold.width = parseFloat(ret.spine_width);
-					printProduct.cover_pdf.searchParams.set('foldWidth', paper.fold.width);
-				} else {
-					console.warn("Missing pdf page count");
-				}
-				const coverRun = await this.#downloadPublic(req, printProduct.cover_pdf);
-				clean.push(coverRun.path);
-				printProduct.cover_pdf = coverRun.href;
-				printProduct.runlists.push({
-					tag: "cover",
-					sides: options.cover.sides,
-					paper_id: options.cover.paper,
-					separation_mode: "CMYK",
-					fold_on: "axis_longer",
-					bleed: coverPaper.trim
 				});
-			}
-			const width = paper.width - (paper.trim ? 2 * paper.margin : 0);
-			const height = paper.height - (paper.trim ? 2 * paper.margin : 0);
-			printProduct.runlists.push({
-				tag: "content",
-				sides: 2,
-				paper_id: options.content.paper,
-				separation_mode: "CMYK",
-				size_a: width.toFixed(2),
-				size_b: height.toFixed(2),
-				bleed: paper.trim
-			});
-
-			try {
-				const ret = await agent.fetch(conf.order, "post", {
-					data: order
-				});
-				if (ret.status != "ok") {
+				if (ret.status != 'ok') {
 					throw new HttpError.BadRequest(ret.msg);
 				}
-				block.data.order = {
-					id: ret.order_id,
-					price: ret.total_price
-				};
-				response.status = 200;
-				response.text = 'OK';
-			} finally {
-				for (const file of clean) await fs.promises.unlink(file);
+				paper.fold ??= {};
+				paper.fold.width = parseFloat(ret.spine_width);
+				printProduct.cover_pdf.searchParams.set('foldWidth', paper.fold.width);
+			} else {
+				console.warn("Missing pdf page count");
 			}
+			const { paper: coverPaper } = coverPdf.data;
+			const coverRun = await this.#downloadPublic(req, printProduct.cover_pdf);
+			clean.push(coverRun.path);
+			printProduct.cover_pdf = coverRun.href;
+			printProduct.runlists.push({
+				tag: "cover",
+				sides: options.cover.sides,
+				paper_id: options.cover.paper,
+				separation_mode: "CMYK",
+				fold_on: "axis_longer",
+				bleed: coverPaper.trim
+			});
+		}
+		const width = paper.width - (paper.trim ? 2 * paper.margin : 0);
+		const height = paper.height - (paper.trim ? 2 * paper.margin : 0);
+		printProduct.runlists.push({
+			tag: "content",
+			sides: 2,
+			paper_id: options.content.paper,
+			separation_mode: "CMYK",
+			size_a: width.toFixed(2),
+			size_b: height.toFixed(2),
+			bleed: paper.trim
 		});
-		return block;
+
+		try {
+			const ret = await agent.fetch(this.opts.remote.order, "post", {
+				data: order
+			});
+			if (ret.status != "ok") {
+				console.info("got expresta response", ret);
+				throw new HttpError.BadRequest(ret.msg);
+			}
+			block.data.order = {
+				id: ret.order_id,
+				price: ret.total_price
+			};
+		} finally {
+			for (const file of clean) await fs.promises.unlink(file);
+		}
 	}
 
 	async #downloadPublic(req, url) {
@@ -425,20 +411,22 @@ module.exports = class PrintModule {
 	}
 };
 
-async function runJob(req, block, job) {
-	const { response } = block.data;
-	try {
-		const result = await job(req, block);
-		return result;
-	} catch (ex) {
-		response.status = ex.statusCode ?? 500;
-		response.text = ex.message ?? null;
-	} finally {
-		await req.run('block.save', {
-			id: block.id,
-			type: block.type,
-			data: block.data
-		});
+
+function findCourier(list, type) {
+	const name = {
+		express: 'express',
+		standard: 'courier'
+	}[type];
+	const item = list.find(item => item.courier.includes(name));
+	if (!item) {
+		if (type != 'express') {
+			return findCourier(list, 'standard');
+		}
+		else {
+			console.warn("Couldn't find courier, using first in the list", list[0]);
+			return list[0];
+		}
+	} else {
+		return item;
 	}
 }
-

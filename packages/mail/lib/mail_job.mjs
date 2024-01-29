@@ -74,7 +74,7 @@ export const mail_job = {
 		url: {
 			title: 'Mail page',
 			type: "string",
-			format: "pathname",
+			format: "uri-reference",
 			$filter: {
 				name: 'helper',
 				helper: {
@@ -99,11 +99,6 @@ export const mail_job = {
 			description: 'Defaults to mail page title',
 			type: 'string',
 			nullable: true
-		},
-		body: {
-			title: 'Query',
-			type: 'object',
-			default: {}
 		}
 	}
 };
