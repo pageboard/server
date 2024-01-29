@@ -67,7 +67,7 @@ module.exports = class ApiModule {
 					$ref: '#/definitions/' + name
 				}))
 			};
-			this.#validation = new Validation(services, elements, this.app.dirs);
+			this.#validation = new Validation(services, elements);
 		}
 		return this.#validation;
 	}

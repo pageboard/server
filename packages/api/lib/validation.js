@@ -6,10 +6,6 @@ const AjvFormats = require('ajv-formats');
 
 const { betterAjvErrors } = require('@apideck/better-ajv-errors');
 const Traverse = require('json-schema-traverse');
-const fs = require('node:fs/promises');
-const ajvStandalone = require.lazy("ajv/dist/standalone");
-const Path = require('node:path');
-const { exists } = require('../../../src/utils');
 
 function fixSchema(schema) {
 	if (schema.definitions) for (const type of Object.values(schema.definitions)) {
@@ -49,79 +45,15 @@ function fixSchema(schema) {
 }
 
 class AjvValidatorExt extends AjvValidator {
-	#cacheDir;
 
-	constructor(opts) {
-		super(opts);
-		this.#cacheDir = opts.cacheDir;
-	}
 	async prepare(mclass, pkg) {
 		const schema = mclass.jsonSchema = fixSchema(mclass.jsonSchema);
-		const cachePath = Path.join(
-			this.#cacheDir,
-			pkg.name,
-			pkg.tag,
-			schema.$id
-		);
-		const cacheDir = Path.dirname(cachePath);
 		const obj = {};
 		this.cache.set(schema.$id, obj);
-		await fs.mkdir(Path.join(cacheDir, 'node_modules'), { recursive: true });
-		await fs.mkdir(Path.join(cacheDir, 'lib'), { recursive: true });
-		await Promise.all([
-			"node_modules/ajv",
-			"node_modules/ajv-keywords",
-			"node_modules/ajv-formats",
-			"./lib/formats.js"
-		].map(async mod => {
-			try {
-				await fs.symlink(
-					Path.join(__dirname, '..', mod),
-					Path.join(cacheDir, mod)
-				);
-			} catch (ex) {
-				if (ex.code != 'EEXIST') throw ex;
-			}
-		}));
-
 		// schema compilation works but rebuilding ajv instance with $ref does not
 		obj.normalValidator = this.compileNormalValidator(schema);
 		const patchedSchema = Object.assign({}, schema);
 		obj.patchValidator = this.compilePatchValidator(patchedSchema);
-
-		/*
-		const patchPath = cachePath + '-patch.js';
-		try {
-			if (!pkg.cache || !(await exists(patchPath))) {
-				throw new Error();
-			}
-			const fn = require(patchPath);
-			if (typeof fn != "function") throw new Error();
-			obj.patchValidator = fn;
-		} catch (ex) {
-			if (ex.message) console.error(ex);
-			// fixSchema mutates it
-			const patchedSchema = Object.assign({}, schema);
-			obj.patchValidator = this.compilePatchValidator(patchedSchema);
-			const patchCode = ajvStandalone.default(this.ajvNoDefaults, obj.patchValidator);
-			await fs.writeFile(patchPath, patchCode);
-		}
-
-		const normalPath = cachePath + '-normal.js';
-		try {
-			if (!pkg.cache || !(await exists(normalPath))) {
-				throw new Error();
-			}
-			const fn = require(normalPath);
-			if (typeof fn != "function") throw new Error();
-			obj.normalValidator = fn;
-		} catch (ex) {
-			if (ex.message) console.error(ex);
-			obj.normalValidator = this.compileNormalValidator(schema);
-			const normalCode = ajvStandalone.default(this.ajv, obj.normalValidator);
-			await fs.writeFile(normalPath, normalCode);
-		}
-		*/
 	}
 
 	getValidator(modelClass, jsonSchema, isPatchObject) {
@@ -172,24 +104,37 @@ module.exports = class Validation {
 		discriminator: true,
 		ownProperties: true,
 		coerceTypes: 'array',
-		formats: require('./formats')
+		invalidDefaults: 'log',
+		formats: require('./formats'),
+		code: {
+			optimize: false // much faster compilation
+		}
 	};
 
-	constructor(services, elements, { filesCache }) {
-		this.cacheDir = filesCache;
-
+	constructor(services, elements) {
 		this.elements = fixSchema(elements);
 		this.services = fixSchema(services);
+		// those services are actually patch versions
 		this.readServices = this.#keepDefinitions(this.services, '$action', 'read');
 		this.writeServices = this.#keepDefinitions(this.services, '$action', 'write');
 
-		this.#servicesValidator = this.#setupAjv(
-			new Ajv(this.#createSettings({
-				removeAdditional: false,
+		const helper = new AjvValidator({
+			onCreateAjv: (ajv) => this.#setupAjv(ajv),
+			options: {
+				...Validation.AjvOptions,
+				schemas: [this.elements, this.services],
+				strictSchema: "log",
 				useDefaults: 'empty',
-				schemas: [this.services, this.elements, this.readServices, this.writeServices]
-			}))
-		);
+				validateSchema: false,
+				removeAdditional: "failing" // used to be false
+			}
+		});
+		helper.ajvNoDefaults.compile = schema => schema;
+		this.readServices = helper.compilePatchValidator(this.readServices);
+		this.writeServices = helper.compilePatchValidator(this.writeServices);
+		helper.compileNormalValidator(this.readServices);
+		helper.compileNormalValidator(this.writeServices);
+		this.#servicesValidator = helper.ajv;
 	}
 	#keepDefinitions(schema, key, val) {
 		schema = { ...schema };
@@ -247,7 +192,6 @@ module.exports = class Validation {
 	}
 	createValidator() {
 		return new AjvValidatorExt({
-			cacheDir: this.cacheDir,
 			onCreateAjv: (ajv) => this.#setupAjv(ajv),
 			options: {
 				...Validation.AjvOptions,
@@ -255,27 +199,11 @@ module.exports = class Validation {
 				strictSchema: "log",
 				validateSchema: false,
 				removeAdditional: "failing",
-				invalidDefaults: 'log',
-				code: {
-					source: true,
-					optimize: false,
-					formats: _`Object.assign(
-						require("ajv-formats/dist/formats").fullFormats,
-						require('./lib/formats')
-					)`
-				}
+				invalidDefaults: 'log'
 			}
 		});
 	}
-	#createSettings(opts) {
-		return {
-			...Validation.AjvOptions,
-			strictSchema: "log",
-			validateSchema: true,
-			invalidDefaults: 'log',
-			...opts
-		};
-	}
+
 	#customKeywords(ajv) {
 		ajv.addKeyword({
 			// used for preparing schema for semafor in write module
