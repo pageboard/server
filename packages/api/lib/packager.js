@@ -149,19 +149,25 @@ module.exports = class Packager {
 		$pkg.aliases = pkg.aliases;
 		const { eltsMap } = pkg;
 
-		const { services } = this.app.api.validation;
-		const definitions = {};
-		for (const [name, service] of Object.entries(services.definitions)) {
-			if (service.$lock !== true && service.$action) {
-				definitions[name] = service;
-			}
-		}
+		const { exportedServices, reads, writes } = this.app.api.validation;
 
 		$pkg.bundles.set('services', {
-			scripts: [await this.#bundleSource(site, {
-				name: 'services',
-				source: definitions
-			})]
+			scripts: [
+				await this.#bundleSource(site, {
+					assign: 'schemas',
+					name: 'services',
+					source: exportedServices
+				}),
+				await this.#bundleSource(site, {
+					assign: 'schemas',
+					name: 'reads',
+					source: reads
+				}), await this.#bundleSource(site, {
+					assign: 'schemas',
+					name: 'writes',
+					source: writes
+				})
+			]
 		});
 
 		const bundles = Object.entries(pkg.bundles).sort(([na], [nb]) => {
@@ -179,6 +185,7 @@ module.exports = class Packager {
 				name: 'polyfills', dry: true
 			}),
 			await this.#bundleSource(site, {
+				assign: 'schemas',
 				name: 'elements', dry: true
 			})
 		);
@@ -243,8 +250,18 @@ module.exports = class Packager {
 			source: await this.app.polyfill.source(Array.from(pkg.polyfills))
 		});
 		await this.#bundleSource(site, {
+			assign: 'schemas',
 			name: 'elements',
-			source: pkg.eltsMap
+			source: {
+				$id: '/elements',
+				definitions: pkg.eltsMap,
+				discriminator: {
+					propertyName: 'type'
+				},
+				oneOf: Object.keys(pkg.eltsMap).map(key => {
+					return { $ref: '#/definitions/' + key };
+				})
+			}
 		});
 
 		// create bundles
@@ -290,25 +307,28 @@ module.exports = class Packager {
 		return { ...el };
 	}
 
-	async #bundleSource(site, { prefix, name, source, dry }) {
+	async #bundleSource(site, { prefix, assign, name, source, dry }) {
 		if (prefix?.startsWith('ext-')) return;
 		const tag = site.data.version ?? site.$pkg.tag;
 		if (tag == null) return;
-		const filename = [prefix, name].filter(Boolean).join('-') + '.js';
+		const filename = [prefix, assign, name].filter(Boolean).join('-') + '.js';
 		const sourceUrl = `/.files/${tag}/${filename}`;
 		const sourcePath = this.app.statics.resolve(site.id, sourceUrl);
 		if (source) {
 			if (typeof source == "object") {
 				source = toSource(source);
 			}
-			source = `window.Pageboard.${name} = ${source};`;
+			if (assign) assign = "." + assign;
+			else assign = "";
+			source = `window.Pageboard${assign}.${name} = ${source};`;
 		} else if (!dry) {
 			throw new Error("Missing source argument");
 		}
 
 		if (!dry) {
 			await fs.mkdir(Path.dirname(sourcePath), { recursive: true });
-			await fs.writeFile(sourcePath, `window.Pageboard ??= {}; ${source}`);
+			if (assign) assign = `window.Pageboard${assign} ??= {};`;
+			await fs.writeFile(sourcePath, `window.Pageboard ??= {}; ${assign} ${source}`);
 		}
 		const paths = await this.app.statics.bundle(site, {
 			inputs: [sourceUrl],

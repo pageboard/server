@@ -67,7 +67,7 @@ module.exports = class ApiModule {
 					$ref: '#/definitions/' + name
 				}))
 			};
-			this.#validation = new Validation(services, elements, this.app.dirs);
+			this.#validation = new Validation(services, elements);
 		}
 		return this.#validation;
 	}
@@ -152,13 +152,16 @@ module.exports = class ApiModule {
 
 		// start a transaction on set trx object on site
 		let hadTrx = false;
-		const { locals = { } } = req.res || { };
+		const { locals = {} } = req.res || {};
+		if (req.trx?.isCompleted()) {
+			req.trx = null;
+		}
 
 		if (req.trx) {
 			hadTrx = true;
 		} else {
 			req.trx = await transaction.start(app.database.tenant(locals.tenant));
-			req.trx.req = req;
+			req.trx.req = req; // needed by objection hooks
 		}
 		Object.assign(req, { Block, Href, ref, val, raw, fun });
 
@@ -180,7 +183,20 @@ module.exports = class ApiModule {
 				if (hadTrx) {
 					req.trx = await transaction.start(app.database.tenant(locals.tenant));
 				} else {
+					// top-lost run call
 					delete req.trx;
+					const { afters } = req;
+					if (afters) {
+						Promise.resolve().then(async () => {
+							while (afters.length) {
+								try {
+									await afters.shift()();
+								} catch (ex) {
+									console.error(ex);
+								}
+							}
+						});
+					}
 				}
 			}
 		}
