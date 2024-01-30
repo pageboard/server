@@ -189,7 +189,11 @@ module.exports = class ApiModule {
 					if (afters) {
 						Promise.resolve().then(async () => {
 							while (afters.length) {
-								await afters.shift()();
+								try {
+									await afters.shift()();
+								} catch (ex) {
+									console.error(ex);
+								}
 							}
 						});
 					}
