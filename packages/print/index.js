@@ -264,7 +264,9 @@ module.exports = class PrintModule {
 			obj.coverPdf = coverPdf;
 		}
 
-		req.fork((req, block) => this.#remoteCall(req, block, obj), block);
+		req.postpone(
+			() => req.try(block, (req, block) => this.#remoteCall(req, block, obj))
+		);
 		return block;
 	}
 
