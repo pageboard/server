@@ -171,7 +171,7 @@ module.exports = class PrintModule {
 		}
 
 		req.postpone(() => req.try(block, async () => {
-			const { path } = await this.#download(req, pdfUrl, this.app.dirs.tmp);
+			const { path } = await this.#download(req, pdfUrl, block.id);
 			try {
 				const ret = await cups.printFile(path, {
 					printer: this.opts.local,
@@ -194,7 +194,7 @@ module.exports = class PrintModule {
 		});
 		pdfUrl.searchParams.set('pdf', 'printer');
 		req.postpone(() => req.try(block, async () => {
-			const { path } = await this.#download(req, pdfUrl, this.app.dirs.tmp);
+			const { path } = await this.#download(req, pdfUrl, block.id);
 			const dest = Path.join(this.opts.storage, Path.basename(path));
 			try {
 				if (this.opts.storage.startsWith('/')) {
@@ -335,7 +335,9 @@ module.exports = class PrintModule {
 		};
 		const clean = [];
 
-		const pdfRun = await this.#downloadPublic(req, printProduct.pdf);
+		const pdfRun = await this.#downloadPublic(
+			req, printProduct.pdf, `${block.id}-content`
+		);
 		clean.push(pdfRun.path);
 		printProduct.pdf = pdfRun.href;
 
@@ -362,7 +364,9 @@ module.exports = class PrintModule {
 				console.warn("Missing pdf page count");
 			}
 			const { paper: coverPaper } = coverPdf.data;
-			const coverRun = await this.#downloadPublic(req, printProduct.cover_pdf);
+			const coverRun = await this.#downloadPublic(
+				req, printProduct.cover_pdf, `${block.id}-cover`
+			);
 			clean.push(coverRun.path);
 			printProduct.cover_pdf = coverRun.href;
 			printProduct.runlists.push({
@@ -403,19 +407,19 @@ module.exports = class PrintModule {
 		}
 	}
 
-	async #downloadPublic(req, url) {
+	async #downloadPublic(req, url, name) {
 		const { site } = req;
 		const pubDir = Path.join(this.app.dirs.publicCache, site.id);
 		await fs.promises.mkdir(pubDir, {
 			recursive: true
 		});
-		const { path, response } = await this.#download(req, url, pubDir);
+		const { path, response } = await this.#download(req, url, name, pubDir);
 		const href = (new URL("/.public/" + Path.basename(path), site.$url)).href;
 		const count = response.headers.get('x-page-count');
 		return { href, path, count };
 	}
 
-	async #download(req, url, to) {
+	async #download(req, url, name, to = this.app.dirs.tmp) {
 		const controller = new AbortController();
 		const toId = setTimeout(() => controller.abort(), 100000);
 		const response = await fetch(new URL(url, req.site.$url), {
@@ -438,7 +442,7 @@ module.exports = class PrintModule {
 			if (ext != "pdf") {
 				throw new HttpError.BadParams("Cannot print non-pdf file");
 			}
-			path = Path.join(to, await req.Block.genId()) + "." + ext;
+			path = Path.join(to, name) + "." + ext;
 			await pipeline(response.body, fs.createWriteStream(path));
 			return { path, response };
 		} catch (err) {
