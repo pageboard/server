@@ -2,6 +2,8 @@ const BearerAgent = require('./src/agent');
 const fs = require('node:fs');
 const Path = require('node:path');
 const { pipeline } = require('node:stream/promises');
+const { promisify } = require('node:util');
+const exec = promisify(require('node:child_process').exec);
 const mime = require.lazy('mime-types');
 const cups = require('node-cups');
 
@@ -193,10 +195,24 @@ module.exports = class PrintModule {
 		pdfUrl.searchParams.set('pdf', 'printer');
 		req.postpone(() => req.try(block, async () => {
 			const { path } = await this.#download(req, pdfUrl, this.app.dirs.tmp);
-			await fs.promises.rename(
-				path,
-				Path.join(this.opts.storage, Path.basename(path))
-			);
+			const dest = Path.join(this.opts.storage, Path.basename(path));
+			try {
+				if (this.opts.storage.startsWith('/')) {
+					await fs.promises.copyFile(path, dest);
+				} else {
+					await exec(`scp ${path} ${dest}`, {
+						env: {
+							SSH_AUTH_SOCK: process.env.SSH_AUTH_SOCK
+						},
+						shell: false,
+						timeout: 120000
+					});
+				}
+			} catch (ex) {
+				throw new HttpError.InternalServerError(`Storage failure`);
+			} finally {
+				await fs.promises.unlink(path);
+			}
 		}));
 	}
 
