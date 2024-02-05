@@ -4,9 +4,8 @@ module.exports = class HelpService {
 	static name = 'help';
 	static $global = true;
 
-	constructor(app, opts) {
+	constructor(app) {
 		this.app = app;
-		this.opts = opts;
 	}
 
 	doc(req, { command, schema }) {

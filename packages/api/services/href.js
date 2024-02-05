@@ -4,9 +4,8 @@ const jsonPath = require.lazy('@kapouer/path');
 module.exports = class HrefService {
 	static name = 'href';
 
-	constructor(app, opts) {
+	constructor(app) {
 		this.app = app;
-		this.opts = opts;
 	}
 
 	apiRoutes(app, server) {
