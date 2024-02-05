@@ -389,7 +389,7 @@ module.exports = class PrintModule {
 		});
 
 		try {
-			const ret = await agent.fetch(this.opts.remote.order, "post", {
+			const ret = await agent.fetch(req.opts.print.remote.order, "post", {
 				data: order
 			});
 			if (ret.status != "ok") {
