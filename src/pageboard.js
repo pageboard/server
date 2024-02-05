@@ -91,7 +91,7 @@ module.exports = class Pageboard {
 
 	constructor(opts = {}) {
 		if (opts.config === undefined) {
-			opts.config = Path.join(Pageboard.defaults.dirs.config, 'config');
+			opts.config = Path.join(Pageboard.defaults.dirs.config, 'config.toml');
 		}
 
 		// TODO check schema of toml
