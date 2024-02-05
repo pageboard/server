@@ -1,4 +1,3 @@
-const BearerAgent = require('./src/agent');
 const fs = require('node:fs');
 const Path = require('node:path');
 const { pipeline } = require('node:stream/promises');
@@ -17,8 +16,7 @@ module.exports = class PrintModule {
 	}
 
 	async init() {
-		const { withCache } = await import("ultrafetch");
-		this.opts.fetch = withCache(fetch);
+		this.Agent = await import('./src/agent');
 	}
 
 	async elements() {
@@ -55,7 +53,7 @@ module.exports = class PrintModule {
 			// nothing
 		} else if (printer == "remote" && this.opts[printer]) {
 			const conf = this.opts[printer];
-			const agent = new BearerAgent(this.opts, conf.url);
+			const agent = new this.Agent(this.opts, conf.url);
 
 			agent.bearer = (await agent.fetch("/login", "post", {
 				email: conf.email,
@@ -219,7 +217,7 @@ module.exports = class PrintModule {
 	async couriers(req, { iso_code }) {
 		const { remote: conf } = this.opts;
 		if (!conf) throw new HttpError.BadRequest("No remote printer");
-		const agent = new BearerAgent(this.opts, conf.url);
+		const agent = new this.Agent(this.opts, conf.url);
 
 		agent.bearer = (await agent.fetch("/login", "post", {
 			email: conf.email,
@@ -243,7 +241,7 @@ module.exports = class PrintModule {
 	async #remoteJob(req, block) {
 		const { remote: conf } = this.opts;
 		if (!conf) throw new HttpError.BadRequest("No remote printer");
-		const agent = new BearerAgent(this.opts, conf.url);
+		const agent = new this.Agent(this.opts, conf.url);
 
 		agent.bearer = (await agent.fetch("/login", "post", {
 			email: conf.email,
