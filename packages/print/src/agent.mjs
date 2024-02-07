@@ -1,4 +1,4 @@
-import withCache from "ultrafetch";
+import { withCache } from "ultrafetch";
 const cfetch = withCache(fetch);
 
 export class BearerAgent {

@@ -16,7 +16,7 @@ module.exports = class PrintModule {
 	}
 
 	async init() {
-		this.Agent = await import('./src/agent');
+		this.Agent = await import('./src/agent.mjs');
 	}
 
 	async elements() {
