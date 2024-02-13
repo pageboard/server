@@ -115,6 +115,17 @@ module.exports = class Validation {
 		this.elements = fixSchema(elements);
 		this.services = fixSchema(services);
 
+		const actions = { ...services, definitions: {}, $id: '/actions' };
+		const { definitions } = actions;
+		for (const [name, service] of Object.entries(services.definitions)) {
+			if (service.$lock !== true && service.$action) {
+				definitions[name] = service;
+			}
+		}
+		actions.oneOf = Object.keys(definitions).map(key => {
+			return { $ref: '#/definitions/' + key };
+		});
+
 		const helper = new AjvValidator({
 			onCreateAjv: (ajv) => this.#setupAjv(ajv),
 			options: {
@@ -127,35 +138,29 @@ module.exports = class Validation {
 			}
 		});
 		helper.ajvNoDefaults.compile = schema => schema;
-		const exportedServices = { ...services };
-		const definitions = exportedServices.definitions = {};
-		for (const [name, service] of Object.entries(services.definitions)) {
-			if (service.$lock !== true && service.$action) {
-				definitions[name] = service;
-			}
-		}
-		exportedServices.oneOf = Object.keys(definitions).map(key => {
-			return { $ref: '#/definitions/' + key };
-		});
-		this.exportedServices = helper.compilePatchValidator(exportedServices);
 
-		// those services are actually patch versions
-		this.reads = this.#keepDefinitions(this.exportedServices, '$action', 'read');
+		this.actions = helper.compilePatchValidator(actions);
+
+		// reads and writes must use the non-required version (patch validator)
+		// but here helper is constructed with the required version (this.services)
+		// so it doesn't really work
+
+		this.reads = this.#keepDefinitions(this.actions, '$action', 'read');
 		this.reads.$id = '/reads';
-		this.writes = this.#keepDefinitions(this.exportedServices, '$action', 'write');
+		this.writes = this.#keepDefinitions(this.actions, '$action', 'write');
 		this.writes.$id = '/writes';
-		// only definitions are needed by reads/writes
-		delete this.exportedServices.oneOf;
+		// $global services validator
 		this.#servicesValidator = helper.ajv;
 	}
 	#keepDefinitions(schema, key, val) {
 		schema = { ...schema };
 		const { definitions } = schema;
 		delete schema.definitions;
+		const id = schema.$id;
 		const list = [];
 		for (const [name, service] of Object.entries(definitions)) {
 			if (service[key] == val) {
-				list.push({$ref: schema.$id + '#/definitions/' + name});
+				list.push({ $ref: `${id}#/definitions/${name}` });
 			}
 		}
 		schema.oneOf = list;
@@ -200,11 +205,15 @@ module.exports = class Validation {
 		return ajv;
 	}
 	createValidator() {
+		// objection validator
 		return new AjvValidatorExt({
 			onCreateAjv: (ajv) => this.#setupAjv(ajv),
 			options: {
 				...Validation.AjvOptions,
-				schemas: [this.services, this.reads, this.writes],
+				schemas: [
+					this.services,
+					this.actions, this.reads, this.writes
+				],
 				strictSchema: "log",
 				validateSchema: false,
 				removeAdditional: "failing",
