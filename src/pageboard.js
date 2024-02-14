@@ -91,7 +91,7 @@ module.exports = class Pageboard {
 
 	constructor(opts = {}) {
 		if (opts.config === undefined) {
-			opts.config = Path.join(Pageboard.defaults.dirs.config, 'config');
+			opts.config = Path.join(Pageboard.defaults.dirs.config, 'config.toml');
 		}
 
 		// TODO check schema of toml
@@ -115,7 +115,16 @@ module.exports = class Pageboard {
 			delete opts[key];
 		}
 		this.dev = !opts.cache?.enable;
+		const { dev, staging, production } = opts;
+		delete opts.dev;
+		delete opts.staging;
+		delete opts.production;
 		this.opts = opts;
+		this.envs = {
+			dev: mergeRecursive({}, opts, dev),
+			staging: mergeRecursive({}, opts, staging),
+			production: mergeRecursive({}, opts, production)
+		};
 	}
 
 	async #symlinkDir(name) {
@@ -161,7 +170,9 @@ module.exports = class Pageboard {
 				}
 			}
 			req.site = siteInst;
+			req.opts = this.envs[siteInst.data.env ?? 'dev'];
 		} else {
+			req.opts = this.opts;
 			await this.api.install({ id: "*", data: {} });
 		}
 		return this.api.run(req, command, data);

@@ -169,6 +169,8 @@ module.exports = class Domains {
 
 		req.try = async (block, job) => {
 			const { response } = block.data;
+			response.status = null;
+			response.text = null;
 			try {
 				const result = await job(req, block);
 				response.status = 200;

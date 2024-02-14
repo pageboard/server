@@ -23,13 +23,8 @@ module.exports = class ApiModule {
 	#packager;
 	#validation;
 
-	constructor(app, opts) {
+	constructor(app) {
 		this.app = app;
-
-		this.opts = {
-			...opts,
-			migrations: [Path.join(__dirname, 'migrations')]
-		};
 
 		Href.createValidator = () => {
 			return this.validation.createValidator();

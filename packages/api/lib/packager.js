@@ -149,14 +149,14 @@ module.exports = class Packager {
 		$pkg.aliases = pkg.aliases;
 		const { eltsMap } = pkg;
 
-		const { exportedServices, reads, writes } = this.app.api.validation;
+		const { actions, reads, writes } = this.app.api.validation;
 
 		$pkg.bundles.set('services', {
 			scripts: [
 				await this.#bundleSource(site, {
 					assign: 'schemas',
 					name: 'services',
-					source: exportedServices
+					source: actions
 				}),
 				await this.#bundleSource(site, {
 					assign: 'schemas',

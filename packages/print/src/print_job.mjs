@@ -73,12 +73,32 @@ export const print_job = {
 					type: 'string',
 					format: 'singleline',
 					nullable: true
-				},
-				tracking: {
-					title: 'Tracking',
+				}
+			}
+		},
+		tracking: { // tracking_url
+			title: 'Tracking',
+			type: 'object',
+			nullable: true,
+			properties: {
+				url: {
+					title: 'URL',
 					type: 'string',
-					format: "uri-reference",
-					nullable: true
+					format: "uri-reference"
+				},
+				parcel: { // package_number
+					title: 'Parcel',
+					type: 'string',
+					format: 'singleline'
+				},
+				quantity: { // packages_amount
+					title: 'Quantity',
+					type: 'integer'
+				},
+				since: { // created
+					title: 'Since',
+					type: 'string',
+					format: 'date-time'
 				}
 			}
 		},

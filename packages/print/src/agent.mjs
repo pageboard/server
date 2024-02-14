@@ -1,4 +1,7 @@
-module.exports = class BearerAgent {
+import { withCache } from "ultrafetch";
+const cfetch = withCache(fetch);
+
+export class BearerAgent {
 
 	constructor(opts, baseUrl) {
 		this.baseUrl = baseUrl;
@@ -19,7 +22,7 @@ module.exports = class BearerAgent {
 			opts.body = fd;
 		}
 		if (this.bearer) opts.headers = { Authorization: `Bearer ${this.bearer}` };
-		const res = await this.opts.fetch(this.baseUrl + path, {
+		const res = await cfetch(this.baseUrl + path, {
 			method,
 			redirect: 'follow',
 			...opts
@@ -27,4 +30,4 @@ module.exports = class BearerAgent {
 		if (!res.ok) throw new HttpError[res.status](res.statusText);
 		return res.json();
 	}
-};
+}

@@ -120,6 +120,7 @@ module.exports = class Installer {
 				shell: false,
 				timeout
 			}).catch(err => {
+				// FIXME after failure, won't process new requests / see domain too
 				if (err.signal == "SIGTERM") err.message = "Timeout installing " + module;
 				console.error(command);
 				console.error("in", pkg.dir);

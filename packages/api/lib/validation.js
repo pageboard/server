@@ -91,7 +91,30 @@ class AjvValidatorExt extends AjvValidator {
 			}
 		}
 
-		return validator;
+		return this.wrapValidator(validator);
+	}
+
+	wrapValidator(validator) {
+		return function (json) {
+			let ret = validator.call(this, json);
+			if (validator.errors?.length > 0) {
+				validator.errors = validator.errors.filter(e => {
+					const { instancePath, keyword, params } = e;
+					const key = params?.missingProperty;
+					if (!instancePath || keyword != "required" || key == null) return true;
+					const parts = instancePath.split("/").slice(1);
+					if (parts[0] != "data") return true;
+					parts[0] = "expr";
+					parts.push(key);
+					let target = json;
+					for (const part of parts) target = target[part];
+					return !target;
+				});
+				ret = validator.errors.length == 0;
+				if (ret) delete validator.errors;
+			}
+			return ret;
+		};
 	}
 }
 
@@ -115,6 +138,23 @@ module.exports = class Validation {
 		this.elements = fixSchema(elements);
 		this.services = fixSchema(services);
 
+		const actions = { ...services, definitions: {} };
+		const { definitions } = actions;
+		for (const [name, service] of Object.entries(services.definitions)) {
+			if (service.$lock !== true && service.$action) {
+				definitions[name] = service;
+			}
+		}
+		actions.oneOf = Object.keys(definitions).map(key => {
+			return { $ref: '#/definitions/' + key };
+		});
+		// needed for exporting writes/reads to client
+		this.actions = actions;
+		this.reads = this.#keepDefinitions(this.actions, '$action', 'read');
+		this.reads.$id = '/reads';
+		this.writes = this.#keepDefinitions(this.actions, '$action', 'write');
+		this.writes.$id = '/writes';
+
 		const helper = new AjvValidator({
 			onCreateAjv: (ajv) => this.#setupAjv(ajv),
 			options: {
@@ -126,36 +166,18 @@ module.exports = class Validation {
 				removeAdditional: "failing" // used to be false
 			}
 		});
-		helper.ajvNoDefaults.compile = schema => schema;
-		const exportedServices = { ...services };
-		const definitions = exportedServices.definitions = {};
-		for (const [name, service] of Object.entries(services.definitions)) {
-			if (service.$lock !== true && service.$action) {
-				definitions[name] = service;
-			}
-		}
-		exportedServices.oneOf = Object.keys(definitions).map(key => {
-			return { $ref: '#/definitions/' + key };
-		});
-		this.exportedServices = helper.compilePatchValidator(exportedServices);
-
-		// those services are actually patch versions
-		this.reads = this.#keepDefinitions(this.exportedServices, '$action', 'read');
-		this.reads.$id = '/reads';
-		this.writes = this.#keepDefinitions(this.exportedServices, '$action', 'write');
-		this.writes.$id = '/writes';
-		// only definitions are needed by reads/writes
-		delete this.exportedServices.oneOf;
+		// $global services validator
 		this.#servicesValidator = helper.ajv;
 	}
 	#keepDefinitions(schema, key, val) {
 		schema = { ...schema };
 		const { definitions } = schema;
 		delete schema.definitions;
+		const id = schema.$id;
 		const list = [];
 		for (const [name, service] of Object.entries(definitions)) {
 			if (service[key] == val) {
-				list.push({$ref: schema.$id + '#/definitions/' + name});
+				list.push({ $ref: `${id}#/definitions/${name}` });
 			}
 		}
 		schema.oneOf = list;
@@ -200,11 +222,14 @@ module.exports = class Validation {
 		return ajv;
 	}
 	createValidator() {
+		// objection validator
 		return new AjvValidatorExt({
 			onCreateAjv: (ajv) => this.#setupAjv(ajv),
 			options: {
 				...Validation.AjvOptions,
-				schemas: [this.services, this.reads, this.writes],
+				schemas: [
+					this.services, this.reads, this.writes
+				],
 				strictSchema: "log",
 				validateSchema: false,
 				removeAdditional: "failing",
@@ -360,25 +385,26 @@ module.exports = class Validation {
 		const validator = site ?
 			site.$modelClass.getValidator().ajv
 			: this.#servicesValidator;
-		if (validator.validate('/services', data)) {
+		validator.validate('/services', data);
+		const { errors } = validator;
+		if (!errors?.length) {
 			return data;
-		} else {
-			const messages = betterAjvErrors({
-				schema: this.services,
-				data,
-				errors: validator.errors
-			});
-			const str = '\n' + messages.map(
-				item => {
-					const repl = item.message.replaceAll(/\{base\}/g, 'data');
-					if (repl != item.message) {
-						return ' ' + repl;
-					} else {
-						return ' ' + item.message + ' at: ' + item.path.replaceAll(/\{base\}/g, 'data');
-					}
-				}
-			).join('\n');
-			throw new HttpError.BadRequest(str);
 		}
+		const messages = betterAjvErrors({
+			schema: this.services,
+			data,
+			errors
+		});
+		const str = '\n' + messages.map(
+			item => {
+				const repl = item.message.replaceAll(/\{base\}/g, 'data');
+				if (repl != item.message) {
+					return ' ' + repl;
+				} else {
+					return ' ' + item.message + ' at: ' + item.path.replaceAll(/\{base\}/g, 'data');
+				}
+			}
+		).join('\n');
+		throw new HttpError.BadRequest(str);
 	}
 };
