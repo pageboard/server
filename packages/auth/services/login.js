@@ -180,7 +180,7 @@ module.exports = class LoginModule {
 		if (req.locked(data.grant)) {
 			throw new HttpError.Forbidden("User has insufficient grants");
 		}
-		user.grants = data.grant;
+		user.grants = data.grant ?? [];
 		req.granted = grants.join(',') != user.grants.join(',');
 		return {
 			item: settings,
