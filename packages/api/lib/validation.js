@@ -91,7 +91,29 @@ class AjvValidatorExt extends AjvValidator {
 			}
 		}
 
-		return validator;
+		return this.wrapValidator(validator);
+	}
+
+	wrapValidator(validator) {
+		return function (json) {
+			let ret = validator.call(this, json);
+			if (validator.errors?.length > 0) {
+				validator.errors = validator.errors.filter(e => {
+					const { instancePath, keyword, params } = e;
+					const key = params?.missingProperty;
+					if (!instancePath || keyword != "required" || key == null) return true;
+					const parts = instancePath.split("/").slice(1);
+					if (parts[0] != "data") return true;
+					parts[0] = "expr";
+					parts.push(key);
+					let target = json;
+					for (const part of parts) target = target[part];
+					return !target;
+				});
+				ret = validator.errors.length == 0;
+			}
+			return ret;
+		};
 	}
 }
 
@@ -115,7 +137,7 @@ module.exports = class Validation {
 		this.elements = fixSchema(elements);
 		this.services = fixSchema(services);
 
-		const actions = { ...services, definitions: {}, $id: '/actions' };
+		const actions = { ...services, definitions: {} };
 		const { definitions } = actions;
 		for (const [name, service] of Object.entries(services.definitions)) {
 			if (service.$lock !== true && service.$action) {
@@ -125,6 +147,12 @@ module.exports = class Validation {
 		actions.oneOf = Object.keys(definitions).map(key => {
 			return { $ref: '#/definitions/' + key };
 		});
+		// needed for exporting writes/reads to client
+		this.actions = actions;
+		this.reads = this.#keepDefinitions(this.actions, '$action', 'read');
+		this.reads.$id = '/reads';
+		this.writes = this.#keepDefinitions(this.actions, '$action', 'write');
+		this.writes.$id = '/writes';
 
 		const helper = new AjvValidator({
 			onCreateAjv: (ajv) => this.#setupAjv(ajv),
@@ -137,18 +165,6 @@ module.exports = class Validation {
 				removeAdditional: "failing" // used to be false
 			}
 		});
-		helper.ajvNoDefaults.compile = schema => schema;
-
-		this.actions = helper.compilePatchValidator(actions);
-
-		// reads and writes must use the non-required version (patch validator)
-		// but here helper is constructed with the required version (this.services)
-		// so it doesn't really work
-
-		this.reads = this.#keepDefinitions(this.actions, '$action', 'read');
-		this.reads.$id = '/reads';
-		this.writes = this.#keepDefinitions(this.actions, '$action', 'write');
-		this.writes.$id = '/writes';
 		// $global services validator
 		this.#servicesValidator = helper.ajv;
 	}
@@ -211,8 +227,7 @@ module.exports = class Validation {
 			options: {
 				...Validation.AjvOptions,
 				schemas: [
-					this.services,
-					this.actions, this.reads, this.writes
+					this.services, this.reads, this.writes
 				],
 				strictSchema: "log",
 				validateSchema: false,

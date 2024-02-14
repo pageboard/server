@@ -155,7 +155,7 @@ module.exports = class Packager {
 			scripts: [
 				await this.#bundleSource(site, {
 					assign: 'schemas',
-					name: 'actions',
+					name: 'services',
 					source: actions
 				}),
 				await this.#bundleSource(site, {
