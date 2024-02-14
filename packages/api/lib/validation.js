@@ -111,6 +111,7 @@ class AjvValidatorExt extends AjvValidator {
 					return !target;
 				});
 				ret = validator.errors.length == 0;
+				if (ret) delete validator.errors;
 			}
 			return ret;
 		};
