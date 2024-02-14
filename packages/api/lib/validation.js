@@ -107,7 +107,10 @@ class AjvValidatorExt extends AjvValidator {
 					parts[0] = "expr";
 					parts.push(key);
 					let target = json;
-					for (const part of parts) target = target[part];
+					for (const part of parts) {
+						if (!target) break;
+						target = target[part];
+					}
 					return !target;
 				});
 				ret = validator.errors.length == 0;
