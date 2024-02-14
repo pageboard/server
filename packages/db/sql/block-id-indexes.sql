@@ -16,16 +16,17 @@ DECLARE
 BEGIN
 	SELECT parent.id, block.id INTO site_id, block_id
 	FROM block, block AS child, block AS parent, relation
-	WHERE block._id = NEW.child_id
-		AND parent._id = NEW.parent_id
+	WHERE block._id = new.child_id
+		AND parent._id = new.parent_id
 		AND parent.type = 'site'
-		AND relation.parent_id = NEW.parent_id
-		AND relation.child_id != NEW.child_id
+		AND relation.parent_id = new.parent_id
+		AND relation.child_id != new.child_id
 		AND child._id = relation.child_id
 		AND child.id = block.id;
 	IF FOUND THEN
 		RAISE EXCEPTION 'block.id: % must be unique in site: %', block_id, site_id;
 	END IF;
+	RETURN new;
 END
 $BODY$;
 
