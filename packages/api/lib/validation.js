@@ -384,25 +384,26 @@ module.exports = class Validation {
 		const validator = site ?
 			site.$modelClass.getValidator().ajv
 			: this.#servicesValidator;
-		if (validator.validate('/services', data)) {
+		validator.validate('/services', data);
+		const { errors } = validator;
+		if (!errors?.length) {
 			return data;
-		} else {
-			const messages = betterAjvErrors({
-				schema: this.services,
-				data,
-				errors: validator.errors
-			});
-			const str = '\n' + messages.map(
-				item => {
-					const repl = item.message.replaceAll(/\{base\}/g, 'data');
-					if (repl != item.message) {
-						return ' ' + repl;
-					} else {
-						return ' ' + item.message + ' at: ' + item.path.replaceAll(/\{base\}/g, 'data');
-					}
-				}
-			).join('\n');
-			throw new HttpError.BadRequest(str);
 		}
+		const messages = betterAjvErrors({
+			schema: this.services,
+			data,
+			errors
+		});
+		const str = '\n' + messages.map(
+			item => {
+				const repl = item.message.replaceAll(/\{base\}/g, 'data');
+				if (repl != item.message) {
+					return ' ' + repl;
+				} else {
+					return ' ' + item.message + ' at: ' + item.path.replaceAll(/\{base\}/g, 'data');
+				}
+			}
+		).join('\n');
+		throw new HttpError.BadRequest(str);
 	}
 };
