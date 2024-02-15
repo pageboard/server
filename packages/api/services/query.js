@@ -39,14 +39,17 @@ module.exports = class SearchService {
 		if (!method) {
 			throw new HttpError.BadRequest("Missing method");
 		}
-		const scope = {};
 		const query = unflatten(data.query ?? {});
+		const scope = {};
+
 		for (const [key, val] of Object.entries(query)) {
 			if (key.startsWith('$')) {
+				// allows client to pass $pathname $lang and others
 				scope[key] = val;
 				delete query[key];
 			}
 		}
+		// overwrite to avoid injection
 		Object.assign(scope, {
 			$query: query,
 			$site: site.id,
