@@ -20,7 +20,8 @@ module.exports = class FormService {
 		});
 	}
 
-	async submit({ site, run, user, locked, trx, ref }, data) {
+	async submit(req, data) {
+		const { site, run, user, locked, trx, ref } = req;
 		const form = await site.$relatedQuery('children', trx)
 			.where('block.id', data.id)
 			.orWhere(q => {

@@ -5,10 +5,29 @@ CREATE INDEX block_id_index ON block USING btree (id);
 CREATE UNIQUE INDEX block_user_site_index ON block USING btree (id) WHERE type::text = ANY (ARRAY['site'::text, 'user'::text]);
 
 
--- this enforces child.id, site.id pairs to be unique
+-- force siblings to have a unique id
 
-CREATE MATERIALIZED VIEW relations_id AS
-SELECT child.id AS child_id, parent.id AS parent_id FROM block AS child
-LEFT OUTER JOIN relation AS r ON r.child_id = child._id
-LEFT OUTER JOIN block AS parent ON parent._id = r.parent_id AND parent.type = 'site';
-CREATE UNIQUE INDEX ON relations_id (child_id, parent_id);
+CREATE OR REPLACE FUNCTION siblings_unique_id() RETURNS trigger
+	LANGUAGE plpgsql
+AS $BODY$
+DECLARE
+	site_id TEXT;
+	block_id TEXT;
+BEGIN
+	SELECT parent.id, block.id INTO site_id, block_id
+	FROM block, block AS child, block AS parent, relation
+	WHERE block._id = new.child_id
+		AND parent._id = new.parent_id
+		AND parent.type = 'site'
+		AND relation.parent_id = new.parent_id
+		AND relation.child_id != new.child_id
+		AND child._id = relation.child_id
+		AND child.id = block.id;
+	IF FOUND THEN
+		RAISE EXCEPTION 'block.id: % must be unique in site: %', block_id, site_id;
+	END IF;
+	RETURN new;
+END
+$BODY$;
+
+CREATE OR REPLACE TRIGGER siblings_unique_id_trigger BEFORE INSERT ON relation FOR EACH ROW EXECUTE FUNCTION siblings_unique_id();
