@@ -1,7 +1,7 @@
 import { withCache } from "ultrafetch";
 const cfetch = withCache(fetch);
 
-export default class BearerAgent {
+export class BearerAgent {
 
 	constructor(opts, baseUrl) {
 		this.baseUrl = baseUrl;
