@@ -122,6 +122,10 @@ export const print_job = {
 					format: 'singleline',
 					nullable: true
 				},
+				bleed: {
+					title: 'Trim bleed margins',
+					type: 'boolean'
+				},
 				cover: {
 					title: 'Cover',
 					type: 'object',
