@@ -47,15 +47,28 @@ module.exports = class FormService {
 			if (formData[key] === null) delete formData[key];
 		}
 
+		const query = unflatten(data.query ?? {});
+		const scope = {};
+
+		for (const [key, val] of Object.entries(query)) {
+			if (key.startsWith('$')) {
+				// allows client to pass $pathname $lang and others
+				scope[key] = val;
+				delete query[key];
+			}
+		}
+		// overwrite to avoid injection
+		Object.assign(scope, {
+			$request: reqBody ?? {},
+			$query: query,
+			$site: site.id,
+			$user: user
+		});
+
 		const params = mergeExpressions(
 			form.data?.action?.parameters ?? {},
 			form.expr?.action?.parameters ?? {},
-			{
-				$request: reqBody ?? {},
-				$query: unflatten(data.query ?? {}),
-				$site: site.id,
-				$user: user
-			}
+			scope
 		);
 
 		Log.api("form params", params, user, data.query);
