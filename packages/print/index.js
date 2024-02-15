@@ -361,7 +361,8 @@ module.exports = class PrintModule {
 			} else {
 				console.warn("Missing pdf page count");
 			}
-			const { paper: coverPaper } = coverPdf.data;
+			// TODO ensure coverPaper matches paper
+			// const { paper: coverPaper } = coverPdf.data;
 			const coverRun = await this.#downloadPublic(
 				req, printProduct.cover_pdf, `${block.id}-cover`
 			);
@@ -373,11 +374,11 @@ module.exports = class PrintModule {
 				paper_id: options.cover.paper,
 				separation_mode: "CMYK",
 				fold_on: "axis_longer",
-				bleed: coverPaper.trim
+				bleed: options.bleed
 			});
 		}
-		const width = paper.width - (paper.trim ? 2 * paper.margin : 0);
-		const height = paper.height - (paper.trim ? 2 * paper.margin : 0);
+		const width = paper.width - (options.bleed ? 2 * paper.margin : 0);
+		const height = paper.height - (options.bleed ? 2 * paper.margin : 0);
 		printProduct.runlists.push({
 			tag: "content",
 			sides: 2,
@@ -385,7 +386,7 @@ module.exports = class PrintModule {
 			separation_mode: "CMYK",
 			size_a: width.toFixed(2),
 			size_b: height.toFixed(2),
-			bleed: paper.trim
+			bleed: options.bleed
 		});
 
 		try {
