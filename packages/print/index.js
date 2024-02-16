@@ -135,7 +135,7 @@ module.exports = class PrintModule {
 
 	async run(req, data) {
 		const { item: block } = await req.run('block.add', {
-			// w/a remote#customer_reference limit
+			// w/a remote#customer_reference limited to 15 chars
 			id: await req.Block.genId(7),
 			type: 'print_job',
 			data: { ...data, response: {} }
