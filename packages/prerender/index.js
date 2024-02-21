@@ -176,7 +176,8 @@ module.exports = class PrerenderModule {
 				plugins.add('hidden');
 				plugins.add('polyfill');
 				plugins.add('serialize');
-				if (args.length > 1 && site.data.env == "dev" || !req.locked(['webmaster'])) {
+				if (res.req && (site.data.env == "dev" || !req.locked(['webmaster']))) {
+					// manual response does not have req
 					settings.enabled = false;
 				}
 			} else if (online) {
