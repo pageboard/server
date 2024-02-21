@@ -6,6 +6,7 @@ const Path = require('node:path');
 const https = require('node:https');
 const { createWriteStream } = require('node:fs');
 const { createHash } = require('node:crypto');
+const { performance } = require('node:perf_hooks');
 const dom = require.lazy('express-dom');
 const pdf = require.lazy('express-dom-pdf');
 
@@ -239,6 +240,7 @@ module.exports = class PrerenderModule {
 		if (!site.$url) {
 			throw new HttpError.BadRequest("Rendering needs a site url");
 		}
+		const start = performance.now();
 		const {
 			pathname,
 			schema
@@ -275,7 +277,8 @@ module.exports = class PrerenderModule {
 		else await waitPipeline(res, createWriteStream(filePath));
 		return {
 			path: filePath,
-			headers: res.headers
+			headers: res.headers,
+			time: performance.now() - start
 		};
 	}
 	static save = {
