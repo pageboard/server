@@ -149,7 +149,7 @@ module.exports = class PrerenderModule {
 				settings.plugins.add('equivs');
 				settings.plugins.delete('pdf');
 				settings.plugins.add('pdf');
-				const preset = req.query.pdf;
+				const preset = location.searchParams.get('pdf');
 				if (preset != null) {
 					location.searchParams.delete('pdf');
 				}
