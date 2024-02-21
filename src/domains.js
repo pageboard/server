@@ -160,7 +160,7 @@ module.exports = class Domains {
 		req.types = new Set();
 
 		req.locked = list => app.auth.locked(req, list);
-		req.tag = (...args) => app.cache.tag(...args)(req, res);
+		req.tag = (...args) => app.cache.tag(...args)(req, req.res);
 
 		if (!req.get) req.get = str => {
 			console.info("Cannot use req.get in cli mode");
