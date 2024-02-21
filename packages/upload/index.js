@@ -6,7 +6,6 @@ const typeis = require.lazy('type-is');
 const mime = require.lazy('mime-types');
 const speaking = require.lazy('speakingurl');
 const { promises: fs } = require('node:fs');
-const randomBytesSeed = require.lazy('random-bytes-seed');
 
 module.exports = class UploadModule {
 	static name = 'upload';
@@ -71,13 +70,8 @@ module.exports = class UploadModule {
 			truncate: 128,
 			symbols: false
 		});
-		let ranFour;
-		if (req.query.seed) {
-			ranFour = randomBytesSeed(req.query.seed)(4);
-		} else {
-			ranFour = await randomBytes(4);
-		}
-		cb(null, `${basename}-${ranFour.toString('hex')}.${ext}`);
+		const ranb = await randomBytes(6);
+		cb(null, `${basename}-${ranb.toString('base64url').replaceAll(/_/g, '')}.${ext}`);
 	}
 	parse(req, limits) {
 		limits = { ...this.limits, ...limits };
