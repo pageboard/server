@@ -1,6 +1,11 @@
 const { pipeline } = require('node:stream');
-const http = require('http');
-const https = require('https');
+const { pipeline: waitPipeline } = require('node:stream/promises');
+const { writeFile, mkdir } = require('node:fs/promises');
+const http = require('node:http');
+const Path = require('node:path');
+const https = require('node:https');
+const { createWriteStream } = require('node:fs');
+const { createHash } = require('node:crypto');
 const dom = require.lazy('express-dom');
 const pdf = require.lazy('express-dom-pdf');
 
@@ -56,24 +61,26 @@ module.exports = class PrerenderModule {
 		);
 	}
 
-	#requestedRenderingSchema(req, { pathname }) {
+	#requestedRenderingSchema(req, { path }) {
 		const { site } = req;
-		const { url, lang, ext = 'page' } = req.call('page.parse', { url: pathname });
+		const {
+			pathname, lang, ext = 'page'
+		} = req.call('page.parse', { url: path });
+		const ret = { pathname, schema: null };
 		if (!site.$pkg.pages.has(ext)) {
-			pathname = null;
+			return ret;
 		}
 		if (lang && !site.data.languages?.includes(lang)) {
-			pathname = null;
+			return ret;
 		}
 		if (this.app.api.check({
-			method: 'page.parse', parameters: { url }
+			method: 'page.parse', parameters: { pathname }
 		}) === false) {
-			pathname = null;
+			// shouldn't req.call be req.run above ?
+			return ret;
 		}
-		return {
-			pathname,
-			schema: pathname != null ? site.$schema(ext) : null
-		};
+		ret.schema = site.$schema(ext);
+		return ret;
 	}
 
 	check(req, res, next) {
@@ -83,7 +90,7 @@ module.exports = class PrerenderModule {
 		const {
 			pathname,
 			schema
-		} = this.#requestedRenderingSchema(req, { pathname: req.path });
+		} = this.#requestedRenderingSchema(req, { path: req.path });
 
 		if (pathname == null || schema == null) {
 			if (req.accepts(['image/*', 'json', 'html']) != 'html') {
@@ -168,7 +175,7 @@ module.exports = class PrerenderModule {
 				plugins.add('hidden');
 				plugins.add('polyfill');
 				plugins.add('serialize');
-				if (site.data.env == "dev" || !req.locked(['webmaster'])) {
+				if (args.length > 1 && site.data.env == "dev" || !req.locked(['webmaster'])) {
 					settings.enabled = false;
 				}
 			} else if (online) {
@@ -224,6 +231,64 @@ module.exports = class PrerenderModule {
 				<body></body>
 			</html>`);
 	}
+
+	async save(req, data) {
+		const { site } = req;
+		if (!site.$url) {
+			throw new HttpError.BadRequest("Rendering needs a site url");
+		}
+		const {
+			pathname,
+			schema
+		} = this.#requestedRenderingSchema(req, { path: data.path });
+
+		req.url = data.path;
+		req.schema = schema;
+
+		let res, ext;
+
+		if (schema.name == "pdf") {
+			ext = 'pdf';
+			res = await this.#callPdfMw(req);
+		} else if (schema.name == "mail") {
+			ext = 'mail';
+			res = await this.#callMailMw(req);
+		} else {
+			ext = 'html';
+			res = await this.#callHtmlMw(req);
+		}
+		if (res.statusCode != 200) {
+			throw new HttpError[res.statusCode]();
+		}
+
+		const hash = createHash('sha1');
+		hash.update(data.path);
+		const fileName = hash.digest('base64url') + '.' + ext;
+		const dirName = Path.join(this.app.dirs.tmp, site.id);
+		await mkdir(dirName, { recursive: true });
+
+		const filePath = Path.join(dirName, fileName);
+
+		if (res.body) await writeFile(filePath, res.body);
+		else await waitPipeline(res, createWriteStream(filePath));
+		return {
+			path: filePath,
+			headers: res.headers
+		};
+	}
+	static save = {
+		title: 'Save prerendered URL',
+		$lock: true,
+		$action: 'write',
+		required: ['path'],
+		properties: {
+			path: {
+				title: 'Relative URL',
+				type: 'string',
+				format: 'uri-reference'
+			}
+		}
+	};
 };
 
 
