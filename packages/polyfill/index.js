@@ -86,7 +86,7 @@ module.exports = class PolyfillModule {
 
 					const [output] = await this.app.statics.bundle(req.site, {
 						inputs,
-						output: 'polyfill-' + hash.digest('base64url') + '.js',
+						output: 'polyfill-' + hash.digest('base64url').replaceAll(/_/g, '') + '.js',
 						local: true,
 						sourceMap: false
 					});
