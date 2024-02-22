@@ -108,34 +108,46 @@ module.exports = class TranslateService {
 		$action: 'write'
 	};
 
-	async list({ site, trx, ref, fun }, { self, id, lang, limit, offset, valid }) {
+	async list({ site, trx, ref, fun, raw }, { self, id, lang, limit, offset, valid }) {
 		const sourceLang = site.data.languages?.[0];
 		if (!sourceLang) throw new HttpError.BadRequest("Missing site.data.languages");
-		const q = site.$relatedQuery('children', trx)
-			.distinct(
-				'target.id', 'target.data', 'target.type', 'target._id',
-				ref('source.data:text').castText().as('source')
-			);
+
+		if (site.$pkg.textblocks.includes('content')) {
+			throw new HttpError.InternalServerError("content cannot be a text block");
+		}
+
+		// parents > blocks > source + target
+		const qWith = site.$relatedQuery('children', trx)
+			.distinct('source._id AS source_id', 'target._id AS target_id');
 		if (!self) {
-			q.joinRelated('[parents, children as source, children as target]')
+			qWith.joinRelated('[parents, children as source, children as target]')
 				.where('parents.id', id);
 		} else {
-			q.joinRelated('[children as source, children as target]')
+			qWith.joinRelated('[children as source, children as target]')
 				.where('block.id', id);
 		}
-		q.whereNot('block.type', 'content')
+		qWith
 			.whereIn('block.type', site.$pkg.textblocks)
 			.where('source.type', 'content')
 			.where(ref('source.data:lang').castText(), sourceLang)
-			.where('target.type', 'content')
-			.where(ref('target.data:name'), ref('source.data:name'))
-			.where(ref('target.data:lang').castText(), lang)
 			.whereNot(q => {
 				q.where(fun('starts_with', ref('source.data:text').castText(), '<'));
 				q.where(fun('regexp_count', ref('source.data:text').castText(), '>\\w'), 0);
 			})
+			.where('target.type', 'content')
+			.where(ref('target.data:name'), ref('source.data:name'))
+			.where(ref('target.data:lang').castText(), lang)
 			.where(fun.coalesce(ref('target.data:valid').castBool(), false), valid)
 			.orderBy('target._id', 'desc');
+
+		const q = site.$modelClass.query(trx)
+			.from(qWith.as('contents'))
+			.leftJoin('block as source', 'source._id', 'contents.source_id')
+			.leftJoin('block as target', 'target._id', 'contents.target_id')
+			.select(
+				'target.id', 'target.data', 'target.type', 'target._id',
+				ref('source.data:text').castText().as('source')
+			);
 		const [items, count] = await Promise.all([
 			q.limit(limit).offset(offset),
 			q.resultSize()
