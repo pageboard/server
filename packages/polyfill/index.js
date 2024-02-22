@@ -59,9 +59,8 @@ module.exports = class PolyfillModule {
 	}
 
 	async fileRoutes(app, server) {
-
 		server.get(
-			'/.files/polyfill.js',
+			'/.api/polyfills',
 			app.cache.for({
 				maxAge: this.app.opts.cache.files,
 				immutable: true // eventually...
