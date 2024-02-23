@@ -296,7 +296,7 @@ BEGIN
 						'name', cur_name,
 						'lang', cur_lang,
 						'valid', cur_valid,
-						'text', CASE WHEN cur_valid THEN cur_text ELSE COALESCE(old_text, '') END
+						'text', CASE WHEN cur_valid THEN cur_text ELSE '' END
 					)
 				) RETURNING block._id INTO cur_id;
 				INSERT INTO relation (child_id, parent_id) VALUES (cur_id, _site._id);
