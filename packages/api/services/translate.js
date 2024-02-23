@@ -1,6 +1,8 @@
 module.exports = class TranslateService {
 	static name = 'translate';
 
+	// TODO use deepl-node
+
 	constructor(app, opts) {
 		this.app = app;
 		this.opts = opts;
@@ -144,9 +146,8 @@ module.exports = class TranslateService {
 			.from(qWith.as('contents'))
 			.leftJoin('block as source', 'source._id', 'contents.source_id')
 			.leftJoin('block as target', 'target._id', 'contents.target_id')
-			.select(
-				'target.id', 'target.data', 'target.type', 'target._id',
-				ref('source.data:text').castText().as('source')
+			.select('target.id', 'target.data', 'target.type',
+				raw("jsonb_build_object('id', source.id, 'data', source.data, 'type', source.type) AS parent")
 			);
 		const [items, count] = await Promise.all([
 			q.limit(limit).offset(offset),
