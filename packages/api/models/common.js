@@ -386,7 +386,7 @@ function asPaths(obj, ret, pre, first, schemas) {
 	const dateTimes = ["date-time", "date"];
 	Object.keys(obj).forEach(str => {
 		let val = obj[str];
-		const [key, op] = str.split(':');
+		const [key, op] = str.split(/[:#]/);
 		if (op != null) {
 			delete obj[str];
 			obj[key] = val;

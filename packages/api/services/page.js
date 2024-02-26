@@ -96,6 +96,7 @@ module.exports = class PageService {
 		);
 		return {
 			url: pathname + loc.search,
+			pathname,
 			lang,
 			ext
 		};

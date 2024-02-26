@@ -135,7 +135,7 @@ module.exports = class PrintModule {
 
 	async run(req, data) {
 		const { item: block } = await req.run('block.add', {
-			// w/a remote#customer_reference limit
+			// w/a remote#customer_reference limited to 15 chars
 			id: await req.Block.genId(7),
 			type: 'print_job',
 			data: { ...data, response: {} }
@@ -169,7 +169,9 @@ module.exports = class PrintModule {
 		}
 
 		req.postpone(() => req.try(block, async () => {
-			const { path } = await this.#download(req, pdfUrl, block.id);
+			const { path } = await req.run('prerender.save', {
+				path: pdfUrl.pathname + pdfUrl.search
+			});
 			try {
 				const ret = await cups.printFile(path, {
 					printer: this.opts.local,
@@ -192,7 +194,9 @@ module.exports = class PrintModule {
 		});
 		pdfUrl.searchParams.set('pdf', 'printer');
 		req.postpone(() => req.try(block, async () => {
-			const { path } = await this.#download(req, pdfUrl, block.id);
+			const { path } = await req.run('prerender.save', {
+				path: pdfUrl.pathname + pdfUrl.search
+			});
 			const dest = Path.join(this.opts.storage, Path.basename(path));
 			try {
 				if (this.opts.storage.startsWith('/')) {
@@ -333,8 +337,8 @@ module.exports = class PrintModule {
 		};
 		const clean = [];
 
-		const pdfRun = await this.#downloadPublic(
-			req, printProduct.pdf, `${block.id}-content`
+		const pdfRun = await this.#publicPdf(
+			req, printProduct.pdf, `${block.id}-content.pdf`
 		);
 		clean.push(pdfRun.path);
 		printProduct.pdf = pdfRun.href;
@@ -363,8 +367,8 @@ module.exports = class PrintModule {
 			}
 			// TODO ensure coverPaper matches paper
 			// const { paper: coverPaper } = coverPdf.data;
-			const coverRun = await this.#downloadPublic(
-				req, printProduct.cover_pdf, `${block.id}-cover`
+			const coverRun = await this.#publicPdf(
+				req, printProduct.cover_pdf, `${block.id}-cover.pdf`
 			);
 			clean.push(coverRun.path);
 			printProduct.cover_pdf = coverRun.href;
@@ -406,53 +410,20 @@ module.exports = class PrintModule {
 		}
 	}
 
-	async #downloadPublic(req, url, name) {
+	async #publicPdf(req, url, name) {
 		const { site } = req;
+		const res = await req.run('prerender.save', {
+			path: url.pathname + url.search
+		});
 		const pubDir = Path.join(this.app.dirs.publicCache, site.id);
 		await fs.promises.mkdir(pubDir, {
 			recursive: true
 		});
-		const { path, response } = await this.#download(req, url, name, pubDir);
-		const href = (new URL("/.public/" + Path.basename(path), site.$url)).href;
-		const count = response.headers.get('x-page-count');
-		return { href, path, count };
-	}
+		await fs.promises.rename(res.path, Path.join(pubDir, name));
 
-	async #download(req, url, name, to = this.app.dirs.tmp) {
-		const controller = new AbortController();
-		const toId = setTimeout(() => controller.abort(), 100000);
-		const response = await fetch(new URL(url, req.site.$url), {
-			headers: {
-				cookie: req.get('cookie')
-			},
-			signal: controller.signal
-		});
-		let path;
-		try {
-			clearTimeout(toId);
-			if (!response.ok) {
-				throw new HttpError.BadRequest(response.statusText);
-			}
-			const type = response.headers.get('Content-Type');
-			if (!type) {
-				throw new HttpError.BadRequest("Cannot print file that has not Content-Type");
-			}
-			const ext = mime.extension(type);
-			if (ext != "pdf") {
-				throw new HttpError.BadParams("Cannot print non-pdf file");
-			}
-			path = Path.join(to, name) + "." + ext;
-			await pipeline(response.body, fs.createWriteStream(path));
-			return { path, response };
-		} catch (err) {
-			try {
-				controller.abort();
-				if (path) await fs.promises.unlink(path);
-			} catch {
-				// pass
-			}
-			throw err;
-		}
+		const href = (new URL("/.public/" + name, site.$url)).href;
+		const count = res.headers['x-page-count'];
+		return { href, path: res.path, count };
 	}
 };
 
