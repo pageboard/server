@@ -290,6 +290,7 @@ module.exports = class PrintModule {
 
 	async #remoteCall(req, block, { agent, pdf, coverPdf, courier }) {
 		const { options } = block.data;
+		block.data.order = {};
 		const pdfUrl = req.call('page.format', {
 			url: block.data.url,
 			lang: block.data.lang,
