@@ -316,16 +316,28 @@ module.exports = class HrefService {
 			}
 			q.union(urlQueries, true);
 		};
+		const pageTypes = Array.from(site.$pkg.pages);
+		const standaloneTypes = site.$pkg.standalones;
 		const q = site.$relatedQuery('children', trx)
 			.with('list', qList)
 			.join('list', 'list.id', 'block.id')
 			.distinct('parents.id', 'parents.type')
 			.where(ref('block.data:url').castText(), url)
-			.joinRelated('parents')
+			.joinRelated('parents.[parents as roots]')
 			.whereNot('parents.type', 'site')
-			.whereNotIn('block.type', Array.from(site.$pkg.pages))
+			.whereNotIn('block.type', pageTypes)
 			.where(q => {
-				if (ids.length) q.whereNotIn('parents.id', ids);
+				q.where(q => {
+					q.where('parents:roots.type', 'site');
+					q.where('parents.type', pageTypes);
+					if (ids.length) q.whereNotIn('parents.id', ids);
+				});
+				q.orWhere(q => {
+					q.whereIn('parents:roots.type', pageTypes);
+					q.whereIn('parents.type', standaloneTypes);
+					q.where('parents.standalone', true);
+					if (ids.length) q.whereNotIn('parents:roots.id', ids);
+				});
 			});
 		const [items, count] = await Promise.all([
 			q.limit(limit).offset(offset),
