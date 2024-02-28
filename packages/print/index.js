@@ -419,11 +419,12 @@ module.exports = class PrintModule {
 		await fs.promises.mkdir(pubDir, {
 			recursive: true
 		});
-		await fs.promises.rename(res.path, Path.join(pubDir, name));
+		const destPath = Path.join(pubDir, name);
+		await fs.promises.rename(res.path, destPath);
 
 		const href = (new URL("/.public/" + name, site.$url)).href;
 		const count = res.headers['x-page-count'];
-		return { href, path: res.path, count };
+		return { href, path: destPath, count };
 	}
 };
 
