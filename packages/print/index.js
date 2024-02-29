@@ -1,9 +1,7 @@
 const fs = require('node:fs');
 const Path = require('node:path');
-const { pipeline } = require('node:stream/promises');
 const { promisify } = require('node:util');
 const exec = promisify(require('node:child_process').exec);
-const mime = require.lazy('mime-types');
 const cups = require('node-cups');
 
 module.exports = class PrintModule {
