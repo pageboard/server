@@ -387,6 +387,16 @@ module.exports = class BlockService {
 				type: 'object',
 				nullable: true
 			},
+			created_at: {
+				title: 'Created at',
+				type: 'string',
+				nullable: true
+			},
+			updated_at: {
+				title: 'Updated at',
+				type: 'string',
+				nullable: true
+			},
 			order: {
 				title: 'Sort by',
 				type: 'array',
@@ -1020,9 +1030,14 @@ function whereSub(q, data, alias = 'block') {
 			q.where(`${alias}.id`, data.id);
 		}
 	}
-	if (data.data && Object.keys(data.data).length > 0) {
+	const wobj = {};
+	if (!Object.isEmpty(data.data)) wobj.data = data.data;
+	if (data.created_at) wobj.created_at = data.created_at;
+	if (data.updated_at) wobj.updated_at = data.updated_at;
+	if (!Object.isEmpty(wobj)) {
 		valid = true;
-		q.whereObject({ data: data.data }, data.type, alias);
+		// add the generic block style
+		q.whereObject(wobj, types.concat(['*']), alias);
 	}
 	return valid;
 }

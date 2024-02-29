@@ -66,6 +66,10 @@ class Block extends Model {
 				type: 'boolean',
 				default: false
 			},
+			created_at: {
+				format: 'date-time',
+				type: 'string'
+			},
 			updated_at: {
 				format: 'date-time',
 				type: 'string'
@@ -269,6 +273,7 @@ class Block extends Model {
 
 			static #types = types;
 			static schema(path) {
+				if (path == "*") return Block.jsonSchema;
 				const list = path.split('.');
 				const type = list.shift();
 				let sch = this.#types[type];
