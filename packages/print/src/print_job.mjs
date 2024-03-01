@@ -35,6 +35,19 @@ export const print_job = {
 			description: 'Preconfigured printer type',
 			type: 'string'
 		},
+		device: {
+			title: 'Device',
+			anyOf: [{
+				const: 'screen',
+				title: 'Screen'
+			}, {
+				const: 'ebook',
+				title: 'Ebook'
+			}, {
+				const: 'printer',
+				title: 'Printer'
+			}]
+		},
 		response: {
 			title: 'Job response',
 			$filter: 'hide',

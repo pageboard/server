@@ -27,6 +27,10 @@ module.exports = class PrintModule {
 			const: 'storage',
 			title: 'Storage'
 		});
+		if (this.opts.file) list.push({
+			const: 'file',
+			title: 'File'
+		});
 		if (this.opts.remote) list.push({
 			const: 'remote',
 			title: 'Remote'
@@ -46,11 +50,12 @@ module.exports = class PrintModule {
 			},
 			properties: {}
 		};
+		const conf = this.opts[printer];
+		if (!conf) return { item };
 		const p = item.properties;
-		if (printer == "storage" && this.opts[printer]) {
+		if (printer == "storage" || printer == "file") {
 			// nothing
-		} else if (printer == "remote" && this.opts[printer]) {
-			const conf = this.opts[printer];
+		} else if (printer == "remote") {
 			const agent = new this.Agent(this.opts, conf.url);
 
 			agent.bearer = (await agent.fetch("/login", "post", {
@@ -80,7 +85,7 @@ module.exports = class PrintModule {
 					const: 'express', title: 'Express'
 				}]
 			};
-		} else {
+		} else if (printer == "local") {
 			const optsList = await cups.getPrinterOptions(printer);
 			item.properties = Object.fromEntries(optsList.map(po => {
 				const obj = {
@@ -112,7 +117,8 @@ module.exports = class PrintModule {
 		const job = {
 			remote: this.#remoteJob,
 			storage: this.#storageJob,
-			local: this.#localJob
+			local: this.#localJob,
+			file: this.#fileJob
 		}[block.data.printer];
 
 		await req.try(block, (req, block) => job.call(this, req, block));
@@ -141,7 +147,8 @@ module.exports = class PrintModule {
 		const job = {
 			remote: this.#remoteJob,
 			storage: this.#storageJob,
-			local: this.#localJob
+			local: this.#localJob,
+			file: this.#fileJob
 		}[block.data.printer];
 
 		await req.try(block, (req, block) => job.call(this, req, block));
@@ -154,12 +161,25 @@ module.exports = class PrintModule {
 		$ref: "/elements#/definitions/print_job/properties/data"
 	};
 
+	async #fileJob(req, block) {
+		const { url, lang, options } = block.data;
+		const pdfUrl = req.call('page.format', {
+			url, lang, ext: 'pdf'
+		});
+		pdfUrl.searchParams.set('pdf', options.device);
+		req.postpone(() => req.try(block, async () => {
+			await this.#publicPdf(
+				req, pdfUrl, `${block.id}.pdf`
+			);
+		}));
+	}
+
 	async #localJob(req, block) {
 		const { url, lang, options } = block.data;
 		const pdfUrl = req.call('page.format', {
 			url, lang, ext: 'pdf'
 		});
-		pdfUrl.searchParams.set('pdf', 'printer');
+		pdfUrl.searchParams.set('pdf', options.device ?? 'printer');
 
 		const list = await cups.getPrinterNames();
 		if (!list.find(name => name == this.opts.local)) {
@@ -183,14 +203,14 @@ module.exports = class PrintModule {
 	}
 
 	async #storageJob(req, block) {
-		const { url, lang } = block.data;
+		const { url, lang, options } = block.data;
 		if (!this.opts.storage) {
 			throw new HttpError.BadRequest("No storage printer");
 		}
 		const pdfUrl = req.call('page.format', {
 			url, lang, ext: 'pdf'
 		});
-		pdfUrl.searchParams.set('pdf', 'printer');
+		pdfUrl.searchParams.set('pdf', options.device ?? 'printer');
 		req.postpone(() => req.try(block, async () => {
 			const { path } = await req.run('prerender.save', {
 				path: pdfUrl.pathname + pdfUrl.search
@@ -294,7 +314,7 @@ module.exports = class PrintModule {
 			lang: block.data.lang,
 			ext: 'pdf'
 		});
-		pdfUrl.searchParams.set('pdf', 'printer');
+		pdfUrl.searchParams.set('pdf', options.device ?? 'printer');
 
 		const printProduct = {
 			pdf: pdfUrl,
@@ -310,7 +330,7 @@ module.exports = class PrintModule {
 				lang: block.data.lang,
 				ext: 'pdf'
 			});
-			coverUrl.searchParams.set('pdf', 'printer');
+			coverUrl.searchParams.set('pdf', options.device ?? 'printer');
 			printProduct.cover_pdf = coverUrl;
 		}
 		if (options.discount_code) {
