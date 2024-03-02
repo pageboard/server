@@ -204,7 +204,8 @@ module.exports = class PrintModule {
 
 	async #storageJob(req, block) {
 		const { url, lang, options } = block.data;
-		if (!this.opts.storage) {
+		const storePath = this.opts.storage?.[req.site.data.env];
+		if (!storePath) {
 			throw new HttpError.BadRequest("No storage printer");
 		}
 		const pdfUrl = req.call('page.format', {
@@ -215,9 +216,10 @@ module.exports = class PrintModule {
 			const { path } = await req.run('prerender.save', {
 				path: pdfUrl.pathname + pdfUrl.search
 			});
-			const dest = Path.join(this.opts.storage, Path.basename(path));
+
+			const dest = Path.join(storePath, Path.basename(path));
 			try {
-				if (this.opts.storage.startsWith('/')) {
+				if (storePath.startsWith('/')) {
 					await fs.promises.copyFile(path, dest);
 				} else {
 					await exec(`scp ${path} ${dest}`, {
@@ -307,6 +309,10 @@ module.exports = class PrintModule {
 	}
 
 	async #remoteCall(req, block, { agent, pdf, coverPdf, courier }) {
+		const orderEndpoint = this.opts.remote[req.site.data.env];
+		if (!orderEndpoint) {
+			throw new HttpError.BadRequest("No remote order end point");
+		}
 		const { options } = block.data;
 		block.data.order = {};
 		const pdfUrl = req.call('page.format', {
@@ -413,11 +419,11 @@ module.exports = class PrintModule {
 		});
 
 		try {
-			const ret = await agent.fetch(this.opts.remote.order, "post", {
+			const ret = await agent.fetch(orderEndpoint, "post", {
 				data: order
 			});
 			if (ret.status != "ok") {
-				console.info("got expresta response", ret);
+				console.info("Order response", ret);
 				throw new HttpError.BadRequest(ret.msg);
 			}
 			block.data.order = {
