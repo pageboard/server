@@ -336,6 +336,9 @@ module.exports = class PrintModule {
 			},
 			products
 		};
+		if (order.delivery.phone) {
+			order.delivery.phone = order.delivery.phone.replaceAll(/[()-\s]+/g, '');
+		}
 		const clean = [];
 
 		const pdfRun = await this.#publicPdf(
