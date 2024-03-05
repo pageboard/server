@@ -268,9 +268,7 @@ module.exports = class PrerenderModule {
 		const hash = createHash('sha1');
 		hash.update(data.path);
 		const fileName = hash.digest('base64url').replaceAll(/_/g, '') + '.' + ext;
-		const dirName = Path.join(this.app.dirs.tmp, site.id);
-		await mkdir(dirName, { recursive: true });
-
+		const dirName = await req.call('statics.dir', { dir: 'tmp' });
 		const filePath = Path.join(dirName, fileName);
 
 		if (res.body) await writeFile(filePath, res.body);

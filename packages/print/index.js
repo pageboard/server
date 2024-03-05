@@ -440,10 +440,8 @@ module.exports = class PrintModule {
 		const res = await req.run('prerender.save', {
 			path: url.pathname + url.search
 		});
-		const pubDir = Path.join(this.app.dirs.publicCache, site.id);
-		await fs.promises.mkdir(pubDir, {
-			recursive: true
-		});
+
+		const pubDir = await req.call('statics.dir', {dir: 'public'});
 		const destPath = Path.join(pubDir, name);
 		await fs.promises.rename(res.path, destPath);
 
