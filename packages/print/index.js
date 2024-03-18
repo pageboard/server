@@ -171,7 +171,7 @@ module.exports = class PrintModule {
 			await this.#publicPdf(
 				req, pdfUrl, `${block.id}.pdf`
 			);
-		}));
+		});
 	}
 
 	async #localJob(req, block) {
