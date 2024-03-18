@@ -231,6 +231,7 @@ module.exports = class PrintModule {
 					});
 				}
 			} catch (ex) {
+				console.error(ex);
 				throw new HttpError.InternalServerError(`Storage failure`);
 			} finally {
 				await fs.promises.unlink(path);
