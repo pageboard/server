@@ -227,7 +227,7 @@ module.exports = class PrintModule {
 							SSH_AUTH_SOCK: process.env.SSH_AUTH_SOCK
 						},
 						shell: false,
-						timeout: 120000
+						timeout: 300000
 					});
 				}
 			} catch (ex) {
