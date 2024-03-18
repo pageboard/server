@@ -180,18 +180,7 @@ module.exports = class ApiModule {
 				} else {
 					// top-lost run call
 					delete req.trx;
-					const { afters } = req;
-					if (afters) {
-						Promise.resolve().then(async () => {
-							while (afters.length) {
-								try {
-									await afters.shift()();
-								} catch (ex) {
-									console.error(ex);
-								}
-							}
-						});
-					}
+					req.postTryProcess();
 				}
 			}
 		}

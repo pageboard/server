@@ -167,7 +167,7 @@ module.exports = class PrintModule {
 			url, lang, ext: 'pdf'
 		});
 		pdfUrl.searchParams.set('pdf', options.device);
-		req.postpone(() => req.try(block, async () => {
+		req.postTry(block, async () => {
 			await this.#publicPdf(
 				req, pdfUrl, `${block.id}.pdf`
 			);
@@ -186,7 +186,7 @@ module.exports = class PrintModule {
 			throw new HttpError.NotFound("Printer not found");
 		}
 
-		req.postpone(() => req.try(block, async () => {
+		req.postTry(block, async () => {
 			const { path } = await req.run('prerender.save', {
 				path: pdfUrl.pathname + pdfUrl.search
 			});
@@ -199,7 +199,7 @@ module.exports = class PrintModule {
 			} finally {
 				await fs.promises.unlink(path);
 			}
-		}));
+		});
 	}
 
 	async #storageJob(req, block) {
@@ -212,7 +212,7 @@ module.exports = class PrintModule {
 			url, lang, ext: 'pdf'
 		});
 		pdfUrl.searchParams.set('pdf', options.device ?? 'printer');
-		req.postpone(() => req.try(block, async () => {
+		req.postTry(block, async () => {
 			const { path } = await req.run('prerender.save', {
 				path: pdfUrl.pathname + pdfUrl.search
 			});
@@ -235,7 +235,7 @@ module.exports = class PrintModule {
 			} finally {
 				await fs.promises.unlink(path);
 			}
-		}));
+		});
 	}
 
 	async couriers(req, { iso_code }) {
@@ -302,9 +302,7 @@ module.exports = class PrintModule {
 			obj.coverPdf = coverPdf;
 		}
 
-		req.postpone(
-			() => req.try(block, (req, block) => this.#remoteCall(req, block, obj))
-		);
+		req.postTry(block, (req, block) => this.#remoteCall(req, block, obj));
 		return block;
 	}
 
