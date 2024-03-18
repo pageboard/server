@@ -188,7 +188,7 @@ module.exports = class PrintModule {
 
 		req.postTry(block, async () => {
 			const { path } = await req.run('prerender.save', {
-				path: pdfUrl.pathname + pdfUrl.search
+				url: pdfUrl.pathname + pdfUrl.search
 			});
 			try {
 				const ret = await cups.printFile(path, {
@@ -214,10 +214,10 @@ module.exports = class PrintModule {
 		pdfUrl.searchParams.set('pdf', options.device ?? 'printer');
 		req.postTry(block, async () => {
 			const { path } = await req.run('prerender.save', {
-				path: pdfUrl.pathname + pdfUrl.search
+				url: pdfUrl.pathname + pdfUrl.search
 			});
 
-			const dest = Path.join(storePath, Path.basename(path));
+			const dest = Path.join(storePath, block.id + '.pdf');
 			try {
 				if (storePath.startsWith('/')) {
 					await fs.promises.copyFile(path, dest);
@@ -439,7 +439,7 @@ module.exports = class PrintModule {
 	async #publicPdf(req, url, name) {
 		const { site } = req;
 		const res = await req.run('prerender.save', {
-			path: url.pathname + url.search
+			url: url.pathname + url.search
 		});
 
 		const pubDir = await req.call('statics.dir', {dir: 'public'});
