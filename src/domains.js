@@ -170,7 +170,9 @@ module.exports = class Domains {
 		};
 
 		req.try = async (block, job) => {
-			this.#kqueue.push(`${req.site?.id}-${block.id}`, async () => {
+			// trying in repetition with same key makes next tries
+			// wait for the first one
+			return this.#kqueue.push(`${req.site?.id}-${block.id}`, async () => {
 				const { response } = block.data;
 				response.status = null;
 				response.text = null;
