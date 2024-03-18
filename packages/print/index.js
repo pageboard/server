@@ -1,9 +1,7 @@
 const fs = require('node:fs');
 const Path = require('node:path');
-const { pipeline } = require('node:stream/promises');
 const { promisify } = require('node:util');
 const exec = promisify(require('node:child_process').exec);
-const mime = require.lazy('mime-types');
 const cups = require('node-cups');
 
 module.exports = class PrintModule {
@@ -29,6 +27,10 @@ module.exports = class PrintModule {
 			const: 'storage',
 			title: 'Storage'
 		});
+		if (this.opts.file) list.push({
+			const: 'file',
+			title: 'File'
+		});
 		if (this.opts.remote) list.push({
 			const: 'remote',
 			title: 'Remote'
@@ -48,11 +50,12 @@ module.exports = class PrintModule {
 			},
 			properties: {}
 		};
+		const conf = this.opts[printer];
+		if (!conf) return { item };
 		const p = item.properties;
-		if (printer == "storage" && this.opts[printer]) {
+		if (printer == "storage" || printer == "file") {
 			// nothing
-		} else if (printer == "remote" && this.opts[printer]) {
-			const conf = this.opts[printer];
+		} else if (printer == "remote") {
 			const agent = new this.Agent(this.opts, conf.url);
 
 			agent.bearer = (await agent.fetch("/login", "post", {
@@ -82,7 +85,7 @@ module.exports = class PrintModule {
 					const: 'express', title: 'Express'
 				}]
 			};
-		} else {
+		} else if (printer == "local") {
 			const optsList = await cups.getPrinterOptions(printer);
 			item.properties = Object.fromEntries(optsList.map(po => {
 				const obj = {
@@ -114,7 +117,8 @@ module.exports = class PrintModule {
 		const job = {
 			remote: this.#remoteJob,
 			storage: this.#storageJob,
-			local: this.#localJob
+			local: this.#localJob,
+			file: this.#fileJob
 		}[block.data.printer];
 
 		await req.try(block, (req, block) => job.call(this, req, block));
@@ -143,7 +147,8 @@ module.exports = class PrintModule {
 		const job = {
 			remote: this.#remoteJob,
 			storage: this.#storageJob,
-			local: this.#localJob
+			local: this.#localJob,
+			file: this.#fileJob
 		}[block.data.printer];
 
 		await req.try(block, (req, block) => job.call(this, req, block));
@@ -156,21 +161,34 @@ module.exports = class PrintModule {
 		$ref: "/elements#/definitions/print_job/properties/data"
 	};
 
+	async #fileJob(req, block) {
+		const { url, lang, options } = block.data;
+		const pdfUrl = req.call('page.format', {
+			url, lang, ext: 'pdf'
+		});
+		pdfUrl.searchParams.set('pdf', options.device);
+		req.postTry(block, async () => {
+			await this.#publicPdf(
+				req, pdfUrl, `${block.id}.pdf`
+			);
+		});
+	}
+
 	async #localJob(req, block) {
 		const { url, lang, options } = block.data;
 		const pdfUrl = req.call('page.format', {
 			url, lang, ext: 'pdf'
 		});
-		pdfUrl.searchParams.set('pdf', 'printer');
+		pdfUrl.searchParams.set('pdf', options.device ?? 'printer');
 
 		const list = await cups.getPrinterNames();
 		if (!list.find(name => name == this.opts.local)) {
 			throw new HttpError.NotFound("Printer not found");
 		}
 
-		req.postpone(() => req.try(block, async () => {
+		req.postTry(block, async () => {
 			const { path } = await req.run('prerender.save', {
-				path: pdfUrl.pathname + pdfUrl.search
+				url: pdfUrl.pathname + pdfUrl.search
 			});
 			try {
 				const ret = await cups.printFile(path, {
@@ -181,25 +199,27 @@ module.exports = class PrintModule {
 			} finally {
 				await fs.promises.unlink(path);
 			}
-		}));
+		});
 	}
 
 	async #storageJob(req, block) {
-		const { url, lang } = block.data;
-		if (!this.opts.storage) {
+		const { url, lang, options } = block.data;
+		const storePath = this.opts.storage?.[req.site.data.env];
+		if (!storePath) {
 			throw new HttpError.BadRequest("No storage printer");
 		}
 		const pdfUrl = req.call('page.format', {
 			url, lang, ext: 'pdf'
 		});
-		pdfUrl.searchParams.set('pdf', 'printer');
-		req.postpone(() => req.try(block, async () => {
+		pdfUrl.searchParams.set('pdf', options.device ?? 'printer');
+		req.postTry(block, async () => {
 			const { path } = await req.run('prerender.save', {
-				path: pdfUrl.pathname + pdfUrl.search
+				url: pdfUrl.pathname + pdfUrl.search
 			});
-			const dest = Path.join(this.opts.storage, Path.basename(path));
+
+			const dest = Path.join(storePath, block.id + '.pdf');
 			try {
-				if (this.opts.storage.startsWith('/')) {
+				if (storePath.startsWith('/')) {
 					await fs.promises.copyFile(path, dest);
 				} else {
 					await exec(`scp ${path} ${dest}`, {
@@ -207,15 +227,16 @@ module.exports = class PrintModule {
 							SSH_AUTH_SOCK: process.env.SSH_AUTH_SOCK
 						},
 						shell: false,
-						timeout: 120000
+						timeout: 300000
 					});
 				}
 			} catch (ex) {
+				console.error(ex);
 				throw new HttpError.InternalServerError(`Storage failure`);
 			} finally {
 				await fs.promises.unlink(path);
 			}
-		}));
+		});
 	}
 
 	async couriers(req, { iso_code }) {
@@ -282,13 +303,15 @@ module.exports = class PrintModule {
 			obj.coverPdf = coverPdf;
 		}
 
-		req.postpone(
-			() => req.try(block, (req, block) => this.#remoteCall(req, block, obj))
-		);
+		req.postTry(block, (req, block) => this.#remoteCall(req, block, obj));
 		return block;
 	}
 
 	async #remoteCall(req, block, { agent, pdf, coverPdf, courier }) {
+		const orderEndpoint = this.opts.remote[req.site.data.env];
+		if (!orderEndpoint) {
+			throw new HttpError.BadRequest("No remote order end point");
+		}
 		const { options } = block.data;
 		block.data.order = {};
 		const pdfUrl = req.call('page.format', {
@@ -296,7 +319,7 @@ module.exports = class PrintModule {
 			lang: block.data.lang,
 			ext: 'pdf'
 		});
-		pdfUrl.searchParams.set('pdf', 'printer');
+		pdfUrl.searchParams.set('pdf', options.device ?? 'printer');
 
 		const printProduct = {
 			pdf: pdfUrl,
@@ -312,7 +335,7 @@ module.exports = class PrintModule {
 				lang: block.data.lang,
 				ext: 'pdf'
 			});
-			coverUrl.searchParams.set('pdf', 'printer');
+			coverUrl.searchParams.set('pdf', options.device ?? 'printer');
 			printProduct.cover_pdf = coverUrl;
 		}
 		if (options.discount_code) {
@@ -398,11 +421,11 @@ module.exports = class PrintModule {
 		});
 
 		try {
-			const ret = await agent.fetch(req.opts.print.remote.order, "post", {
+			const ret = await agent.fetch(orderEndpoint, "post", {
 				data: order
 			});
 			if (ret.status != "ok") {
-				console.info("got expresta response", ret);
+				console.info("Order response", ret);
 				throw new HttpError.BadRequest(ret.msg);
 			}
 			block.data.order = {
@@ -417,12 +440,10 @@ module.exports = class PrintModule {
 	async #publicPdf(req, url, name) {
 		const { site } = req;
 		const res = await req.run('prerender.save', {
-			path: url.pathname + url.search
+			url: url.pathname + url.search
 		});
-		const pubDir = Path.join(this.app.dirs.publicCache, site.id);
-		await fs.promises.mkdir(pubDir, {
-			recursive: true
-		});
+
+		const pubDir = await req.call('statics.dir', {dir: 'public'});
 		const destPath = Path.join(pubDir, name);
 		await fs.promises.rename(res.path, destPath);
 

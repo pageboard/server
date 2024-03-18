@@ -1,11 +1,10 @@
 const { pipeline } = require('node:stream');
 const { pipeline: waitPipeline } = require('node:stream/promises');
-const { writeFile, mkdir } = require('node:fs/promises');
+const { writeFile } = require('node:fs/promises');
 const http = require('node:http');
 const Path = require('node:path');
 const https = require('node:https');
 const { createWriteStream } = require('node:fs');
-const { createHash } = require('node:crypto');
 const { performance } = require('node:perf_hooks');
 const dom = require.lazy('express-dom');
 const pdf = require.lazy('express-dom-pdf');
@@ -129,13 +128,16 @@ module.exports = class PrerenderModule {
 		}
 
 		req.schema = schema;
+		this.#callMw(schema.name, req, res, next);
+	}
 
-		if (schema.name == "pdf") {
-			this.#callPdfMw(req, res, next);
-		} else if (schema.name == "mail") {
-			this.#callMailMw(req, res, next);
+	#callMw(name, req, res, next) {
+		if (name == "pdf") {
+			return this.#callPdfMw(req, res, next);
+		} else if (name == "mail") {
+			return this.#callMailMw(req, res, next);
 		} else {
-			this.#callHtmlMw(req, res, next);
+			return this.#callHtmlMw(req, res, next);
 		}
 	}
 
@@ -235,43 +237,27 @@ module.exports = class PrerenderModule {
 			</html>`);
 	}
 
-	async save(req, data) {
+	async save(req, { url }) {
 		const { site } = req;
 		if (!site.$url) {
 			throw new HttpError.BadRequest("Rendering needs a site url");
 		}
 		const start = performance.now();
 		const {
-			pathname,
 			schema
-		} = this.#requestedRenderingSchema(req, { path: data.path });
+		} = this.#requestedRenderingSchema(req, { path: url });
 
-		req.url = data.path;
+		req.url = url;
 		req.schema = schema;
 
-		let res, ext;
-
-		if (schema.name == "pdf") {
-			ext = 'pdf';
-			res = await this.#callPdfMw(req);
-		} else if (schema.name == "mail") {
-			ext = 'mail';
-			res = await this.#callMailMw(req);
-		} else {
-			ext = 'html';
-			res = await this.#callHtmlMw(req);
-		}
+		const ext = schema.name;
+		const res = await this.#callMw(ext, req);
 		if (res.statusCode != 200) {
 			throw new HttpError[res.statusCode]();
 		}
-
-		const hash = createHash('sha1');
-		hash.update(data.path);
-		const fileName = hash.digest('base64url').replaceAll(/_/g, '') + '.' + ext;
-		const dirName = Path.join(this.app.dirs.tmp, site.id);
-		await mkdir(dirName, { recursive: true });
-
-		const filePath = Path.join(dirName, fileName);
+		const dirName = await req.call('statics.dir', { dir: 'tmp' });
+		const fileName = await req.Block.genId(9);
+		const filePath = Path.join(dirName, fileName + '.' + ext);
 
 		if (res.body) await writeFile(filePath, res.body);
 		else await waitPipeline(res, createWriteStream(filePath));
@@ -285,9 +271,9 @@ module.exports = class PrerenderModule {
 		title: 'Save prerendered URL',
 		$lock: true,
 		$action: 'write',
-		required: ['path'],
+		required: ['url'],
 		properties: {
-			path: {
+			url: {
 				title: 'Relative URL',
 				type: 'string',
 				format: 'uri-reference'

@@ -68,8 +68,6 @@ module.exports = class TranslateService {
 	};
 
 	async available({ Block, trx }, { lang }) {
-		// deux usages: savoir quels languages sont disponibles dans pageboard
-		// savoir quels languages sont disponibles dans un site donné
 		if (!lang) {
 			const shared = await Block.query(trx).where('type', 'site').where('id', 'shared').first();
 			lang = shared?.data.languages?.[0];
@@ -78,7 +76,7 @@ module.exports = class TranslateService {
 			.columns({ content: true, lang }).where('block.type', 'language');
 	}
 	static available = {
-		title: 'List available languages',
+		title: 'List available shared languages',
 		$lock: true,
 		$global: true,
 		properties: {
@@ -87,6 +85,60 @@ module.exports = class TranslateService {
 				type: 'string',
 				format: 'lang',
 				nullable: true
+			}
+		}
+	};
+
+	async provision(req, { title, lang, tsconfig, translate }) {
+		const shared = await req.run('site.get', { id: 'shared' });
+		const reqShared = Object.assign({}, req, { site: shared });
+		const { item } = await reqShared.run('block.find', {
+			standalone: true, type: 'language', data: { lang }
+		});
+		if (!item) {
+			return reqShared.run('block.add', {
+				type: 'language',
+				data: {
+					lang, tsconfig, translate
+				},
+				content: { '': title }
+			});
+		} else {
+			return reqShared.run('block.save', {
+				data: {
+					tsconfig, translate
+				},
+				content: { '': title }
+			});
+		}
+	}
+	static provision = {
+		title: 'Provision shared language',
+		$lock: true,
+		$global: true,
+		properties: {
+			title: {
+				title: 'Title',
+				type: 'string',
+				format: 'singleline'
+			},
+			lang: {
+				title: 'Language identifier',
+				description: 'Two-letters code',
+				type: 'string',
+				format: 'lang'
+			},
+			tsconfig: {
+				title: 'Text search configuration',
+				description: 'One of SELECT cfgname FROM pg_ts_config',
+				type: 'string',
+				format: 'grant'
+			},
+			translate: {
+				title: 'Translation identifier',
+				description: 'External translation id',
+				type: 'string',
+				format: 'grant'
 			}
 		}
 	};

@@ -12,6 +12,7 @@ module.exports = class StaticsModule {
 		this.opts = {
 			cache: app.cache.opts,
 			uploads: app.upload.opts.dir,
+			tmp: app.dirs.tmp,
 			statics: Path.join(app.dirs.cache, "statics"),
 			files: Path.join(app.dirs.cache, "files"),
 			public: Path.join(app.dirs.cache, "public"),
@@ -185,6 +186,24 @@ module.exports = class StaticsModule {
 	resolve(id, url) {
 		return urlToPath(this.opts.files, id, url);
 	}
+
+	async dir(req, { dir }) {
+		const path = Path.join(this.opts[dir], req.site.id);
+		await fs.mkdir(path, {
+			recursive: true
+		});
+		return path;
+	}
+	static dir = {
+		title: 'Get directory for site',
+		$lock: true,
+		properties: {
+			dir: {
+				title: 'Directory type',
+				enum: ['tmp', 'public']
+			}
+		}
+	};
 };
 
 function staticNotFound(req) {

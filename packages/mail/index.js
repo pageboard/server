@@ -377,7 +377,7 @@ module.exports = class MailModule {
 			type: 'mail_job',
 			data: { ...data, response: {} }
 		});
-		req.postpone(() => req.try(block, (req, block) => this.#sendJob(req, block)));
+		req.postTry(block, (req, block) => this.#sendJob(req, block));
 		return block;
 	}
 	static send = {

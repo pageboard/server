@@ -17,7 +17,7 @@ module.exports = class ApiModule {
 	static priority = -1;
 	static plugins = [
 		'help', 'user', 'site', 'archive', 'settings', 'page', 'links',
-		'block', 'href', 'form', 'query',	'reservation', 'translate'
+		'block', 'href', 'reservation', 'translate', 'apis'
 	].map(name => Path.join(__dirname, 'services', name));
 
 	#packager;
@@ -180,18 +180,7 @@ module.exports = class ApiModule {
 				} else {
 					// top-lost run call
 					delete req.trx;
-					const { afters } = req;
-					if (afters) {
-						Promise.resolve().then(async () => {
-							while (afters.length) {
-								try {
-									await afters.shift()();
-								} catch (ex) {
-									console.error(ex);
-								}
-							}
-						});
-					}
+					req.postTryProcess();
 				}
 			}
 		}

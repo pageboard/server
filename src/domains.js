@@ -1,6 +1,7 @@
 const { promises: dns, setDefaultResultOrder } = require.lazy('node:dns');
 const { Deferred } = require.lazy('class-deferred');
 const Queue = require.lazy('./express-queue');
+const KQueue = require('./kqueue');
 
 // const localhost4 = "127.0.0.1";
 // const localhost6 = "::1";
@@ -34,6 +35,7 @@ class Host {
 
 module.exports = class Domains {
 	#wait = new Deferred();
+	#kqueue = new KQueue();
 	#ips = {};
 	#suffixes = [];
 	#allDomainsCalled = false;
@@ -168,29 +170,45 @@ module.exports = class Domains {
 		};
 
 		req.try = async (block, job) => {
-			const { response } = block.data;
-			response.status = null;
-			response.text = null;
-			try {
-				const result = await job(req, block);
-				response.status = 200;
-				response.text = 'OK';
-				return result;
-			} catch (ex) {
-				response.status = ex.statusCode ?? 500;
-				response.text = ex.message ?? null;
-				throw ex;
-			} finally {
-				await req.run('block.save', {
-					id: block.id,
-					type: block.type,
-					data: block.data
-				});
-			}
+			// trying in repetition with same key makes next tries
+			// wait for the first one
+			return this.#kqueue.push(`${req.site?.id}-${block.id}`, async () => {
+				const { response } = block.data;
+				response.status = null;
+				response.text = null;
+				try {
+					const result = await job(req, block);
+					response.status = 200;
+					response.text = 'OK';
+					return result;
+				} catch (ex) {
+					response.status = ex.statusCode ?? 500;
+					response.text = ex.message ?? null;
+					throw ex;
+				} finally {
+					await req.run('block.save', {
+						id: block.id,
+						type: block.type,
+						data: block.data
+					});
+				}
+			});
 		};
-		req.afters = [];
-		req.postpone = fn => {
-			req.afters.push(fn);
+		req.postTries = [];
+		req.postTry = (block, job) => {
+			req.postTries.push([block, job]);
+		};
+		req.postTryProcess = () => {
+			const { postTries: list } = req;
+			if (list.length) Promise.resolve().then(async () => {
+				while (list.length) {
+					try {
+						await req.try(...list.shift());
+					} catch (ex) {
+						console.error(ex);
+					}
+				}
+			});
 		};
 
 		res.return = data => {

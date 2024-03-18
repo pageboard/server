@@ -144,13 +144,14 @@ module.exports = class LinksService {
 			if (urls.has(item.data.url)) {
 				// new page replace old page with same url
 			} else {
-				const { count } = await req.run('href.referrers', {
+				const { count, items } = await req.run('href.referrers', {
 					url: item.data.url,
 					ids: removals,
-					limit: 0
+					limit: 5
 				});
 				if (count) throw new HttpError.Conflict(Text`
 					There are ${count} links referring to page ${item.data.url}
+					${items.map(item => item.type + ' ' + item.id).join(', ')}
 				`);
 			}
 			await req.run('block.del', { id: item.id });
