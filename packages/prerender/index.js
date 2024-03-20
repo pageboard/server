@@ -5,7 +5,6 @@ const http = require('node:http');
 const Path = require('node:path');
 const https = require('node:https');
 const { createWriteStream } = require('node:fs');
-const { performance } = require('node:perf_hooks');
 const dom = require.lazy('express-dom');
 const pdf = require.lazy('express-dom-pdf');
 
@@ -96,6 +95,10 @@ module.exports = class PrerenderModule {
 			if (req.accepts(['image/*', 'json', 'html']) != 'html') {
 				throw new HttpError.NotAcceptable("Malformed path");
 			} else {
+				// TODO factor this to subrequest /pathname when req.query is not empty,
+				// so that prerendering is only done for "static/default" pages.
+				// the query parts are done by the client
+				// TODO likewise for /.well-known/401 (vary upon grants)
 				const url = new URL('/.well-known/404', site.$url);
 				const agent = url.protocol == "https:" ? https : http;
 				const subReq = agent.request(url, {
@@ -242,7 +245,6 @@ module.exports = class PrerenderModule {
 		if (!site.$url) {
 			throw new HttpError.BadRequest("Rendering needs a site url");
 		}
-		const start = performance.now();
 		const {
 			schema
 		} = this.#requestedRenderingSchema(req, { path: url });
@@ -263,8 +265,7 @@ module.exports = class PrerenderModule {
 		else await waitPipeline(res, createWriteStream(filePath));
 		return {
 			path: filePath,
-			headers: res.headers,
-			time: performance.now() - start
+			headers: res.headers
 		};
 	}
 	static save = {
