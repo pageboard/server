@@ -62,6 +62,11 @@ export const print_job = {
 					title: 'Text',
 					type: 'string',
 					nullable: true
+				},
+				time: {
+					title: 'Time',
+					type: 'number',
+					nullable: true
 				}
 			}
 		},

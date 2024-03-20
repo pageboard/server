@@ -1,4 +1,5 @@
 const { promises: dns, setDefaultResultOrder } = require.lazy('node:dns');
+const { performance } = require.lazy('node:perf_hooks');
 const { Deferred } = require.lazy('class-deferred');
 const Queue = require.lazy('./express-queue');
 const KQueue = require('./kqueue');
@@ -174,6 +175,7 @@ module.exports = class Domains {
 			// wait for the first one
 			return this.#kqueue.push(`${req.site?.id}-${block.id}`, async () => {
 				const { response } = block.data;
+				const start = performance.now();
 				response.status = null;
 				response.text = null;
 				try {
@@ -186,6 +188,7 @@ module.exports = class Domains {
 					response.text = ex.message ?? null;
 					throw ex;
 				} finally {
+					response.time = performance.now() - start;
 					await req.run('block.save', {
 						id: block.id,
 						type: block.type,
