@@ -1,7 +1,5 @@
 const fs = require('node:fs');
 const Path = require('node:path');
-const { promisify } = require('node:util');
-const exec = promisify(require('node:child_process').exec);
 const cups = require('node-cups');
 
 module.exports = class PrintModule {
@@ -216,20 +214,9 @@ module.exports = class PrintModule {
 			const { path } = await req.run('prerender.save', {
 				url: pdfUrl.pathname + pdfUrl.search
 			});
-
 			const dest = Path.join(storePath, block.id + '.pdf');
 			try {
-				if (storePath.startsWith('/')) {
-					await fs.promises.copyFile(path, dest);
-				} else {
-					await exec(`scp ${path} ${dest}`, {
-						env: {
-							SSH_AUTH_SOCK: process.env.SSH_AUTH_SOCK
-						},
-						shell: false,
-						timeout: 300000
-					});
-				}
+				await fs.promises.copyFile(path, dest);
 			} catch (ex) {
 				console.error(ex);
 				throw new HttpError.InternalServerError(`Storage failure`);
