@@ -3,11 +3,23 @@ const { mergeRecursive } = require('../../../src/utils');
 module.exports = class LinksService {
 	static name = 'links';
 
+	constructor(app, opts) {
+		this.opts = opts;
+	}
+
 	apiRoutes(app, server) {
 		server.get('/robots.txt', app.cache.tag('data-:site'), async (req, res) => {
 			const txt = await req.run('links.robot');
 			res.type('text/plain');
 			res.send(txt);
+		});
+
+		server.get('/.well-known/traffic-advice', (req, res) => {
+			res.type('application/trafficadvice+json');
+			res.json([{
+				"user_agent": "prefetch-proxy",
+				"fraction": 1.0
+			}]);
 		});
 
 		server.get('/.well-known/sitemap.txt', app.cache.tag('data-:site'), async (req, res) => {
@@ -51,6 +63,26 @@ module.exports = class LinksService {
 					${items.map(item => xmlItem(item)).join('\n')}
 				</urlset>`.replace(/\t+/g, '')
 			);
+		});
+
+		const { security } = this.opts;
+		if (!security) {
+			console.info("links.security URL is missing");
+			return;
+		} else try {
+			new URL(security);
+		} catch {
+			console.info("links.security must be a URL");
+			return;
+		}
+		const securityResponse = Object.entries({
+			Contact: security,
+			Expires: new Date(new Date().getFullYear() + 1)
+		}).map(([key, str]) => `${key}: ${str}`).join('\n');
+
+		server.get('/.well-known/security.txt', (req, res) => {
+			res.type('text/plain');
+			res.send(securityResponse);
 		});
 	}
 
