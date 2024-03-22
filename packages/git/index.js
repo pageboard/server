@@ -1,6 +1,5 @@
 const semver = require.lazy('semver');
-const bodyParser = require.lazy('body-parser');
-const xHub = require.lazy('x-hub-signature-middleware');
+const xHubSignature = require.lazy('x-hub-signature');
 
 module.exports = class GitModule {
 	static name = 'git';
@@ -11,35 +10,27 @@ module.exports = class GitModule {
 			opts.wkp = "/.well-known/git";
 		}
 	}
+
 	apiRoutes(app, server) {
-		server.post(this.opts.wkp, bodyParser.json({
-			verify: xHub.extractRawBody
-		}), (req, res, next) => {
+		app.post(this.opts.wkp, req => {
 			const { site } = req;
 			const event = req.get('X-Github-Event');
 			if (event == "ping") {
-				return res.sendStatus(200);
+				return {};
 			}
 			if (event != "push") {
-				return next(new HttpError.BadRequest("Unsupported event"));
+				throw new HttpError.BadRequest("Unsupported event");
 			}
 			const secret = site.data['github-webhook-secret'];
 			if (secret) {
-				xHub.xHubSignatureMiddleware({
-					algorithm: 'sha256',
-					header: 'X-Hub-Signature-256',
-					secret,
-					require: true
-				})(req, res, next);
-			} else {
-				next();
+				const xHub = new xHubSignature('sha256', secret);
+				if (!xHub.verify(req.get('X-Hub-Signature-256'), req.buffer)) {
+					throw new HttpError.BadRequest("Bad signature");
+				}
 			}
-		}, req => {
-			// run this async on purpose
 			this.github(req, req.body).catch(err => {
 				console.error(err);
 			});
-			return 200;
 		});
 	}
 
@@ -125,7 +116,7 @@ module.exports = class GitModule {
 	}
 	static decide = {
 		title: 'Decide deployment',
-		$lock: true,
+		$private: true,
 		$action: 'write',
 		properties: {
 			url: {

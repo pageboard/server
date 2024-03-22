@@ -236,7 +236,7 @@ module.exports = class LoginModule {
 		title: 'Internal login link',
 		$action: 'write',
 		required: ['email', 'grant'],
-		$lock: true,
+		$private: true,
 		properties: {
 			email: {
 				title: 'Email',

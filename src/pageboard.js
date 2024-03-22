@@ -7,6 +7,7 @@ Object.getPrototypeOf(require).lazy = function(str) {
 const util = require('node:util');
 const Path = require('node:path');
 const express = require.lazy('express');
+const bodyParser = require.lazy('body-parser');
 const morgan = require.lazy('morgan');
 const pad = require.lazy('pad');
 const prettyBytes = require.lazy('pretty-bytes');
@@ -20,7 +21,7 @@ util.inspect.defaultOptions.depth = 10;
 
 const cli = require.lazy('./cli');
 const Domains = require.lazy('./domains');
-const { mergeRecursive, init: initUtils } = require('./utils');
+const { mergeRecursive, init: initUtils, unflatten } = require('./utils');
 const Installer = require('./installer');
 const ResponseFilter = require('./filter');
 
@@ -167,8 +168,8 @@ module.exports = class Pageboard {
 		return this.api.run(req, command, data);
 	}
 
-	async send(...args) {
-		return this.api.send(...args);
+	async send(req, data) {
+		return this.api.send(req, data);
 	}
 
 	#loadPlugin(path, sub) {
@@ -235,6 +236,11 @@ module.exports = class Pageboard {
 		server.use((req, res, next) => this.log(req, res, next));
 
 		// call plugins#service
+		const tenantsLen = Object.keys(this.opts.database.url).length - 1;
+		server.get('/.api/*',
+			this.cache.tag('app-:site'),
+			this.cache.tag('db-:tenant').for(`${tenantsLen}day`)
+		);
 		await this.#initPlugins('api');
 		server.use(req => {
 			if (req.url.startsWith('/.api/')) {
@@ -270,6 +276,80 @@ module.exports = class Pageboard {
 			res.set(headers);
 		});
 		return server;
+	}
+
+	use(handler) {
+		this.#server.use(handler);
+	}
+
+	get(route, handler) {
+		this.#server.get(
+			route,
+			async req => {
+				if (typeof handler == "string") {
+					const apiStr = handler;
+					handler = req => req.run(apiStr, unflatten(req.query));
+				}
+				const data = await handler(req);
+				this.api.send(req, data);
+			}
+		);
+	}
+
+	delete(route, handler) {
+		this.#server.delete(
+			route,
+			async req => {
+				if (typeof handler == "string") {
+					const apiStr = handler;
+					handler = req => req.run(apiStr, unflatten(req.query));
+				}
+				const data = await handler(req);
+				this.api.send(req, data);
+			}
+		);
+	}
+
+	put(route, handler) {
+		this.#server.put(
+			route,
+			bodyParser.json({
+				limit: '1000kb',
+				verify(req, res, buf) {
+					req.buffer = buf;
+				}
+			}),
+			bodyParser.urlencoded({ extended: false, limit: '100kb' }),
+			async req => {
+				if (typeof handler == "string") {
+					const apiStr = handler;
+					handler = req => req.run(apiStr, unflatten(req.body));
+				}
+				const data = await handler(req);
+				this.api.send(req, data);
+			}
+		);
+	}
+
+	post(route, handler) {
+		this.#server.post(
+			route,
+			bodyParser.json({
+				limit: '1000kb',
+				verify(req, res, buf) {
+					req.buffer = buf;
+				}
+			}),
+			bodyParser.urlencoded({ extended: false, limit: '100kb' }),
+			async req => {
+				if (typeof handler == "string") {
+					const apiStr = handler;
+					handler = req => req.run(apiStr, unflatten(req.body));
+				}
+				const data = await handler(req);
+				this.api.send(req, data);
+			}
+		);
 	}
 
 	async install(block) {

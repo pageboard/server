@@ -47,11 +47,7 @@ module.exports = class CacheModule {
 		} finally {
 			if (!this.data) this.data = {};
 		}
-		server.post(
-			this.opts.wkp,
-			(req, res, next) => this.mw(req, res, next),
-			(req, res) => res.sendStatus(204)
-		);
+		app.post(this.opts.wkp, req => this.mw(req));
 	}
 
 	#save() {
@@ -92,7 +88,7 @@ module.exports = class CacheModule {
 		});
 	}
 
-	mw(req, res, next) {
+	mw(req) {
 		const tags = [];
 		let doSave = false;
 		let dobj = this.data;
@@ -113,7 +109,7 @@ module.exports = class CacheModule {
 			console.info("cache changes app tag");
 		}
 		tags.push('app-:site');
-		this.tag(...tags)(req, res, next);
+		this.tag(...tags)(req, req.res);
 		if (doSave) this.#save();
 	}
 };

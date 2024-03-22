@@ -20,11 +20,8 @@ module.exports = class TranslateService {
 		this.app.languages.default = list[0];
 	}
 
-	apiRoutes(app, server) {
-		server.get("/.api/languages", async (req, res) => {
-			const data = await req.run('translate.languages', req.query);
-			res.return(data);
-		});
+	apiRoutes(app) {
+		app.get("/.api/languages", 'translate.languages');
 	}
 
 	lang(req, { lang } = {}) {
@@ -45,7 +42,7 @@ module.exports = class TranslateService {
 	}
 	static lang = {
 		title: 'Get language',
-		$lock: true,
+		$private: true,
 		properties: {
 			lang: {
 				title: 'Language',
@@ -77,7 +74,7 @@ module.exports = class TranslateService {
 	}
 	static available = {
 		title: 'List available shared languages',
-		$lock: true,
+		$private: true,
 		$global: true,
 		properties: {
 			lang: {
@@ -114,7 +111,7 @@ module.exports = class TranslateService {
 	}
 	static provision = {
 		title: 'Provision shared language',
-		$lock: true,
+		$private: true,
 		$global: true,
 		properties: {
 			title: {
@@ -158,7 +155,7 @@ module.exports = class TranslateService {
 	}
 	static initialize = {
 		title: 'Initialize site languages',
-		$lock: true,
+		$private: true,
 		$action: 'write'
 	};
 

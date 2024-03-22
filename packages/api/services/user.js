@@ -23,7 +23,7 @@ module.exports = class UserService {
 	}
 	static get = {
 		title: 'Get user',
-		$lock: true,
+		$private: true,
 		$action: 'read',
 		anyOf: [{
 			required: ['email']
@@ -60,7 +60,7 @@ module.exports = class UserService {
 	}
 	static add = {
 		title: 'Add user',
-		$lock: true,
+		$private: true,
 		$action: 'write',
 		required: ['email'],
 		properties: {
@@ -81,7 +81,7 @@ module.exports = class UserService {
 	}
 	static save = {
 		title: 'Save user',
-		$lock: true,
+		$private: true,
 		$action: 'write',
 		required: ['id', 'data'],
 		properties: {
@@ -117,7 +117,7 @@ module.exports = class UserService {
 	static del = {
 		...this.add,
 		title: 'Delete user',
-		$lock: true,
+		$private: true,
 		$action: 'write'
 	};
 };

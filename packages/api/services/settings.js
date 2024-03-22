@@ -1,18 +1,14 @@
 module.exports = class SettingsService {
 	static name = 'settings';
 
-	apiRoutes(app, server) {
-		server.get("/.api/settings", async (req, res) => {
-			const data = await req.run('settings.get', {
+	apiRoutes(app) {
+		app.get("/.api/settings", async req => {
+			return req.run('settings.get', {
 				id: req.user.id
 			});
-			res.return(data);
 		});
 
-		server.put('/.api/settings', app.cache.tag('data-:site'), app.auth.lock('webmaster'), async (req, res) => {
-			const data = await req.run('settings.save', req.body);
-			res.return(data);
-		});
+		app.put('/.api/settings', 'settings.save');
 	}
 	async get(req, { id }) {
 		return req.run('block.find', {
@@ -269,6 +265,8 @@ module.exports = class SettingsService {
 		title: 'Save user settings',
 		$action: 'write',
 		required: ['id'],
+		$lock: 'webmaster',
+		$tags: ['data-:site'],
 		properties: {
 			id: {
 				title: 'User settings ID',

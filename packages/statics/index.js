@@ -196,7 +196,7 @@ module.exports = class StaticsModule {
 	}
 	static dir = {
 		title: 'Get directory for site',
-		$lock: true,
+		$private: true,
 		properties: {
 			dir: {
 				title: 'Directory type',

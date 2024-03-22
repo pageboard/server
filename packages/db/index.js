@@ -93,7 +93,7 @@ module.exports = class DatabaseModule {
 	}
 	static setup = {
 		title: 'Setup tenant database',
-		$lock: true,
+		$private: true,
 		$action: 'write',
 		required: ['file', 'tenant'],
 		properties: {
@@ -118,7 +118,7 @@ module.exports = class DatabaseModule {
 	static copy = {
 		title: 'Copy current database to tenant database',
 		$action: 'write',
-		$lock: true,
+		$private: true,
 		required: ['tenant'],
 		properties: {
 			tenant: {
@@ -149,7 +149,7 @@ module.exports = class DatabaseModule {
 		title: 'Dump database',
 		$action: 'read',
 		required: ['file'],
-		$lock: true,
+		$private: true,
 		properties: {
 			file: {
 				title: 'File path',
@@ -191,7 +191,7 @@ module.exports = class DatabaseModule {
 	static restore = {
 		title: 'Restore dump to tenant database',
 		$action: 'write',
-		$lock: true,
+		$private: true,
 		required: ['file', 'tenant'],
 		properties: {
 			file: {

@@ -3,8 +3,8 @@ const jsonPath = require.lazy('@kapouer/path');
 module.exports = class PageService {
 	static name = 'page';
 
-	apiRoutes(app, server) {
-		server.get('/.api/page', async (req, res) => {
+	apiRoutes(app) {
+		app.get('/.api/page', async req => {
 			const { site, query } = req;
 			const { url, lang, ext } = req.call('page.parse', query);
 			const isWebmaster = !req.locked(['webmaster']) && query.url == url;
@@ -25,9 +25,9 @@ module.exports = class PageService {
 				}));
 			}
 			obj.commons = app.opts.commons;
-			res.return(obj);
+			return obj;
 		});
-		server.get('/.api/pages', app.auth.lock('webmaster'), async (req, res) => {
+		app.get('/.api/pages', async req => {
 			const { query, site } = req;
 			const isWebmaster = !req.locked(['webmaster']);
 			if (isWebmaster) {
@@ -43,13 +43,10 @@ module.exports = class PageService {
 
 			const action = query.text != null ? 'page.search' : 'page.list';
 			const obj = await req.run(action, query);
-			res.return(obj);
+			return obj;
 		});
 
-		server.put('/.api/page', app.cache.tag('data-:site'), app.auth.lock('webmaster'), async (req, res) => {
-			const page = await req.run('page.write', req.body);
-			res.send(page);
-		});
+		app.put('/.api/page', 'page.write');
 	}
 
 	#QueryPage({ site, trx, ref, val, fun }, { url, lang, type }) {
@@ -103,7 +100,7 @@ module.exports = class PageService {
 	}
 	static parse = {
 		title: 'Parse url',
-		$lock: true,
+		$private: true,
 		properties: {
 			url: {
 				title: 'Url path',
@@ -121,7 +118,7 @@ module.exports = class PageService {
 	}
 	static format = {
 		title: 'Format url with lang and ext',
-		$lock: true,
+		$private: true,
 		properties: {
 			url: {
 				title: 'Url path',
@@ -195,7 +192,7 @@ module.exports = class PageService {
 	}
 	static get = {
 		title: 'Get page',
-		$lock: true,
+		$private: true,
 		$action: 'read',
 		required: ['url'],
 		properties: {
@@ -329,7 +326,9 @@ module.exports = class PageService {
 	}
 	static write = {
 		title: 'Write to page',
-		$lock: true,
+		$private: true,
+		$lock: ['webmaster'],
+		$tags: ['data-:site'],
 		$action: 'write',
 		properties: {
 			add: {

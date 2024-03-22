@@ -7,14 +7,10 @@ module.exports = class LinksService {
 		this.opts = opts;
 	}
 
-	apiRoutes(app, server) {
-		server.get('/robots.txt', app.cache.tag('data-:site'), async (req, res) => {
-			const txt = await req.run('links.robot');
-			res.type('text/plain');
-			res.send(txt);
-		});
+	apiRoutes(app) {
+		app.get('/robots.txt', 'links.robot');
 
-		server.get('/.well-known/traffic-advice', (req, res) => {
+		app.get('/.well-known/traffic-advice', ({ res }) => {
 			res.type('application/trafficadvice+json');
 			res.json([{
 				"user_agent": "prefetch-proxy",
@@ -22,18 +18,17 @@ module.exports = class LinksService {
 			}]);
 		});
 
-		server.get('/.well-known/sitemap.txt', app.cache.tag('data-:site'), async (req, res) => {
+		app.get('/.well-known/sitemap.txt', async req => {
 			const obj = await req.run('page.list', {
 				robot: true,
 				type: ['page']
 			});
-			res.type('text/plain');
-			res.send(app.responseFilter.run(req, obj).items.map(page => {
+			return app.responseFilter.run(req, obj).items.map(page => {
 				return new URL(page.data.url, req.site.$url).href;
-			}).join('\n'));
+			}).join('\n');
 		});
 
-		server.get('/.well-known/sitemap.xml', app.cache.tag('data-:site'), async (req, res) => {
+		app.get('/.well-known/sitemap.xml', async req => {
 			const obj = await req.run('page.list', {
 				robot: true,
 				type: ['page']
@@ -43,7 +38,7 @@ module.exports = class LinksService {
 			const { languages = [] } = site.data;
 
 			// https://www.sitemaps.org/protocol.html
-			res.type('application/xml');
+			req.res.type('application/xml');
 
 			const xmlAlt = (href, lang) => {
 				return `<xhtml:link rel="alternate" hreflang="${lang}" href="${href}~${lang}"/>`;
@@ -58,11 +53,10 @@ module.exports = class LinksService {
 				</url>`;
 			};
 
-			res.send(`<?xml version="1.0" encoding="UTF-8"?>
+			return `<?xml version="1.0" encoding="UTF-8"?>
 				<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9" xmlns:xhtml="http://www.w3.org/1999/xhtml">
 					${items.map(item => xmlItem(item)).join('\n')}
-				</urlset>`.replace(/\t+/g, '')
-			);
+				</urlset>`.replace(/\t+/g, '');
 		});
 
 		const { security } = this.opts;
@@ -80,10 +74,7 @@ module.exports = class LinksService {
 			Expires: new Date(new Date().getFullYear() + 1)
 		}).map(([key, str]) => `${key}: ${str}`).join('\n');
 
-		server.get('/.well-known/security.txt', (req, res) => {
-			res.type('text/plain');
-			res.send(securityResponse);
-		});
+		app.get('/.well-known/security.txt', req => securityResponse);
 	}
 
 	async robot(req, data) {
@@ -108,7 +99,8 @@ module.exports = class LinksService {
 	}
 	static robot = {
 		title: 'Get robots.txt',
-		$lock: true,
+		$tags: ['data-:site'],
+		$private: true,
 		$action: 'read',
 		properties: {
 			env: {
@@ -272,7 +264,7 @@ module.exports = class LinksService {
 	}
 	static rebuild = {
 		title: 'Reprovision all hrefs for pages',
-		$lock: true,
+		$private: true,
 		$action: 'write'
 	};
 };

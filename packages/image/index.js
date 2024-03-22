@@ -137,7 +137,7 @@ module.exports = class ImageModule {
 	static upload = {
 		title: 'Process uploaded image',
 		required: ['path', 'mime'],
-		$lock: true,
+		$private: true,
 		properties: {
 			path: {
 				title: 'Path',

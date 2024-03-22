@@ -12,13 +12,6 @@ module.exports = class SiteService {
 		return import("../lib/site.mjs");
 	}
 
-	apiRoutes(app, server) {
-		server.put('/.api/site', app.cache.tag('data-:site'), app.auth.lock('webmaster'), async (req, res) => {
-			const site = await req.run('site.update', req.body);
-			res.send(site);
-		});
-	}
-
 	#QuerySite({ trx, Block }, data) {
 		return Block.query(trx).alias('site').first()
 			.where('site.type', 'site')
@@ -49,7 +42,7 @@ module.exports = class SiteService {
 	static get = {
 		title: 'Get site',
 		$action: 'read',
-		$lock: true,
+		$private: true,
 		properties: {
 			id: {
 				title: 'ID',
@@ -99,7 +92,7 @@ module.exports = class SiteService {
 	static search = {
 		title: 'Search user sites',
 		$action: 'read',
-		$lock: true,
+		$private: true,
 		required: ['email'],
 		properties: {
 			email: {
@@ -147,7 +140,7 @@ module.exports = class SiteService {
 	static add = {
 		title: 'Add site',
 		$action: 'write',
-		$lock: true,
+		$private: true,
 		required: ['id'],
 		properties: {
 			id: {
@@ -169,7 +162,7 @@ module.exports = class SiteService {
 	static save = {
 		title: 'Save site',
 		$action: 'write',
-		$lock: true, // or lock: site-manager ?
+		$private: true, // or lock: site-manager ?
 		required: ['id', 'data'],
 		properties: {
 			id: {
@@ -229,7 +222,7 @@ module.exports = class SiteService {
 	static all = {
 		title: 'List all sites',
 		$action: 'read',
-		$lock: true,
+		$private: true,
 		properties: {
 			text: {
 				title: 'Search text',
@@ -247,7 +240,7 @@ module.exports = class SiteService {
 	static del = {
 		title: 'Delete a site',
 		$action: 'write',
-		$lock: true,
+		$private: true,
 		required: ['id'],
 		properties: {
 			id: {
@@ -268,7 +261,7 @@ module.exports = class SiteService {
 	static empty = {
 		title: 'Empty site',
 		$action: 'write',
-		$lock: true,
+		$private: true,
 		required: ['id'],
 		properties: {
 			id: {

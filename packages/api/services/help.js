@@ -13,7 +13,7 @@ module.exports = class HelpService {
 	}
 	static doc = {
 		title: 'Get json doc',
-		$lock: true,
+		$private: true,
 		required: ['command', 'schema'],
 		properties: {
 			command: {
@@ -46,7 +46,7 @@ module.exports = class HelpService {
 	}
 	static command = {
 		title: 'Help on command',
-		$lock: true,
+		$private: true,
 		properties: {
 			command: {
 				title: 'Command',

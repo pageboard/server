@@ -27,14 +27,14 @@ module.exports = class AuthModule {
 		return import('./src/elements.mjs');
 	}
 
-	async apiRoutes(app, server) {
+	async apiRoutes(app) {
 		const keys = await this.#keygen(
 			Path.join(app.dirs.data, 'keys.json')
 		);
 		Object.assign(this.opts, keys);
 		this.#lock = Upcache.lock(this.opts);
 		app.responseFilter.register(this);
-		server.use((req, res, next) => {
+		app.use((req, res, next) => {
 			req.locks = [];
 			onHeaders(res, () => {
 				if (req.locks?.length) {
@@ -61,7 +61,7 @@ module.exports = class AuthModule {
 	}
 	static cookie = {
 		title: 'Create cookie',
-		$lock: true,
+		$private: true,
 		properties: {
 			maxAge: {
 				title: 'Max Age',

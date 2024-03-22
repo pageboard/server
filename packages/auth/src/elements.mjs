@@ -23,7 +23,7 @@ export const user = {
 export const priv = {
 	title: 'Private',
 	priority: -10,
-	$lock: true,
+	$private: true,
 	standalone: true,
 	properties: {
 		otp: {

@@ -144,7 +144,7 @@ module.exports = class Validation {
 		const actions = { ...services, definitions: {} };
 		const { definitions } = actions;
 		for (const [name, service] of Object.entries(services.definitions)) {
-			if (service.$lock !== true && service.$action) {
+			if (!service.$private && service.$action) {
 				definitions[name] = service;
 			}
 		}
@@ -285,9 +285,24 @@ module.exports = class Validation {
 			schemaType: "array"
 		});
 		ajv.addKeyword({
+			// is this a private service
+			keyword: '$private',
+			schemaType: "boolean"
+		});
+		ajv.addKeyword({
 			// required permissions to view that element or its properties
 			keyword: '$lock',
-			schemaType: ["object", "boolean"]
+			schemaType: ["string", "array", "object"]
+		});
+		ajv.addKeyword({
+			// cache
+			keyword: '$cache',
+			schemaType: ["string", "boolean"]
+		});
+		ajv.addKeyword({
+			// cache
+			keyword: '$tags',
+			schemaType: ["array"]
 		});
 		ajv.addKeyword({
 			// a service is either reading or writing data

@@ -31,7 +31,7 @@ module.exports = class UploadModule {
 		this.storage = multer.diskStorage(this);
 	}
 	async apiRoutes(app, server) {
-		server.post('/.api/upload/:id?', app.cache.tag('data-:site'), async req => {
+		app.post('/.api/upload/:id?', async req => {
 			const limits = { ...this.opts.limits };
 			if (req.params.id) {
 				const input = await req.run('block.get', { id: req.params.id });
@@ -109,7 +109,7 @@ module.exports = class UploadModule {
 	}
 	static parse = {
 		title: 'Parse request',
-		$lock: true,
+		$private: true,
 		description: 'Returns a list of { name, title, path, mime, size }',
 		properties: {
 			files: {
@@ -151,6 +151,7 @@ module.exports = class UploadModule {
 	}
 	static store = {
 		title: 'Store uploaded file',
+		$private: true,
 		required: ['path'],
 		properties: {
 			path: {

@@ -8,25 +8,10 @@ module.exports = class BlockService {
 		this.app = app;
 	}
 
-	apiRoutes(app, server) {
-		server.get("/.api/block", async (req, res) => {
-			const data = await req.run('block.get', req.query);
-			res.return(data);
-		});
-
-		server.get("/.api/blocks", async (req, res) => {
-			const data = await req.run('block.search', unflatten(req.query));
-			res.return(data);
-		});
-
-		server.post('/.api/blocks',
-			app.cache.tag('data-:site'),
-			app.auth.lock('writer'),
-			async (req, res) => {
-				const data = await req.run('block.write', req.body);
-				res.return(data);
-			}
-		);
+	apiRoutes(app) {
+		app.get("/.api/block", 'block.get');
+		app.get("/.api/blocks", 'block.search');
+		app.post('/.api/blocks', 'block.write');
 	}
 
 	get(req, data) {
@@ -896,7 +881,9 @@ module.exports = class BlockService {
 	static write = {
 		title: 'Write multiple blocks',
 		$action: 'write',
-		$lock: true,
+		$private: true,
+		$lock: 'webmaster',
+		$tags: ['data-:site'],
 		required: ['operations'],
 		properties: {
 			operations: {

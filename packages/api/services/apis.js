@@ -5,17 +5,16 @@ const {
 module.exports = class ApiService {
 	static name = 'apis';
 
-	apiRoutes(app, server) {
+	apiRoutes(app) {
 		// these routes are setup after all others
 		// eventually all routes will be dynamic
-		server.get(["/.api/:id", "/.api/query/:id"], async (req, res) => {
-			const data = await req.run('apis.get', {
+		app.get(["/.api/:id", "/.api/query/:id"], req => {
+			return req.run('apis.get', {
 				id: req.params.id,
 				query: req.query
 			});
-			res.return(data);
 		});
-		server.post(["/.api/:id", "/.api/form/:id"], app.cache.tag('data-:site'), async (req, res) => {
+		app.post(["/.api/:id", "/.api/form/:id"], req => {
 			// TODO process multipart form data to upload files
 			// body[name] must become the relative URL of the uploaded file
 			// however, since we don't know the input_file block,
@@ -23,12 +22,11 @@ module.exports = class ApiService {
 			// Inputs should be affiliated to their forms - forms should always be standalone,
 			// however standalones are buggy and dangerous to use when they are in a page
 			// so stabilizing standalones should be a priority
-			const data = await req.run('apis.post', {
+			return req.run('apis.post', {
 				id: req.params.id,
 				query: req.query,
-				body: unflatten(req.body)
+				body: req.body
 			});
-			res.return(data);
 		});
 	}
 
@@ -59,7 +57,7 @@ module.exports = class ApiService {
 			if (formData[key] === null) delete formData[key];
 		}
 
-		const query = unflatten(data.query ?? {});
+		const { query = {} } = data;
 		const scope = {};
 
 		for (const [key, val] of Object.entries(query)) {
@@ -89,8 +87,9 @@ module.exports = class ApiService {
 	}
 	static post = {
 		title: 'API Post',
-		$lock: true,
+		$private: true,
 		$action: 'write',
+		$tags: ['data-:site'],
 		required: ["id"],
 		properties: {
 			id: {
@@ -125,7 +124,7 @@ module.exports = class ApiService {
 		if (!method) {
 			throw new HttpError.BadRequest("Missing method");
 		}
-		const query = unflatten(data.query ?? {});
+		const { query = {} } = data;
 		const scope = {};
 
 		for (const [key, val] of Object.entries(query)) {
@@ -151,8 +150,9 @@ module.exports = class ApiService {
 	}
 	static get = {
 		title: 'API Get',
-		$lock: true,
+		$private: true,
 		$action: 'read',
+		$tags: ['data-:site'],
 		required: ['id'],
 		properties: {
 			id: {

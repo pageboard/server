@@ -215,7 +215,7 @@ module.exports = class Domains {
 		};
 
 		res.return = data => {
-			app.send(res, data);
+			app.send(req, data);
 		};
 	}
 

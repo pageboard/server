@@ -8,23 +8,11 @@ module.exports = class HrefService {
 		this.app = app;
 	}
 
-	apiRoutes(app, server) {
-		server.get("/.api/hrefs", app.auth.lock('webmaster'), async (req, res) => {
-			const obj = await req.run('href.search', req.query);
-			res.send(obj);
-		});
-		server.get("/.api/href", app.auth.lock('user'), async (req, res) => {
-			const obj = await req.run('href.find', req.query);
-			res.send(obj);
-		});
-		server.post("/.api/href", app.cache.tag('data-:site'), app.auth.lock('user'), async (req, res) => {
-			const obj = await req.run('href.add', req.body);
-			res.send(obj);
-		});
-		server.delete("/.api/href", app.cache.tag('data-:site'), app.auth.lock('webmaster'), async (req, res) => {
-			const obj = await req.run('href.del', req.query);
-			res.send(obj);
-		});
+	apiRoutes(app) {
+		app.get("/.api/hrefs", 'href.search');
+		app.get("/.api/href", 'href.find');
+		app.post("/.api/href", 'href.add');
+		app.delete("/.api/href", 'href.del');
 	}
 
 	get({ Href, site, trx }, data) {
@@ -42,6 +30,7 @@ module.exports = class HrefService {
 	static find = {
 		title: 'Get URL metadata',
 		$action: 'read',
+		$lock: 'user',
 		required: ['url'],
 		properties: {
 			url: {
@@ -133,6 +122,7 @@ module.exports = class HrefService {
 	static search = {
 		title: 'Search URL metadata',
 		$action: 'read',
+		$lock: 'webmaster',
 		properties: {
 			type: {
 				type: 'array',
@@ -239,6 +229,8 @@ module.exports = class HrefService {
 	static add = {
 		title: 'Add URL',
 		$action: 'write',
+		$tags: ['data-:site'],
+		$lock: 'user',
 		required: ['url'],
 		properties: {
 			url: {
@@ -285,6 +277,8 @@ module.exports = class HrefService {
 	static del = {
 		title: 'Delete URL',
 		$action: 'write',
+		$tags: ['data-:site'],
+		$lock: 'webmaster',
 		required: ['url'],
 		properties: {
 			url: {
@@ -352,7 +346,7 @@ module.exports = class HrefService {
 	}
 	static referrers = {
 		title: 'Referrers',
-		$lock: true,
+		$private: true,
 		$action: 'read',
 		properties: {
 			ids: {
@@ -428,7 +422,7 @@ module.exports = class HrefService {
 	}
 	static change = {
 		title: 'Change',
-		$lock: true,
+		$private: true,
 		properties: {
 			from: {
 				title: 'From Url',
@@ -509,7 +503,7 @@ module.exports = class HrefService {
 
 	static collect = {
 		title: 'Collect hrefs',
-		$lock: true,
+		$private: true,
 		$action: 'read',
 		properties: {
 			ids: {
@@ -654,7 +648,7 @@ module.exports = class HrefService {
 	}
 	static reinspect = {
 		title: 'Batch reinspection',
-		$lock: true,
+		$private: true,
 		$action: 'write',
 		required: ['block', 'href'],
 		properties: {
@@ -693,7 +687,7 @@ module.exports = class HrefService {
 	}
 	static inspect = {
 		title: 'Inspect',
-		$lock: true,
+		$private: true,
 		$action: 'read',
 		required: ['url'],
 		properties: {

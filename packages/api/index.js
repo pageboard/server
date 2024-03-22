@@ -1,7 +1,6 @@
 const { transaction, fn: fun, val, ref, raw } = require('objection');
 const Path = require('node:path');
 
-const bodyParser = require.lazy('body-parser');
 const jsonPath = require.lazy('@kapouer/path');
 
 const Packager = require.lazy('./lib/packager');
@@ -67,25 +66,15 @@ module.exports = class ApiModule {
 		return this.#validation;
 	}
 
-	apiRoutes(app, server) {
+	apiRoutes(app) {
 		app.responseFilter.register(this);
-		const tenantsLen = Object.keys(app.opts.database.url).length - 1;
 		// api depends on site files, that tag is invalidated in cache install
-		server.get("/.well-known/api.json", ({ site }, res) => {
-			res.redirect(site.$pkg.bundles.get('services').scripts[0]);
-		});
-		server.get("/.api", ({ site }, res) => {
-			res.redirect("/.well-known/api");
-		});
-		server.get('/.api/*',
-			app.cache.tag('app-:site', 'data-:site'),
-			app.cache.tag('db-:tenant').for(`${tenantsLen}day`)
-		);
-		server.use('/.api/*',
-			// parse json bodies
-			bodyParser.json({ limit: '1000kb' }),
-			bodyParser.urlencoded({ extended: false, limit: '100kb' })
-		);
+		app.get("/.well-known/api.json", req => ({
+			location: req.site.$pkg.bundles.get('services').scripts[0]
+		}));
+		app.get("/.api", req => ({
+			location: "/.well-known/api"
+		}));
 	}
 
 	async install(...args) {
@@ -143,6 +132,25 @@ module.exports = class ApiModule {
 		if (!schema.$global && !req.site) {
 			throw new HttpError.BadRequest(method + ' expects site to be defined');
 		}
+		if (schema.$cache != null && req.res) {
+			if (schema.$cache === false) {
+				app.cache.disable(req, req.res, () => { });
+			} else if (typeof schema.$cache == "string") {
+				app.cache.for(schema.$cache)(req, req.res, () => { });
+			}
+		}
+		if (schema.$tags && req.res) {
+			console.log("tag cache", schema.$tags);
+			app.cache.tag(...schema.$tags)(req, req.res, () => { });
+		}
+		if (schema.$lock != null && schema.$lock !== true) {
+			if (req.locked?.(schema.$lock)) {
+				return {
+					status: req.user?.grants?.length == 0 ? 401 : 403,
+					locks: req.locks
+				};
+			}
+		}
 		this.validate(data, req.site);
 
 		// start a transaction on set trx object on site
@@ -186,9 +194,18 @@ module.exports = class ApiModule {
 		}
 	}
 
-	send(res, obj) {
-		const { req } = res;
-		if (obj == null || typeof obj != "object") {
+	send(req, obj) {
+		const { res } = req;
+		if (obj == null) {
+			res.sendStatus(204);
+			return;
+		}
+		if (typeof obj == "string") {
+			if (!res.get('Content-Type')) res.type('text/plain');
+			res.send(obj);
+			return;
+		}
+		if (typeof obj != "object") {
 			// eslint-disable-next-line no-console
 			console.trace("app.send expects an object, got", obj);
 			obj = {};
@@ -214,7 +231,7 @@ module.exports = class ApiModule {
 			delete obj.cookies;
 		}
 		// client needs to know what keys are supposed to be available
-		obj.grants = Object.fromEntries(
+		if (req.user.grants.length) obj.grants = Object.fromEntries(
 			req.user.grants.map(grant => [grant, true])
 		);
 		if (obj.status) {
@@ -226,6 +243,9 @@ module.exports = class ApiModule {
 				res.status(code);
 			}
 			delete obj.status;
+		}
+		if (obj.location) {
+			res.redirect(obj.location);
 		}
 
 		obj = this.app.responseFilter.run(req, obj);
