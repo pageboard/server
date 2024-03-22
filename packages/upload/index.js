@@ -1,4 +1,4 @@
-const multer = require.lazy('multer');
+const fileUpload = require.lazy('express-fileupload');
 const Path = require('node:path');
 const randomBytes = require('node:util')
 	.promisify(require('node:crypto').pseudoRandomBytes);
@@ -23,12 +23,10 @@ module.exports = class UploadModule {
 		opts.tmp = app.dirs.tmp;
 
 		opts.limits = {
-			files: 100,
-			size: 50000000,
+			files: 10,
+			size: 10000000,
 			...opts.limits
 		};
-		this.destination = this.destination.bind(this);
-		this.storage = multer.diskStorage(this);
 	}
 	async apiRoutes(app, server) {
 		app.post('/.api/upload/:id?', async req => {
@@ -49,60 +47,38 @@ module.exports = class UploadModule {
 			return obj;
 		});
 	}
-	async destination(req, file, cb) {
-		if (req.site) {
-			const date = (new Date()).toISOString().split('T').shift().substring(0, 7);
-			const curDest = Path.join(this.opts.dir, req.site.id, date);
-			await fs.mkdir(curDest, { recursive: true }).then(() => {
-				cb(null, curDest);
-			}).catch(cb);
-		} else {
-			cb(null, this.opts.tmp);
-		}
-	}
-	async filename(req, file, cb) {
-		const parts = file.originalname.split('.');
-		const ext = speaking(parts.pop(), {
-			truncate: 8,
-			symbols: false
-		});
-		const basename = speaking(parts.join('-'), {
-			truncate: 128,
-			symbols: false
-		});
-		const ranb = await randomBytes(6);
-		cb(null, `${basename}-${ranb.toString('base64url').replaceAll(/_/g, '')}.${ext}`);
-	}
+
 	parse(req, limits) {
 		limits = { ...this.limits, ...limits };
 		return new Promise((resolve, reject) => {
-			multer({
-				storage: this.storage,
-				fileFilter: function(req, file, cb) {
-					const types = limits.types?.length ? limits.types : ['*/*'];
-					cb(null, Boolean(typeis.is(file.mimetype, types)));
-				},
+			fileUpload({
+				abortOnLimit: true,
+				useTempFiles: true,
+				tempFileDir: this.opts.tmp,
 				limits: {
 					files: limits.files,
 					fileSize: limits.size
 				}
-			}).array('files')(req, req.res, err => {
+			})(req, req.res, err => {
 				if (err) {
 					if (parseInt(err.status) != err.status) err.status = 400;
 					return reject(err);
 				}
-				if (req.files == null) {
+				if (Object.isEmpty(req.files)) {
 					reject(new HttpError.BadRequest("Missing files"));
 				} else {
-					resolve(req.files.map(file => {
-						return {
-							name: file.fieldname,
-							title: file.originalname,
-							path: file.path,
+					const types = limits.types?.length ? limits.types : ['*/*'];
+					const entries = [];
+					for (const [fieldname, file] of Object.entries(req.files)) {
+						if (typeis.is(file.mimetype, types)) entries.push({
+							name: fieldname,
+							title: file.name,
+							path: file.tempFilePath,
 							mime: file.mimetype,
 							size: file.size
-						};
-					}));
+						});
+					}
+					resolve(entries);
 				}
 			});
 		});
@@ -137,6 +113,33 @@ module.exports = class UploadModule {
 	};
 
 	async store(req, data) {
+		// TODO setup pathname here
+		/*
+	async #dest(req) {
+		if (req.site) {
+			const date = (new Date()).toISOString().split('T').shift().substring(0, 7);
+			const curDest = Path.join(this.opts.dir, req.site.id, date);
+			// TODO use req.call('statics.dir', { dir: 'uploads' })
+			await fs.mkdir(curDest, { recursive: true });
+			return curDest;
+		} else {
+			return this.opts.tmp;
+		}
+	}
+	async #filename(req, file, cb) {
+		const parts = file.originalname.split('.');
+		const ext = speaking(parts.pop(), {
+			truncate: 8,
+			symbols: false
+		});
+		const basename = speaking(parts.join('-'), {
+			truncate: 128,
+			symbols: false
+		});
+		const ranb = await randomBytes(6);
+		return `${basename}-${ranb.toString('base64url').replaceAll(/_/g, '')}.${ext}`;
+	}
+		*/
 		const image = await req.run('image.upload', {
 			path: data.path,
 			mime: mime.lookup(Path.extname(data.path))
