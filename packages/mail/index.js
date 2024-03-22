@@ -5,8 +5,6 @@ const Transports = {
 };
 const Mailers = {};
 
-const multipart = require.lazy('./lib/multipart.js');
-
 module.exports = class MailModule {
 	static name = 'mail';
 	constructor(app, opts) {
@@ -31,12 +29,6 @@ module.exports = class MailModule {
 				return;
 			}
 		});
-	}
-
-	async elements() {
-		return import('./lib/mail_job.mjs');
-	}
-	apiRoutes(app, server) {
 		Object.entries(this.opts).forEach(([purpose, conf]) => {
 			Log.mail(purpose, conf);
 			try {
@@ -51,42 +43,11 @@ module.exports = class MailModule {
 				console.error(ex);
 			}
 		});
-		server.post('/.api/mail/receive', app.cache.tag('data-:site'), multipart, (req, res, next) => {
-			req.run('mail.receive', req.body).then(ok => {
-				// https://documentation.mailgun.com/en/latest/user_manual.html#receiving-messages-via-http-through-a-forward-action
-				if (!ok) res.sendStatus(406);
-				else res.sendStatus(200);
-			}).catch(next);
-		});
-		server.post('/.api/mail/report', app.cache.tag('data-:site'), (req, res, next) => {
-			req.run('mail.report', req.body).then(ok => {
-				// https://documentation.mailgun.com/en/latest/user_manual.html#webhooks
-				if (!ok) res.sendStatus(406);
-				else res.sendStatus(200);
-			}).catch(next);
-		});
 	}
 
-	async report(req, data) {
-		const mailer = Mailers.bulk;
-		const sign = data.signature;
-		if (!checkMail(mailer.auth, sign.timestamp, sign.token, sign.signature)) {
-			return false;
-		}
-		const event = data['event-data'];
-		return req.run('mail.to', {
-			to: [mailer.sender],
-			subject: 'Pageboard mail delivery failure to ' + event.message.headers.to,
-			text: JSON.stringify(event, null, ' ')
-		});
+	async elements() {
+		return import('./lib/mail_job.mjs');
 	}
-	static report = {
-		title: 'Process report-to email',
-		$lock: true,
-		$action: 'write',
-		additionalProperties: true,
-		properties: { /* TODO */ }
-	};
 
 	async receive(req, data) {
 		const mailer = Mailers.bulk;
@@ -135,7 +96,7 @@ module.exports = class MailModule {
 	}
 	static receive = {
 		title: 'Receive email',
-		$lock: true,
+		$private: true,
 		$action: 'write',
 		additionalProperties: true,
 		properties: { /* TODO */ }
@@ -185,7 +146,7 @@ module.exports = class MailModule {
 	}
 	static to = {
 		title: 'Send email to',
-		$lock: true,
+		$private: true,
 		$action: 'write',
 		required: ['subject', 'to', 'text'],
 		properties: {
