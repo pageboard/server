@@ -187,8 +187,8 @@ module.exports = class StaticsModule {
 		return urlToPath(this.opts.files, id, url);
 	}
 
-	async dir(req, { dir }) {
-		const path = Path.join(this.opts[dir], req.site.id);
+	async dir(req, { dir, subDir }) {
+		const path = Path.join(this.opts[dir], req.site.id, subDir ?? '');
 		await fs.mkdir(path, {
 			recursive: true
 		});
@@ -201,6 +201,11 @@ module.exports = class StaticsModule {
 			dir: {
 				title: 'Directory type',
 				enum: ['tmp', 'public']
+			},
+			subDir: {
+				title: 'Optional sub-directory',
+				type: 'string',
+				format: 'name'
 			}
 		}
 	};
