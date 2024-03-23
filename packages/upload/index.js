@@ -42,7 +42,6 @@ module.exports = class UploadModule {
 			}
 			const files = await this.parse(req, limits);
 			const list = await Promise.all(files.map(file => this.store(req, file)));
-			// href has no type ?
 			return { hrefs: list };
 		});
 	}
