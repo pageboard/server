@@ -42,9 +42,8 @@ module.exports = class UploadModule {
 			}
 			const files = await this.parse(req, limits);
 			const list = await Promise.all(files.map(file => this.store(req, file)));
-			// backward compatibility with elements-write's input href
-			const obj = req.params.id ? { items: list } : list;
-			return obj;
+			// href has no type ?
+			return { hrefs: list };
 		});
 	}
 
@@ -113,21 +112,12 @@ module.exports = class UploadModule {
 	};
 
 	async store(req, data) {
-		// TODO setup pathname here
-		/*
-	async #dest(req) {
-		if (req.site) {
-			const date = (new Date()).toISOString().split('T').shift().substring(0, 7);
-			const curDest = Path.join(this.opts.dir, req.site.id, date);
-			// TODO use req.call('statics.dir', { dir: 'uploads' })
-			await fs.mkdir(curDest, { recursive: true });
-			return curDest;
-		} else {
-			return this.opts.tmp;
-		}
-	}
-	async #filename(req, file, cb) {
-		const parts = file.originalname.split('.');
+		const subDir = (new Date()).toISOString().split('T').shift().substring(0, 7);
+		const dir = await req.call('statics.dir', {
+			dir: 'uploads',
+			subDir
+		});
+		const parts = data.title.split('.');
 		const ext = speaking(parts.pop(), {
 			truncate: 8,
 			symbols: false
@@ -136,21 +126,21 @@ module.exports = class UploadModule {
 			truncate: 128,
 			symbols: false
 		});
-		const ranb = await randomBytes(6);
-		return `${basename}-${ranb.toString('base64url').replaceAll(/_/g, '')}.${ext}`;
-	}
-		*/
+		const ranb = (await randomBytes(6)).toString('base64url').replaceAll(/_/g, '');
+		const filepath = Path.join(
+			dir,
+			`${basename}-${ranb}.${ext}`
+		);
+		await fs.rename(data.path, filepath);
 		const image = await req.run('image.upload', {
-			path: data.path,
-			mime: mime.lookup(Path.extname(data.path))
-		}) ?? data;
-		const root = Path.join(this.opts.dir, req.site.id);
+			path: filepath,
+			mime: mime.lookup(ext)
+		}) ?? { path: filepath };
 		const pathname = Path.join(
 			"/.uploads",
-			Path.relative(root, image.path)
+			Path.relative(Path.join(dir, '..'), image.path)
 		);
-		await req.run('href.add', { url: pathname });
-		return pathname;
+		return req.run('href.add', { url: pathname });
 	}
 	static store = {
 		title: 'Store uploaded file',
