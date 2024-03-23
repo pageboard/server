@@ -1,0 +1,27 @@
+{
+  "name": "@pageboard/stripe",
+  "version": "0.14.0",
+  "description": "Stripe API",
+  "main": "index.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/pageboard/server.git"
+  },
+  "keywords": [
+    "pageboard",
+    "print",
+    "cups"
+  ],
+  "author": "Jérémy Lal <kapouer@melix.org>",
+  "license": "MIT",
+  "bugs": {
+    "url": "https://github.com/pageboard/server/issues"
+  },
+  "homepage": "https://github.com/pageboard/server#readme",
+  "dependencies": {
+    "stripe": "^14.21.0"
+  }
+}
