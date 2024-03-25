@@ -1,9 +1,8 @@
-const {
-	mergeExpressions, unflatten
-} = require('../../../src/utils');
+const { mergeExpressions } = require('../../../src/utils');
 
 module.exports = class ApiService {
 	static name = 'apis';
+	static priority = 1000;
 
 	apiRoutes(app, server) {
 		// these routes are setup after all others
