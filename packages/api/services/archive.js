@@ -1,8 +1,9 @@
-const { createReadStream } = require('node:fs');
+const { createReadStream, createWriteStream } = require('node:fs');
+const { pipeline } = require('node:stream/promises');
 const Path = require('node:path');
-const { Deferred } = require.lazy('class-deferred');
 const ndjson = require.lazy('ndjson');
 const Upgrader = require.lazy('../upgrades');
+const Archiver = require.lazy('archiver');
 
 module.exports = class ArchiveService {
 	static name = 'archive';
@@ -12,24 +13,28 @@ module.exports = class ArchiveService {
 	}
 
 	apiRoutes(app, server) {
-		server.get('/.api/archive',
-			app.cache.disable(),
-			app.auth.lock('webmaster'),
-			req => req.run('archive.export', req.query)
-		);
+		app.get('/.api/archive', 'archive.export');
 		// TODO process req.files with multer
-		server.put('/.api/archive',
-			app.cache.tag('data-:site'),
-			app.auth.lock('webmaster'),
-			req => req.run('archive.import', req.query)
-		);
+		app.put('/.api/archive', 'archive.import');
 	}
 
-	async export(req, { file, ids = [], urls = [] }) {
-		const { site, trx, res, ref, fun } = req;
+	async export(req, { ids = [], urls = [], hrefs, resize }) {
+		const { site, trx, ref, fun } = req;
 		const { id } = site;
 		const lang = site.data.languages?.length == 0 ? req.call('translate.lang') : null;
-		const filepath = file ?? `${id}-${fileStamp()}.ndjson`;
+
+		const archive = new Archiver('zip');
+		archive.on('warning', err => {
+			if (err.code === 'ENOENT') {
+				console.warn(err);
+			} else {
+				throw err;
+			}
+		});
+		const pubDir = await req.call('statics.dir', { dir: 'public' });
+		const file = `${id}-${fileStamp()}.zip`;
+		const out = createWriteStream(Path.join(pubDir, file));
+		const d = pipeline(archive, out);
 
 		if (urls.length) {
 			const urlIds = await site.$relatedQuery('children', trx)
@@ -45,16 +50,11 @@ module.exports = class ArchiveService {
 			blocks: 0,
 			hrefs: 0,
 			orphaned,
-			file: Path.basename(filepath)
+			file: '/.public/' + file
 		};
-		res.type('application/x-ndjson');
-		const out = res.attachment(counts.file) ?? res;
 
-		const finished = new Deferred();
-		out.once('finish', finished.resolve);
-		out.once('error', finished.reject);
 		const jstream = ndjson.stringify();
-		jstream.pipe(out);
+		archive.append(jstream, { name: 'site.ndjson' });
 
 		const nsite = site.toJSON();
 		delete nsite.data.domains;
@@ -151,30 +151,36 @@ module.exports = class ArchiveService {
 				}
 			}
 		}
+		if (hrefs) {
+			const list = await req.run('href.collect', {
+				ids,
+				content: true
+			});
+			counts.hrefs = list.length;
+			for (const href of list) {
+				jstream.write(href);
+			}
+			jstream.end();
 
-		const hrefs = await req.run('href.collect', {
-			ids,
-			content: true
-		});
-		counts.hrefs = hrefs.length;
-		for (const href of hrefs) {
-			jstream.write(href);
+			for (const href of list) {
+				archive.file(href.pathname, { name: href.path });
+				break;
+			}
+
+		} else {
+			jstream.end();
 		}
-		jstream.end();
-		await finished;
+		await archive.finalize();
+		await d;
 		return counts;
 	}
 	static export = {
 		title: 'Export site',
 		$action: 'read',
-		$lock: true,
+		$private: true,
+		$lock: 'webmaster',
+		$cache: false,
 		properties: {
-			file: {
-				title: 'File name',
-				type: 'string',
-				pattern: /^[\w-]+\.ndjson$/.source,
-				nullable: true
-			},
 			ids: {
 				title: 'List of id',
 				type: 'array',
@@ -190,6 +196,16 @@ module.exports = class ArchiveService {
 					type: "string",
 					format: 'page'
 				}
+			},
+			hrefs: {
+				title: 'Includes hrefs',
+				type: 'boolean',
+				default: true
+			},
+			uploads: {
+				title: 'Include uploads',
+				type: 'string',
+				format: 'singleline'
 			}
 		}
 	};
@@ -225,10 +241,10 @@ module.exports = class ArchiveService {
 					to: toVersion
 				});
 			} else if (!obj.id) {
-				if (obj.pathname) {
+				if (obj.pathname && obj.pathname.includes('/uploads/')) {
 					obj.pathname = obj.pathname.replace(
-						/\/uploads\/[^/]+\//,
-						`/uploads/${site.id}/`
+						/^\/.+\/uploads\/[^/]+\//, // replace old paths with paths relative to common uploads
+						``
 					);
 				}
 				return obj;
@@ -361,7 +377,9 @@ module.exports = class ArchiveService {
 	static import = {
 		title: 'Import site',
 		$action: 'write',
-		$lock: true,
+		$private: true,
+		$lock: 'webmaster',
+		$tags: ['data-:site'],
 		required: ['file'],
 		properties: {
 			file: {
