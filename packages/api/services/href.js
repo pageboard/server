@@ -177,32 +177,32 @@ module.exports = class HrefService {
 		const { site, trx, Href } = req;
 		let local = false;
 		const siteUrl = site.$url ?? new URL(`https://${site.id}.localhost.localdomain`);
-		const pageUrl = new URL(data.url, siteUrl);
-		if (siteUrl.hostname == pageUrl.hostname) {
-			data.url = pageUrl.pathname + pageUrl.search;
+		const fullUrl = new URL(data.url, siteUrl);
+		if (siteUrl.hostname == fullUrl.hostname) {
+			data.url = fullUrl.pathname + fullUrl.search;
 			local = true;
 		}
 
 		let result;
-		if (local && !pageUrl.pathname.startsWith('/.')) {
+		if (local && !fullUrl.pathname.startsWith('/.')) {
 			// consider it's a page
 			const { item } = await req.run('block.find', {
 				type: Array.from(site.$pkg.pages),
 				content: 'title',
 				data: {
-					url: pageUrl.pathname
+					url: fullUrl.pathname
 				}
 			});
 			if (!item) {
-				throw new HttpError.NotFound("inspect cannot find block: " + pageUrl.pathname);
+				throw new HttpError.NotFound("inspect cannot find block: " + fullUrl.pathname);
 			}
 			result = {
 				mime: 'text/html; charset=utf-8',
 				type: 'link',
 				title: item.content.title,
 				site: null,
-				pathname: pageUrl.pathname,
-				url: pageUrl.pathname + pageUrl.search
+				pathname: fullUrl.pathname,
+				url: fullUrl.pathname + fullUrl.search
 			};
 		} else {
 			result = await this.inspect(req, { url: data.url, local });
@@ -210,7 +210,7 @@ module.exports = class HrefService {
 		if (!local && result.url != data.url) {
 			result.canonical = result.url;
 			result.url = data.url;
-			result.pathname = pageUrl.pathname;
+			result.pathname = fullUrl.pathname;
 		}
 		const href = await this.get(req, data).forUpdate();
 		if (!href) {
@@ -667,13 +667,14 @@ module.exports = class HrefService {
 	};
 
 	async inspect({ site }, { url, local }) {
+		const dir = this.app.dirs.data;
 		let fileUrl = url;
 		if (local === undefined) {
 			local = url.startsWith(`/.uploads/`);
 		}
 		if (local) {
 			fileUrl = url.replace(`/.uploads/`, `uploads/${site.id}/`);
-			fileUrl = "file://" + Path.join(this.app.dirs.data, fileUrl);
+			fileUrl = "file://" + Path.join(dir, fileUrl);
 		}
 		const obj = await this.app.inspector.get({
 			url: fileUrl,
@@ -682,6 +683,9 @@ module.exports = class HrefService {
 		if (local) {
 			obj.site = null;
 			obj.url = url;
+			if (obj.pathname.startsWith(dir)) {
+				obj.pathname = obj.pathname.substring(dir.length);
+			}
 		}
 		return obj;
 	}
