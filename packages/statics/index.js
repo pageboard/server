@@ -78,7 +78,7 @@ module.exports = class StaticsModule {
 		const { uploads, files } = this.opts;
 		let pathname;
 		if (path.startsWith('/.uploads/')) {
-			pathname = Path.join(uploads, site.id, path.substring(9));
+			pathname = Path.join(uploads, path.substring(9));
 		} else if (path.startsWith('/.files/')) {
 			pathname = Path.join(files, site.id, path.substring(7));
 		}
@@ -187,8 +187,8 @@ module.exports = class StaticsModule {
 		return urlToPath(this.opts.files, id, url);
 	}
 
-	async dir(req, { dir, subDir }) {
-		const path = Path.join(this.opts[dir], req.site.id, subDir ?? '');
+	async dir(req, { dir }) {
+		const path = Path.join(this.opts[dir], req.site.id);
 		await fs.mkdir(path, {
 			recursive: true
 		});
@@ -201,11 +201,6 @@ module.exports = class StaticsModule {
 			dir: {
 				title: 'Directory type',
 				enum: ['tmp', 'public']
-			},
-			subDir: {
-				title: 'Optional sub-directory',
-				type: 'string',
-				format: 'name'
 			}
 		}
 	};

@@ -22,10 +22,10 @@ module.exports = class HrefService {
 	}
 
 	async find({ Href, site, trx }, data) {
-		const item = await Href.query(trx).columns()
+		const href = await Href.query(trx).columns()
 			.whereSite(site.id)
 			.where('href.url', data.url).first().throwIfNotFound();
-		return { item };
+		return { href };
 	}
 	static find = {
 		title: 'Get URL metadata',
@@ -113,7 +113,7 @@ module.exports = class HrefService {
 			items = await q;
 		}
 		return {
-			items,
+			hrefs: items,
 			offset: data.offset,
 			limit: data.limit
 		};
@@ -168,8 +168,8 @@ module.exports = class HrefService {
 		try {
 			return await req.run('href.find', data);
 		} catch(err) {
-			const item = await this.#add(req, data);
-			return { item };
+			const href = await this.#add(req, data);
+			return { href };
 		}
 	}
 
@@ -206,11 +206,11 @@ module.exports = class HrefService {
 			};
 		} else {
 			result = await this.inspect(req, { url: data.url, local });
+			result.pathname = fullUrl.pathname;
 		}
 		if (!local && result.url != data.url) {
 			result.canonical = result.url;
 			result.url = data.url;
-			result.pathname = fullUrl.pathname;
 		}
 		const href = await this.get(req, data).forUpdate();
 		if (!href) {
@@ -637,9 +637,7 @@ module.exports = class HrefService {
 				}
 			}
 		}
-		const list = await Promise.all(urls.map(url => {
-			return req.run('href.add', { url });
-		}));
+		const list = await Promise.all(urls.map(url => req.run('href.add', { url })));
 		return {
 			ignored,
 			blocks: rows.length,
@@ -667,14 +665,13 @@ module.exports = class HrefService {
 	};
 
 	async inspect({ site }, { url, local }) {
-		const dir = this.app.dirs.data;
+		const dir = this.app.dirs.uploads;
 		let fileUrl = url;
 		if (local === undefined) {
 			local = url.startsWith(`/.uploads/`);
 		}
 		if (local) {
-			fileUrl = url.replace(`/.uploads/`, `uploads/${site.id}/`);
-			fileUrl = "file://" + Path.join(dir, fileUrl);
+			fileUrl = "file://" + Path.join(dir, url.replace(`/.uploads/`, '/'));
 		}
 		const obj = await this.app.inspector.get({
 			url: fileUrl,
@@ -683,9 +680,6 @@ module.exports = class HrefService {
 		if (local) {
 			obj.site = null;
 			obj.url = url;
-			if (obj.pathname.startsWith(dir)) {
-				obj.pathname = obj.pathname.substring(dir.length);
-			}
 		}
 		return obj;
 	}

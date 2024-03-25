@@ -32,7 +32,7 @@ module.exports = class InspectorModule {
 	}
 
 	#filterResult(result) {
-		const obj = {meta:{}};
+		const obj = { meta: {} };
 		['mime', 'url', 'type', 'title', 'icon', 'site']
 			.forEach(key => {
 				if (result[key] !== undefined) obj[key] = result[key];

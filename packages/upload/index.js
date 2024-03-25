@@ -1,11 +1,11 @@
-const fileUpload = require.lazy('express-fileupload');
+const { promisify } = require('node:util');
 const Path = require('node:path');
-const randomBytes = require('node:util')
-	.promisify(require('node:crypto').pseudoRandomBytes);
+const { promises: fs } = require('node:fs');
+const randomBytes = promisify(require('node:crypto').pseudoRandomBytes);
+const fileUpload = require.lazy('express-fileupload');
 const typeis = require.lazy('type-is');
 const mime = require.lazy('mime-types');
 const speaking = require.lazy('speakingurl');
-const { promises: fs } = require('node:fs');
 
 module.exports = class UploadModule {
 	static name = 'upload';
@@ -38,48 +38,40 @@ module.exports = class UploadModule {
 				}
 				Object.assign(limits, input.data.limits);
 			} else {
-				console.warn("/.api/upload without /:id is deprecated.\nConfigure an upload input and use its id");
+				console.info("/.api/upload without /:id is deprecated.\nConfigure an upload input and use its id");
 			}
 			const files = await this.parse(req, limits);
 			const list = await Promise.all(files.map(file => this.store(req, file)));
-			return { hrefs: list };
+			return { hrefs: list.map(item => item.href) };
 		});
 	}
 
-	parse(req, limits) {
+	async parse(req, limits) {
 		limits = { ...this.limits, ...limits };
-		return new Promise((resolve, reject) => {
-			fileUpload({
-				abortOnLimit: true,
-				useTempFiles: true,
-				tempFileDir: this.opts.tmp,
-				limits: {
-					files: limits.files,
-					fileSize: limits.size
-				}
-			})(req, req.res, err => {
-				if (err) {
-					if (parseInt(err.status) != err.status) err.status = 400;
-					return reject(err);
-				}
-				if (Object.isEmpty(req.files)) {
-					reject(new HttpError.BadRequest("Missing files"));
-				} else {
-					const types = limits.types?.length ? limits.types : ['*/*'];
-					const entries = [];
-					for (const [fieldname, file] of Object.entries(req.files)) {
-						if (typeis.is(file.mimetype, types)) entries.push({
-							name: fieldname,
-							title: file.name,
-							path: file.tempFilePath,
-							mime: file.mimetype,
-							size: file.size
-						});
-					}
-					resolve(entries);
-				}
+		await promisify(fileUpload({
+			abortOnLimit: true,
+			useTempFiles: true,
+			tempFileDir: this.opts.tmp,
+			limits: {
+				files: limits.files,
+				fileSize: limits.size
+			}
+		}))(req, req.res);
+		if (Object.isEmpty(req.files)) {
+			throw new HttpError.BadRequest("Missing files");
+		}
+		const types = limits.types?.length ? limits.types : ['*/*'];
+		const entries = [];
+		for (const [fieldname, file] of Object.entries(req.files)) {
+			if (typeis.is(file.mimetype, types)) entries.push({
+				name: fieldname,
+				title: file.name,
+				path: file.tempFilePath,
+				mime: file.mimetype,
+				size: file.size
 			});
-		});
+		}
+		return entries;
 	}
 	static parse = {
 		title: 'Parse request',
@@ -112,10 +104,8 @@ module.exports = class UploadModule {
 
 	async store(req, data) {
 		const subDir = (new Date()).toISOString().split('T').shift().substring(0, 7);
-		const dir = await req.call('statics.dir', {
-			dir: 'uploads',
-			subDir
-		});
+		const dir = Path.join(this.opts.dir, subDir);
+		await fs.mkdir(dir, { recursive: true });
 		const parts = data.title.split('.');
 		const ext = speaking(parts.pop(), {
 			truncate: 8,
@@ -135,11 +125,11 @@ module.exports = class UploadModule {
 			path: filepath,
 			mime: mime.lookup(ext)
 		}) ?? { path: filepath };
-		const pathname = Path.join(
+		const url = Path.join(
 			"/.uploads",
 			Path.relative(Path.join(dir, '..'), image.path)
 		);
-		return req.run('href.add', { url: pathname });
+		return req.run('href.add', { url });
 	}
 	static store = {
 		title: 'Store uploaded file',
@@ -156,17 +146,4 @@ module.exports = class UploadModule {
 			}
 		}
 	};
-
-	gc(id, pathname) {
-		if (!id || !pathname.startsWith('/.uploads')) {
-			return Promise.resolve();
-		}
-		const file = Path.join("uploads", id, pathname);
-		return fs.unlink(file).catch(() => {
-			// ignore error
-		}).then(() => {
-			console.info("gc uploaded file", file);
-		});
-	}
-
 };
