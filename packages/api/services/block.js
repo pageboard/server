@@ -1,5 +1,5 @@
 const Block = require('../models/block');
-const { unflatten, mergeRecursive, dget } = require('../../../src/utils');
+const { mergeRecursive, dget } = require('../../../src/utils');
 
 module.exports = class BlockService {
 	static name = 'block';
