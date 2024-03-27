@@ -1,4 +1,4 @@
-const { mergeExpressions } = require('../../../src/utils');
+const { mergeExpressions, unflatten } = require('../../../src/utils');
 
 module.exports = class ApiService {
 	static name = 'apis';
@@ -10,7 +10,7 @@ module.exports = class ApiService {
 		app.get(["/.api/:id", "/.api/query/:id"], req => {
 			return req.run('apis.get', {
 				id: req.params.id,
-				query: req.query
+				query: unflatten(req.query)
 			});
 		});
 		app.post(["/.api/:id", "/.api/form/:id"], req => {
@@ -23,8 +23,8 @@ module.exports = class ApiService {
 			// so stabilizing standalones should be a priority
 			return req.run('apis.post', {
 				id: req.params.id,
-				query: req.query,
-				body: req.body
+				query: unflatten(req.query),
+				body: unflatten(req.body)
 			});
 		});
 	}
