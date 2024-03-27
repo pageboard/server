@@ -440,7 +440,7 @@ module.exports = class Pageboard {
 				if (desc.$global == null && constructor.$global != null) {
 					desc.$global = constructor.$global;
 				}
-				for (const name of ['$action', '$global', '$lock', 'title', 'description']) {
+				for (const name of ['$cache', '$tags', '$private', '$action', '$global', '$lock', 'title', 'description']) {
 					if (desc[name] != null) {
 						schema[name] = desc[name];
 						delete desc[name];
