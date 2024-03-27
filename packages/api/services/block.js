@@ -308,6 +308,8 @@ module.exports = class BlockService {
 				preview: data.preview,
 				types: Href.mediaTypes
 			});
+		} else {
+			obj.hrefs = {};
 		}
 		return obj;
 	}
