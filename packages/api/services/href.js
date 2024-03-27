@@ -498,7 +498,7 @@ module.exports = class HrefService {
 				${meta}
 			) AS hrefs`));
 			const [{ hrefs }] = await q;
-			return hrefs;
+			return hrefs ?? {};
 		} else {
 			q.columns();
 			return q;
