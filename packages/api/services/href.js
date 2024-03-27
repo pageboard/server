@@ -1,5 +1,7 @@
 const Path = require('node:path');
+const { promises: fs } = require('node:fs');
 const jsonPath = require.lazy('@kapouer/path');
+
 
 module.exports = class HrefService {
 	static name = 'href';
@@ -701,32 +703,40 @@ module.exports = class HrefService {
 			}
 		}
 	};
-};
 
-
-
-exports.gc = function ({ trx }, days) {
-	return Promise.resolve([]);
-	// TODO use sites schemas to known which paths to check:
-	// for example, data.url comes from elements.image.properties.url.input.name == "href"
-
-	// TODO href.site IS NULL used to be p.data->>'domain' = href.site
-	// BOTH are wrong since they won't touch external links...
-	// TODO the outer join on url is also a bit wrong since it does not use href._parent !!!
-	/*
-	return req.raw(`DELETE FROM href USING (
-		SELECT count(block.*) AS count, href._id FROM href
-		LEFT OUTER JOIN block ON (block.data->>'url' = href.url)
-		LEFT JOIN relation AS r ON (r.child_id = block._id)
-		LEFT JOIN block AS p ON (p._id = r.parent_id AND p.type='site' AND href.site IS NULL)
-		WHERE extract('day' from now() - href.updated_at) >= ?
-		GROUP BY href._id
-	) AS usage WHERE usage.count = 0 AND href._id = usage._id
-	RETURNING href.type, href.pathname, p.id AS site`, [
-		days
-	]).then(function(result) {
-		return result.rows;
-	});
-	*/
+	async gc(req, data) {
+		const dir = this.app.dirs.uploads;
+		const prefix = "/.uploads/";
+		const collected = await req.run('href.collect', { content: true, asMap: true });
+		const items = await req.Href.query(req.trx).columns().whereSite(req.site.id);
+		const list = [];
+		for (const item of items) {
+			if (!(item.url in collected)) {
+				list.push(item.url);
+				if (item.url.startsWith(prefix)) {
+					const filePath = Path.join(dir, item.url.substring(prefix.length));
+					await fs.unlink(filePath);
+				}
+				const { count } = await req.run('href.del', { url: item.url });
+				if (count != 1) {
+					console.warn(count, "href have been removed with url:", item.url);
+				}
+			}
+		}
+		return { removals: list };
+	}
+	static gc = {
+		title: 'Garbage Collector',
+		$private: true,
+		$action: 'write',
+		properties: {
+			ttl: {
+				title: 'TTL',
+				description: 'days',
+				type: 'integer',
+				default: 7
+			}
+		}
+	};
 };
 
