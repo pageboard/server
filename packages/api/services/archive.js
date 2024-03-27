@@ -19,26 +19,36 @@ module.exports = class ArchiveService {
 	}
 
 	async bundle(req, data) {
-		const { items, hrefs } = await req.run('apis.get', {
+		const output = await req.run('apis.get', {
 			id: data.id,
 			query: data.query
 		});
 		const file = `${data.id}-${fileStamp()}.zip`;
-		await archiveWrap(req, file, (archive, jstream) => {
-			for (const item of items) {
-				jstream.write(item);
-			}
+
+		const counts = {
+			items: output.items?.length,
+			hrefs: 0,
+			files: 0,
+			file: '/.public/' + file
+		};
+		const { hrefs } = output;
+		delete output.hrefs;
+
+		await archiveWrap(req, file, archive => {
+			archive.append(JSON.stringify(output), { name: 'export.json' });
 			const { uploads } = this.app.dirs;
-			for (const href of hrefs) {
-				if (href.url.startsWith('/.uploads/')) {
+			for (const url of Object.keys(hrefs)) {
+				counts.hrefs++;
+				if (url.startsWith('/.uploads/')) {
+					counts.files++;
 					archive.file(
-						Path.join(uploads, href.pathname.replace(/^\/\.uploads/, '')),
-						{ name: href.pathname.substring(2) }
+						Path.join(uploads, url.replace(/^\/\.uploads/, '')),
+						{ name: url.substring(2) }
 					);
 				}
 			}
 		});
-		return { file };
+		return counts;
 	}
 	static bundle = {
 		title: 'Bundle',
@@ -81,7 +91,7 @@ module.exports = class ArchiveService {
 			file: '/.public/' + file
 		};
 
-		await archiveWrap(req, file, async (archive, jstream) => {
+		await archiveWrap(req, file, async archive => {
 			if (urls.length) {
 				const urlIds = await site.$relatedQuery('children', trx)
 					.select('block.id')
@@ -95,6 +105,8 @@ module.exports = class ArchiveService {
 
 			const nsite = site.toJSON();
 			delete nsite.data.domains;
+			const jstream = ndjson.stringify();
+			archive.append(jstream, { name: 'export.ndjson' });
 			jstream.write(nsite);
 
 			const colOpts = { lang, content: Boolean(lang) };
@@ -211,6 +223,7 @@ module.exports = class ArchiveService {
 					}
 				}
 			}
+			jstream.end();
 		});
 		return counts;
 	}
@@ -489,10 +502,7 @@ async function archiveWrap(req, file, fn) {
 	const pubDir = await req.call('statics.dir', { dir: 'public' });
 	const out = createWriteStream(Path.join(pubDir, file));
 	const d = pipeline(archive, out);
-	const jstream = ndjson.stringify();
-	archive.append(jstream, { name: 'export.ndjson' });
-	await fn(archive, jstream);
-	jstream.end();
+	await fn(archive);
 	await archive.finalize();
 	await d;
 }
