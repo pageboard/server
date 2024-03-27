@@ -18,130 +18,146 @@ module.exports = class ArchiveService {
 		app.put('/.api/archive', 'archive.import');
 	}
 
+	async bundle(req, data) {
+		const { items, hrefs } = await req.run('apis.get', {
+			id: data.id,
+			query: data.query
+		});
+		const file = `${data.id}-${fileStamp()}.zip`;
+		await archiveWrap(req, file, (archive, jstream) => {
+			for (const item of items) {
+				jstream.write(item);
+			}
+			const { uploads } = this.app.dirs;
+			for (const href of hrefs) {
+				if (href.url.startsWith('/.uploads/')) {
+					archive.file(
+						Path.join(uploads, href.pathname.replace(/^\/\.uploads/, '')),
+						{ name: href.pathname.substring(2) }
+					);
+				}
+			}
+		});
+		return { file };
+	}
+	static bundle = {
+		title: 'Bundle',
+		$action: 'read',
+		$private: true,
+		$lock: 'webmaster',
+		$cache: false,
+		required: ['id'],
+		properties: {
+			id: {
+				title: 'Fetch id',
+				type: 'string',
+				format: 'id'
+			},
+			query: {
+				title: 'Fetch query',
+				type: 'object',
+				nullable: true
+			},
+			resize: {
+				title: 'Resize images',
+				type: 'string',
+				nullable: true
+			}
+		}
+	};
+
 	async export(req, data) {
 		const { site, trx, ref, fun } = req;
 		const { id } = site;
 		const lang = site.data.languages?.length == 0 ? req.call('translate.lang') : null;
 		const urls = data.urls;
 		const ids = (data.ids ?? []).slice();
-
-		const archive = new Archiver('zip');
-		archive.on('warning', err => {
-			if (err.code === 'ENOENT') {
-				console.warn(err);
-			} else {
-				throw err;
-			}
-		});
-		const pubDir = await req.call('statics.dir', { dir: 'public' });
 		const file = `${id}-${fileStamp()}.zip`;
-		const out = createWriteStream(Path.join(pubDir, file));
-		const d = pipeline(archive, out);
-
-		if (urls.length) {
-			const urlIds = await site.$relatedQuery('children', trx)
-				.select('block.id')
-				.whereIn('block.type', Array.from(site.$pkg.pages))
-				.whereJsonText('block.data:url', 'IN', urls);
-			ids.push(...urlIds.map(item => item.id));
-		}
-		const { orphaned } = await site.$query(trx)
-			.select(fun('block_delete_orphans', ref('block._id')).as('orphaned'));
 		const counts = {
 			users: 0,
 			blocks: 0,
 			hrefs: 0,
-			orphaned,
+			orphaned: 0,
 			file: '/.public/' + file
 		};
 
-		const jstream = ndjson.stringify();
-		archive.append(jstream, { name: 'site.ndjson' });
-
-		const nsite = site.toJSON();
-		delete nsite.data.domains;
-		jstream.write(nsite);
-
-		const colOpts = { lang, content: Boolean(lang) };
-
-		const modifiers = {
-			blocks(q) {
-				q.where('standalone', false)
-					.whereNot('type', 'content')
-					.columns(colOpts);
-			},
-			standalones(q) {
-				q.where('standalone', true).columns(colOpts);
-			},
-			users(q) {
-				q.where('type', 'user').columns(colOpts);
+		await archiveWrap(req, file, async (archive, jstream) => {
+			if (urls.length) {
+				const urlIds = await site.$relatedQuery('children', trx)
+					.select('block.id')
+					.whereIn('block.type', Array.from(site.$pkg.pages))
+					.whereJsonText('block.data:url', 'IN', urls);
+				ids.push(...urlIds.map(item => item.id));
 			}
-		};
+			const { orphaned } = await site.$query(trx)
+				.select(fun('block_delete_orphans', ref('block._id')).as('orphaned'));
+			counts.orphaned = orphaned;
 
-		const countParents = site.$modelClass.relatedQuery('parents', trx)
-			.whereNot('parents.id', site.id)
-			.whereNot('parents.type', 'user');
+			const nsite = site.toJSON();
+			delete nsite.data.domains;
+			jstream.write(nsite);
 
-		const q = site.$relatedQuery('children', trx)
-			.modify(q => {
-				if (ids.length > 0) q.whereIn('block.id', ids);
-			})
-			.where(q => {
-				// workaround settings not being standalone on previous versions
-				q.where('standalone', true).orWhere('type', 'settings');
-			})
-			.whereNotExists(countParents)
-			.columns(colOpts);
+			const colOpts = { lang, content: Boolean(lang) };
 
-		const blocks = await q.withGraphFetched(`[
+			const modifiers = {
+				blocks(q) {
+					q.where('standalone', false)
+						.whereNot('type', 'content')
+						.columns(colOpts);
+				},
+				standalones(q) {
+					q.where('standalone', true).columns(colOpts);
+				},
+				users(q) {
+					q.where('type', 'user').columns(colOpts);
+				}
+			};
+
+			const countParents = site.$modelClass.relatedQuery('parents', trx)
+				.whereNot('parents.id', site.id)
+				.whereNot('parents.type', 'user');
+
+			const q = site.$relatedQuery('children', trx)
+				.modify(q => {
+					if (ids.length > 0) q.whereIn('block.id', ids);
+				})
+				.where(q => {
+					// workaround settings not being standalone on previous versions
+					q.where('standalone', true).orWhere('type', 'settings');
+				})
+				.whereNotExists(countParents)
+				.columns(colOpts);
+
+			const blocks = await q.withGraphFetched(`[
 				parents(users),
 				children(standalones) as standalones . children(blocks),
 				children(blocks)
 			]`)
-			.modifiers(modifiers);
-		const blocksId = new Set();
-		counts.blocks += blocks.length;
-		for (const block of blocks) {
-			counts.users += writeBlocks(jstream, block, 'parents', blocksId);
-			counts.blocks += writeBlocks(jstream, block, 'standalones', blocksId);
-			if (block.children.length == 0) delete block.children;
-			if (blocksId.has(block.id)) {
-				console.error("Skip already inserted block", block.id, block.type);
-			} else {
-				jstream.write(block);
+				.modifiers(modifiers);
+			const blocksId = new Set();
+			counts.blocks += blocks.length;
+			for (const block of blocks) {
+				counts.users += writeBlocks(jstream, block, 'parents', blocksId);
+				counts.blocks += writeBlocks(jstream, block, 'standalones', blocksId);
+				if (block.children.length == 0) delete block.children;
+				if (blocksId.has(block.id)) {
+					console.error("Skip already inserted block", block.id, block.type);
+				} else {
+					jstream.write(block);
+				}
 			}
-		}
 
-		if (!lang) {
-			const contents = await site.$relatedQuery('children', trx)
-				.with('parents', site.$relatedQuery('children', trx)
-					.select('block._id')
-					.joinRelated('parents')
-					.whereNot('parents.type', 'site')
-					.modify(q => {
-						if (ids.length) q.whereIn('parents.id', ids);
-					})
-					.select(fun('array_agg', ref('parents.id')).as('parents'))
-					.groupBy('block._id')
-				)
-				.join('parents', 'parents._id', 'block._id')
-				.select('parents.parents')
-				.where('block.type', 'content')
-				.columns();
-			counts.contents = contents.length;
-			for (const content of contents) {
-				jstream.write(content);
-			}
-			if (ids.length) {
+			if (!lang) {
 				const contents = await site.$relatedQuery('children', trx)
 					.with('parents', site.$relatedQuery('children', trx)
-						.select('children._id')
+						.select('block._id')
 						.joinRelated('parents')
-						.joinRelated('children')
 						.whereNot('parents.type', 'site')
-						.whereIn('parents.id', ids)
-						.select(fun('array_agg', ref('block.id')).as('parents'))
-						.groupBy('children._id')
+						.modify(q => {
+							if (ids.length) q.whereIn('parents.id', ids);
+						})
+						.select(fun('array_agg', ref('parents.id')).as('parents'))
+						.groupBy('block._id')
 					)
 					.join('parents', 'parents._id', 'block._id')
 					.select('parents.parents')
@@ -151,36 +167,51 @@ module.exports = class ArchiveService {
 				for (const content of contents) {
 					jstream.write(content);
 				}
-			}
-		}
-		counts.files = 0;
-		if (data.hrefs) {
-			const list = await req.run('href.collect', {
-				ids,
-				content: true
-			});
-			counts.hrefs = list.length;
-			for (const href of list) {
-				jstream.write(href);
-			}
-			jstream.end();
-			if (data.uploads) {
-				const { uploads } = this.app.dirs;
-				for (const href of list) {
-					if (href.url.startsWith('/.uploads/')) {
-						archive.file(
-							Path.join(uploads, href.pathname.replace(/^\/\.uploads/, '')),
-							{ name: href.pathname.substring(2) }
-						);
-						counts.files++;
+				if (ids.length) {
+					const contents = await site.$relatedQuery('children', trx)
+						.with('parents', site.$relatedQuery('children', trx)
+							.select('children._id')
+							.joinRelated('parents')
+							.joinRelated('children')
+							.whereNot('parents.type', 'site')
+							.whereIn('parents.id', ids)
+							.select(fun('array_agg', ref('block.id')).as('parents'))
+							.groupBy('children._id')
+						)
+						.join('parents', 'parents._id', 'block._id')
+						.select('parents.parents')
+						.where('block.type', 'content')
+						.columns();
+					counts.contents = contents.length;
+					for (const content of contents) {
+						jstream.write(content);
 					}
 				}
 			}
-		} else {
-			jstream.end();
-		}
-		await archive.finalize();
-		await d;
+			counts.files = 0;
+			if (data.hrefs) {
+				const list = await req.run('href.collect', {
+					ids,
+					content: true
+				});
+				counts.hrefs = list.length;
+				for (const href of list) {
+					jstream.write(href);
+				}
+				if (data.uploads) {
+					const { uploads } = this.app.dirs;
+					for (const href of list) {
+						if (href.url.startsWith('/.uploads/')) {
+							archive.file(
+								Path.join(uploads, href.pathname.replace(/^\/\.uploads/, '')),
+								{ name: href.pathname.substring(2) }
+							);
+							counts.files++;
+						}
+					}
+				}
+			}
+		});
 		return counts;
 	}
 	static export = {
@@ -220,6 +251,7 @@ module.exports = class ArchiveService {
 	};
 
 	async import(req, { file, reset, idMap, types = [] }) {
+		// TODO import zip file with export.ndjson
 		const { trx, Block } = req;
 		let { site } = req;
 		const counts = {
@@ -443,4 +475,24 @@ function writeBlocks(jstream, parent, key, ids) {
 		delete parent[key];
 	}
 	return count;
+}
+
+async function archiveWrap(req, file, fn) {
+	const archive = new Archiver('zip');
+	archive.on('warning', err => {
+		if (err.code === 'ENOENT') {
+			console.warn(err);
+		} else {
+			throw err;
+		}
+	});
+	const pubDir = await req.call('statics.dir', { dir: 'public' });
+	const out = createWriteStream(Path.join(pubDir, file));
+	const d = pipeline(archive, out);
+	const jstream = ndjson.stringify();
+	archive.append(jstream, { name: 'export.ndjson' });
+	await fn(archive, jstream);
+	jstream.end();
+	await archive.finalize();
+	await d;
 }
