@@ -5,15 +5,15 @@ pageboard-api
 Configuration
 -------------
 
-* database  
+* database
   a connection string, any parameter of which can be overriden by the
   following parameters
 
-* connection.type  
-  connection.user  
-  connection.password  
-  connection.host  
-  connection.database  
+* connection.type
+  connection.user
+  connection.password
+  connection.host
+  connection.database
 
 Commands
 --------
@@ -26,17 +26,17 @@ Services
 
 These services expose get, add, save, del functions.
 
-* user  
-  identifies a user and its grants  
+* user
+  identifies a user and its grants
   children of a user are sites
 
-* site  
+* site
   identifies a site containing pages, belongs to one or several users
 
-* page  
+* page
   a web page, belongs to a site
 
-* block  
+* block
   all other blocks are children of a page (or grand-children, recursively).
 
 
@@ -44,7 +44,7 @@ Permissions
 -----------
 
 login.grant can grant scopes to a requester by sending him a jwt cookie.
-Elements have `$locks` property (a map)
+Elements have `$lock` property (a map)
 blocks have `locks` property (a map).
 
 If locks maps the '*' to something, it locks the whole block.
