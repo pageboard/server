@@ -170,7 +170,7 @@ module.exports = class PageService {
 		} else if (wkp) {
 			obj.status = parseInt(wkp[1]);
 		}
-		const hrefs = await req.call('href.collect', {
+		const hrefs = await req.run('href.collect', {
 			ids: [page.id],
 			content: true,
 			asMap: true,
@@ -182,8 +182,8 @@ module.exports = class PageService {
 			parent: site,
 			item: page,
 			items: [ ...page.children, ...page.standalones ],
-			links: links,
-			hrefs: hrefs[0].hrefs
+			links,
+			hrefs
 		});
 		delete page.standalones;
 		delete page.children;

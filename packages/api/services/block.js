@@ -301,14 +301,13 @@ module.exports = class BlockService {
 			lang: language.lang
 		})).item;
 		if (ids.length) {
-			const hrow = await req.call('href.collect', {
+			obj.hrefs = await req.run('href.collect', {
 				ids,
 				content: data.content === true,
 				asMap: true,
 				preview: data.preview,
 				types: Href.mediaTypes
-			}).first();
-			obj.hrefs = hrow.hrefs;
+			});
 		}
 		return obj;
 	}

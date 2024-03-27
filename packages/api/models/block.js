@@ -420,7 +420,8 @@ function findHrefs(schema, list, root, array) {
 		if ($filter?.name == "helper") {
 			$helper = $filter.helper;
 		}
-		if ($helper == "href" || $helper?.name == "href") {
+		const name = $helper?.name ?? $helper;
+		if (name && ["href", "pageUrl"].includes(name)) {
 			let types = $helper.filter?.type ?? [];
 			if (!Array.isArray(types)) types = [types];
 			if (types.length == 0) {

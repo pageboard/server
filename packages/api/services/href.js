@@ -437,7 +437,7 @@ module.exports = class HrefService {
 		}
 	};
 
-	collect(req, data) {
+	async collect(req, data) {
 		const { site, trx } = req;
 		const hrefs = site.$hrefs;
 		const qList = q => {
@@ -495,10 +495,12 @@ module.exports = class HrefService {
 				href.url,
 				${meta}
 			) AS hrefs`));
+			const [{ hrefs }] = await q;
+			return hrefs;
 		} else {
 			q.columns();
+			return q;
 		}
-		return q;
 	}
 
 	static collect = {
@@ -559,7 +561,7 @@ module.exports = class HrefService {
 				$relation: 'children',
 				$modify: [(q) => {
 					q.where('standalone', true);
-					if (data.ids.length) q.whereIn('id', data.ids);
+					if (data.ids?.length) q.whereIn('id', data.ids);
 				}]
 			}
 		};
