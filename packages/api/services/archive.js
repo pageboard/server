@@ -18,10 +18,12 @@ module.exports = class ArchiveService {
 		app.put('/.api/archive', 'archive.import');
 	}
 
-	async export(req, { ids = [], urls = [], hrefs, resize }) {
+	async export(req, data) {
 		const { site, trx, ref, fun } = req;
 		const { id } = site;
 		const lang = site.data.languages?.length == 0 ? req.call('translate.lang') : null;
+		const urls = data.urls;
+		const ids = (data.ids ?? []).slice();
 
 		const archive = new Archiver('zip');
 		archive.on('warning', err => {
@@ -152,7 +154,7 @@ module.exports = class ArchiveService {
 			}
 		}
 		counts.files = 0;
-		if (hrefs) {
+		if (data.hrefs) {
 			const list = await req.run('href.collect', {
 				ids,
 				content: true
@@ -162,14 +164,16 @@ module.exports = class ArchiveService {
 				jstream.write(href);
 			}
 			jstream.end();
-			const { uploads } = this.app.dirs;
-			for (const href of list) {
-				if (href.url.startsWith('/.uploads/')) {
-					archive.file(
-						Path.join(uploads, href.pathname.replace(/^\/\.uploads/, '')),
-						{ name: '.' + href.pathname }
-					);
-					counts.files++;
+			if (data.uploads) {
+				const { uploads } = this.app.dirs;
+				for (const href of list) {
+					if (href.url.startsWith('/.uploads/')) {
+						archive.file(
+							Path.join(uploads, href.pathname.replace(/^\/\.uploads/, '')),
+							{ name: href.pathname.substring(2) }
+						);
+						counts.files++;
+					}
 				}
 			}
 		} else {
@@ -209,8 +213,8 @@ module.exports = class ArchiveService {
 			},
 			uploads: {
 				title: 'Include uploads',
-				type: 'string',
-				format: 'singleline'
+				type: 'boolean',
+				default: true
 			}
 		}
 	};
@@ -246,7 +250,7 @@ module.exports = class ArchiveService {
 					to: toVersion
 				});
 			} else if (!obj.id) {
-				if (obj.pathname && obj.pathname.includes('/uploads/')) {
+				if (obj.pathname && obj.pathname.includes('/uploads/')) { // NOT /.uploads/
 					obj.pathname = obj.url;
 				}
 				return obj;
