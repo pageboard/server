@@ -140,7 +140,6 @@ module.exports = class ApiModule {
 			}
 		}
 		if (schema.$tags && req.res) {
-			console.log("tag cache", schema.$tags);
 			app.cache.tag(...schema.$tags)(req, req.res, () => { });
 		}
 		if (schema.$lock != null && schema.$lock !== true) {
