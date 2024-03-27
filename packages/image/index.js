@@ -67,6 +67,22 @@ module.exports = class ImageModule {
 		);
 	}
 
+	async resize(req, data) {
+
+	}
+	static resize = {
+		title: 'Resize image',
+		$private: true,
+		properties: {
+			width: {
+
+			},
+			height: {
+
+			}
+		}
+	};
+
 	async thumbnail(url) {
 		let pipeline;
 		if (url.startsWith('file://')) {
