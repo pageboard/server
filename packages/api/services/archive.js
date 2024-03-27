@@ -151,6 +151,7 @@ module.exports = class ArchiveService {
 				}
 			}
 		}
+		counts.files = 0;
 		if (hrefs) {
 			const list = await req.run('href.collect', {
 				ids,
@@ -161,12 +162,16 @@ module.exports = class ArchiveService {
 				jstream.write(href);
 			}
 			jstream.end();
-
+			const { uploads } = this.app.dirs;
 			for (const href of list) {
-				archive.file(href.pathname, { name: href.path });
-				break;
+				if (href.url.startsWith('/.uploads/')) {
+					archive.file(
+						Path.join(uploads, href.pathname.replace(/^\/\.uploads/, '')),
+						{ name: '.' + href.pathname }
+					);
+					counts.files++;
+				}
 			}
-
 		} else {
 			jstream.end();
 		}
@@ -242,10 +247,7 @@ module.exports = class ArchiveService {
 				});
 			} else if (!obj.id) {
 				if (obj.pathname && obj.pathname.includes('/uploads/')) {
-					obj.pathname = obj.pathname.replace(
-						/^\/.+\/uploads\/[^/]+\//, // replace old paths with paths relative to common uploads
-						``
-					);
+					obj.pathname = obj.url;
 				}
 				return obj;
 			}
