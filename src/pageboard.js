@@ -132,13 +132,14 @@ module.exports = class Pageboard {
 
 	async run(command, data, { site, grant } = {}) {
 		const req = Object.setPrototypeOf({
-			headers: {}
+			headers: {},
+			params: {}
 		}, express.request);
 		req.res = Object.setPrototypeOf({
 			headersSent: true,
 			locals: {}
 		}, express.response);
-		req.res.setHeader = () => { };
+		req.res.getHeader = req.res.setHeader = () => { };
 		req.res.attachment = filename => {
 			return createWriteStream(filename);
 		};
