@@ -20,7 +20,7 @@
     "url": "https://github.com/pageboard/server/issues"
   },
   "engines": {
-    "node": ">=16"
+    "node": ">=18"
   },
   "homepage": "https://github.com/pageboard/server#readme",
   "workspaces": [
