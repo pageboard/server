@@ -712,6 +712,12 @@ module.exports = class HrefService {
 		const list = [];
 		for (const item of items) {
 			if (!(item.url in collected)) {
+				const { updated_at } = item;
+				const now = Date.now();
+				const expired = data.ttl * 3600 * 24 * 1000 + Date.parse(updated_at);
+				if (now < expired) {
+					continue;
+				}
 				list.push(item.url);
 				if (item.url.startsWith(prefix)) {
 					const filePath = Path.join(dir, item.url.substring(prefix.length));
@@ -727,6 +733,7 @@ module.exports = class HrefService {
 	}
 	static gc = {
 		title: 'Garbage Collector',
+		description: 'Delete orphaned hrefs',
 		$private: true,
 		$action: 'write',
 		properties: {
@@ -734,7 +741,7 @@ module.exports = class HrefService {
 				title: 'TTL',
 				description: 'days',
 				type: 'integer',
-				default: 7
+				default: 31
 			}
 		}
 	};
