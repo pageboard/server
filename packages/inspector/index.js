@@ -59,7 +59,7 @@ module.exports = class InspectorModule {
 		delete obj.meta.thumbnail;
 		if (thumb != null) {
 			try {
-				const datauri = await this.app.image.thumbnail(thumb);
+				const datauri = await this.app.run('image.thumbnail', { url: thumb });
 				obj.preview = `<img src="${datauri.content}" alt="${desc}" />`;
 			} catch (err) {
 				console.error("Error embedding thumbnail", thumb, err);

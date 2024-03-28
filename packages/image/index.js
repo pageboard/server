@@ -1,4 +1,4 @@
-const { promises: fs } = require('node:fs');
+const { promises: fs, createReadStream } = require('node:fs');
 const Path = require('node:path');
 
 const DatauriParser = require.lazy('datauri/parser');
@@ -31,9 +31,10 @@ module.exports = class ImageModule {
 	}
 
 	async init() {
-		const { sharp, sharpie } = await import('sharpie');
+		const { sharp, sharpie, Sharpie } = await import('sharpie');
 		this.sharp = sharp;
 		this.sharpie = sharpie;
+		this.fileTypes = Sharpie.fileTypes;
 	}
 
 	mw(req, res, next) {
@@ -67,47 +68,156 @@ module.exports = class ImageModule {
 		);
 	}
 
-	async resize(req, data) {
+	async resize(req, { input, output, format, width, height, enlarge, background }) {
+		const formatOpts = {
+			quality: format.quality
+		};
+		if (format.name == "webp") {
+			formatOpts.reductionEffort = 3;
+			if (format.lossless == "yes") {
+				formatOpts.lossless = true;
+			} else if (format.lossless == "near") {
+				formatOpts.nearLossless = true;
+			} else if (!format.lossless) {
+				formatOpts.lossless = false;
+				formatOpts.smartSubsample = true;
+			}
+		}
 
+		const ret = {
+			mime: this.fileTypes[format.name],
+			path: output
+		};
+
+		const pipeline = this.sharp()
+			.rotate()
+			.resize({
+				fit: "inside",
+				withoutEnlargement: !enlarge,
+				fastShrinkOnLoad: true,
+				width,
+				height
+			})
+			.toFormat(format.name, formatOpts);
+		if (background) {
+			pipeline.flatten({
+				background
+			});
+		}
+		if (/^https?:\/\//.test(input)) {
+			const req = await this.app.inspector.request(new URL(input));
+			req.res.pipe(pipeline);
+		} else {
+			createReadStream(input.startsWith('file://') ? input.substring(7) : input).pipe(pipeline);
+		}
+		if (output) {
+			pipeline.withMetadata();
+			await pipeline.toFile(output);
+		} else {
+			const buf = await pipeline.toBuffer();
+			const dtu = new DatauriParser();
+			ret.uri = dtu.format(`.${format.name}`, buf);
+		}
+		return ret;
 	}
 	static resize = {
 		title: 'Resize image',
 		$private: true,
 		properties: {
+			input: {
+				title: 'Input file path',
+				type: 'string',
+				format: 'uri-reference'
+			},
+			output: {
+				title: 'Output file path',
+				description: 'Returns buffer when null',
+				type: 'string',
+				format: 'pathname',
+				nullable: true
+			},
 			width: {
-
+				title: 'Width',
+				type: 'integer',
+				minimum: 0,
+				nullable: true
 			},
 			height: {
-
+				title: 'Height',
+				type: 'integer',
+				minimum: 0,
+				nullable: true
+			},
+			format: {
+				title: 'Format options',
+				type: 'object',
+				discriminator: { propertyName: "name" },
+				oneOf: [{
+					properties: {
+						name: {
+							title: 'webp',
+							const: 'webp'
+						},
+						quality: {
+							title: 'Quality',
+							type: 'integer',
+							minimum: 0,
+							maximum: 100,
+							default: 90
+						},
+						lossless: {
+							title: 'Lossless',
+							anyOf: [{
+								title: 'Yes',
+								const: 'yes'
+							}, {
+								title: 'Near',
+								const: 'near'
+							}, {
+								title: 'No',
+								type: 'null'
+							}]
+						}
+					}
+				}]
+			},
+			enlarge: {
+				title: 'Enlarge',
+				description: 'Zoom to match dimensions',
+				type: 'boolean',
+				nullable: true
+			},
+			background: {
+				title: 'Background color',
+				type: 'string',
+				format: 'name'
 			}
 		}
 	};
 
-	async thumbnail(url) {
-		let pipeline;
-		if (url.startsWith('file://')) {
-			pipeline = this.sharp(url.substring(7));
-		} else {
-			pipeline = this.sharp();
-			const req = await this.app.inspector.request(new URL(url));
-			req.res.pipe(pipeline);
-		}
-		return pipeline
-			.resize({
-				fit: "inside",
-				height: 64
-			})
-			.flatten({
-				background: 'white'
-			})
-			.toFormat('webp', {
+	async thumbnail(req, { url }) {
+		const ret = await req.run('image.resize', {
+			input: url,
+			height: 64,
+			background: 'white',
+			format: {
+				name: 'webp',
 				quality: 50
-			})
-			.toBuffer().then(buf => {
-				const dtu = new DatauriParser();
-				return dtu.format('.webp', buf);
-			});
+			}
+		});
+		return ret.uri;
 	}
+	static thumbnail = {
+		title: 'Thumbnail',
+		$private: true,
+		properties: {
+			url: {
+				title: 'URL',
+				type: 'string',
+				format: 'uri'
+			}
+		}
+	};
 	async upload(req, { mime, path }) {
 		if (!mime) {
 			console.warn("image.upload cannot inspect file without mime type", mime, path);
@@ -129,26 +239,16 @@ module.exports = class ImageModule {
 			base: filename
 		});
 
-		await this.sharp(orig)
-			.withMetadata()
-			.resize({
-				fit: "inside",
-				withoutEnlargement: true,
-				fastShrinkOnLoad: false,
-				width: 2362, // 200mm at 300dpi
-				height: 3390 // 287mm at 300dpi
-			})
-			.toFormat("webp", {
-				quality: 95,
-				lossless: false,
-				smartSubsample: true,
-				reductionEffort: 2
-			})
-			.toFile(npath);
-		return {
-			mime: "image/webp",
-			path: npath
-		};
+		return req.run('image.resize', {
+			input: orig,
+			output: npath,
+			width: 2362, // 200mm at 300dpi
+			height: 3390, // 287mm at 300dpi
+			format: {
+				name: 'webp',
+				quality: 95
+			}
+		});
 	}
 	static upload = {
 		title: 'Process uploaded image',
