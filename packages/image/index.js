@@ -152,6 +152,7 @@ module.exports = class ImageModule {
 			format: {
 				title: 'Format options',
 				type: 'object',
+				required: ['name'],
 				discriminator: { propertyName: "name" },
 				oneOf: [{
 					properties: {
