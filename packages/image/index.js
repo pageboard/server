@@ -201,6 +201,7 @@ module.exports = class ImageModule {
 		const ret = await req.run('image.resize', {
 			input: url,
 			height: 64,
+			enlarge: true,
 			background: 'white',
 			format: {
 				name: 'webp',
