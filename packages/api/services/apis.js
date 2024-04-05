@@ -1,4 +1,4 @@
-const { mergeExpressions } = require('../../../src/utils');
+const { mergeExpressions, unflatten } = require('../../../src/utils');
 
 module.exports = class ApiService {
 	static name = 'apis';
