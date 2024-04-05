@@ -248,6 +248,9 @@ module.exports = class ArchiveService {
 					site = await req.run('site.update', obj.data);
 					upgrader.DomainBlock = site.$modelClass;
 				}
+				if (!site.data.languages?.length) {
+					site.data.languages = [this.app.languages.default];
+				}
 			} else if (obj.type == "user") {
 				try {
 					const user = await site.$modelClass.query(trx).where('type', 'user')
