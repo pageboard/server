@@ -18,6 +18,7 @@
   "homepage": "https://github.com/pageboard/server#readme",
   "dependencies": {
     "datauri": "^4.1.0",
-    "sharpie": "^5.2.0"
+    "glob": "^10.3.12",
+    "sharpie": "^5.3.0"
   }
 }

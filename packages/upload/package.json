@@ -17,7 +17,7 @@
   },
   "homepage": "https://github.com/pageboard/server#readme",
   "dependencies": {
-    "express-fileupload": "^1.4.3",
+    "express-fileupload": "^1.5.0",
     "mime-types": "^2.1.35",
     "speakingurl": "^14.0.1",
     "type-is": "^1.6.18"
