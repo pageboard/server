@@ -5,6 +5,7 @@ const cups = require('node-cups');
 module.exports = class PrintModule {
 	static name = 'print';
 	static priority = 100;
+	#bearer;
 
 	constructor(app, opts) {
 		this.app = app;
@@ -54,12 +55,7 @@ module.exports = class PrintModule {
 		if (printer == "storage" || printer == "file") {
 			// nothing
 		} else if (printer == "remote") {
-			const agent = new this.Agent(this.opts, conf.url);
-
-			agent.bearer = (await agent.fetch("/login", "post", {
-				email: conf.email,
-				password: conf.password
-			})).token;
+			const agent = await this.#getAuthorizedAgent(conf);
 
 			const remap = list => list.map(item => {
 				const obj = {
@@ -229,12 +225,7 @@ module.exports = class PrintModule {
 	async couriers(req, { iso_code }) {
 		const { remote: conf } = this.opts;
 		if (!conf) throw new HttpError.BadRequest("No remote printer");
-		const agent = new this.Agent(this.opts, conf.url);
-
-		agent.bearer = (await agent.fetch("/login", "post", {
-			email: conf.email,
-			password: conf.password
-		})).token;
+		const agent = await this.#getAuthorizedAgent(conf);
 
 		return agent.fetch(`/data/deliveries-by-courier/${iso_code}`);
 	}
@@ -250,15 +241,20 @@ module.exports = class PrintModule {
 		}
 	};
 
-	async #remoteJob(req, block) {
-		const { remote: conf } = this.opts;
-		if (!conf) throw new HttpError.BadRequest("No remote printer");
+	async #getAuthorizedAgent(conf) {
 		const agent = new this.Agent(this.opts, conf.url);
-
-		agent.bearer = (await agent.fetch("/login", "post", {
+		if (!this.#bearer) this.#bearer = (await agent.fetch("/login", "post", {
 			email: conf.email,
 			password: conf.password
 		})).token;
+		agent.bearer = this.#bearer;
+		return agent;
+	}
+
+	async #remoteJob(req, block) {
+		const { remote: conf } = this.opts;
+		if (!conf) throw new HttpError.BadRequest("No remote printer");
+		const agent = await this.#getAuthorizedAgent(conf);
 
 		const { options, delivery } = block.data;
 		const obj = { agent };
