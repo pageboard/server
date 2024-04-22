@@ -108,6 +108,10 @@ class Href extends common.Model {
 				.where('parent.id', id);
 		}
 	};
+
+	$schema() {
+		return Href.jsonSchema;
+	}
 }
 
 module.exports = Href;
