@@ -187,9 +187,8 @@ module.exports = class HrefService {
 
 		let result;
 		if (local && !fullUrl.pathname.startsWith('/.')) {
-			// consider it's a page
 			const { item } = await req.run('block.find', {
-				type: Array.from(site.$pkg.pages),
+				type: site.$pkg.standalones,
 				content: 'title',
 				data: {
 					url: fullUrl.pathname
