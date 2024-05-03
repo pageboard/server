@@ -10,7 +10,6 @@ const express = require.lazy('express');
 const bodyParser = require.lazy('body-parser');
 const morgan = require.lazy('morgan');
 const pad = require.lazy('pad');
-const prettyBytes = require.lazy('pretty-bytes');
 const http = require.lazy('node:http');
 const { promises: fs, readFileSync, createWriteStream } = require('node:fs');
 const { once } = require.lazy('node:events');
@@ -203,7 +202,6 @@ module.exports = class Pageboard {
 		const { opts } = this;
 
 		const server = this.#server = this.#createServer();
-		this.#initLog();
 		this.#installer = new Installer(this, opts.installer);
 
 		this.responseFilter = new ResponseFilter();
@@ -228,6 +226,8 @@ module.exports = class Pageboard {
 		await this.#initPlugins();
 
 		if (!this.opts.server.start) return;
+
+		await this.#initLog();
 
 		// call plugins#file
 		await this.#initPlugins('file');
@@ -455,7 +455,8 @@ module.exports = class Pageboard {
 		}
 	}
 
-	#initLog() {
+	async #initLog() {
+		const { default: prettyBytes } = await import('pretty-bytes');
 		morgan.token('method', (req, res) => {
 			return pad((req.call('prerender.prerendering') ? '*' : '') + req.method, 4);
 		});
