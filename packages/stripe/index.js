@@ -27,9 +27,9 @@ module.exports = class StripeModule {
 	}
 
 	apiRoutes(app, server) {
-		app.get("/.api/stripe/config", 'stripe.config');
-		app.get("/.api/stripe/intent", 'stripe.intent');
-		app.post("/.api/stripe/hook", 'stripe.hook');
+		app.get("/@api/stripe/config", 'stripe.config');
+		app.get("/@api/stripe/intent", 'stripe.intent');
+		app.post("/@api/stripe/hook", 'stripe.hook');
 	}
 
 	async config(req) {
