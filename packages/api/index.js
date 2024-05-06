@@ -24,13 +24,14 @@ module.exports = class ApiModule {
 
 	constructor(app) {
 		this.app = app;
+		const self = this;
 
-		Href.createValidator = () => {
-			return this.validation.createValidator();
+		Href.createValidator = function() {
+			return self.validation.createValidator(this);
 		};
 
-		Block.createValidator = () => {
-			return this.validation.createValidator();
+		Block.createValidator = function() {
+			return self.validation.createValidator(this);
 		};
 	}
 

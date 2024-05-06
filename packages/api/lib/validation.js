@@ -153,9 +153,11 @@ module.exports = class Validation {
 		});
 		// needed for exporting writes/reads to client
 		this.actions = actions;
-		this.reads = this.#keepDefinitions(this.actions, '$action', 'read');
+		this.standalones = keepDefinitions(this.elements, 'standalone', true);
+		this.standalones.$id = '/standalones';
+		this.reads = keepDefinitions(this.actions, '$action', 'read');
 		this.reads.$id = '/reads';
-		this.writes = this.#keepDefinitions(this.actions, '$action', 'write');
+		this.writes = keepDefinitions(this.actions, '$action', 'write');
 		this.writes.$id = '/writes';
 
 		const helper = new AjvValidator({
@@ -172,21 +174,11 @@ module.exports = class Validation {
 		// $global services validator
 		this.#servicesValidator = helper.ajv;
 	}
-	#keepDefinitions(schema, key, val) {
-		schema = { ...schema };
-		const { definitions } = schema;
-		delete schema.definitions;
-		const id = schema.$id;
-		const list = [];
-		for (const [name, service] of Object.entries(definitions)) {
-			if (service[key] == val) {
-				list.push({ $ref: `${id}#/definitions/${name}` });
-			}
+
+	#setupAjv(ajv, modelClass) {
+		if (modelClass?.jsonSchema.$id == "/elements") {
+			// add /standalones ?
 		}
-		schema.oneOf = list;
-		return schema;
-	}
-	#setupAjv(ajv) {
 		AjvFormats(ajv);
 		AjvKeywords(ajv);
 
@@ -224,10 +216,10 @@ module.exports = class Validation {
 		rules.unshift(rules.pop());
 		return ajv;
 	}
-	createValidator() {
+	createValidator(modelClass) {
 		// objection validator
 		return new AjvValidatorExt({
-			onCreateAjv: (ajv) => this.#setupAjv(ajv),
+			onCreateAjv: (ajv) => this.#setupAjv(ajv, modelClass),
 			options: {
 				...Validation.AjvOptions,
 				schemas: [
@@ -426,3 +418,18 @@ module.exports = class Validation {
 		throw new HttpError.BadRequest(str);
 	}
 };
+
+function keepDefinitions(schema, key, val) {
+	schema = { ...schema };
+	const { definitions } = schema;
+	delete schema.definitions;
+	const id = schema.$id;
+	const list = [];
+	for (const [name, service] of Object.entries(definitions)) {
+		if (service[key] == val) {
+			list.push({ $ref: `${id}#/definitions/${name}` });
+		}
+	}
+	schema.oneOf = list;
+	return schema;
+}
