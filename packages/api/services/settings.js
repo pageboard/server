@@ -83,20 +83,20 @@ module.exports = class SettingsService {
 			order: '-created_at'
 		});
 		obj.items = obj.items.filter(item => {
-			if (req.locked(item.data.grants)) return false;
-			item.email = item.parent.data.email;
-			delete item.parent;
-			delete item.lock;
-			return true;
-		});
+			return !req.locked(item.data.grants);
+		}).map(item => ({
+			type: 'email_grant',
+			data: { email: item.parent.data.email }
+		}));
 		return obj;
 	}
 	static list = {
-		title: 'List users grants',
+		title: 'List user emails by grant',
 		$action: 'read',
 		properties: {
 			grant: {
 				title: 'Filter by grant',
+				description: 'Empty for no grant',
 				type: 'string',
 				format: 'grant',
 				nullable: true
@@ -123,22 +123,20 @@ module.exports = class SettingsService {
 	};
 
 	async grant(req, { email, grant }) {
-		if (req.locked([grant], true)) {
+		if (req.locked([grant], true)) { // TODO req.user must also have a "grant" manager permission
 			throw new HttpError.Forbidden("Higher grant is needed");
 		}
 		const obj = await req.run('settings.have', { email });
 		const { grants = [] } = obj.item.data ?? {};
 		if (grant && !grants.includes(grant)) {
 			grants.push(grant);
-			return req.run('block.save', {
+			await req.run('block.save', {
 				id: obj.item.id,
 				type: 'settings',
 				data: {
 					grants
 				}
 			});
-		} else {
-			return obj;
 		}
 	}
 	static grant = {
@@ -162,23 +160,22 @@ module.exports = class SettingsService {
 	};
 
 	async revoke(req, { email, grant }) {
-		if (req.locked([grant], true)) {
+		if (req.locked([grant], true)) { // TODO req.user must also have a "grant" manager permission
 			throw new HttpError.Forbidden("Higher grant is needed");
 		}
 		const obj = await req.run('settings.find', { email });
-		const { grants = [] } = obj.item?.data ?? {};
+		if (!obj.item) return;
+		const { grants = [] } = obj.item.data ?? {};
 
 		if (grant && grants.includes(grant)) {
 			grants.splice(grants.indexOf(grant), 1);
-			return req.run('block.save', {
+			await req.run('block.save', {
 				id: obj.item.id,
 				type: 'settings',
 				data: {
 					grants
 				}
 			});
-		} else {
-			return obj;
 		}
 	}
 	static revoke = {
