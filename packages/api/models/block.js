@@ -1,6 +1,8 @@
 const common = require('./common');
 const { Model } = common;
+const { dget } = require('../../../src/utils');
 const crypto = require('node:crypto');
+const { HttpError } = require('http-errors');
 
 class Block extends Model {
 	static useLimitInFirst = true;
@@ -313,8 +315,31 @@ class Block extends Model {
 				Object.assign(copy.$pkg, this.$pkg);
 				return copy;
 			}
-			async $beforeInsert(q) {
-				await super.$beforeInsert(q);
+			async $beforeInsert(context) {
+				const el = this.$schema();
+				if (el.unique) {
+					const { req } = context.transaction;
+					const q = req.site.$relatedQuery('children', req.trx)
+						.where('type', this.type);
+					for (const field of el.unique) {
+						const val = dget(this, 'data.' + field);
+						if (val == null) {
+							throw new HttpError.BadRequest(`Element requires unique ${field} but value is null`);
+						}
+						q.where(Model.ref('data:' + field), val);
+					}
+					const count = await q.resultSize();
+					if (count > 0) {
+						throw new HttpError.BadRequest(`Element requires unique fields ${el.unique} but there are already ${count} rows`);
+					}
+				}
+
+				await super.$beforeInsert(context);
+			}
+			async $beforeUpdate(opt, context) {
+				await super.$beforeUpdate(opt, context);
+				// TODO check el.unique here too
+				// factorize with bforeInsert ehck
 			}
 			$beforeValidate(jsonSchema, json) {
 				if (json.id === null) delete json.id;
