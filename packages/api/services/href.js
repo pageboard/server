@@ -11,10 +11,10 @@ module.exports = class HrefService {
 	}
 
 	apiRoutes(app) {
-		app.get("/.api/hrefs", 'href.search');
-		app.get("/.api/href", 'href.find');
-		app.post("/.api/href", 'href.add');
-		app.delete("/.api/href", 'href.del');
+		app.get("/@api/hrefs", 'href.search');
+		app.get("/@api/href", 'href.find');
+		app.post("/@api/href", 'href.add');
+		app.delete("/@api/href", 'href.del');
 	}
 
 	get({ Href, site, trx }, data) {
@@ -207,7 +207,7 @@ module.exports = class HrefService {
 			};
 		} else {
 			result = await this.inspect(req, { url: data.url, local });
-			result.pathname = fullUrl.pathname;
+			result.pathname = data.pathname ?? fullUrl.pathname;
 		}
 		if (!local && result.url != data.url) {
 			result.canonical = result.url;
@@ -237,6 +237,11 @@ module.exports = class HrefService {
 			url: {
 				type: 'string',
 				format: 'uri-reference'
+			},
+			pathname: {
+				type: 'string',
+				format: 'pathname',
+				nullable: true
 			}
 		}
 	};
@@ -667,17 +672,11 @@ module.exports = class HrefService {
 		}
 	};
 
-	async inspect({ site }, { url, local }) {
-		const dir = this.app.dirs.uploads;
-		let fileUrl = url;
-		if (local === undefined) {
-			local = url.startsWith(`/.uploads/`);
-		}
-		if (local) {
-			fileUrl = "file://" + Path.join(dir, url.replace(`/.uploads/`, '/'));
-		}
+	async inspect(req, { url, local }) {
+		const localFile = this.app.statics.urlToPath(url);
+		if (local === undefined) local = Boolean(localFile);
 		const obj = await this.app.inspector.get({
-			url: fileUrl,
+			url: local ? localFile : url,
 			local: local
 		});
 		if (local) {
@@ -704,8 +703,6 @@ module.exports = class HrefService {
 	};
 
 	async gc(req, data) {
-		const dir = this.app.dirs.uploads;
-		const prefix = "/.uploads/";
 		const collected = await req.run('href.collect', { content: true, asMap: true });
 		const items = await req.Href.query(req.trx).columns().whereSite(req.site.id);
 		const list = [];
@@ -718,10 +715,8 @@ module.exports = class HrefService {
 					continue;
 				}
 				list.push(item.url);
-				if (item.url.startsWith(prefix)) {
-					const filePath = Path.join(dir, item.url.substring(prefix.length));
-					await fs.unlink(filePath);
-				}
+				const filePath = this.app.statics.urlToPath(item.url);
+				if (filePath) await fs.unlink(filePath);
 				const { count } = await req.run('href.del', { url: item.url });
 				if (count != 1) {
 					console.warn(count, "href have been removed with url:", item.url);

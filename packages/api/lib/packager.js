@@ -312,8 +312,8 @@ module.exports = class Packager {
 		const tag = site.data.version ?? site.$pkg.tag;
 		if (tag == null) return;
 		const filename = [prefix, assign, name].filter(Boolean).join('-') + '.js';
-		const sourceUrl = `/.files/${tag}/${filename}`;
-		const sourcePath = this.app.statics.resolve(site.id, sourceUrl);
+		const sourceUrl = `/@site/${tag}/${filename}`;
+		const sourcePath = this.app.statics.urlToPath(`/@site/${site.id}/${tag}/${filename}`);
 		if (source) {
 			if (typeof source == "object") {
 				source = toSource(source);

@@ -13,9 +13,8 @@ module.exports = class ArchiveService {
 	}
 
 	apiRoutes(app, server) {
-		app.get('/.api/archive', 'archive.export');
-		// TODO process req.files with multer
-		app.put('/.api/archive', 'archive.import');
+		app.get('/@api/archive', 'archive.export');
+		app.put('/@api/archive', 'archive.import');
 	}
 
 	async bundle(req, data) {
@@ -29,20 +28,25 @@ module.exports = class ArchiveService {
 			items: output.items?.length,
 			hrefs: 0,
 			files: 0,
-			file: '/.public/' + file
+			file: '/@public/' + file
 		};
 		const { hrefs } = output;
 		delete output.hrefs;
 
-		await archiveWrap(req, file, archive => {
+		await archiveWrap(req, file, async archive => {
 			archive.append(JSON.stringify(output), { name: 'export.json' });
-			const { uploads } = this.app.dirs;
-			for (const url of Object.keys(hrefs)) {
+			const { files } = this.app.dirs;
+			for (const [url, { type }] of Object.entries(hrefs)) {
 				counts.hrefs++;
-				if (url.startsWith('/.uploads/')) {
+				if (url.startsWith('/@file/')) {
 					counts.files++;
+					if (type == "image" && data.resize) {
+						const { path } = await req.run('image.resize', {
+
+						});
+					}
 					archive.file(
-						Path.join(uploads, url.replace(/^\/\.uploads/, '')),
+						url,
 						{ name: url.substring(2) }
 					);
 				}
@@ -88,7 +92,7 @@ module.exports = class ArchiveService {
 			blocks: 0,
 			hrefs: 0,
 			orphaned: 0,
-			file: '/.public/' + file
+			file: '/@public/' + file
 		};
 
 		await archiveWrap(req, file, async archive => {
@@ -210,12 +214,12 @@ module.exports = class ArchiveService {
 				for (const href of list) {
 					jstream.write(href);
 				}
-				if (data.uploads) {
-					const { uploads } = this.app.dirs;
+				if (data.files) {
 					for (const href of list) {
-						if (href.url.startsWith('/.uploads/')) {
+						const abs = this.app.statics.urlToPath(href.url);
+						if (abs) {
 							archive.file(
-								Path.join(uploads, href.pathname.replace(/^\/\.uploads/, '')),
+								abs,
 								{ name: href.pathname.substring(2) }
 							);
 							counts.files++;
@@ -255,8 +259,8 @@ module.exports = class ArchiveService {
 				type: 'boolean',
 				default: true
 			},
-			uploads: {
-				title: 'Include uploads',
+			files: {
+				title: 'Include files',
 				type: 'boolean',
 				default: true
 			}
@@ -295,9 +299,6 @@ module.exports = class ArchiveService {
 					to: toVersion
 				});
 			} else if (!obj.id) {
-				if (obj.pathname && obj.pathname.includes('/uploads/')) { // NOT /.uploads/
-					obj.pathname = obj.url;
-				}
 				return obj;
 			}
 			return upgrader.beforeEach(obj);

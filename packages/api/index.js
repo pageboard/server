@@ -72,7 +72,7 @@ module.exports = class ApiModule {
 		app.get("/.well-known/api.json", req => ({
 			location: req.site.$pkg.bundles.get('services').scripts[0]
 		}));
-		app.get("/.api", req => ({
+		app.get("/@api", req => ({
 			location: "/.well-known/api"
 		}));
 	}

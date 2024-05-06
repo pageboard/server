@@ -13,9 +13,6 @@ module.exports = class CacheModule {
 		this.metafile = Path.join(app.dirs.data, 'cache.json');
 		this.opts = opts;
 		opts.wkp = "/.well-known/upcache";
-		opts.files ??= '1 year';
-		opts.uploads ??= '1 year';
-		opts.icons ??= '1 month';
 	}
 	map({ res }, to) {
 		return Upcache.map(res, to);

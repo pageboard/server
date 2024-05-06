@@ -425,14 +425,12 @@ module.exports = class PrintModule {
 		const res = await req.run('prerender.save', {
 			url: url.pathname + url.search
 		});
-
-		const pubDir = await req.call('statics.dir', {dir: 'public'});
-		const destPath = Path.join(pubDir, name);
+		const destUrl = new URL("/@cache/" + name, site.$url);
+		const destPath = this.app.statics.urlToPath(destUrl.pathname);
 		await fs.promises.rename(res.path, destPath);
 
-		const href = (new URL("/.public/" + name, site.$url)).href;
 		const count = res.headers['x-page-count'];
-		return { href, path: destPath, count };
+		return { href: destUrl.href, path: destPath, count };
 	}
 };
 

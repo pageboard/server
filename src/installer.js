@@ -11,10 +11,7 @@ module.exports = class Installer {
 
 	constructor(app, opts) {
 		this.app = app;
-		this.opts = {
-			dir: Path.join(app.dirs.data, 'sites'),
-			...opts
-		};
+		this.opts = opts;
 	}
 
 	async install(site) {
@@ -153,7 +150,7 @@ module.exports = class Installer {
 	// site.data.module (or installed pkg module) may provide a tag
 
 	async #decide(site) {
-		const { dir } = this.opts;
+		const dir = this.app.statics.dir('@site');
 		const branch = getSiteBranch(site);
 		const { version } = site.data;
 		let tag = version;
@@ -228,7 +225,7 @@ module.exports = class Installer {
 			modOpts = {};
 		}
 
-		const dstDir = id != 'pageboard' ? Path.join('/', '.files', id, module) : '/.' + id;
+		const dstDir = id != 'pageboard' ? Path.join('/', '@site', id, module) : '/.' + id;
 		let directories = modOpts.directories || [];
 		if (!Array.isArray(directories)) directories = [directories];
 		Log.install("processing directories from", moduleDir, directories);
@@ -297,7 +294,7 @@ module.exports = class Installer {
 	}
 
 	async clean(site, pkg) {
-		const rootSite = Path.join(this.opts.dir, site.id);
+		const rootSite = Path.join(this.app.statics.dir('@site'), site.id);
 		try {
 			const paths = await fs.readdir(rootSite);
 			const stats = await Promise.all(paths.map(async item => {

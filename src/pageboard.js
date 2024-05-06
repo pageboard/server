@@ -121,7 +121,7 @@ module.exports = class Pageboard {
 	async #symlinkDir(name) {
 		try {
 			await fs.symlink(
-				Path.join(this.dirs.data, name),
+				Path.join(this.dirs[name]),
 				Path.join(this.dirs.app, name)
 			);
 		} catch (err) {
@@ -195,9 +195,9 @@ module.exports = class Pageboard {
 	}
 
 	async init() {
-		await this.#symlinkDir('sites');
-		await this.#symlinkDir('uploads');
-		await this.#symlinkDir('dumps');
+		await this.#symlinkDir('data');
+		await this.#symlinkDir('config');
+		await this.#symlinkDir('cache');
 
 		const { opts } = this;
 
@@ -238,13 +238,13 @@ module.exports = class Pageboard {
 
 		// call plugins#service
 		const tenantsLen = Object.keys(this.opts.database.url).length - 1;
-		server.get('/.api/*',
+		server.get('/@api/*',
 			this.cache.tag('app-:site'),
 			this.cache.tag('db-:tenant').for(`${tenantsLen}day`)
 		);
 		await this.#initPlugins('api');
 		server.use(req => {
-			if (req.url.startsWith('/.api/')) {
+			if (req.url.startsWith('/@api/')) {
 				throw new HttpError.NotFound("Unknown api url");
 			}
 		});

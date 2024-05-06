@@ -7,13 +7,13 @@ module.exports = class ApiService {
 	apiRoutes(app) {
 		// these routes are setup after all others
 		// eventually all routes will be dynamic
-		app.get(["/.api/:id", "/.api/query/:id"], req => {
+		app.get(["/@api/:id", "/@api/query/:id"], req => {
 			return req.run('apis.get', {
 				id: req.params.id,
 				query: unflatten(req.query)
 			});
 		});
-		app.post(["/.api/:id", "/.api/form/:id"], req => {
+		app.post(["/@api/:id", "/@api/form/:id"], req => {
 			// TODO process multipart form data to upload files
 			// body[name] must become the relative URL of the uploaded file
 			// however, since we don't know the input_file block,

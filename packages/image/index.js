@@ -1,5 +1,11 @@
-const { promises: fs, createReadStream } = require('node:fs');
+const {
+	promises: fs,
+	createReadStream,
+	createWriteStream
+} = require('node:fs');
+const { pipeline } = require('node:stream/promises');
 const Path = require('node:path');
+const { glob } = require.lazy('glob');
 
 const DatauriParser = require.lazy('datauri/parser');
 const allowedParameters = {
@@ -15,12 +21,38 @@ module.exports = class ImageModule {
 	static name = 'image';
 	static priority = -1;
 	static $global = true;
+	static sizes = [{
+		suffix: 'xs',
+		width: 200,
+		height: 200
+	}, {
+		suffix: 's',
+		width: 400,
+		height: 400
+	}, {
+		suffix: 'm',
+		width: 800,
+		height: 600
+	}, {
+		suffix: 'l',
+		width: 1600,
+		height: 1200
+	}, {
+		suffix: 'xl',
+		width: 3200, // A4 pages
+		height: 3200
+	}];
 
 	constructor(app, opts) {
 		this.app = app;
 		this.opts = {
-			param(req) {
-				return app.statics.get(req);
+			async param(req, { rs }) {
+				return req.call('image.get', {
+					url: req.path,
+					width: rs?.w ?? 0,
+					height: rs?.h ?? 0,
+					fit: rs.fit
+				});
 			},
 			dir: '.image',
 			signs: {
@@ -58,12 +90,12 @@ module.exports = class ImageModule {
 
 	fileRoutes(app, server) {
 		server.get(
-			/^\/\.(uploads|files)\//,
+			/^\/@file\//,
 			this.mw,
 			// files are loaded directly and need some headers
 			app.cache.for({
 				immutable: true,
-				maxAge: app.cache.opts.uploads
+				maxAge: '1 year'
 			}),
 			this.sharpie(this.opts)
 		);
@@ -90,7 +122,7 @@ module.exports = class ImageModule {
 			path: output
 		};
 
-		const pipeline = this.sharp()
+		const transform = this.sharp()
 			.rotate()
 			.resize({
 				fit: "inside",
@@ -101,23 +133,24 @@ module.exports = class ImageModule {
 			})
 			.toFormat(format.name, formatOpts);
 		if (background) {
-			pipeline.flatten({
+			transform.flatten({
 				background
 			});
 		}
+		let inputStream;
 		if (/^https?:\/\//.test(input)) {
-			const req = await this.app.inspector.request(new URL(input));
-			req.res.pipe(pipeline);
+			inputStream = (await this.app.inspector.request(new URL(input))).res;
 		} else {
-			createReadStream(input.startsWith('file://') ? input.substring(7) : input).pipe(pipeline);
+			inputStream = createReadStream(input.startsWith('file://') ? input.substring(7) : input);
 		}
 		if (output) {
-			pipeline.withMetadata();
-			await pipeline.toFile(output);
+			await pipeline(
+				inputStream,
+				transform.withMetadata(),
+				createWriteStream(output)
+			);
 		} else {
-			const buf = await pipeline.toBuffer();
-			const dtu = new DatauriParser();
-			ret.uri = dtu.format(`.${format.name}`, buf);
+			ret.buffer = await transform.toBuffer();
 		}
 		return ret;
 	}
@@ -208,7 +241,8 @@ module.exports = class ImageModule {
 				quality: 50
 			}
 		});
-		return ret.uri;
+		const dtu = new DatauriParser();
+		return dtu.format('.web', ret.buffer);
 	}
 	static thumbnail = {
 		title: 'Thumbnail',
@@ -221,42 +255,23 @@ module.exports = class ImageModule {
 			}
 		}
 	};
-	async upload(req, { mime, path }) {
-		if (!mime) {
-			console.warn("image.upload cannot inspect file without mime type", mime, path);
-			return;
+
+	async add(req, { mime, path }) {
+		if (!mime.startsWith('image/') || mime.startsWith('image/svg')) {
+			return { path };
 		}
-		if (!mime.startsWith('image/')) return;
-		if (mime.startsWith('image/svg')) return;
 		const format = mime.split('/').pop();
 		if (!this.sharp.format[format]) {
-			console.warn("image.upload cannot process", mime);
-			return;
+			console.warn("image.add cannot process", mime);
+			return { path };
 		}
-		const orig = path + ".orig";
-		await fs.rename(path, orig);
-		const pathObj = Path.parse(path);
-		const filename = pathObj.name + '.webp';
-		const npath = Path.format({
-			dir: pathObj.dir,
-			base: filename
-		});
-
-		return req.run('image.resize', {
-			input: orig,
-			output: npath,
-			width: 2362, // 200mm at 300dpi
-			height: 3390, // 287mm at 300dpi
-			format: {
-				name: 'webp',
-				quality: 95
-			}
-		});
+		return { path };
 	}
-	static upload = {
-		title: 'Process uploaded image',
+	static add = {
+		title: 'Add image',
 		required: ['path', 'mime'],
 		$private: true,
+		$action: 'write',
 		properties: {
 			path: {
 				title: 'Path',
@@ -267,5 +282,127 @@ module.exports = class ImageModule {
 				type: 'string'
 			}
 		}
+	};
+
+	async get(req, { url, width, height, fit }) {
+		const srcPath = this.app.statics.urlToPath(url);
+		if (!srcPath) throw new HttpError.NotFound("Cannot find static path of", url);
+
+		const destPath = Path.join(this.app.dirs.cache, url.replace(/^\/@file/, '/images'));
+		const parts = Path.parse(destPath);
+		const suffix = /-(xs|s|m|l|xl)$/.exec(parts.name)?.[1];
+		let size;
+		if (suffix) {
+			size = ImageModule.sizes.find(item => item.suffix == suffix);
+		} else if (!width && !height) {
+			return srcPath;
+		} else {
+			// TODO if fit is outside or inside
+			// it changed which size we cant
+			size = ImageModule.sizes.find(item => item.width >= width && item.height >= height);
+			parts.name += '-' + size.suffix;
+			parts.base = null;
+		}
+		parts.ext = ".webp";
+		const destSized = Path.format(parts);
+		try {
+			await fs.access(destSized);
+		} catch (err) {
+			if (err.code != 'ENOENT') {
+				throw err;
+			}
+			await fs.mkdir(parts.dir, { recursive: true });
+			await req.run('image.resize', {
+				input: srcPath,
+				output: destSized,
+				width: size.width,
+				height: size.height,
+				format: {
+					name: 'webp',
+					quality: 95
+				}
+			});
+		}
+		return destSized;
+	}
+	static get = {
+		title: 'Get rel and abs paths from URL',
+		$private: true,
+		$action: 'read',
+		required: ['url'],
+		properties: {
+			url: {
+				title: 'Pathname',
+				type: 'string',
+				format: 'pathname'
+			},
+			width: {
+				title: 'Width',
+				type: 'integer',
+				minimum: 0,
+				default: 0,
+				nullable: true
+			},
+			height: {
+				title: 'Height',
+				type: 'integer',
+				minimum: 0,
+				default: 0,
+				nullable: true
+			}
+		}
+	};
+
+	async migrate(req) {
+		const limit = 100;
+		let obj = { offset: 0 };
+		do {
+			obj = await req.run('href.search', { type: 'image', limit, offset: obj.offset });
+			obj.offset += limit;
+			for (const href of obj.hrefs) {
+				let urlPath = href.url;
+				if (urlPath.startsWith('/@file/') && href.mime.startsWith('image/') && !href.mime.startsWith('image/svg')) {
+					let filePath = this.app.statics.urlToPath(urlPath);
+					const parts = Path.parse(filePath);
+					const patterns = [
+						Path.format({ ...parts, ext: '.orig', name: parts.name + '.*' }),
+						Path.format({ ...parts, ext: '.{png,jpg,jpeg,tif,tiff}' })
+					];
+					const list = await glob(patterns);
+					if (list.length > 1) {
+						throw new HttpError.Conflict("Too many files for href", urlPath, "\n", list);
+					} else if (list.length == 1) {
+						// rename *.ext.orig to *.ext
+						// remove *.webp when *.anotherext exists
+						const parts = Path.parse(list[0]);
+						if (parts.ext == ".orig") {
+							parts.ext = "";
+							filePath = Path.format(parts);
+							await fs.rename(list[0], filePath);
+						} else {
+							// if a file with same name and .webp extension exists, remove it
+							parts.ext = ".webp";
+							await fs.unlink(Path.format(parts));
+							filePath = list[0];
+						}
+						urlPath = this.app.statics.pathToUrl(filePath);
+					}
+					try {
+						console.info("image.migrate", filePath);
+						await req.call('href.update', { url: urlPath, pathname: urlPath });
+					} catch (ex) {
+						if (ex.code != 'ENOENT') throw ex;
+						console.warn("Missing image file:", filePath);
+					}
+				}
+			}
+		} while (obj.offset < obj.count);
+	}
+	static migrate = {
+		title: 'Migrate site original images',
+		$private: true,
+		$global: false,
+		$action: 'write',
+		$lock: ['webmaster']
 	};
 };

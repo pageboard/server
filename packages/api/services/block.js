@@ -9,9 +9,9 @@ module.exports = class BlockService {
 	}
 
 	apiRoutes(app) {
-		app.get("/.api/block", 'block.get');
-		app.get("/.api/blocks", 'block.search');
-		app.post('/.api/blocks', 'block.write');
+		app.get("/@api/block", 'block.get');
+		app.get("/@api/blocks", 'block.search');
+		app.post('/@api/blocks', 'block.write');
 	}
 
 	get(req, data) {
@@ -410,7 +410,7 @@ module.exports = class BlockService {
 				nullable: true,
 				$helper: {
 					name: 'datalist',
-					url: '/.api/languages'
+					url: '/@api/languages'
 				}
 			},
 			parent: {

@@ -10,22 +10,22 @@ module.exports = class StaticsModule {
 	constructor(app, opts) {
 		this.app = app;
 		this.opts = {
-			cache: app.cache.opts,
-			uploads: app.upload.opts.dir,
-			tmp: app.dirs.tmp,
-			statics: Path.join(app.dirs.cache, "statics"),
-			files: Path.join(app.dirs.cache, "files"),
-			public: Path.join(app.dirs.cache, "public"),
-			...opts
+			bundlerCache: Path.join(app.dirs.cache, "bundler"),
+			mounts: {
+				'@file': [app.dirs.data, '1 year'],
+				'@cache': [app.dirs.cache, '1 day'],
+				'@site': [app.dirs.data, '1 year', true]
+			}
 		};
+	}
 
-		app.dirs.staticsCache = this.opts.statics;
-		app.dirs.filesCache = this.opts.files;
-		app.dirs.publicCache = this.opts.public;
+	async init() {
+		for (const mount of Object.keys(this.opts.mounts)) {
+			await fs.mkdir(this.dir(mount), { recursive: true });
+		}
 	}
 
 	fileRoutes(app, server) {
-		const { opts } = this;
 		const serveOpts = {
 			index: false,
 			redirect: false,
@@ -33,35 +33,23 @@ module.exports = class StaticsModule {
 			fallthrough: true
 		};
 
-		const filesPrefix = '/.files';
-		server.get(filesPrefix + "/*",
-			req => {
-				const { path, site } = req;
-				req.url = site.id + path.substring(filesPrefix.length);
-			},
-			app.cache.tag('app-:site').for({
-				immutable: true,
-				maxAge: opts.cache.files
-			}),
-			serveStatic(opts.files, serveOpts),
-			staticNotFound
-		);
-
-		const publicPrefix = '/.public';
-		server.get(publicPrefix + "/*",
-			req => {
-				const { path, site } = req;
-				req.url = site.id + path.substring(publicPrefix.length);
-			},
-			app.cache.disable(),
-			serveStatic(opts.public, serveOpts),
-			staticNotFound
-		);
+		for (const [mount, [mountDir, mountAge, mountSite]] of Object.entries(this.opts.mounts)) {
+			server.get(`/${mount}/*`,
+				req => {
+					req.url = (mountSite ? `/${req.site.id}` : '') + req.path.substring(mount.length + 1);
+				},
+				app.cache.tag('app-:site').for({
+					immutable: true,
+					maxAge: mountAge
+				}),
+				serveStatic(Path.join(mountDir, mount), serveOpts),
+				staticNotFound
+			);
+		}
 
 		server.get('/favicon.ico',
 			app.cache.tag('data-:site').for({
-				immutable: true,
-				maxAge: opts.cache.icon
+				maxAge: '1 day' // this redirection is subject to change
 			}),
 			({ site }, res, next) => {
 				if (!site || !site.data.favicon) {
@@ -73,16 +61,24 @@ module.exports = class StaticsModule {
 		);
 	}
 
-	get(req) {
-		const { path, site } = req;
-		const { uploads, files } = this.opts;
-		let pathname;
-		if (path.startsWith('/.uploads/')) {
-			pathname = Path.join(uploads, path.substring(9));
-		} else if (path.startsWith('/.files/')) {
-			pathname = Path.join(files, site.id, path.substring(7));
+	urlToPath(url) {
+		for (const [mount, [mountDir]] of Object.entries(this.opts.mounts)) {
+			if (url.startsWith(`/${mount}/`)) {
+				return Path.join(mountDir, url);
+			}
 		}
-		return pathname;
+	}
+
+	pathToUrl(path) {
+		for (const [mount, [mountDir]] of Object.entries(this.opts.mounts)) {
+			if (path.startsWith(Path.join(mountDir, mount))) {
+				return path.substring(mountDir.length);
+			}
+		}
+	}
+
+	dir(mount) {
+		return Path.join(this.opts.mounts[mount][0], mount);
 	}
 
 	async bundle(site, { inputs, output, dry = false, local = false }) {
@@ -108,12 +104,15 @@ module.exports = class StaticsModule {
 		delete fileObj.base;
 		fileObj.name += suffix;
 		const buildFile = Path.format(fileObj);
+		// build dir must be inside the site module directory
 		const buildDir = Path.join(dir, "builds");
 		const buildPath = Path.join(buildDir, buildFile);
 
 		const outList = [];
-		const outUrl = `/.files/${site.data.version ?? site.$pkg.tag}/${buildFile}`;
-		const outPath = urlToPath(this.opts.files, site.id, outUrl);
+		const version = site.data.version ?? site.$pkg.tag;
+		const outUrl = `/@site/${version}/${buildFile}`;
+		const sitesDir = this.dir('@site');
+		const outPath = Path.join(sitesDir, site.id, version, buildFile);
 		if (local) outList.push(outPath);
 		else outList.push(outUrl);
 
@@ -139,12 +138,12 @@ module.exports = class StaticsModule {
 		const inList = [];
 		inputs.forEach(url => {
 			if (local) {
-				if (url.startsWith(this.app.dirs.app)) inList.push(url);
+				if (url.startsWith('/@site/')) inList.push(url);
 				else console.error("file not in project", url);
 			} else if (/^https?:\/\//.test(url)) {
 				inList.push(url);
 			} else {
-				inList.push(urlToPath(this.opts.files, site.id, url));
+				inList.push(Path.join(sitesDir, site.id, url));
 			}
 		});
 
@@ -153,7 +152,7 @@ module.exports = class StaticsModule {
 				minify: site.data.env == "production",
 				sourceMap: !local,
 				cache: {
-					dir: this.opts.statics
+					dir: this.opts.bundlerCache
 				},
 				browsers: this.opts[ext]
 			});
@@ -172,37 +171,37 @@ module.exports = class StaticsModule {
 
 	async install(site, { directories } = {}) {
 		if (!site.$url) return;
-		const runSiteDir = Path.join(this.opts.files, site.id);
+		const dir = this.app.statics.dir('@site');
+		const runSiteDir = Path.join(dir, site.id);
 		await fs.mkdir(runSiteDir, { recursive: true });
 		if (directories) for (const mount of directories) {
 			try {
-				await mountPath(this.opts.files, mount.from, mount.to);
+				await mountDirectory(dir, mount.from, mount.to);
 			} catch (err) {
 				console.error("Cannot mount", mount.from, mount.to, err);
 			}
 		}
 	}
 
-	resolve(id, url) {
-		return urlToPath(this.opts.files, id, url);
-	}
-
-	async dir(req, { dir }) {
-		const path = Path.join(this.opts[dir], req.site.id);
-		await fs.mkdir(path, {
-			recursive: true
+	async migrate(req) {
+		await req.run('href.change', {
+			from: '/.uploads',
+			to: '/@file'
 		});
-		return path;
+		const dest = this.dir('@file');
+
+		await fs.cp(
+			Path.join(this.app.dirs.data, 'uploads', req.site.id),
+			dest,
+			{ errorOnExist: true, recursive: true }
+		);
 	}
-	static dir = {
-		title: 'Get directory for site',
+	static migrate = {
+		title: 'Migrate from /.uploads to /@file',
 		$private: true,
-		properties: {
-			dir: {
-				title: 'Directory type',
-				enum: ['tmp', 'public']
-			}
-		}
+		$global: false,
+		$action: 'write',
+		$lock: ['webmaster']
 	};
 };
 
@@ -212,17 +211,11 @@ function staticNotFound(req) {
 	}
 }
 
-function urlToPath(base, id, url) {
-	const obj = new URL(url, "http://-");
-	const list = obj.pathname.substring(1).split('/');
-	if (list[0].startsWith('.') == false) throw new Error(`Bad ${id} url: ${url}`);
-	list[0] = list[0].substring(1);
-	list.splice(1, 0, id);
-	return Path.join(base, list.slice(1).join('/'));
-}
-
-async function mountPath(base, src, dst) {
-	if (dst.startsWith('/.')) dst = '/' + dst.substring(2);
+async function mountDirectory(base, src, dst) {
+	if (dst.startsWith('/.')) {
+		dst = '/' + dst.substring(2);
+		throw new Error("Shouldn't happen");
+	}
 	const absDst = Path.resolve(Path.join(base, "..", dst));
 	if (absDst.startsWith(base) == false) {
 		console.error("Cannot mount outside runtime", dst);

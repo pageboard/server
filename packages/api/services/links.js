@@ -217,7 +217,7 @@ module.exports = class LinksService {
 			prefix: {
 				title: 'Url prefix',
 				type: 'string',
-				format: 'pathname',
+				format: 'page',
 				$helper: "page"
 			},
 			items: {
@@ -240,7 +240,7 @@ module.exports = class LinksService {
 			prefix: {
 				title: 'Url prefix',
 				type: 'string',
-				format: 'pathname',
+				format: 'page',
 				$helper: "page",
 				nullable: true
 			}

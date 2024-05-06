@@ -4,7 +4,7 @@ module.exports = class PageService {
 	static name = 'page';
 
 	apiRoutes(app) {
-		app.get('/.api/page', async req => {
+		app.get('/@api/page', async req => {
 			const { site, query } = req;
 			const { url, lang, ext } = req.call('page.parse', query);
 			const isWebmaster = !req.locked(['webmaster']) && query.url == url;
@@ -27,7 +27,7 @@ module.exports = class PageService {
 			obj.commons = app.opts.commons;
 			return obj;
 		});
-		app.get('/.api/pages', async req => {
+		app.get('/@api/pages', async req => {
 			const { query, site } = req;
 			const isWebmaster = !req.locked(['webmaster']);
 			if (isWebmaster) {
@@ -46,7 +46,7 @@ module.exports = class PageService {
 			return obj;
 		});
 
-		app.put('/.api/page', 'page.write');
+		app.put('/@api/page', 'page.write');
 	}
 
 	#QueryPage({ site, trx, ref, val, fun }, { url, lang, type }) {
@@ -199,7 +199,7 @@ module.exports = class PageService {
 			url: {
 				title: 'URL',
 				type: 'string',
-				format: 'pathname'
+				format: 'page'
 			},
 			lang: {
 				title: 'Translate to site lang',
@@ -363,7 +363,7 @@ module.exports = class PageService {
 	};
 
 	async list(req, data) {
-		const { site, trx, fun, ref, raw } = req;
+		const { site, trx, fun, ref } = req;
 		const { lang } = req.call('translate.lang', data);
 		const q = site.$relatedQuery('children', trx)
 			.columns({ lang, content: 'title' })
@@ -415,14 +415,14 @@ module.exports = class PageService {
 			prefix: {
 				title: 'By url prefix',
 				type: 'string',
-				format: 'pathname',
+				format: 'page',
 				$helper: "page",
 				nullable: true
 			},
 			url: {
 				title: 'Starts with',
 				type: 'string',
-				format: 'pathname'
+				format: 'page'
 			},
 			lang: {
 				title: 'Lang',

@@ -13,13 +13,6 @@ module.exports = class UploadModule {
 	constructor(app, opts) {
 		this.app = app;
 		this.opts = opts;
-		console.info("data:", app.dirs.data);
-		if (!opts.dir) {
-			opts.dir = Path.join(app.dirs.data, "uploads");
-		} else {
-			console.info(`uploads: ${opts.dir}`);
-		}
-		app.dirs.uploads = opts.dir;
 		opts.tmp = app.dirs.tmp;
 
 		opts.limits = {
@@ -29,7 +22,7 @@ module.exports = class UploadModule {
 		};
 	}
 	async apiRoutes(app, server) {
-		app.post('/.api/upload/:id?', async req => {
+		app.post('/@api/upload/:id?', async req => {
 			const limits = { ...this.opts.limits };
 			if (req.params.id) {
 				const input = await req.run('block.get', { id: req.params.id });
@@ -38,10 +31,10 @@ module.exports = class UploadModule {
 				}
 				Object.assign(limits, input.data.limits);
 			} else {
-				console.info("/.api/upload without /:id is deprecated.\nConfigure an upload input and use its id");
+				console.info("/@api/upload without /:id is deprecated.\nConfigure an upload input and use its id");
 			}
 			const files = await this.parse(req, limits);
-			const list = await Promise.all(files.map(file => this.store(req, file)));
+			const list = await Promise.all(files.map(file => this.add(req, file)));
 			return { hrefs: list.map(item => item.href) };
 		});
 	}
@@ -102,9 +95,9 @@ module.exports = class UploadModule {
 		}
 	};
 
-	async store(req, data) {
+	async add(req, data) {
 		const subDir = (new Date()).toISOString().split('T').shift().substring(0, 7);
-		const dir = Path.join(this.opts.dir, subDir);
+		const dir = Path.join(this.app.statics.dir('@file'), subDir);
 		await fs.mkdir(dir, { recursive: true });
 		const parts = data.title.split('.');
 		const ext = speaking(parts.pop(), {
@@ -121,18 +114,15 @@ module.exports = class UploadModule {
 			`${basename}-${ranb}.${ext}`
 		);
 		await fs.rename(data.path, filepath);
-		const image = await req.run('image.upload', {
+		const image = await req.run('image.add', {
 			path: filepath,
 			mime: mime.lookup(ext)
 		}) ?? { path: filepath };
-		const url = Path.join(
-			"/.uploads",
-			Path.relative(Path.join(dir, '..'), image.path)
-		);
-		return req.run('href.add', { url });
+		const url = this.app.statics.pathToUrl(image.path);
+		return req.run('href.add', { url, pathname: url });
 	}
-	static store = {
-		title: 'Store uploaded file',
+	static add = {
+		title: 'Add file',
 		$private: true,
 		required: ['path'],
 		properties: {

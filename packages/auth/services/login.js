@@ -12,28 +12,28 @@ module.exports = class LoginModule {
 		};
 	}
 	apiRoutes(app, server) {
-		server.post("/.api/login/send", async (req, res) => {
+		server.post("/@api/login/send", async (req, res) => {
 			const data = await req.run('login.send', req.body);
 			res.return(data);
 		});
 
-		server.post("/.api/login/grant", async (req, res) => {
+		server.post("/@api/login/grant", async (req, res) => {
 			const data = await req.run('login.grant', req.body);
 			res.return(data);
 		});
 
-		server.post("/.api/login/out", async (req, res) => {
+		server.post("/@api/login/out", async (req, res) => {
 			const data = await req.run('login.clear', req.query);
 			res.return(data);
 		});
 
-		server.get("/.api/login", async (req, res) => {
+		server.get("/@api/login", async (req, res) => {
 			// deprecated
 			const data = await req.run('login.grant', req.query);
 			res.return(data);
 		});
 
-		server.get("/.api/logout", async (req, res) => {
+		server.get("/@api/logout", async (req, res) => {
 			// deprecated
 			const data = await req.run('login.clear', req.query);
 			res.return(data);
@@ -91,9 +91,8 @@ module.exports = class LoginModule {
 			}]
 		};
 		const tokenStr = token.toString();
-		const prefix = site.data.title ? site.data.title + ' - ' : '';
 		if (req.call('translate.lang').lang == "fr") {
-			mail.subject = `${prefix}code de vérification: ${tokenStr}`;
+			mail.subject = `Code: ${tokenStr} pour ${site.data.title ?? site.id}`;
 			mail.text = Text`
 				${tokenStr}
 
@@ -102,7 +101,7 @@ module.exports = class LoginModule {
 
 				Si vous n'avez pas demandé ce code, vous pouvez ignorer ce message.`;
 		} else {
-			mail.subject = `${prefix}verification token: ${tokenStr}`;
+			mail.subject = `Token: ${tokenStr} for ${site.data.title ?? site.id}`;
 			mail.text = Text`
 				${tokenStr}
 
@@ -226,7 +225,7 @@ module.exports = class LoginModule {
 
 	async link(req, data) {
 		const token = await this.#generate(req, data);
-		return "/.api/login?" + new URLSearchParams({
+		return "/@api/login?" + new URLSearchParams({
 			email: data.email,
 			grant: data.grant,
 			token
