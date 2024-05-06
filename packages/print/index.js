@@ -5,7 +5,11 @@ const cups = require('node-cups');
 module.exports = class PrintModule {
 	static name = 'print';
 	static priority = 100;
-	#bearer;
+	#bearer = {
+		token: null,
+		updated: 0,
+		maxAge: 60 * 60 * 24 * 1000
+	};
 
 	constructor(app, opts) {
 		this.app = app;
@@ -243,11 +247,14 @@ module.exports = class PrintModule {
 
 	async #getAuthorizedAgent(conf) {
 		const agent = new this.Agent(this.opts, conf.url);
-		if (!this.#bearer) this.#bearer = (await agent.fetch("/login", "post", {
-			email: conf.email,
-			password: conf.password
-		})).token;
-		agent.bearer = this.#bearer;
+		if (Date.now() - this.#bearer.lastUpdate > this.#bearer.maxAge) {
+			this.#bearer.token = (await agent.fetch("/login", "post", {
+				email: conf.email,
+				password: conf.password
+			})).token;
+			this.#bearer.lastUpdate = Date.now();
+		}
+		agent.bearer = this.#bearer.token;
 		return agent;
 	}
 

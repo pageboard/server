@@ -1,6 +1,3 @@
-import { withCache } from "ultrafetch";
-const cfetch = withCache(fetch);
-
 export class BearerAgent {
 
 	constructor(opts, baseUrl) {
@@ -22,7 +19,7 @@ export class BearerAgent {
 			opts.body = fd;
 		}
 		if (this.bearer) opts.headers = { Authorization: `Bearer ${this.bearer}` };
-		const res = await cfetch(this.baseUrl + path, {
+		const res = await fetch(this.baseUrl + path, {
 			method,
 			redirect: 'follow',
 			...opts
