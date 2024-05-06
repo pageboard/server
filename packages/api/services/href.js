@@ -1,4 +1,3 @@
-const Path = require('node:path');
 const { promises: fs } = require('node:fs');
 const jsonPath = require.lazy('@kapouer/path');
 
@@ -246,22 +245,46 @@ module.exports = class HrefService {
 		}
 	};
 
-	async save(req, data) {
+	async update(req, data) {
 		const { Href, site, trx } = req;
-		const href = await this.get(req, data)
+		const { url } = data;
+		const copy = { ...data };
+		delete copy.url;
+		const href = await this.get(req, { url })
 			.throwIfNotFound()
 			.forUpdate();
 		return site.$relatedQuery('hrefs', trx)
 			.where('_id', href._id)
 			.first()
-			.patchObject({
-				title: data.title
-			})
+			.patchObject(copy)
 			.returning(Href.columns);
 	}
+	static update = {
+		title: 'Update Href',
+		$action: 'write',
+		$private: true,
+		required: ['url'],
+		properties: {
+			url: {
+				type: 'string',
+				format: 'uri-reference'
+			},
+			title: {
+				type: 'string',
+				format: 'singleline'
+			},
+			pathname: {
+				type: 'string',
+				format: 'pathname'
+			}
+		}
+	};
+
+	async save(req, data) {
+		return req.call('image.update', data);
+	}
 	static save = {
-		title: 'Change href title',
-		description: 'This avoids reinspecting the full url',
+		title: 'Update Href Title',
 		$action: 'write',
 		required: ['url', 'title'],
 		properties: {
@@ -390,11 +413,6 @@ module.exports = class HrefService {
 		if (from == to) return; // hum
 		for (const [type, list] of Object.entries(site.$hrefs)) {
 			for (const desc of list) {
-				if (desc.types.some(type => {
-					// just a bug waiting to happen
-					// site.$hrefs should omit unmutable hrefs
-					return ['image', 'video', 'audio', 'svg'].includes(type);
-				})) continue;
 				const key = 'block.data:' + desc.path;
 				const field = ref(key).castText();
 				// this is a fake query not part of trx
@@ -409,25 +427,24 @@ module.exports = class HrefService {
 					})
 					.patch({
 						type,
-						[key]: raw(
-							`overlay(${args[0]} placing ? from 1 for ${from.length})`,
+						[key]: raw(`overlay(${args[0]} placing ? from 1 for ${from.length})`, [
 							args[1],
 							to
-						)
+						])
 					});
 			}
 		}
-		await Href.query(trx).where('_parent_id', site._id)
-			.where('type', 'link')
+		const q = Href.query(trx).where('_parent_id', site._id)
 			.where(q => {
-				q.where(fun('starts_with', 'url', `${from}/`));
+				q.where(fun('starts_with', ref('url').castText(), `${from}/`));
 				q.orWhere('url', from);
 			}).patch({
-				url: raw(`overlay(url placing ? from 1 for ${from.length})`, to)
+				url: raw(`overlay(url placing ? from 1 for ${from.length})`, [to])
 			});
+		await q;
 	}
 	static change = {
-		title: 'Change',
+		title: 'Change Prefix To',
 		$private: true,
 		properties: {
 			from: {
