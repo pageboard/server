@@ -36,10 +36,10 @@ jspm_packages
 # Optional REPL history
 .node_repl_history
 
-# pageboard upload dir
-/uploads
-/dumps
-/sites
+# pageboard dir
+/data
+/cache
+/config
 /lib
 
 yarn.lock
