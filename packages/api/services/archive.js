@@ -28,7 +28,7 @@ module.exports = class ArchiveService {
 			items: output.items?.length,
 			hrefs: 0,
 			files: 0,
-			file: '/@public/' + file
+			file: '/@cache/' + file
 		};
 		const { hrefs } = output;
 		delete output.hrefs;
@@ -92,7 +92,7 @@ module.exports = class ArchiveService {
 			blocks: 0,
 			hrefs: 0,
 			orphaned: 0,
-			file: '/@public/' + file
+			file: '/@cache/' + file
 		};
 
 		await archiveWrap(req, file, async archive => {
@@ -500,7 +500,7 @@ async function archiveWrap(req, file, fn) {
 			throw err;
 		}
 	});
-	const pubDir = await req.call('statics.dir', { dir: 'public' });
+	const pubDir = req.call('statics.dir', '@cache');
 	const out = createWriteStream(Path.join(pubDir, file));
 	const d = pipeline(archive, out);
 	await fn(archive);

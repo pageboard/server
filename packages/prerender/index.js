@@ -257,7 +257,7 @@ module.exports = class PrerenderModule {
 		if (res.statusCode != 200) {
 			throw new HttpError[res.statusCode]();
 		}
-		const dirName = await req.call('statics.dir', { dir: 'tmp' });
+		const dirName = req.call('statics.dir', '@tmp');
 		const fileName = await req.Block.genId(9);
 		const filePath = Path.join(dirName, fileName + '.' + ext);
 

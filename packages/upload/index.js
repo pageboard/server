@@ -97,7 +97,7 @@ module.exports = class UploadModule {
 
 	async add(req, data) {
 		const subDir = (new Date()).toISOString().split('T').shift().substring(0, 7);
-		const dir = Path.join(this.app.statics.dir('@file'), subDir);
+		const dir = Path.join(req.call('statics.dir', '@file'), subDir);
 		await fs.mkdir(dir, { recursive: true });
 		const parts = data.title.split('.');
 		const ext = speaking(parts.pop(), {

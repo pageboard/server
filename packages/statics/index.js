@@ -14,7 +14,8 @@ module.exports = class StaticsModule {
 			mounts: {
 				'@file': [app.dirs.data, '1 year'],
 				'@cache': [app.dirs.cache, '1 day'],
-				'@site': [app.dirs.data, '1 year', true]
+				'@site': [app.dirs.data, '1 year', true],
+				'@tmp': [app.dirs.tmp, '1 hour']
 			}
 		};
 	}
@@ -77,7 +78,8 @@ module.exports = class StaticsModule {
 		}
 	}
 
-	dir(mount) {
+	dir(req, mount) {
+		mount ??= req;
 		return Path.join(this.opts.mounts[mount][0], mount);
 	}
 
