@@ -21,37 +21,46 @@ module.exports = class ImageModule {
 	static name = 'image';
 	static priority = -1;
 	static $global = true;
-	static sizes = [{
-		suffix: 'xs',
-		width: 200,
-		height: 200
-	}, {
-		suffix: 's',
-		width: 400,
-		height: 400
-	}, {
-		suffix: 'm',
-		width: 800,
-		height: 600
-	}, {
-		suffix: 'l',
-		width: 1600,
-		height: 1200
-	}, {
-		suffix: 'xl',
-		width: 3200, // A4 pages
-		height: 3200
-	}];
+	static sizes = {
+		xs: {
+			title: 'Extra Small',
+			width: 200,
+			height: 200
+		},
+		s: {
+			title: 'Small',
+			width: 400,
+			height: 400
+		},
+		m: {
+			title: 'Medium',
+			width: 800,
+			height: 800
+		},
+		l: {
+			title: 'Large',
+			width: 1600,
+			height: 1600
+		},
+		xl: {
+			title: 'Extra Large',
+			width: 3200, // A4 pages
+			height: 3200
+		}
+	};
 
 	constructor(app, opts) {
 		this.app = app;
 		this.opts = {
 			async param(req, { rs }) {
-				return req.call('image.get', {
-					url: req.path,
+				const size = req.call('image.guess', {
 					width: rs?.w ?? 0,
 					height: rs?.h ?? 0,
 					fit: rs.fit
+				});
+				return req.call('image.get', {
+					url: req.path,
+					size
 				});
 			},
 			dir: '.image',
@@ -284,25 +293,23 @@ module.exports = class ImageModule {
 		}
 	};
 
-	async get(req, { url, width, height, fit }) {
+	guess(req, { width, height, fit }) {
+		for (const [suffix, item] of Object.entries(ImageModule.sizes)) {
+			if (item.width >= width && item.height >= height) return suffix;
+		}
+	}
+
+	async get(req, { url, size }) {
 		const srcPath = this.app.statics.urlToPath(url);
 		if (!srcPath) throw new HttpError.NotFound("Cannot find static path of", url);
+		if (!size) return srcPath;
 
 		const destPath = Path.join(this.app.dirs.cache, url.replace(/^\/@file/, '/images'));
 		const parts = Path.parse(destPath);
-		const suffix = /-(xs|s|m|l|xl)$/.exec(parts.name)?.[1];
-		let size;
-		if (suffix) {
-			size = ImageModule.sizes.find(item => item.suffix == suffix);
-		} else if (!width && !height) {
-			return srcPath;
-		} else {
-			// TODO if fit is outside or inside
-			// it changed which size we cant
-			size = ImageModule.sizes.find(item => item.width >= width && item.height >= height);
-			parts.name += '-' + size.suffix;
-			parts.base = null;
-		}
+		parts.name = parts.name.replace(/-(xs|s|m|l|xl)$/, '');
+		const { width, height } = ImageModule.sizes[size];
+		parts.name += '-' + size;
+		parts.base = null;
 		parts.ext = ".webp";
 		const destSized = Path.format(parts);
 		try {
@@ -315,8 +322,8 @@ module.exports = class ImageModule {
 			await req.run('image.resize', {
 				input: srcPath,
 				output: destSized,
-				width: size.width,
-				height: size.height,
+				width,
+				height,
 				format: {
 					name: 'webp',
 					quality: 95
@@ -336,19 +343,12 @@ module.exports = class ImageModule {
 				type: 'string',
 				format: 'pathname'
 			},
-			width: {
-				title: 'Width',
-				type: 'integer',
-				minimum: 0,
-				default: 0,
-				nullable: true
-			},
-			height: {
-				title: 'Height',
-				type: 'integer',
-				minimum: 0,
-				default: 0,
-				nullable: true
+			size: {
+				title: 'Size',
+				anyOf: Object.entries(ImageModule.sizes).map(([size, { title, width, height }]) => ({
+					const: size,
+					title
+				}))
 			}
 		}
 	};

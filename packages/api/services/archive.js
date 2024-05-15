@@ -35,19 +35,21 @@ module.exports = class ArchiveService {
 
 		await archiveWrap(req, file, async archive => {
 			archive.append(JSON.stringify(output), { name: 'export.json' });
-			const { files } = this.app.dirs;
-			for (const [url, { type }] of Object.entries(hrefs)) {
+			for (const [url, { mime }] of Object.entries(hrefs)) {
 				counts.hrefs++;
 				if (url.startsWith('/@file/')) {
 					counts.files++;
-					if (type == "image" && data.resize) {
-						const { path } = await req.run('image.resize', {
-
+					let filePath;
+					if (req.Href.isImage(mime) && data.size) {
+						filePath = await req.run('image.get', {
+							url, size: data.size
 						});
+					} else {
+						filePath = this.app.statics.urlToPath(url);
 					}
 					archive.file(
-						url,
-						{ name: url.substring(2) }
+						filePath,
+						{ name: url.substring(1) }
 					);
 				}
 			}
@@ -72,10 +74,9 @@ module.exports = class ArchiveService {
 				type: 'object',
 				nullable: true
 			},
-			resize: {
-				title: 'Resize images',
-				type: 'string',
-				nullable: true
+			size: {
+				title: 'Resource size',
+				$ref: "#/definitions/image.get/properties/parameters/properties/size"
 			}
 		}
 	};
