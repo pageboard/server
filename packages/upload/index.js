@@ -108,7 +108,8 @@ module.exports = class UploadModule {
 			truncate: 128,
 			symbols: false
 		});
-		const ranb = (await randomBytes(6)).toString('base64url').replaceAll(/_/g, '');
+		const ranb = (await randomBytes(6)).toString('base64url')
+			.replaceAll(/[_-]/g, 'x');
 		const filepath = Path.join(
 			dir,
 			`${basename}-${ranb}.${ext}`
