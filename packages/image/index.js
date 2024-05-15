@@ -274,6 +274,18 @@ module.exports = class ImageModule {
 			console.warn("image.add cannot process", mime);
 			return { path };
 		}
+		// we want all images to end with .webp ext,
+		// even if they are not of that format
+		const parts = Path.parse(path);
+		if (parts.ext != ".wepb") {
+			const npath = Path.format({
+				...parts,
+				base: null,
+				ext: ".webp"
+			});
+			await fs.rename(path, npath);
+			path = npath;
+		}
 		return { path };
 	}
 	static add = {
