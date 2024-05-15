@@ -257,7 +257,7 @@ module.exports = class ImageModule {
 	};
 
 	async add(req, { mime, path }) {
-		if (!mime.startsWith('image/') || mime.startsWith('image/svg')) {
+		if (!req.Href.isImage({ mime })) {
 			return { path };
 		}
 		const format = mime.split('/').pop();
@@ -361,7 +361,7 @@ module.exports = class ImageModule {
 			obj.offset += limit;
 			for (const href of obj.hrefs) {
 				let urlPath = href.url;
-				if (urlPath.startsWith('/@file/') && href.mime.startsWith('image/') && !href.mime.startsWith('image/svg')) {
+				if (urlPath.startsWith('/@file/') && req.Href.isImage(href.mime)) {
 					let filePath = this.app.statics.urlToPath(urlPath);
 					const parts = Path.parse(filePath);
 					const patterns = [

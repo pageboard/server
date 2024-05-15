@@ -112,6 +112,10 @@ class Href extends common.Model {
 	$schema() {
 		return Href.jsonSchema;
 	}
+
+	static isImage(mime) {
+		return mime.startsWith('image/') && !mime.startsWith('image/svg');
+	}
 }
 
 module.exports = Href;
