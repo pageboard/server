@@ -118,17 +118,6 @@ module.exports = class Pageboard {
 		this.opts = opts;
 	}
 
-	async #symlinkDir(name) {
-		try {
-			await fs.symlink(
-				Path.join(this.dirs[name]),
-				Path.join(this.dirs.app, name)
-			);
-		} catch (err) {
-			// pass
-		}
-	}
-
 	async run(command, data, { site, grant } = {}) {
 		const req = Object.setPrototypeOf({
 			headers: {},
@@ -195,10 +184,6 @@ module.exports = class Pageboard {
 	}
 
 	async init() {
-		await this.#symlinkDir('data');
-		await this.#symlinkDir('config');
-		await this.#symlinkDir('cache');
-
 		const { opts } = this;
 
 		const server = this.#server = this.#createServer();
