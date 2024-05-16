@@ -1,4 +1,4 @@
-const { createReadStream, createWriteStream } = require('node:fs');
+const { createReadStream, createWriteStream, promises: fs } = require('node:fs');
 const { pipeline } = require('node:stream/promises');
 const Path = require('node:path');
 const ndjson = require.lazy('ndjson');
@@ -28,6 +28,7 @@ module.exports = class ArchiveService {
 			items: output.items?.length,
 			hrefs: 0,
 			files: 0,
+			skips: [],
 			file: '/@cache/' + file
 		};
 		const { hrefs } = output;
@@ -38,19 +39,23 @@ module.exports = class ArchiveService {
 			for (const [url, { mime }] of Object.entries(hrefs)) {
 				counts.hrefs++;
 				if (url.startsWith('/@file/')) {
-					counts.files++;
 					let filePath;
-					if (req.Href.isImage(mime) && data.size) {
+					if (req.Href.isImage(mime)) {
 						filePath = await req.run('image.get', {
 							url, size: data.size
 						});
 					} else {
 						filePath = this.app.statics.urlToPath(url);
 					}
-					archive.file(
-						filePath,
-						{ name: url.substring(1) }
-					);
+					if (!filePath) {
+						counts.skips.push(url);
+					} else {
+						archive.file(
+							filePath,
+							{ name: url.substring(1) }
+						);
+						counts.files++;
+					}
 				}
 			}
 		});
@@ -502,6 +507,7 @@ async function archiveWrap(req, file, fn) {
 		}
 	});
 	const pubDir = req.call('statics.dir', '@cache');
+	await fs.mkdir(pubDir, { recursive: true });
 	const out = createWriteStream(Path.join(pubDir, file));
 	const d = pipeline(archive, out);
 	await fn(archive);
