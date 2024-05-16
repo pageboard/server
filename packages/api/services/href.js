@@ -43,31 +43,29 @@ module.exports = class HrefService {
 
 	async search(req, data) {
 		const { Href, site, trx } = req;
-		// TODO use .page() and/or .resultSize() see objection doc
 		const q = Href.query(trx).columns().whereSite(site.id);
+		const { type, maxSize, maxWidth, maxHeight } = data;
+		let { offset, limit } = data;
 
-		if (data.type) {
-			q.whereIn('href.type', data.type);
+		if (type) {
+			q.whereIn('href.type', type);
 		}
-		if (data.maxSize) {
-			q.where(req.ref('href.meta:size'), '<=', data.maxSize);
+		if (maxSize) {
+			q.where(req.ref('href.meta:size'), '<=', maxSize);
 		}
-		if (data.maxWidth) {
-			q.where(req.ref('href.meta:width'), '<=', data.maxWidth);
+		if (maxWidth) {
+			q.where(req.ref('href.meta:width'), '<=', maxWidth);
 		}
-		if (data.maxHeight) {
-			q.where(req.ref('href.meta:height'), '<=', data.maxHeight);
+		if (maxHeight) {
+			q.where(req.ref('href.meta:height'), '<=', maxHeight);
 		}
-		if (data.offset < 0) {
-			data.limit += data.offset;
-			data.offset = 0;
-			if (data.limit < 0) {
+		if (offset < 0) {
+			limit += offset;
+			offset = 0;
+			if (limit < 0) {
 				throw new HttpError.BadRequest("limit cannot be negative");
 			}
 		}
-		q.offset(data.offset).limit(data.limit);
-
-		let items = [];
 
 		if (data.url) {
 			const [url, hash] = data.url.split('#');
@@ -83,19 +81,21 @@ module.exports = class HrefService {
 							}
 						},
 						type: site.$pkg.hashtargets,
-						offset: data.offset,
-						limit: data.limit,
+						offset,
+						limit,
 						data: {
 							'id:start': hash
 						}
 					});
-					for (const item of obj.items) {
-						items.push({
-							...href,
-							title: `${href.title} #${item.data.id}`,
-							url: `${href.url}#${item.data.id}`
-						});
-					}
+					obj.hrefs = obj.items.map(item => ({
+						...href,
+						title: `${href.title} #${item.data.id}`,
+						url: `${href.url}#${item.data.id}`
+					}));
+					delete obj.items;
+					return obj;
+				} else {
+					return { count: 0, hrefs: [], offset, limit };
 				}
 			}
 		} else if (data.text) {
@@ -108,15 +108,18 @@ module.exports = class HrefService {
 			q.orderByRaw('ts_rank(href.tsv, query) DESC');
 			q.orderBy(req.ref('href.url'));
 			q.orderBy('updated_at', 'desc');
-			items = await q;
 		} else {
 			q.orderBy('updated_at', 'desc');
-			items = await q;
 		}
+		const [hrefs, count] = await Promise.all([
+			q.offset(offset).limit(limit),
+			q.resultSize()
+		]);
 		return {
-			hrefs: items,
-			offset: data.offset,
-			limit: data.limit
+			hrefs,
+			offset,
+			limit,
+			count
 		};
 	}
 
