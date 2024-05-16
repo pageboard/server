@@ -58,10 +58,12 @@ module.exports = class ImageModule {
 					height: rs?.h ?? 0,
 					fit: rs.fit
 				});
-				return req.call('image.get', {
+				const path = await req.call('image.get', {
 					url: req.path,
 					size
 				});
+				if (!path) throw new HttpError.NotFound();
+				return path;
 			},
 			dir: '.image',
 			signs: {
@@ -321,8 +323,13 @@ module.exports = class ImageModule {
 	}
 
 	async get(req, { url, size }) {
-		const srcPath = this.app.statics.urlToPath(url);
-		if (!srcPath) throw new HttpError.NotFound("Cannot find static path of", url);
+		let srcPath = this.app.statics.urlToPath(url);
+		if (!srcPath) return;
+		const srcParts = Path.parse(srcPath);
+		srcParts.base = null;
+		if (srcParts.ext == ".svg") return srcPath;
+		srcParts.ext = null;
+		srcPath = Path.format(srcParts);
 		if (!size) return srcPath;
 
 		const destPath = Path.join(this.app.dirs.cache, url.replace(/^\/@file/, '/images'));
@@ -340,21 +347,28 @@ module.exports = class ImageModule {
 				throw err;
 			}
 			await fs.mkdir(parts.dir, { recursive: true });
-			await req.run('image.resize', {
-				input: srcPath,
-				output: destSized,
-				width,
-				height,
-				format: {
-					name: 'webp',
 					quality: 95
 				}
-			});
+			try {
+				await req.run('image.resize', {
+					input: srcPath,
+					output: destSized,
+					width,
+					height,
+					format: {
+						name: 'webp',
+						quality: 95
+					}
+				});
+			} catch(err) {
+				console.error(err);
+				return;
+			}
 		}
 		return destSized;
 	}
 	static get = {
-		title: 'Get rel and abs paths from URL',
+		title: 'Get image path at given size',
 		$private: true,
 		$action: 'read',
 		required: ['url'],
