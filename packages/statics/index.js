@@ -1,4 +1,3 @@
-const serveStatic = require.lazy('serve-static');
 const Path = require('node:path');
 const { promises: fs } = require('node:fs');
 
@@ -27,13 +26,6 @@ module.exports = class StaticsModule {
 	}
 
 	fileRoutes(app, server) {
-		const serveOpts = {
-			index: false,
-			redirect: false,
-			dotfiles: 'ignore',
-			fallthrough: true
-		};
-
 		for (const [mount, [mountDir, mountAge, mountSite]] of Object.entries(this.opts.mounts)) {
 			server.get(`/${mount}/*`,
 				req => {
@@ -43,8 +35,10 @@ module.exports = class StaticsModule {
 					immutable: true,
 					maxAge: mountAge
 				}),
-				serveStatic(Path.join(mountDir, mount), serveOpts),
-				staticNotFound
+				(req, res, next) => {
+					res.set('X-Accel-Redirect', Path.join("/@internal", mountDir, mount, req.url));
+					res.send();
+				}
 			);
 		}
 
