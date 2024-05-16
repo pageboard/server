@@ -150,7 +150,7 @@ module.exports = class Installer {
 	// site.data.module (or installed pkg module) may provide a tag
 
 	async #decide(site) {
-		const dir = this.app.statics.dir('@site');
+		const siteDir = this.app.statics.dir({ site }, '@site');
 		const branch = getSiteBranch(site);
 		const { version } = site.data;
 		let tag = version;
@@ -164,9 +164,8 @@ module.exports = class Installer {
 		} else if (/\s+/.test(version) == true || (semverRegex().test(version) == false && /[a-z0-9]+/.test(version) == false)) {
 			throw new Error(`${site.id} has invalid version '${version}'`);
 		}
-		const siteDir = Path.join(dir, site.id, tag);
 
-		const pkg = await this.#getPkg(siteDir);
+		const pkg = await this.#getPkg(Path.join(siteDir, tag));
 		const newTag = pkg.tag == null || pkg.tag != tag;
 		pkg.tag = tag;
 

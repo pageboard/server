@@ -13,7 +13,7 @@ module.exports = class StaticsModule {
 			bundlerCache: Path.join(app.dirs.cache, "bundler"),
 			mounts: {
 				'@file': [app.dirs.data, '1 year'],
-				'@cache': [app.dirs.cache, '1 day'],
+				'@cache': [app.dirs.cache, '1 day', true],
 				'@site': [app.dirs.data, '1 year', true],
 				'@tmp': [app.dirs.tmp, '1 hour']
 			}
@@ -21,8 +21,8 @@ module.exports = class StaticsModule {
 	}
 
 	async init() {
-		for (const mount of Object.keys(this.opts.mounts)) {
-			await fs.mkdir(this.dir(mount), { recursive: true });
+		for (const [mount, [dir]] of Object.entries(this.opts.mounts)) {
+			await fs.mkdir(Path.join(dir, mount), { recursive: true });
 		}
 	}
 
@@ -79,8 +79,8 @@ module.exports = class StaticsModule {
 	}
 
 	dir(req, mount) {
-		mount ??= req;
-		return Path.join(this.opts.mounts[mount][0], mount);
+		const def = this.opts.mounts[mount];
+		return Path.join(def[0], mount, def[2] ? req.site.id : '');
 	}
 
 	async bundle(site, { inputs, output, dry = false, local = false }) {
@@ -113,8 +113,8 @@ module.exports = class StaticsModule {
 		const outList = [];
 		const version = site.data.version ?? site.$pkg.tag;
 		const outUrl = `/@site/${version}/${buildFile}`;
-		const sitesDir = this.dir('@site');
-		const outPath = Path.join(sitesDir, site.id, version, buildFile);
+		const sitesDir = this.dir({ site }, '@site');
+		const outPath = Path.join(sitesDir, version, buildFile);
 		if (local) outList.push(outPath);
 		else outList.push(outUrl);
 
@@ -145,7 +145,7 @@ module.exports = class StaticsModule {
 			} else if (/^https?:\/\//.test(url)) {
 				inList.push(url);
 			} else {
-				inList.push(Path.join(sitesDir, site.id, url));
+				inList.push(Path.join(sitesDir, url));
 			}
 		});
 
@@ -173,12 +173,12 @@ module.exports = class StaticsModule {
 
 	async install(site, { directories } = {}) {
 		if (!site.$url) return;
-		const dir = this.app.statics.dir('@site');
-		const runSiteDir = Path.join(dir, site.id);
-		await fs.mkdir(runSiteDir, { recursive: true });
+		const siteDir = this.app.statics.dir({ site }, '@site');
+		await fs.mkdir(siteDir, { recursive: true });
+		const baseDir = Path.join(siteDir, "..");
 		if (directories) for (const mount of directories) {
 			try {
-				await mountDirectory(dir, mount.from, mount.to);
+				await mountDirectory(baseDir, mount.from, mount.to);
 			} catch (err) {
 				console.error("Cannot mount", mount.from, mount.to, err);
 			}
@@ -190,7 +190,7 @@ module.exports = class StaticsModule {
 			from: '/.uploads',
 			to: '/@file'
 		});
-		const dest = this.dir('@file');
+		const dest = this.dir(req, '@file');
 
 		await fs.cp(
 			Path.join(this.app.dirs.data, 'uploads', req.site.id),
@@ -214,10 +214,6 @@ function staticNotFound(req) {
 }
 
 async function mountDirectory(base, src, dst) {
-	if (dst.startsWith('/.')) {
-		dst = '/' + dst.substring(2);
-		throw new Error("Shouldn't happen");
-	}
 	const absDst = Path.resolve(Path.join(base, "..", dst));
 	if (absDst.startsWith(base) == false) {
 		console.error("Cannot mount outside runtime", dst);
