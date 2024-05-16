@@ -9,6 +9,7 @@ module.exports = class StaticsModule {
 	constructor(app, opts) {
 		this.app = app;
 		this.opts = {
+			...opts,
 			bundlerCache: Path.join(app.dirs.cache, "bundler"),
 			mounts: {
 				'@file': [app.dirs.data, '1 year'],
