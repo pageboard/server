@@ -293,7 +293,7 @@ module.exports = class Installer {
 	}
 
 	async clean(site, pkg) {
-		const rootSite = Path.join(this.app.statics.dir('@site'), site.id);
+		const rootSite = this.app.statics.dir({ site }, '@site');
 		try {
 			const paths = await fs.readdir(rootSite);
 			const stats = await Promise.all(paths.map(async item => {
