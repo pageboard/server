@@ -153,11 +153,20 @@ module.exports = class ImageModule {
 			inputStream = createReadStream(input.startsWith('file://') ? input.substring(7) : input);
 		}
 		if (output) {
-			await pipeline(
-				inputStream,
-				transform.withMetadata(),
-				createWriteStream(output)
-			);
+			try {
+				await pipeline(
+					inputStream,
+					transform.withMetadata(),
+					createWriteStream(output)
+				);
+			} catch (ex) {
+				try {
+					await fs.unlink(output);
+				} catch {
+					// pass
+				}
+				throw ex;
+			}
 		} else {
 			ret.buffer = await transform.toBuffer();
 		}
