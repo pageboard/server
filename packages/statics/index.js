@@ -80,6 +80,7 @@ module.exports = class StaticsModule {
 
 	dir(req, mount) {
 		const def = this.opts.mounts[mount];
+		if (!def) throw new HttpError.InternalServerError("No mount for " + mount);
 		return Path.join(def[0], mount, def[2] ? req.site.id : '');
 	}
 
