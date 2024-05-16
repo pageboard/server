@@ -447,16 +447,16 @@ module.exports = class HrefService {
 		await q;
 	}
 	static change = {
-		title: 'Change Prefix To',
+		title: 'Change Url',
 		$private: true,
 		properties: {
 			from: {
-				title: 'From Url',
+				title: 'From',
 				type: 'string',
 				format: 'pathname'
 			},
 			to: {
-				title: 'To Url',
+				title: 'To',
 				type: 'string',
 				format: 'pathname'
 			}
