@@ -285,18 +285,15 @@ module.exports = class ImageModule {
 			console.warn("image.add cannot process", mime);
 			return { path };
 		}
-		// we want all images to end with .webp ext,
-		// even if they are not of that format
+		// store images without extensions
 		const parts = Path.parse(path);
-		if (parts.ext != ".wepb") {
-			const npath = Path.format({
-				...parts,
-				base: null,
-				ext: ".webp"
-			});
-			await fs.rename(path, npath);
-			path = npath;
-		}
+		const npath = Path.format({
+			...parts,
+			base: null,
+			ext: null
+		});
+		await fs.rename(path, npath);
+		path = npath;
 		return { path };
 	}
 	static add = {
@@ -347,8 +344,6 @@ module.exports = class ImageModule {
 				throw err;
 			}
 			await fs.mkdir(parts.dir, { recursive: true });
-					quality: 95
-				}
 			try {
 				await req.run('image.resize', {
 					input: srcPath,
@@ -396,39 +391,59 @@ module.exports = class ImageModule {
 			obj.offset += limit;
 			for (const href of obj.hrefs) {
 				let urlPath = href.url;
-				if (urlPath.startsWith('/@file/') && req.Href.isImage(href.mime)) {
-					let filePath = this.app.statics.urlToPath(urlPath);
-					const parts = Path.parse(filePath);
-					const patterns = [
-						Path.format({ ...parts, ext: '.orig', name: parts.name + '.*' }),
-						Path.format({ ...parts, ext: '.{png,jpg,jpeg,tif,tiff}' })
-					];
-					const list = await glob(patterns);
-					if (list.length > 1) {
-						throw new HttpError.Conflict("Too many files for href", urlPath, "\n", list);
-					} else if (list.length == 1) {
-						// rename *.ext.orig to *.ext
-						// remove *.webp when *.anotherext exists
-						const parts = Path.parse(list[0]);
-						if (parts.ext == ".orig") {
-							parts.ext = "";
-							filePath = Path.format(parts);
-							await fs.rename(list[0], filePath);
-						} else {
-							// if a file with same name and .webp extension exists, remove it
-							parts.ext = ".webp";
-							await fs.unlink(Path.format(parts));
-							filePath = list[0];
-						}
-						urlPath = this.app.statics.pathToUrl(filePath);
+				if (!urlPath.startsWith('/@file/') || !req.Href.isImage(href.mime)) continue;
+				let filePath = this.app.statics.urlToPath(urlPath);
+				const parts = Path.parse(filePath);
+				parts.base = null;
+				const patterns = [
+					Path.format({
+						...parts,
+						ext: '.{png,jpg,jpeg,tif,tiff}.orig'
+					}),
+					Path.format({
+						...parts,
+						ext: '.{png,jpg,jpeg,tif,tiff,webp}'
+					})
+				];
+				const list = await glob(patterns);
+				if (list.length > 2) {
+					throw new HttpError.Conflict("Too many files for href", urlPath, "\n", list);
+				}
+				if (list.length == 2) {
+					await fs.unlink(list.pop());
+				}
+				if (list.length == 1) {
+					// we want all images to be end with .webp
+					// rename *.ext.orig to *.ext
+					// remove *.webp when *.anotherext exists
+					const parts = Path.parse(list[0]);
+					parts.base = null;
+					if (parts.ext == ".orig") {
+						// reparse
+						parts.ext = null;
+						Object.assign(parts, Path.parse(Path.format(parts)));
+						parts.base = null;
 					}
-					try {
-						console.info("image.migrate", filePath);
-						await req.call('href.update', { url: urlPath, pathname: urlPath });
-					} catch (ex) {
-						if (ex.code != 'ENOENT') throw ex;
-						console.warn("Missing image file:", filePath);
+					parts.ext = null;
+					filePath = Path.format(parts);
+					await fs.rename(list[0], filePath);
+					urlPath = this.app.statics.pathToUrl(filePath) + ".webp";
+				}
+				try {
+					console.info("image.migrate", filePath);
+					if (urlPath != href.url) {
+						await req.call('href.change', {
+							from: href.url,
+							to: urlPath
+						});
 					}
+					if (href.pathname != urlPath) await req.call('href.update', {
+						url: urlPath,
+						pathname: urlPath
+					});
+				} catch (ex) {
+					if (ex.code != 'ENOENT') throw ex;
+					console.warn("Missing image file:", filePath);
 				}
 			}
 		} while (obj.offset < obj.count);
