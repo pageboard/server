@@ -2,7 +2,6 @@ const common = require('./common');
 const { Model } = common;
 const { dget } = require('../../../src/utils');
 const crypto = require('node:crypto');
-const { HttpError } = require('http-errors');
 
 class Block extends Model {
 	static useLimitInFirst = true;
