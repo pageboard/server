@@ -410,7 +410,8 @@ module.exports = class ImageModule {
 					throw new HttpError.Conflict("Too many files for href", urlPath, "\n", list);
 				}
 				if (list.length == 2) {
-					await fs.unlink(list.pop());
+					list.sort(); // .webp at the end
+					await fs.unlink(list.shift()); // remove the other one
 				}
 				if (list.length == 1) {
 					// we want all images to be end with .webp
