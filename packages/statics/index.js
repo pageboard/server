@@ -99,7 +99,7 @@ module.exports = class StaticsModule {
 		if (this.opts[ext] == null) {
 			throw new Error(`Set statics.${ext} to a browserslist query`);
 		}
-		delete fileObj.base;
+		fileObj.base = null;
 		fileObj.name += suffix;
 		const buildFile = Path.format(fileObj);
 		// build dir must be inside the site module directory
@@ -140,8 +140,10 @@ module.exports = class StaticsModule {
 				else console.error("file not in project", url);
 			} else if (/^https?:\/\//.test(url)) {
 				inList.push(url);
+			} else if (url.startsWith('/@site/')) {
+				inList.push(Path.join(sitesDir, url.substring(6)));
 			} else {
-				inList.push(Path.join(sitesDir, url));
+				console.error("file not in project", url);
 			}
 		});
 
