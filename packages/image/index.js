@@ -24,23 +24,23 @@ module.exports = class ImageModule {
 	static sizes = {
 		xs: {
 			title: 'Extra Small',
-			width: 200,
-			height: 200
+			width: 128,
+			height: 128
 		},
 		s: {
 			title: 'Small',
-			width: 400,
-			height: 400
+			width: 256,
+			height: 256
 		},
 		m: {
 			title: 'Medium',
-			width: 800,
-			height: 800
+			width: 512,
+			height: 512
 		},
 		l: {
 			title: 'Large',
-			width: 1600,
-			height: 1600
+			width: 1024,
+			height: 1024
 		},
 		xl: {
 			title: 'Extra Large',
