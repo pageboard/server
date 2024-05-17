@@ -203,12 +203,6 @@ module.exports = class StaticsModule {
 	};
 };
 
-function staticNotFound(req) {
-	if (req.method == "GET" || req.method == "HEAD") {
-		throw new HttpError.NotFound("Static file not found");
-	}
-}
-
 async function mountDirectory(base, src, dst) {
 	const absDst = Path.resolve(Path.join(base, "..", dst));
 	if (absDst.startsWith(base) == false) {
