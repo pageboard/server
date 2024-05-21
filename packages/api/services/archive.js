@@ -36,28 +36,11 @@ module.exports = class ArchiveService {
 
 		await archiveWrap(req, file, async archive => {
 			archive.append(JSON.stringify(output), { name: 'export.json' });
-			for (const [url, { mime }] of Object.entries(hrefs)) {
-				counts.hrefs++;
-				if (url.startsWith('/@file/')) {
-					let filePath;
-					if (req.Href.isImage(mime)) {
-						filePath = await req.run('image.get', {
-							url, size: data.size
-						});
-					} else {
-						filePath = this.app.statics.urlToPath(url);
-					}
-					if (!filePath) {
-						counts.skips.push(url);
-					} else {
-						archive.file(
-							filePath,
-							{ name: url.substring(1) }
-						);
-						counts.files++;
-					}
-				}
-			}
+			counts.hrefs += hrefs.length;
+			const list = Object.entries(hrefs).map(
+				([url, { mime }]) => ({ url, mime })
+			);
+			await archiveFiles(req, archive, list, counts, data.size);
 		});
 		return counts;
 	}
@@ -97,12 +80,14 @@ module.exports = class ArchiveService {
 			users: 0,
 			blocks: 0,
 			hrefs: 0,
+			files: 0,
+			skips: [],
 			orphaned: 0,
 			file: '/@cache/' + file
 		};
 
 		await archiveWrap(req, file, async archive => {
-			if (urls.length) {
+			if (urls?.length) {
 				const urlIds = await site.$relatedQuery('children', trx)
 					.select('block.id')
 					.whereIn('block.type', Array.from(site.$pkg.pages))
@@ -210,7 +195,6 @@ module.exports = class ArchiveService {
 					}
 				}
 			}
-			counts.files = 0;
 			if (data.hrefs) {
 				const list = await req.run('href.collect', {
 					ids,
@@ -221,16 +205,7 @@ module.exports = class ArchiveService {
 					jstream.write(href);
 				}
 				if (data.files) {
-					for (const href of list) {
-						const abs = this.app.statics.urlToPath(href.url);
-						if (abs) {
-							archive.file(
-								abs,
-								{ name: href.pathname.substring(2) }
-							);
-							counts.files++;
-						}
-					}
+					await archiveFiles(req, archive, list, counts, null);
 				}
 			}
 			jstream.end();
@@ -513,4 +488,28 @@ async function archiveWrap(req, file, fn) {
 	await fn(archive);
 	await archive.finalize();
 	await d;
+}
+
+async function archiveFiles(req, archive, hrefs, counts, size) {
+	for (const { url, mime } of hrefs) {
+		if (url.startsWith('/@file/')) {
+			let filePath;
+			if (req.Href.isImage(mime)) {
+				filePath = await req.run('image.get', {
+					url, size
+				});
+			} else {
+				filePath = this.app.statics.urlToPath(url);
+			}
+			if (!filePath) {
+				counts.skips.push(url);
+			} else {
+				archive.file(
+					filePath,
+					{ name: url.substring(1) }
+				);
+				counts.files++;
+			}
+		}
+	}
 }
