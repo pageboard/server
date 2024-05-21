@@ -282,7 +282,7 @@ module.exports = class ImageModule {
 	};
 
 	async add(req, { mime, path }) {
-		if (!req.Href.isImage({ mime })) {
+		if (!req.Href.isImage(mime)) {
 			return { path };
 		}
 		const format = mime.split('/').pop();
