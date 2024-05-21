@@ -396,7 +396,9 @@ module.exports = class ImageModule {
 			obj.offset += limit;
 			for (const href of obj.hrefs) {
 				let urlPath = href.url;
-				if (!urlPath.startsWith('/@file/') || !req.Href.isImage(href.mime)) continue;
+				if (!urlPath.startsWith('/@file/') || !req.Href.isImage(href.mime)) {
+					continue;
+				}
 				let filePath = this.app.statics.urlToPath(urlPath);
 				const parts = Path.parse(filePath);
 				parts.base = null;
@@ -411,46 +413,39 @@ module.exports = class ImageModule {
 					})
 				];
 				const list = await glob(patterns);
-				if (list.length > 2) {
-					throw new HttpError.Conflict("Too many files for href", urlPath, "\n", list);
-				}
-				if (list.length == 2) {
-					list.sort(); // .webp at the end
-					await fs.unlink(list.shift()); // remove the other one
-				}
-				if (list.length == 1) {
-					// we want all images to be end with .webp
-					// rename *.ext.orig to *.ext
-					// remove *.webp when *.anotherext exists
-					const parts = Path.parse(list[0]);
-					parts.base = null;
-					if (parts.ext == ".orig") {
-						// reparse
-						parts.ext = null;
-						Object.assign(parts, Path.parse(Path.format(parts)));
-						parts.base = null;
-					}
-					parts.ext = null;
-					filePath = Path.format(parts);
-					await fs.rename(list[0], filePath);
-					urlPath = this.app.statics.pathToUrl(filePath) + ".webp";
-				}
-				try {
-					console.info("image.migrate", filePath);
-					if (urlPath != href.url) {
-						await req.call('href.change', {
-							from: href.url,
-							to: urlPath
-						});
-					}
-					if (href.pathname != urlPath) await req.call('href.update', {
-						url: urlPath,
-						pathname: urlPath
-					});
-				} catch (ex) {
-					if (ex.code != 'ENOENT') throw ex;
+				if (list.length == 0) {
 					console.warn("Missing image file:", filePath);
+					continue;
 				}
+				const origIndex = list.findIndex(item => item.endsWith('.orig'));
+				let orig = origIndex >= 0 ? list[origIndex] : null;
+				if (orig) {
+					list.splice(origIndex, 1);
+					parts.ext = null;
+					Object.assign(parts, Path.parse(Path.format(parts)));
+					parts.base = null;
+				} else {
+					list.sort();
+					orig = list.pop(); // the webp or any other
+				}
+				parts.ext = null;
+				filePath = Path.format(parts);
+				await fs.rename(orig, filePath);
+				urlPath = this.app.statics.pathToUrl(filePath) + ".webp";
+				for (const item of list) {
+					await fs.unlink(item);
+				}
+				console.info("image.migrate", filePath);
+				if (urlPath != href.url) {
+					await req.call('href.change', {
+						from: href.url,
+						to: urlPath
+					});
+				}
+				if (href.pathname != urlPath) await req.call('href.update', {
+					url: urlPath,
+					pathname: urlPath
+				});
 			}
 		} while (obj.offset < obj.count);
 	}
