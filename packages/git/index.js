@@ -5,6 +5,7 @@ module.exports = class GitModule {
 	static name = 'git';
 
 	constructor(app, opts) {
+		this.app = app;
 		this.opts = opts;
 		if (!opts.wkp) {
 			opts.wkp = "/.well-known/git";
@@ -48,6 +49,7 @@ module.exports = class GitModule {
 			const changed = await req.run('git.decide', getRefs(payload));
 			if (!changed) return;
 			await req.run('site.save', { id: site.id, data: site.data });
+			await this.app.cache.install(site);
 			mail.subject = `Pageboard deployed ${site.id} at version ${site.data.version}`;
 			mail.text = Text`
 						The version is immediately available at
