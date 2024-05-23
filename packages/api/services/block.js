@@ -394,7 +394,7 @@ module.exports = class BlockService {
 				default: 0
 			},
 			lang: {
-				title: 'Select language',
+				title: 'Language',
 				type: 'string',
 				format: 'lang',
 				nullable: true,
