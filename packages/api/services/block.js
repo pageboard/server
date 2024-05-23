@@ -309,7 +309,7 @@ module.exports = class BlockService {
 		if (ids.length) {
 			obj.hrefs = await req.run('href.collect', {
 				ids,
-				content: hasComplexContent, // TODO check names for schema != text* as above
+				content: hasComplexContent,
 				asMap: true,
 				preview: data.preview,
 				types: Href.mediaTypes
