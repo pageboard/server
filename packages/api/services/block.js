@@ -170,8 +170,8 @@ module.exports = class BlockService {
 					.where('children.type', 'content')
 					.where(ref('children.data:lang').castText(), language.lang)
 					.where(q => {
-						if (typeof data.content == "string") {
-							q.where(ref('children.data:name').castText(), data.content);
+						if (data.content?.length) {
+							q.whereIn(ref('children.data:name').castText(), data.content);
 						}
 					})
 				);
@@ -180,8 +180,8 @@ module.exports = class BlockService {
 					.select('block._id', 'block.tsv', 'value AS text')
 					.from(raw('block, jsonb_each_text(block.content)'))
 					.where(q => {
-						if (typeof data.content == "string") {
-							q.where('name', data.content);
+						if (data.content.length) {
+							q.whereIn('name', data.content);
 						}
 					})
 				);
@@ -194,7 +194,7 @@ module.exports = class BlockService {
 					`array_remove(array_agg(DISTINCT content_get_headline(:tsconfig, contents.text, search.query)), NULL) AS headlines`, language
 				))
 				.groupBy('block._id');
-			if (data.content) {
+			if (data.content?.length) {
 				// find blocks by their direct content
 				qdoc.join('contents', 'block._id', 'contents._id')
 					.join('search', 'contents.tsv', '@@', 'search.query');
@@ -240,12 +240,18 @@ module.exports = class BlockService {
 				).as('count')
 			);
 		}
-		if (data.content === true) {
-			eagers.children = {
-				$relation: 'children',
-				$modify: ['childrenFilter']
-			};
-		}
+		const hasComplexContent = data.content?.length && data.type.some(type => {
+			const { contents } = site.$schema(type);
+			return contents.some(
+				({ id, nodes }) => data.content.includes(id) && nodes != "text*"
+			);
+		});
+
+		if (hasComplexContent) eagers.children = {
+			$relation: 'children',
+			$modify: ['childrenFilter']
+		};
+
 		if (!Object.isEmpty(eagers)) q.withGraphFetched(eagers).modifiers({
 			parentsFilter(query) {
 				filterSub(query, parents, language);
@@ -303,7 +309,7 @@ module.exports = class BlockService {
 		if (ids.length) {
 			obj.hrefs = await req.run('href.collect', {
 				ids,
-				content: data.content === true,
+				content: hasComplexContent, // TODO check names for schema != text* as above
 				asMap: true,
 				preview: data.preview,
 				types: Href.mediaTypes
@@ -345,22 +351,6 @@ module.exports = class BlockService {
 				title: 'Preview',
 				type: 'boolean',
 				nullable: true
-			},
-			content: {
-				title: 'Contents',
-				anyOf: [{
-					const: false,
-					title: 'No'
-				}, {
-					const: true,
-					title: 'All'
-				}, {
-					type: 'string',
-					title: 'Custom',
-				}],
-				$filter: {
-					name: 'element-content'
-				}
 			},
 			text: {
 				title: 'Text search',
@@ -413,6 +403,19 @@ module.exports = class BlockService {
 					url: '/@api/languages'
 				}
 			},
+			content: {
+				title: 'Contents',
+				type: 'array',
+				nullable: true,
+				items: {
+					type: 'string',
+					format: 'name',
+					title: 'Custom',
+				},
+				$filter: {
+					name: 'element-content'
+				}
+			},
 			parent: {
 				title: 'Filter by parent',
 				type: "object",
@@ -442,26 +445,23 @@ module.exports = class BlockService {
 							multiple: true
 						}
 					},
-					content: {
-						title: 'Contents',
-						anyOf: [{
-							const: false,
-							title: 'No'
-						}, {
-							const: true,
-							title: 'All'
-						}, {
-							type: 'string',
-							title: 'Custom',
-						}],
-						$filter: {
-							name: 'element-content'
-						}
-					},
 					data: {
 						title: 'Select by data',
 						type: 'object',
 						nullable: true
+					},
+					content: {
+						title: 'Contents',
+						type: 'array',
+						nullable: true,
+						items: {
+							type: 'string',
+							format: 'name',
+							title: 'Custom',
+						},
+						$filter: {
+							name: 'element-content'
+						}
 					},
 					parents: {
 						// internal api
@@ -542,22 +542,6 @@ module.exports = class BlockService {
 						type: 'boolean',
 						nullable: true
 					},
-					content: {
-						title: 'Contents',
-						anyOf: [{
-							const: false,
-							title: 'No'
-						}, {
-							const: true,
-							title: 'All'
-						}, {
-							type: 'string',
-							title: 'Custom',
-						}],
-						$filter: {
-							name: 'element-content'
-						}
-					},
 					data: {
 						title: 'Select by data',
 						type: 'object',
@@ -582,6 +566,19 @@ module.exports = class BlockService {
 						title: 'Offset',
 						type: 'integer',
 						default: 0
+					},
+					content: {
+						title: 'Contents',
+						type: 'array',
+						nullable: true,
+						items: {
+							type: 'string',
+							format: 'name',
+							title: 'Custom',
+						},
+						$filter: {
+							name: 'element-content'
+						}
 					}
 				}
 			},
@@ -619,22 +616,6 @@ module.exports = class BlockService {
 						type: 'boolean',
 						default: false
 					},
-					content: {
-						title: 'Contents',
-						anyOf: [{
-							const: false,
-							title: 'No'
-						}, {
-							const: true,
-							title: 'All'
-						}, {
-							type: 'string',
-							title: 'Custom',
-						}],
-						$filter: {
-							name: 'element-content'
-						}
-					},
 					data: {
 						title: 'Select by data',
 						type: 'object',
@@ -659,6 +640,19 @@ module.exports = class BlockService {
 						title: 'Offset',
 						type: 'integer',
 						default: 0
+					},
+					content: {
+						title: 'Contents',
+						type: 'array',
+						nullable: true,
+						items: {
+							type: 'string',
+							format: 'name',
+							title: 'Custom',
+						},
+						$filter: {
+							name: 'element-content'
+						}
 					}
 				}
 			}

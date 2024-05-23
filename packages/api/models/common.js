@@ -160,11 +160,11 @@ exports.QueryBuilder = class CommonQueryBuilder extends QueryBuilder {
 						})
 					);
 					continue;
-				} else if (typeof content == "string") {
+				} else if (Array.isArray(content)) {
 					cols.push(
-						raw(`jsonb_build_object(:content, content[:content:]) AS content`, {
-							content
-						})
+						raw(`jsonb_build_object(
+							${content.map(_ => '?, content[??]').join(', ')}
+						) AS content`, content.flatMap(n => [n, n]))
 					);
 					continue;
 				}

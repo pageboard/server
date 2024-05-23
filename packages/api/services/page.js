@@ -221,7 +221,7 @@ module.exports = class PageService {
 		return req.run('block.search', {
 			lang,
 			type: 'page',
-			content: 'title',
+			content: data.content,
 			data: {
 				nositemap: data.draft ? undefined : false
 			},
@@ -246,22 +246,6 @@ module.exports = class PageService {
 				type: 'string',
 				format: 'singleline'
 			},
-			content: {
-				title: 'Contents',
-				anyOf: [{
-					const: false,
-					title: 'No'
-				}, {
-					const: true,
-					title: 'All'
-				}, {
-					type: 'string',
-					title: 'Custom',
-				}],
-				$filter: {
-					name: 'element-content'
-				}
-			},
 			limit: {
 				title: 'Limit',
 				type: 'integer',
@@ -278,6 +262,19 @@ module.exports = class PageService {
 				title: 'Show pages that are not in sitemap',
 				type: 'boolean',
 				default: false
+			},
+			content: {
+				title: 'Contents',
+				type: 'array',
+				nullable: true,
+				items: {
+					type: 'string',
+					format: 'name',
+					title: 'Custom',
+				},
+				$filter: {
+					name: 'element-content'
+				}
 			},
 			type: {
 				// kept for compatibility
