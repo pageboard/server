@@ -273,6 +273,7 @@ module.exports = class Validation {
 			schemaType: "boolean"
 		});
 		ajv.addKeyword({
+			// list properties that should have unique values across a site
 			keyword: 'unique',
 			schemaType: "array"
 		});

@@ -314,11 +314,11 @@ class Block extends Model {
 				Object.assign(copy.$pkg, this.$pkg);
 				return copy;
 			}
-			async $beforeInsert(context) {
+			async #uniqueProperty(context) {
 				const el = this.$schema();
 				if (el.unique) {
-					const { req } = context.transaction;
-					const q = req.site.$relatedQuery('children', req.trx)
+					const { req: { trx, site } } = context.transaction;
+					const q = site.$relatedQuery('children', trx)
 						.where('type', this.type);
 					for (const field of el.unique) {
 						const val = dget(this, 'data.' + field);
@@ -332,13 +332,14 @@ class Block extends Model {
 						throw new HttpError.BadRequest(`Element requires unique fields ${el.unique} but there are already ${count} rows`);
 					}
 				}
-
+			}
+			async $beforeInsert(context) {
 				await super.$beforeInsert(context);
+				await this.#uniqueProperty(context);
 			}
 			async $beforeUpdate(opt, context) {
 				await super.$beforeUpdate(opt, context);
-				// TODO check el.unique here too
-				// factorize with bforeInsert ehck
+				await this.#uniqueProperty(context);
 			}
 			$beforeValidate(jsonSchema, json) {
 				if (json.id === null) delete json.id;
