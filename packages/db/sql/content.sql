@@ -120,7 +120,8 @@ SELECT trimmed AS headline FROM (
 $BODY$;
 
 CREATE OR REPLACE FUNCTION block_delete_orphans (
-	site_id INTEGER
+	site_id INTEGER,
+	days INTEGER DEFAULT 0
 ) RETURNS INTEGER
 	LANGUAGE 'sql'
 AS $BODY$
@@ -131,12 +132,14 @@ AS $BODY$
 		WHERE s.parent_id = site_id
 		AND block._id = s.child_id
 		AND block.standalone IS FALSE
+		AND extract('day' from now() - block.updated_at) >= days
 		GROUP BY block._id
 	),
 	dels AS (
 		DELETE FROM block WHERE _id IN (SELECT _id FROM counts WHERE count = 1) RETURNING _id
 	) SELECT count(*) FROM dels;
 $BODY$;
+DROP FUNCTION IF EXISTS block_delete_orphans (integer);
 
 CREATE OR REPLACE FUNCTION content_delete_name(
 	p_id INTEGER,

@@ -996,6 +996,28 @@ module.exports = class BlockService {
 			}
 		}
 	};
+
+	async gc({ trx, raw, site, ref, fun }, { days }) {
+		const { count } = await site.$query(trx).select(
+			fun('block_delete_orphans', ref('block._id'), days)
+				.as('count')
+		);
+		return { count };
+	}
+	static gc = {
+		title: 'Garbage collect blocks',
+		$private: true,
+		$action: 'write',
+		properties: {
+			age: {
+				title: 'Age',
+				description: 'Number of days since last update',
+				type: 'integer',
+				minimum: 0,
+				default: 0
+			}
+		}
+	};
 };
 
 function whereSub(q, data, alias = 'block') {
@@ -1084,23 +1106,6 @@ function filterSub(q, data, language) {
 	}
 	q.offset(data.offset).limit(data.limit);
 	return valid;
-}
-
-
-async function gc({ trx, raw }, days) {
-	// this might prove useless
-	const results = await raw(`DELETE FROM block USING (
-		SELECT count(relation.child_id), b._id FROM block AS b
-			LEFT OUTER JOIN relation ON (relation.child_id = b._id)
-			LEFT JOIN block AS p ON (p._id = relation.parent_id AND p.type='site')
-		WHERE b.type NOT IN ('user', 'site') AND extract('day' from now() - b.updated_at) >= ?
-		GROUP BY b._id
-	) AS usage WHERE usage.count = 0 AND block._id = usage._id`, [
-		days
-	]);
-	return {
-		length: results.rowCount
-	};
 }
 
 function parseOrder(q, table, str) {
