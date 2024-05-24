@@ -2,7 +2,7 @@
   "name": "pageboard",
   "version": "0.15.0",
   "description": "Website hosting and editing",
-  "main": "lib/pageboard.js",
+  "main": "src/pageboard.js",
   "scripts": {
     "start": "pageboard",
     "test": "mocha"
@@ -88,7 +88,7 @@
       },
       {
         "files": [
-          "tests/*.test.js"
+          "tests/*.js"
         ],
         "env": {
           "mocha": true
@@ -107,7 +107,7 @@
     ]
   },
   "mocha": {
-    "spec": "tests/*.test.js",
+    "spec": "tests/*.js",
     "ui": "tdd"
   },
   "devDependencies": {
