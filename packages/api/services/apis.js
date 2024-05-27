@@ -43,14 +43,16 @@ module.exports = class ApiService {
 			throw new HttpError.Unauthorized("Check user permissions");
 		}
 
-		const reqBody = data.body ?? {};
+		const { action = {} } = form.data ?? {};
 
-		const method = form.data?.action?.method;
+		const { method } = action;
 		if (!method) {
 			throw new HttpError.BadRequest("Missing method");
 		}
 
-		const formData = form.data?.action?.parameters ?? {};
+		const reqBody = data.body ?? {};
+
+		const formData = action.parameters ?? {};
 		for (const key of Object.keys(formData)) {
 			// else mergeRecursive(body, params) will drop everything
 			if (formData[key] === null) delete formData[key];
@@ -75,14 +77,20 @@ module.exports = class ApiService {
 		});
 
 		const params = mergeExpressions(
-			form.data?.action?.parameters ?? {},
-			form.expr?.action?.parameters ?? {},
+			action.parameters ?? {},
+			action.request,
 			scope
 		);
 
-		Log.api("form params", params, user, data.query);
+		const obj = await run(method, params);
 
-		return run(method, params);
+		if (Object.isEmpty(action.response)) return obj;
+		else return mergeExpressions({}, action.response, obj);
+
+		// if (schema.templates) {
+		// 	block.expr = mergeExpressions(block.expr ?? {}, schema.templates, block);
+		// 	if (Object.isEmpty(block.expr)) block.expr = null;
+		// }
 	}
 	static post = {
 		title: 'API Post',
@@ -119,7 +127,9 @@ module.exports = class ApiService {
 			throw new HttpError.Unauthorized("Check user permissions");
 		}
 
-		const method = form.data?.action?.method;
+		const { action = {} } = form.data ?? {};
+
+		const { method } = action;
 		if (!method) {
 			throw new HttpError.BadRequest("Missing method");
 		}
@@ -139,13 +149,17 @@ module.exports = class ApiService {
 			$site: site.id,
 			$user: user
 		});
+
 		const params = mergeExpressions(
-			form.data?.action?.parameters ?? {},
-			form.expr?.action?.parameters ?? {},
+			action.parameters ?? {},
+			action.request,
 			scope
 		);
 
-		return run(method, params);
+		const obj = await run(method, params);
+
+		if (Object.isEmpty(action.response)) return obj;
+		else return mergeExpressions({}, action.response, obj);
 	}
 	static get = {
 		title: 'API Get',

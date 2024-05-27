@@ -99,19 +99,20 @@ class AjvValidatorExt extends AjvValidator {
 			let ret = validator.call(this, json);
 			if (validator.errors?.length > 0) {
 				validator.errors = validator.errors.filter(e => {
-					const { instancePath, keyword, params } = e;
-					const key = params?.missingProperty;
-					if (!instancePath || keyword != "required" || key == null) return true;
-					const parts = instancePath.split("/").slice(1);
-					if (parts[0] != "data") return true;
-					parts[0] = "expr";
-					parts.push(key);
-					let target = json;
-					for (const part of parts) {
-						if (!target) break;
-						target = target[part];
+					const {
+						instancePath: path,
+						keyword, params
+					} = e;
+					const { missingProperty: miss } = params ?? {};
+					if (!path || keyword != "required" || miss == null) return true;
+					if (path.startsWith("/data/action/parameters")) {
+						const subPath = path.split('/').slice(4).concat([miss]).join('.');
+						if (json?.data?.action?.request?.[subPath]) {
+							// expression here, ignore requirement
+							return false;
+						}
 					}
-					return !target;
+					return true;
 				});
 				ret = validator.errors.length == 0;
 				if (ret) delete validator.errors;

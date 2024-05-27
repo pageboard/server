@@ -420,7 +420,20 @@ module.exports = class Pageboard {
 							title: 'Method',
 							const: method
 						},
-						parameters: { ...desc, title: 'Parameters' }
+						parameters: {
+							...desc,
+							title: 'Parameters'
+						},
+						request: {
+							title: 'Request Map',
+							type: 'object',
+							nullable: true
+						},
+						response: {
+							title: 'Reponse Map',
+							type: 'object',
+							nullable: true
+						}
 					}
 				};
 				if (desc.$global == null && constructor.$global != null) {

@@ -54,9 +54,9 @@ exports.flatten = function (obj) {
 	return flattie(obj);
 };
 
-exports.mergeExpressions = function mergeExpressions(data, expr, obj) {
+exports.mergeExpressions = function (data, flatExpr, obj) {
+	if (!flatExpr) return data;
 	// only actually fused expressions in expr go into data
-	const flatExpr = flattie(expr);
 	let miss = false;
 	const md = sharedMd.copy().extend({
 		hooks: {
