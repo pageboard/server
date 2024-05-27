@@ -9,7 +9,7 @@ const Validation = require('./lib/validation');
 const Href = require('./models/href');
 const Block = require('./models/block');
 
-const { mergeRecursive, mergeExpressions } = require('../../src/utils');
+const { mergeRecursive } = require('../../src/utils');
 
 module.exports = class ApiModule {
 	static name = 'api';
@@ -268,10 +268,6 @@ module.exports = class ApiModule {
 				jsonPath.set(block, dst, val);
 				jsonPath.unSet(block, src);
 			}
-		}
-		if (schema.templates) {
-			block.expr = mergeExpressions(block.expr ?? {}, schema.templates, block);
-			if (Object.isEmpty(block.expr)) block.expr = null;
 		}
 	}
 
