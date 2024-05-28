@@ -4,11 +4,11 @@ const { site } = require('./helpers/common');
 
 const app = new Pageboard();
 
-suite('query', function () {
+suite('apis.get', function () {
 
 	this.timeout(require('node:inspector').url() === undefined ? 10000 : 0);
 
-	before(async function () {
+	setup(async function () {
 		await app.init();
 		try {
 			await app.run('site.add', site);
@@ -22,32 +22,29 @@ suite('query', function () {
 		const { item: page } = await app.run('block.add', {
 			type: 'page',
 			data: { url: '/test' }
-		}, 'test');
+		}, { site: 'test' });
 		const { item: fetch } = await app.run('block.add', {
 			type: 'fetch',
 			data: {
 				action: {
 					method: 'block.get',
 					parameters: {
-						type: "page"
-					}
-				}
-			},
-			expr: {
-				action: {
-					parameters: {
+						type: "page",
+						content: null
+					},
+					request: {
 						id: "[$query.id]"
 					}
 				}
 			}
-		}, 'test');
+		}, { site: 'test' });
 
-		const bget = await app.run('search.query', {
+		const bget = await app.run('apis.get', {
 			id: fetch.id,
 			query: {
 				id: page.id
 			}
-		}, 'test');
+		}, { site: 'test' });
 		assert.deepEqual(bget, page);
 	});
 
@@ -60,45 +57,42 @@ suite('query', function () {
 					end: '2018-06-10'
 				}
 			}
-		}, 'test');
+		}, { site: 'test' });
 		const { item: fetch } = await app.run('block.add', {
 			type: 'fetch',
 			data: {
 				action: {
 					method: 'block.find',
 					parameters: {
-						type: "event_date"
-					}
-				}
-			},
-			expr: {
-				action: {
-					parameters: {
+						type: "event_date",
+						content: true,
 						data: {
 							slot: {
-								start: "[$query.date]"
+								start: '2000-01-01'
 							}
 						}
+					},
+					request: {
+						'data.slot.start': '[$query.date]'
 					}
 				}
 			}
-		}, 'test');
+		}, { site: 'test' });
 
-		const bget = await app.run('search.query', {
+		const bget = await app.run('apis.get', {
 			id: fetch.id,
 			query: {
 				date: "2018-06"
 			}
-		}, 'test');
-		delete eventDate.content;
+		}, { site: 'test' });
 		assert.deepEqual(eventDate, bget.item);
 
-		const miss = await app.run('search.query', {
+		const miss = await app.run('apis.get', {
 			id: fetch.id,
 			query: {
 				date: "2018-05"
 			}
-		}, 'test');
+		}, { site: 'test' });
 		assert(miss.status, 404);
 	});
 
@@ -112,37 +106,29 @@ suite('query', function () {
 					end: '2022-06-10'
 				}
 			}
-		}, 'test');
+		}, { site: 'test' });
 		const { item: fetch } = await app.run('block.add', {
 			type: 'fetch',
 			data: {
 				action: {
 					method: 'block.find',
 					parameters: {
-						type: "event_date"
-					}
-				}
-			},
-			expr: {
-				action: {
-					parameters: {
-						data: {
-							slot: {
-								start: "[$query.date]"
-							}
-						}
+						type: "event_date",
+						content: true
+					},
+					request: {
+						'data.slot.start': '[$query.date]'
 					}
 				}
 			}
-		}, 'test');
+		}, { site: 'test' });
 
-		const bget = await app.run('search.query', {
+		const bget = await app.run('apis.get', {
 			id: fetch.id,
 			query: {
 				date: "2022-06"
 			}
-		}, 'test');
-		delete eventDate.content;
+		}, { site: 'test' });
 		assert.deepEqual(eventDate, bget.item);
 	});
 
@@ -155,45 +141,37 @@ suite('query', function () {
 					end: '2021-06-10'
 				}
 			}
-		}, 'test');
+		}, { site: 'test' });
 		const { item: fetch } = await app.run('block.add', {
 			type: 'fetch',
 			data: {
 				action: {
 					method: 'block.find',
 					parameters: {
-						type: "event_date"
-					}
-				}
-			},
-			expr: {
-				action: {
-					parameters: {
-						data: {
-							slot: {
-								start: "[$query.date]"
-							}
-						}
+						type: "event_date",
+						content: true
+					},
+					request: {
+						'data.slot.start': "[$query.date]"
 					}
 				}
 			}
-		}, 'test');
+		}, { site: 'test' });
 
-		const bget = await app.run('search.query', {
+		const bget = await app.run('apis.get', {
 			id: fetch.id,
 			query: {
 				date: ["2021-06-06", "2021-06-08"]
 			}
-		}, 'test');
-		delete eventDate.content;
+		}, { site: 'test' });
 		assert.deepEqual(eventDate, bget.item);
 
-		const miss = await app.run('search.query', {
+		const miss = await app.run('apis.get', {
 			id: fetch.id,
 			query: {
 				date: ["2021-05-06", "2021-05-08"]
 			}
-		}, 'test');
+		}, { site: 'test' });
 		assert(miss.status, 404);
 	});
 
@@ -206,7 +184,7 @@ suite('query', function () {
 					end: '2020-06-10'
 				}
 			}
-		}, 'test');
+		}, { site: 'test' });
 		const { item: fetch } = await app.run('block.add', {
 			type: 'fetch',
 			data: {
@@ -214,35 +192,29 @@ suite('query', function () {
 					method: 'block.find',
 					parameters: {
 						type: "event_date"
-					}
-				}
-			},
-			expr: {
-				action: {
-					parameters: {
-						data: {
-							slot: "[$query.date]"
-						}
+					},
+					request: {
+						'data.slot': '[$query.date]'
 					}
 				}
 			}
-		}, 'test');
+		}, { site: 'test' });
 
-		const bget = await app.run('search.query', {
+		const bget = await app.run('apis.get', {
 			id: fetch.id,
 			query: {
 				date: "2020-06-08"
 			}
-		}, 'test');
+		}, { site: 'test' });
 		delete eventDate.content;
 		assert.deepEqual(eventDate, bget.item);
 
-		const miss = await app.run('search.query', {
+		const miss = await app.run('apis.get', {
 			id: fetch.id,
 			query: {
 				date: "2020-05-06"
 			}
-		}, 'test');
+		}, { site: 'test' });
 		assert(miss.status, 404);
 	});
 
@@ -255,7 +227,7 @@ suite('query', function () {
 					end: '2019-06-10'
 				}
 			}
-		}, 'test');
+		}, { site: 'test' });
 		const { item: fetch } = await app.run('block.add', {
 			type: 'fetch',
 			data: {
@@ -263,35 +235,29 @@ suite('query', function () {
 					method: 'block.find',
 					parameters: {
 						type: "event_date"
-					}
-				}
-			},
-			expr: {
-				action: {
-					parameters: {
-						data: {
-							slot: "[$query.date]"
-						}
+					},
+					request: {
+						'data.slot': '[$query.date]'
 					}
 				}
 			}
-		}, 'test');
+		}, { site: 'test' });
 
-		const bget = await app.run('search.query', {
+		const bget = await app.run('apis.get', {
 			id: fetch.id,
 			query: {
 				date: ["2019-06-08", "2019-06-09"]
 			}
-		}, 'test');
+		}, { site: 'test' });
 		delete eventDate.content;
 		assert.deepEqual(eventDate, bget.item);
 
-		const miss = await app.run('search.query', {
+		const miss = await app.run('apis.get', {
 			id: fetch.id,
 			query: {
 				date: ["2019-05-08", "2019-05-09"]
 			}
-		}, 'test');
+		}, { site: 'test' });
 		assert(miss.status, 404);
 	});
 });
