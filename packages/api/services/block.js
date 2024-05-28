@@ -913,7 +913,7 @@ module.exports = class BlockService {
 		}
 	};
 
-	async fill({ site, run, trx }, { id, type, name, items = [] }) {
+	async fill({ site, run, trx }, { id, type = [], name, items = [] }) {
 		const block = await run('block.get', { id });
 
 		const contentIds = {};
@@ -940,30 +940,33 @@ module.exports = class BlockService {
 			.whereIn('block.id', oldIds).where('block.standalone', true);
 		// insert children and build content
 		items = items.filter(item => {
-			if (type.includes(item.type) == false) return false;
+			if (type.length && type.includes(item.type) == false) return false;
 			if (typeof item.content == "string") {
 				item.content = { "": item.content };
 			}
 			return true;
 		});
-		const newItems = await site.$relatedQuery('children', trx)
-			.insert(items).returning('*');
+
+		const newItems = items.length
+			? await site.$relatedQuery('children', trx).insert(items).returning('*')
+			: items;
 		// inserted items have id
 		block.content[name] = newItems
 			.map(item => `<div block-id="${item.id}"></div>`)
 			.join('');
-		await block.$relatedQuery('children', trx).relate(newItems);
+		block.children = newItems;
+		if (items.length) await block.$relatedQuery('children', trx).relate(newItems);
 		// safe with content update trigger
 		await block.$query(trx).patch({
 			type: block.type,
 			content: block.content
 		});
-		return block;
+		return { item: block };
 	}
 	static fill = {
 		title: 'Fill block content',
 		$action: 'write',
-		required: ['id'],
+		required: ['id', 'type'],
 		properties: {
 			id: {
 				title: 'id',
