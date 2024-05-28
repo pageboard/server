@@ -316,6 +316,7 @@ class Block extends Model {
 			}
 			async #uniqueProperty(context) {
 				const el = this.$schema();
+				if (!el) return;
 				if (el.unique) {
 					const { req: { trx, site } } = context.transaction;
 					const q = site.$relatedQuery('children', trx)
