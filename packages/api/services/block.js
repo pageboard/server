@@ -759,6 +759,8 @@ module.exports = class BlockService {
 		const block = await site.$relatedQuery('children', trx)
 			.insert(obj).returning(Block.columns);
 
+		block.content ??= {};
+
 		const newParents = parents.filter(item => item.id != null)
 			.map(item => [item.id, item.type]);
 
