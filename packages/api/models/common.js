@@ -488,8 +488,8 @@ function dateRange(val) {
 		if (range) [start, end] = range;
 		else return;
 	} else if (Array.isArray(val) && val.length == 2) {
-		let start = new Date(val[0]);
-		let end = new Date(val[1]);
+		start = new Date(val[0]);
+		end = new Date(val[1]);
 		let startTime = start.getTime();
 		let endTime = end.getTime();
 		if (Number.isNaN(startTime) && Number.isNaN(endTime)) return;
