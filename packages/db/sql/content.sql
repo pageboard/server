@@ -6,11 +6,6 @@ CREATE TYPE type_site_lang AS (
 	languages JSONB
 );
 
-CREATE TYPE type_content_translated AS (
-	content JSONB,
-	translated BOOLEAN
-);
-
 CREATE OR REPLACE FUNCTION block_site(
 	block_id INTEGER
 ) RETURNS type_site_lang
@@ -80,19 +75,20 @@ CREATE INDEX IF NOT EXISTS block_content_name_lang ON block (
 ) WHERE type='content';
 
 DROP FUNCTION IF EXISTS block_get_content(INTEGER, TEXT);
+DROP FUNCTION IF EXISTS block_get_content (INTEGER, TEXT, TEXT);
+DROP TYPE IF EXISTS type_content_translated;
 
 CREATE OR REPLACE FUNCTION block_get_content (
 	block_id INTEGER,
 	_lang TEXT,
 	_content TEXT DEFAULT NULL
-) RETURNS type_content_translated
+) RETURNS JSONB
 	LANGUAGE sql
 	PARALLEL SAFE
 	STABLE
 AS $BODY$
 SELECT
-	CASE WHEN count(contents.name) = 0 THEN '{}'::jsonb ELSE jsonb_object(array_agg(contents.name), array_agg(contents.text)) END AS content,
-	CASE WHEN count(contents.name) = 0 THEN true ELSE COALESCE(bool_and(contents.valid), false) END AS translated
+	CASE WHEN count(contents.name) = 0 THEN '{}'::jsonb ELSE jsonb_object(array_agg(contents.name), array_agg(contents.text)) END AS content
 FROM (
 	SELECT
 		block.data->>'name' AS name,
