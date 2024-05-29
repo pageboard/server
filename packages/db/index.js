@@ -226,7 +226,7 @@ exports.gc = function(All) {
 	if (jump) return;
 
 	return Promise.all([
-		All.block.gc(blockDays),
+		All.site.gc(blockDays),
 		All.href.gc(hrefDays)
 	]).then(function([blockResult, hrefResult]) {
 		if (blockResult.length) {
