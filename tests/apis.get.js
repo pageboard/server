@@ -113,11 +113,11 @@ suite('apis.get', function () {
 	test('request blocks with response', async function () {
 		const { item: b1 } = await app.run('block.add', {
 			type: 'layout',
-			data: { maxWidth: 7, height: 8 }
+			data: { maxWidth: 7, height: 8, horizontal: 'haround' }
 		}, { site: 'test' });
 		const { item: b2 } = await app.run('block.add', {
 			type: 'layout',
-			data: { maxWidth: 3, height: 2 }
+			data: { maxWidth: 3, height: 2, horizontal: 'haround' }
 		}, { site: 'test' });
 
 		const { item: fetch } = await app.run('block.add', {
@@ -126,7 +126,10 @@ suite('apis.get', function () {
 				action: {
 					method: 'block.search',
 					parameters: {
-						type: "layout"
+						type: "layout",
+						data: {
+							horizontal: 'haround'
+						}
 					},
 					response: {
 						items: "[items|select:h:data.height:w:data.maxWidth]"
@@ -150,11 +153,11 @@ suite('apis.get', function () {
 	test('request blocks with response as array', async function () {
 		const { item: b1 } = await app.run('block.add', {
 			type: 'layout',
-			data: { maxWidth: 7, height: 8 }
+			data: { maxWidth: 7, height: 8, horizontal: 'right' }
 		}, { site: 'test' });
 		const { item: b2 } = await app.run('block.add', {
 			type: 'layout',
-			data: { maxWidth: 3, height: 2 }
+			data: { maxWidth: 3, height: 2, horizontal: 'right' }
 		}, { site: 'test' });
 
 		const { item: fetch } = await app.run('block.add', {
@@ -163,7 +166,10 @@ suite('apis.get', function () {
 				action: {
 					method: 'block.search',
 					parameters: {
-						type: "layout"
+						type: "layout",
+						data: {
+							horizontal: 'right'
+						}
 					},
 					response: {
 						"*": "[items|select:h:data.height:w:data.maxWidth]"
