@@ -1,7 +1,7 @@
 const assert = require('node:assert');
 
 const Pageboard = require('..');
-const { merge, site } = require('./helpers/common');
+const { site, nullers } = require('./helpers/common');
 
 const app = new Pageboard();
 
@@ -9,7 +9,7 @@ suite('site', function () {
 
 	this.timeout(require('node:inspector').url() === undefined ? 10000 : 0);
 
-	before(async function () {
+	suiteSetup(async function () {
 		await app.init();
 	});
 
@@ -33,9 +33,7 @@ suite('site', function () {
 		}
 		const add = await app.run('site.add', site);
 		assert.ok(add.updated_at);
-		const obj = add.toJSON();
-		delete obj.updated_at;
-		assert.deepEqual(obj, site);
+		assert.deepEqual({ ...add.toJSON(), ...nullers }, { ...site, ...nullers });
 	});
 
 	test('site does exist', async function () {
@@ -46,13 +44,7 @@ suite('site', function () {
 		}
 		const get = await app.run('site.get', { id: site.id });
 		assert.equal(typeof get.updated_at, "string");
-		delete get.updated_at;
-		const nsite = merge({}, site, {
-			content: {},
-			expr: null,
-			lock: null
-		});
-		assert.deepEqual(get.toJSON(), nsite);
+		assert.deepEqual({ ...get.toJSON(), ...nullers }, { ...site, ...nullers });
 	});
 
 	test('save site', async function () {
@@ -63,21 +55,13 @@ suite('site', function () {
 		}
 		const save = await app.run('site.save', {
 			id: site.id,
-			data: { lang: 'en' }
+			data: { languages: ['en'] }
 		});
 		assert.ok(save.data.server);
 		delete save.data.server;
 		assert.equal(typeof save.updated_at, "string");
-		delete save.updated_at;
-		const nsite = merge({}, site, {
-			content: {},
-			expr: null,
-			lock: null,
-			data: {
-				lang: 'en'
-			}
-		});
-		assert.deepEqual(save.toJSON(), nsite);
+		site.data.languages = ['en'];
+		assert.deepEqual({ ...save.toJSON(), ...nullers }, { ...site, ...nullers });
 	});
 
 	test('delete site', async function () {
@@ -88,7 +72,9 @@ suite('site', function () {
 		}
 		const del = await app.run('site.del', { id: site.id });
 		assert.deepEqual(del, {
-			blocks: 1
+			site: 1,
+			blocks: 0,
+			hrefs: 0
 		});
 	});
 

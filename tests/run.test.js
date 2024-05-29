@@ -6,7 +6,7 @@ suite('run', function () {
 	this.timeout(require('node:inspector').url() === undefined ? 10000 : 0);
 
 	test('validate data', async function() {
-		const { command, data } = Pageboard.parse([
+		const { command, data, opts } = Pageboard.parse([
 			"--site=test",
 			"fake.command",
 			"str=myval",
@@ -17,7 +17,7 @@ suite('run', function () {
 		const app = new Pageboard();
 		await app.init();
 
-		const ret = await app.run(command, data);
+		const ret = await app.run(command, data, opts);
 		assert.deepEqual(ret, data);
 	});
 

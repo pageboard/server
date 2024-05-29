@@ -32,4 +32,11 @@ const site = {
 	standalone: true
 };
 
-Object.assign(exports, { cli, genId, merge, site });
+const nullers = {
+	expr: null,
+	lock: null,
+	created_at: null,
+	updated_at: null
+};
+
+Object.assign(exports, { cli, genId, merge, site, nullers });

@@ -7,7 +7,7 @@ const app = new Pageboard();
 suite('block', function () {
 	this.timeout(require('node:inspector').url() === undefined ? 20000 : 0);
 
-	setup(async function () {
+	suiteSetup(async function () {
 		await app.init();
 		try {
 			await app.run('site.add', site);
