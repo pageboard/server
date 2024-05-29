@@ -17,7 +17,6 @@ suite('apis.get', function () {
 		}
 	});
 
-
 	test('query block', async function () {
 		const { item: page } = await app.run('block.add', {
 			type: 'page',
@@ -65,7 +64,6 @@ suite('apis.get', function () {
 					method: 'block.find',
 					parameters: {
 						type: "event_date",
-						content: true,
 						data: {
 							slot: {
 								start: '2000-01-01'
@@ -114,7 +112,7 @@ suite('apis.get', function () {
 					method: 'block.find',
 					parameters: {
 						type: "event_date",
-						content: true
+						content: null
 					},
 					request: {
 						'data.slot.start': '[$query.date]'
@@ -149,7 +147,7 @@ suite('apis.get', function () {
 					method: 'block.find',
 					parameters: {
 						type: "event_date",
-						content: true
+						content: null
 					},
 					request: {
 						'data.slot.start': "[$query.date]"
@@ -206,7 +204,7 @@ suite('apis.get', function () {
 				date: "2020-06-08"
 			}
 		}, { site: 'test' });
-		delete eventDate.content;
+
 		assert.deepEqual(eventDate, bget.item);
 
 		const miss = await app.run('apis.get', {
@@ -249,7 +247,7 @@ suite('apis.get', function () {
 				date: ["2019-06-08", "2019-06-09"]
 			}
 		}, { site: 'test' });
-		delete eventDate.content;
+
 		assert.deepEqual(eventDate, bget.item);
 
 		const miss = await app.run('apis.get', {
