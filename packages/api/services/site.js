@@ -252,7 +252,7 @@ module.exports = class SiteService {
 	};
 
 	async empty(req, data) {
-		const site = await this.#QuerySite(req, data);
+		const site = await this.#QuerySite(req, data).throwIfNotFound();
 		const ret = {};
 		ret.blocks = await site.$relatedQuery('children', req.trx).delete();
 		ret.hrefs = await site.$relatedQuery('hrefs', req.trx).delete();
