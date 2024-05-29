@@ -14,6 +14,7 @@ module.exports = class SiteService {
 
 	#QuerySite({ trx, Block }, data) {
 		return Block.query(trx).alias('site').first()
+			.columns()
 			.where('site.type', 'site')
 			.where(q => {
 				if (data.id) {
@@ -132,7 +133,8 @@ module.exports = class SiteService {
 			data = {
 				...data,
 				type: 'site',
-				standalone: true
+				standalone: true,
+				content: {}
 			};
 			return Block.query(trx).insert(data);
 		}

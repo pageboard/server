@@ -29,7 +29,8 @@ const site = {
 		module: 'pageboard/client#master',
 		version: null
 	},
-	standalone: true
+	standalone: true,
+	content: {}
 };
 
 const nullers = {
