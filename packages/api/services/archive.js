@@ -94,8 +94,7 @@ module.exports = class ArchiveService {
 					.whereJsonText('block.data:url', 'IN', urls);
 				ids.push(...urlIds.map(item => item.id));
 			}
-			const { orphaned } = await site.$query(trx)
-				.select(fun('block_delete_orphans', ref('block._id')).as('orphaned'));
+			const { orphaned } = await req.run('site.gc', { days: 0 });
 			counts.orphaned = orphaned;
 
 			const nsite = site.toJSON();
