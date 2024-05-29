@@ -296,12 +296,12 @@ module.exports = class BlockService {
 		}
 
 		const obj = {
-			lang: language.lang,
 			count,
 			offset: data.offset,
 			limit: data.limit,
 			items: rows
 		};
+		if (language.lang) obj.lang = language.lang;
 		if (data.parent?.type?.length) obj.item = (await this.find(req, {
 			...data.parent,
 			lang: language.lang
