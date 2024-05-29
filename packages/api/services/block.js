@@ -995,28 +995,6 @@ module.exports = class BlockService {
 			}
 		}
 	};
-
-	async gc({ trx, raw, site, ref, fun }, { days }) {
-		const { count } = await site.$query(trx).select(
-			fun('block_delete_orphans', ref('block._id'), days)
-				.as('count')
-		);
-		return { count };
-	}
-	static gc = {
-		title: 'Garbage collect blocks',
-		$private: true,
-		$action: 'write',
-		properties: {
-			age: {
-				title: 'Age',
-				description: 'Number of days since last update',
-				type: 'integer',
-				minimum: 0,
-				default: 0
-			}
-		}
-	};
 };
 
 function whereSub(q, data, alias = 'block') {

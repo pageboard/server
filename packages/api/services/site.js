@@ -272,12 +272,26 @@ module.exports = class SiteService {
 		}
 	};
 
-	async gc({ trx, raw }) {
-		// deletes all blocks that belong to no site
-		const ret = await raw(`DELETE FROM block
-		WHERE block.type NOT IN ('site', 'user') AND NOT EXISTS (SELECT c._id FROM block c, relation r, block p
-		WHERE c._id = block._id AND r.child_id = c._id AND p._id = r.parent_id AND p.type IN ('site', 'user')
-		GROUP BY c._id HAVING count(*) >= 1)`);
-		return ret;
+	async gc({ trx, raw, site, ref, fun }, { days }) {
+		const { count } = await site.$query(trx).select(
+			fun('block_delete_orphans', ref('block._id'), days)
+				.as('count')
+		);
+		return { count };
 	}
+	static gc = {
+		title: 'Garbage collect blocks',
+		$private: true,
+		$global: false,
+		$action: 'write',
+		properties: {
+			age: {
+				title: 'Age',
+				description: 'Number of days since last update',
+				type: 'integer',
+				minimum: 0,
+				default: 0
+			}
+		}
+	};
 };
