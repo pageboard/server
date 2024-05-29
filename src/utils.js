@@ -67,15 +67,17 @@ exports.mergeExpressions = function (data, flatExpr, obj) {
 		}
 	});
 
-	for (const [key, val] of Object.entries(flatExpr)) {
+	const copy = structuredClone(obj);
+	const flats = Object.entries(flatExpr);
+	for (const [key, val] of flats) {
 		if (!val || typeof val != "string") continue;
-		const copy = structuredClone(obj);
 		copy.$default = dget(data, key);
 		miss = false;
 		const fused = md.merge(val, copy);
 		if (!miss && fused !== undefined) dset(data, key, fused);
 	}
-	return data;
+	if (flats.length == 1 && flats[0][0] == "*") return data["*"];
+	else return data;
 };
 
 // https://github.com/bgoscinski/dset
