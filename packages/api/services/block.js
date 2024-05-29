@@ -19,7 +19,7 @@ module.exports = class BlockService {
 		const q = req.site.$relatedQuery('children', req.trx)
 			.columns({
 				lang,
-				content: true
+				content: null
 			})
 			.where('block.id', data.id);
 		if (data.type) {
@@ -240,10 +240,10 @@ module.exports = class BlockService {
 				).as('count')
 			);
 		}
-		const hasComplexContent = data.content?.length && data.type.some(type => {
+		const hasComplexContent = (data.content == null || data.content.length) && data.type.some(type => {
 			const { contents = [] } = site.$schema(type);
 			return contents.some(
-				({ id, nodes }) => data.content.includes(id) && nodes != "text*"
+				({ id, nodes }) => (data.content == null || data.content.includes(id)) && nodes != "text*"
 			);
 		});
 

@@ -53,7 +53,7 @@ module.exports = class PageService {
 		return site.$relatedQuery('children', trx)
 			.columns({
 				lang,
-				content: true
+				content: null
 			})
 			.first()
 			// eager load children (in which there are standalones)
@@ -63,12 +63,12 @@ module.exports = class PageService {
 				children(standalonesFilter) as standalones .children(childrenFilter)
 			]`).modifiers({
 				childrenFilter(q) {
-					q.columns({ lang, content: true })
+					q.columns({ lang, content: null })
 						.where('block.standalone', false)
 						.whereNot('block.type', 'content');
 				},
 				standalonesFilter(q) {
-					q.columns({ lang, content: true })
+					q.columns({ lang, content: null })
 						.where('block.standalone', true)
 						.whereNot('block.type', 'content');
 				}
