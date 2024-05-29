@@ -99,7 +99,7 @@ class Block extends Model {
 			'$lock', 'parents', 'upgrade', 'csp', 'templates'
 		];
 		const {
-			standalone, properties, required = [], contents, name
+			standalone, properties, required = [], contents, name, unique
 		} = el;
 		if (!name) {
 			throw new Error("Missing element name: " + JSON.stringify(el));
@@ -116,7 +116,8 @@ class Block extends Model {
 		const dataSchema = properties ? {
 			type: 'object',
 			properties,
-			required
+			required,
+			unique
 		} : {
 			type: 'null'
 		};
@@ -316,22 +317,30 @@ class Block extends Model {
 			}
 			async #uniqueProperty(context) {
 				const el = this.$schema();
-				if (!el) return;
-				if (el.unique) {
-					const { req: { trx, site } } = context.transaction;
-					const q = site.$relatedQuery('children', trx)
-						.where('type', this.type);
-					for (const field of el.unique) {
-						const val = dget(this, 'data.' + field);
-						if (val == null) {
-							throw new HttpError.BadRequest(`Element requires unique ${field} but value is null`);
-						}
-						q.where(Model.ref('data:' + field), val);
+				const { unique } = el?.properties?.data ?? {};
+				if (!unique || !this.type) return;
+				const { req: { trx, site } } = context.transaction;
+				const q = site.$relatedQuery('children', trx)
+					.where('block.type', this.type);
+				if (this.id) q.whereNot('block.id', this.id);
+				let hasCheck = false;
+				for (const field of unique) {
+					const key = `data.${field}`;
+					const val = dget(this, key);
+					if (val == null) {
+						const parent = dget(el.properties, key.split('.').join('.properties.'));
+						if (parent?.nullable) continue;
+						throw new HttpError.BadRequest(
+							`Element requires unique ${key} but value is null`
+						);
 					}
-					const count = await q.resultSize();
-					if (count > 0) {
-						throw new HttpError.BadRequest(`Element requires unique fields ${el.unique} but there are already ${count} rows`);
-					}
+					hasCheck = true;
+					q.whereJsonText('data:' + field, val);
+				}
+				if (!hasCheck) return;
+				const count = await q.resultSize();
+				if (count > 0) {
+					throw new HttpError.BadRequest(`Element requires unique fields ${unique} but there are already ${count} rows`);
 				}
 			}
 			async $beforeInsert(context) {
