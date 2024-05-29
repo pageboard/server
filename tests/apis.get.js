@@ -17,7 +17,7 @@ suite('apis.get', function () {
 		}
 	});
 
-	test('query block', async function () {
+	test('request block', async function () {
 		const { item: page } = await app.run('block.add', {
 			type: 'page',
 			data: { url: '/test' }
@@ -47,7 +47,142 @@ suite('apis.get', function () {
 		assert.deepEqual(bget, page);
 	});
 
-	test('query date by partial date', async function () {
+	test('request block with response', async function () {
+		const { item: page } = await app.run('block.add', {
+			type: 'page',
+			data: { url: '/test' }
+		}, { site: 'test' });
+		const { item: fetch } = await app.run('block.add', {
+			type: 'fetch',
+			data: {
+				action: {
+					method: 'block.get',
+					parameters: {
+						id: page.id,
+						type: "page",
+						content: null
+					},
+					response: {
+						id: "[id]",
+						'data.url': "[data.url]"
+					}
+				}
+			}
+		}, { site: 'test' });
+
+		const bget = await app.run('apis.get', {
+			id: fetch.id,
+			query: {
+				id: page.id
+			}
+		}, { site: 'test' });
+		assert.deepEqual(bget, { id: page.id, data: { url: page.data.url } });
+	});
+
+	test('request blocks', async function () {
+		const { item: b1 } = await app.run('block.add', {
+			type: 'layout',
+			data: { maxWidth: 7, height: 8 }
+		}, { site: 'test' });
+		const { item: b2 } = await app.run('block.add', {
+			type: 'layout',
+			data: { maxWidth: 3, height: 2 }
+		}, { site: 'test' });
+		const { item: fetch } = await app.run('block.add', {
+			type: 'fetch',
+			data: {
+				action: {
+					method: 'block.search',
+					parameters: {
+						type: "layout"
+					}
+				}
+			}
+		}, { site: 'test' });
+
+		const bget = await app.run('apis.get', {
+			id: fetch.id
+		}, { site: 'test' });
+		bget.items = bget.items.map(item => item.toJSON());
+		assert.deepEqual(bget, {
+			count: 2, limit: 10, offset: 0, hrefs: {},
+			items: [b1.toJSON(), b2.toJSON()]
+		});
+	});
+
+	test('request blocks with response', async function () {
+		const { item: b1 } = await app.run('block.add', {
+			type: 'layout',
+			data: { maxWidth: 7, height: 8 }
+		}, { site: 'test' });
+		const { item: b2 } = await app.run('block.add', {
+			type: 'layout',
+			data: { maxWidth: 3, height: 2 }
+		}, { site: 'test' });
+
+		const { item: fetch } = await app.run('block.add', {
+			type: 'fetch',
+			data: {
+				action: {
+					method: 'block.search',
+					parameters: {
+						type: "layout"
+					},
+					response: {
+						items: "[items|select:h:data.height:w:data.maxWidth]"
+					}
+				}
+			}
+		}, { site: 'test' });
+
+		const bget = await app.run('apis.get', {
+			id: fetch.id
+		}, { site: 'test' });
+		assert.deepEqual(bget, {
+			items: [{
+				w: b1.data.maxWidth, h: b1.data.height
+			}, {
+				w: b2.data.maxWidth, h: b2.data.height
+			}]
+		});
+	});
+
+	test('request blocks with response as array', async function () {
+		const { item: b1 } = await app.run('block.add', {
+			type: 'layout',
+			data: { maxWidth: 7, height: 8 }
+		}, { site: 'test' });
+		const { item: b2 } = await app.run('block.add', {
+			type: 'layout',
+			data: { maxWidth: 3, height: 2 }
+		}, { site: 'test' });
+
+		const { item: fetch } = await app.run('block.add', {
+			type: 'fetch',
+			data: {
+				action: {
+					method: 'block.search',
+					parameters: {
+						type: "layout"
+					},
+					response: {
+						"*": "[items|select:h:data.height:w:data.maxWidth]"
+					}
+				}
+			}
+		}, { site: 'test' });
+
+		const bget = await app.run('apis.get', {
+			id: fetch.id
+		}, { site: 'test' });
+		assert.deepEqual(bget, [{
+			w: b1.data.maxWidth, h: b1.data.height
+		}, {
+			w: b2.data.maxWidth, h: b2.data.height
+		}]);
+	});
+
+	test('request date by partial date', async function () {
 		const { item: eventDate } = await app.run('block.add', {
 			type: 'event_date',
 			data: {
@@ -95,7 +230,7 @@ suite('apis.get', function () {
 	});
 
 
-	test('query slot by partial date', async function () {
+	test('request slot by partial date', async function () {
 		const { item: eventDate } = await app.run('block.add', {
 			type: 'event_date',
 			data: {
@@ -130,7 +265,7 @@ suite('apis.get', function () {
 		assert.deepEqual(eventDate, bget.item);
 	});
 
-	test('query date by date range', async function () {
+	test('request date by date range', async function () {
 		const { item: eventDate } = await app.run('block.add', {
 			type: 'event_date',
 			data: {
@@ -173,7 +308,7 @@ suite('apis.get', function () {
 		assert(miss.status, 404);
 	});
 
-	test('query date slot by date', async function () {
+	test('request date slot by date', async function () {
 		const { item: eventDate } = await app.run('block.add', {
 			type: 'event_date',
 			data: {
@@ -216,7 +351,7 @@ suite('apis.get', function () {
 		assert(miss.status, 404);
 	});
 
-	test('query date slot by date range', async function () {
+	test('request date slot by date range', async function () {
 		const { item: eventDate } = await app.run('block.add', {
 			type: 'event_date',
 			data: {

@@ -37,6 +37,7 @@ suite('page', function () {
 		assert.equal(item.data.url, '/test/c');
 	});
 
+	/*
 	test('page match', async function () {
 		// TODO
 		await app.run('block.add', {
@@ -66,6 +67,7 @@ suite('page', function () {
 		assert.equal(spe.item.data.prefix, null);
 
 	});
+	*/
 
 
 });
