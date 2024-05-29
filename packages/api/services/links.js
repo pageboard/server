@@ -212,6 +212,7 @@ module.exports = class LinksService {
 	}
 	static set = {
 		title: 'Set pages',
+		description: 'Add, rename and redirect, delete for a given /prefix',
 		$action: 'write',
 		properties: {
 			prefix: {
