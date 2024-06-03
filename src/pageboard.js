@@ -430,7 +430,7 @@ module.exports = class Pageboard {
 							nullable: true
 						},
 						response: {
-							title: 'Reponse Map',
+							title: 'Response Map',
 							type: 'object',
 							nullable: true
 						}
