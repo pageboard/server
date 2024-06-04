@@ -22,7 +22,6 @@ const cli = require.lazy('./cli');
 const Domains = require.lazy('./domains');
 const { mergeRecursive, init: initUtils, unflatten } = require('./utils');
 const Installer = require('./installer');
-const ResponseFilter = require('./filter');
 
 // exceptional but so natural
 global.HttpError = require('http-errors');
@@ -184,8 +183,6 @@ module.exports = class Pageboard {
 
 		const server = this.#server = this.#createServer();
 		this.#installer = new Installer(this, opts.installer);
-
-		this.responseFilter = new ResponseFilter();
 
 		await initUtils();
 
@@ -351,8 +348,6 @@ module.exports = class Pageboard {
 		if (obj.location) {
 			res.redirect(obj.location);
 		}
-
-		obj = this.responseFilter.run(req, obj);
 		if (obj.item && !obj.item.type) {
 			// 401 Unauthorized: missing or bad authentication
 			// 403 Forbidden: authenticated but not authorized
@@ -474,8 +469,9 @@ module.exports = class Pageboard {
 				}
 				this.servicesDefinitions[method] = schema;
 			}
-			if (!services[name] && defined) {
-				services[name] = service;
+			if (defined) {
+				this.api.registerFilter(service);
+				if (!services[name]) services[name] = service;
 			}
 		}
 	}

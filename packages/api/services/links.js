@@ -23,17 +23,16 @@ module.exports = class LinksService {
 				robot: true,
 				type: ['page']
 			});
-			return app.responseFilter.run(req, obj).items.map(page => {
+			return obj.items.map(page => {
 				return new URL(page.data.url, req.site.$url).href;
 			}).join('\n');
 		});
 
 		app.get('/.well-known/sitemap.xml', async req => {
-			const obj = await req.run('page.list', {
+			const { items } = await req.run('page.list', {
 				robot: true,
 				type: ['page']
 			});
-			const { items } = app.responseFilter.run(req, obj);
 			const { site } = req;
 			const { languages = [] } = site.data;
 

@@ -10,6 +10,7 @@ const Href = require('./models/href');
 const Block = require('./models/block');
 
 const { mergeRecursive } = require('../../src/utils');
+const ResponseFilter = require('./lib/filter');
 
 module.exports = class ApiModule {
 	static name = 'api';
@@ -21,6 +22,7 @@ module.exports = class ApiModule {
 
 	#packager;
 	#validation;
+	#responseFilter = new ResponseFilter();
 
 	constructor(app) {
 		this.app = app;
@@ -33,6 +35,10 @@ module.exports = class ApiModule {
 		Block.createValidator = function() {
 			return self.validation.createValidator(this);
 		};
+	}
+
+	registerFilter(service) {
+		this.#responseFilter.register(service);
 	}
 
 	get validation() {
@@ -68,7 +74,6 @@ module.exports = class ApiModule {
 	}
 
 	apiRoutes(app) {
-		app.responseFilter.register(this);
 		// api depends on site files, that tag is invalidated in cache install
 		app.get("/.well-known/api.json", req => ({
 			location: req.site.$pkg.bundles.get('services').scripts[0]
@@ -173,7 +178,11 @@ module.exports = class ApiModule {
 			if (!hadTrx && req.trx && !req.trx.isCompleted()) {
 				await req.trx.commit();
 			}
-			return obj;
+			if (!schema.$private) {
+				return this.#responseFilter.run(req, obj);
+			} else {
+				return obj;
+			}
 		} catch(err) {
 			Log.api("error %s:\n%O", method, err);
 			if (!hadTrx && !req.trx.isCompleted()) {
@@ -194,7 +203,7 @@ module.exports = class ApiModule {
 		}
 	}
 
-	filter(req, schema, block) {
+	$filter(req, schema, block) {
 		if (schema.upgrade) for (const [src, dst] of Object.entries(schema.upgrade)) {
 			const val = jsonPath.get(block, src);
 			if (val !== undefined) {

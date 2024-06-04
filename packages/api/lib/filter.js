@@ -17,7 +17,7 @@ module.exports = class ResponseFilter {
 	}
 
 	register(inst) {
-		this.#filters.push(inst);
+		if (inst.$filter) this.#filters.push(inst);
 	}
 
 	#recurse(req, item) {
@@ -49,7 +49,7 @@ module.exports = class ResponseFilter {
 		// old types might not have schema
 		const schema = req.site.$schema(item.type) || {};
 		for (const inst of this.#filters) {
-			item = inst.filter(req, schema, item) ?? item;
+			item = inst.$filter(req, schema, item) ?? item;
 		}
 		return item;
 	}

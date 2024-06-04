@@ -33,7 +33,6 @@ module.exports = class AuthModule {
 		);
 		Object.assign(this.opts, keys);
 		this.#lock = Upcache.lock(this.opts);
-		app.responseFilter.register(this);
 		app.use((req, res, next) => {
 			req.locks = [];
 			onHeaders(res, () => {
@@ -194,7 +193,7 @@ module.exports = class AuthModule {
 		return grants;
 	}
 
-	filter(req, schema, item) {
+	$filter(req, schema, item) {
 		let $lock = schema.$lock || {};
 		if (typeof $lock == "boolean" || typeof $lock == "string" || Array.isArray($lock)) $lock = { '*': $lock };
 		const lock = item.lock || [];
