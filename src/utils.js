@@ -8,7 +8,7 @@ let sharedMd;
 
 exports.init = async () => {
 	const {
-		Matchdom, TextPlugin, JsonPlugin, StringPlugin, ArrayPlugin, OpsPlugin, NumPlugin, DatePlugin, RepeatPlugin
+		Matchdom, TextPlugin, JsonPlugin, StringPlugin, ArrayPlugin, OpsPlugin, NumPlugin, DatePlugin, RepeatPlugin, UrlPlugin
 	} = await import('matchdom');
 	sharedMd = new Matchdom(
 		TextPlugin,
@@ -20,16 +20,37 @@ exports.init = async () => {
 		DatePlugin,
 		RepeatPlugin,
 		{
+			debug: true,
+			hooks: {
+				before: {
+					get(ctx, val, [path]) {
+						if (path[0]?.startsWith('$') && ctx.$data == null) {
+							ctx.$data = ctx.data;
+							ctx.data = ctx.scope;
+						}
+					}
+				},
+				after: {
+					get(ctx) {
+						if (ctx.$data != null) {
+							ctx.data = ctx.$data;
+							ctx.$data = null;
+						}
+					}
+				},
+				afterAll(ctx, val) {
+					if (val === undefined) {
+						throw new HttpError.BadRequest("Missing parameters: " + ctx.expr);
+					}
+					return val;
+				}
+			},
 			formats: {
 				as: {
 					slug: (ctx, str) => getSlug(str, { custom: { "_": "-" } }),
 					query: (ctx, obj) => {
 						if (!obj) return obj;
-						const q = new URLSearchParams();
-						for (const [key, val] of Object.entries(obj)) {
-							if (Array.isArray(val)) for (const item of val) q.append(key, item);
-							else if (val !== null) q.append(key, val);
-						}
+						const q = UrlPlugin.types.query(ctx, obj);
 						const ser = q.toString();
 						return ser ? `?${ser}` : '';
 					}
@@ -42,10 +63,6 @@ exports.init = async () => {
 exports.dget = dget;
 exports.dset = dset;
 
-exports.fuse = (obj, data, scope) => {
-	return sharedMd.merge(obj, data, scope);
-};
-
 exports.mergeRecursive = require.lazy('lodash.merge');
 
 exports.unflatten = function(query) {
@@ -56,27 +73,11 @@ exports.flatten = function (obj) {
 	return flattie(obj);
 };
 
-exports.mergeExpressions = function (data, flats, obj) {
+exports.mergeExpressions = function (data, flats, scope) {
 	if (!flats) return data;
-	// only actually fused expressions in expr go into data
-	let miss = false;
-	const md = sharedMd.copy().extend({
-		hooks: {
-			afterAll(ctx, val) {
-				if (val === undefined) miss = true;
-				return val;
-			}
-		}
-	});
 	const template = nestie(flats);
 	if (!template) return data;
-
-	const ret = md.merge(template, data, obj);
-	if (miss) {
-		return data;
-	} else {
-		return ret;
-	}
+	return sharedMd.merge(template, data, scope) || {};
 };
 
 // https://github.com/bgoscinski/dset

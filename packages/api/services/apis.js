@@ -1,4 +1,4 @@
-const { mergeExpressions, unflatten } = require('../../../src/utils');
+const { mergeExpressions, unflatten, mergeRecursive } = require('../../../src/utils');
 
 module.exports = class ApiService {
 	static name = 'apis';
@@ -78,7 +78,7 @@ module.exports = class ApiService {
 
 		const params = mergeExpressions(
 			action.parameters ?? {},
-			action.request,
+			mergeRecursive({}, action.parameters, action.request),
 			scope
 		);
 
@@ -152,7 +152,7 @@ module.exports = class ApiService {
 
 		const params = mergeExpressions(
 			action.parameters ?? {},
-			action.request,
+			mergeRecursive({}, action.parameters, action.request),
 			scope
 		);
 
