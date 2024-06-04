@@ -14,7 +14,7 @@ module.exports = class ArchiveService {
 
 	apiRoutes(app, server) {
 		app.get('/@api/archive', 'archive.export');
-		app.put('/@api/archive', 'archive.import');
+		app.post('/@api/archive', 'archive.import');
 	}
 
 	async bundle(req, data) {

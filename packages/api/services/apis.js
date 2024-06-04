@@ -159,7 +159,7 @@ module.exports = class ApiService {
 		const obj = await run(method, params);
 
 		if (Object.isEmpty(action.response)) return obj;
-		else return mergeExpressions({}, action.response, obj);
+		else return mergeExpressions(obj, action.response, scope);
 	}
 	static get = {
 		title: 'API Get',

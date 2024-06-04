@@ -157,10 +157,6 @@ module.exports = class Pageboard {
 		return this.api.run(req, command, data);
 	}
 
-	async send(req, data) {
-		return this.api.send(req, data);
-	}
-
 	#loadPlugin(path, sub) {
 		try {
 			const Mod = require(path);
@@ -277,42 +273,7 @@ module.exports = class Pageboard {
 					handler = req => req.run(apiStr, unflatten(req.query));
 				}
 				const data = await handler(req);
-				this.api.send(req, data);
-			}
-		);
-	}
-
-	delete(route, handler) {
-		this.#server.delete(
-			route,
-			async req => {
-				if (typeof handler == "string") {
-					const apiStr = handler;
-					handler = req => req.run(apiStr, unflatten(req.query));
-				}
-				const data = await handler(req);
-				this.api.send(req, data);
-			}
-		);
-	}
-
-	put(route, handler) {
-		this.#server.put(
-			route,
-			bodyParser.json({
-				limit: '1000kb',
-				verify(req, res, buf) {
-					req.buffer = buf;
-				}
-			}),
-			bodyParser.urlencoded({ extended: false, limit: '100kb' }),
-			async req => {
-				if (typeof handler == "string") {
-					const apiStr = handler;
-					handler = req => req.run(apiStr, unflatten(req.body));
-				}
-				const data = await handler(req);
-				this.api.send(req, data);
+				this.send(req, data);
 			}
 		);
 	}
@@ -333,9 +294,75 @@ module.exports = class Pageboard {
 					handler = req => req.run(apiStr, unflatten(req.body));
 				}
 				const data = await handler(req);
-				this.api.send(req, data);
+				this.send(req, data);
 			}
 		);
+	}
+
+	send(req, obj) {
+		const { res } = req;
+		if (obj == null) {
+			res.sendStatus(204);
+			return;
+		}
+		if (typeof obj == "string") {
+			if (!res.get('Content-Type')) res.type('text/plain');
+			res.send(obj);
+			return;
+		}
+		if (typeof obj != "object") {
+			// eslint-disable-next-line no-console
+			console.trace("app.send expects an object, got", obj);
+			obj = {};
+		}
+		if (obj.cookies) {
+			const cookieParams = {
+				httpOnly: true,
+				sameSite: true,
+				secure: req.site.$url.protocol == "https:",
+				path: '/'
+			};
+			for (const [key, cookie] of Object.entries(obj.cookies)) {
+				const val = cookie.value;
+				const maxAge = cookie.maxAge;
+
+				if (val == null || maxAge == 0) {
+					res.clearCookie(key, cookieParams);
+				} else res.cookie(key, val, {
+					...cookieParams,
+					maxAge: maxAge
+				});
+			}
+			delete obj.cookies;
+		}
+		if (req.user.grants.length) obj.grants = Object.fromEntries(
+			req.user.grants.map(grant => [grant, true])
+		);
+		if (obj.status) {
+			const code = Number.parseInt(obj.status);
+			if (code < 200 || code >= 600 || Number.isNaN(code)) {
+				console.error("Unknown error code", obj.status);
+				res.status(500);
+			} else {
+				res.status(code);
+			}
+			delete obj.status;
+		}
+		if (obj.location) {
+			res.redirect(obj.location);
+		}
+
+		obj = this.responseFilter.run(req, obj);
+		if (obj.item && !obj.item.type) {
+			// 401 Unauthorized: missing or bad authentication
+			// 403 Forbidden: authenticated but not authorized
+			res.status(req.user.id ? 403 : 401);
+		}
+		if (req.granted) res.set('X-Granted', 1);
+
+		if (req.types.size > 0) obj.types = Array.from(req.types);
+
+		res.json(obj);
 	}
 
 	async install(block) {

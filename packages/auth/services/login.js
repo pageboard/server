@@ -12,32 +12,9 @@ module.exports = class LoginModule {
 		};
 	}
 	apiRoutes(app, server) {
-		server.post("/@api/login/send", async (req, res) => {
-			const data = await req.run('login.send', req.body);
-			res.return(data);
-		});
-
-		server.post("/@api/login/grant", async (req, res) => {
-			const data = await req.run('login.grant', req.body);
-			res.return(data);
-		});
-
-		server.post("/@api/login/out", async (req, res) => {
-			const data = await req.run('login.clear', req.query);
-			res.return(data);
-		});
-
-		server.get("/@api/login", async (req, res) => {
-			// deprecated
-			const data = await req.run('login.grant', req.query);
-			res.return(data);
-		});
-
-		server.get("/@api/logout", async (req, res) => {
-			// deprecated
-			const data = await req.run('login.clear', req.query);
-			res.return(data);
-		});
+		app.post("/@api/login/send", 'login.send');
+		app.post("/@api/login/grant", 'login.grant');
+		app.post("/@api/login/out", 'login.clear');
 	}
 
 	async priv({ trx }, user) {

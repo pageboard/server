@@ -213,10 +213,6 @@ module.exports = class Domains {
 				}
 			});
 		};
-
-		res.return = data => {
-			app.send(req, data);
-		};
 	}
 
 	async #initSite(host, req, res) {

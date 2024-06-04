@@ -46,7 +46,7 @@ module.exports = class PageService {
 			return obj;
 		});
 
-		app.put('/@api/page', 'page.write');
+		app.post('/@api/page', 'page.write');
 	}
 
 	#QueryPage({ site, trx, ref, val, fun }, { url, lang, type }) {

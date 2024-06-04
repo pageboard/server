@@ -8,7 +8,7 @@ module.exports = class SettingsService {
 			});
 		});
 
-		app.put('/@api/settings', 'settings.save');
+		app.post('/@api/settings', 'settings.save');
 	}
 	async get(req, { id }) {
 		return req.run('block.find', {
