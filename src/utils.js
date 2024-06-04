@@ -8,10 +8,12 @@ let sharedMd;
 
 exports.init = async () => {
 	const {
-		Matchdom, TextPlugin, ArrayPlugin, OpsPlugin, NumPlugin, DatePlugin, RepeatPlugin
+		Matchdom, TextPlugin, JsonPlugin, StringPlugin, ArrayPlugin, OpsPlugin, NumPlugin, DatePlugin, RepeatPlugin
 	} = await import('matchdom');
 	sharedMd = new Matchdom(
 		TextPlugin,
+		StringPlugin,
+		JsonPlugin,
 		ArrayPlugin,
 		OpsPlugin,
 		NumPlugin,
@@ -54,8 +56,8 @@ exports.flatten = function (obj) {
 	return flattie(obj);
 };
 
-exports.mergeExpressions = function (data, flatExpr, obj) {
-	if (!flatExpr) return data;
+exports.mergeExpressions = function (data, flats, obj) {
+	if (!flats) return data;
 	// only actually fused expressions in expr go into data
 	let miss = false;
 	const md = sharedMd.copy().extend({
@@ -66,18 +68,15 @@ exports.mergeExpressions = function (data, flatExpr, obj) {
 			}
 		}
 	});
+	const template = nestie(flats);
+	if (!template) return data;
 
-	const copy = structuredClone(obj);
-	const flats = Object.entries(flatExpr);
-	for (const [key, val] of flats) {
-		if (!val || typeof val != "string") continue;
-		copy.$default = dget(data, key);
-		miss = false;
-		const fused = md.merge(val, copy);
-		if (!miss && fused !== undefined) dset(data, key, fused);
+	const ret = md.merge(template, data, obj);
+	if (miss) {
+		return data;
+	} else {
+		return ret;
 	}
-	if (flats.length == 1 && flats[0][0] == "*") return data["*"];
-	else return data;
 };
 
 // https://github.com/bgoscinski/dset
