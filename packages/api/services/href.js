@@ -13,7 +13,6 @@ module.exports = class HrefService {
 		app.get("/@api/hrefs", 'href.search');
 		app.get("/@api/href", 'href.find');
 		app.post("/@api/href", 'href.add');
-		app.delete("/@api/href", 'href.del');
 	}
 
 	get({ Href, site, trx }, data) {
