@@ -6,7 +6,7 @@ module.exports = class ApiService {
 
 	apiRoutes(app) {
 		// these routes are setup after all others
-		// eventually all routes will be dynamic
+		// eventually all routes will be declared as actions ?
 		app.get(["/@api/:id", "/@api/query/:id"], req => {
 			return req.run('apis.get', {
 				id: req.params.id,
