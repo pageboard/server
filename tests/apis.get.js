@@ -172,7 +172,8 @@ suite('apis.get', function () {
 						}
 					},
 					response: {
-						"*": "[items|select:h:data.height:w:data.maxWidth]"
+						w: "[items|at:**|repeat:item|.data.maxWidth]",
+						h: "[item.data.height]"
 					}
 				}
 			}
