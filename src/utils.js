@@ -18,6 +18,7 @@ exports.init = async () => {
 		OpsPlugin,
 		NumPlugin,
 		DatePlugin,
+		UrlPlugin,
 		RepeatPlugin,
 		{
 			debug: true,
@@ -37,23 +38,11 @@ exports.init = async () => {
 							ctx.$data = null;
 						}
 					}
-				},
-				afterAll(ctx, val) {
-					if (val === undefined) {
-						throw new HttpError.BadRequest("Missing parameters: " + ctx.expr);
-					}
-					return val;
 				}
 			},
 			formats: {
 				as: {
-					slug: (ctx, str) => getSlug(str, { custom: { "_": "-" } }),
-					query: (ctx, obj) => {
-						if (!obj) return obj;
-						const q = UrlPlugin.types.query(ctx, obj);
-						const ser = q.toString();
-						return ser ? `?${ser}` : '';
-					}
+					slug: (ctx, str) => getSlug(str, { custom: { "_": "-" } })
 				}
 			}
 		}
