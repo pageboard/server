@@ -50,7 +50,7 @@
     "import-lazy": "^4.0.0",
     "lodash.merge": "^4.6.2",
     "lodash.union": "^4.6.0",
-    "matchdom": "^15.0.2",
+    "matchdom": "^15.1.1",
     "morgan": "^1.10.0",
     "nestie": "^1.0.3",
     "outdent": "^0.8.0",
