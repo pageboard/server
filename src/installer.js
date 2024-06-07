@@ -102,7 +102,7 @@ module.exports = class Installer {
 				'--ignore-scripts',
 				'--no-optional',
 				'--prod',
-				'--reporter=silent',
+				// '--reporter=silent', // https://github.com/pnpm/pnpm/issues/2738
 				module
 			];
 		} else {
