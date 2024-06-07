@@ -103,6 +103,7 @@ module.exports = class Installer {
 				'--no-optional',
 				'--prod',
 				// '--reporter=silent', // https://github.com/pnpm/pnpm/issues/2738
+				'--reporter=append-only',
 				module
 			];
 		} else {
