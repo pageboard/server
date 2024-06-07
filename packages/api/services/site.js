@@ -12,6 +12,10 @@ module.exports = class SiteService {
 		return import("../lib/site.mjs");
 	}
 
+	apiRoutes(app, server) {
+		app.post("/@api/site", 'site.update');
+	}
+
 	#QuerySite({ trx, Block }, data) {
 		return Block.query(trx).alias('site').first()
 			.columns()
