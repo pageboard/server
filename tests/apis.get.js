@@ -110,7 +110,39 @@ suite('apis.get', function () {
 		});
 	});
 
-	test('request blocks with response', async function () {
+	test('request blocks with request', async function () {
+		const { item: b1 } = await app.run('block.add', {
+			type: 'layout',
+			data: { maxWidth: 7, height: 8, horizontal: 'haround' }
+		}, { site: 'test' });
+		const { item: b2 } = await app.run('block.add', {
+			type: 'layout',
+			data: { maxWidth: 3, height: 2, horizontal: 'haround' }
+		}, { site: 'test' });
+
+		const { item: fetch } = await app.run('block.add', {
+			type: 'fetch',
+			data: {
+				action: {
+					method: 'block.search',
+					parameters: {
+						type: "layout"
+					},
+					request: {
+						'data.horizontal': "[$query.h]"
+					}
+				}
+			}
+		}, { site: 'test' });
+
+		const bget = await app.run('apis.get', {
+			id: fetch.id,
+			query: { h: 'haround' }
+		}, { site: 'test' });
+		assert.deepEqual(bget.items, [b1, b2]);
+	});
+
+	test('request blocks with optional request parameter', async function () {
 		const { item: b1 } = await app.run('block.add', {
 			type: 'layout',
 			data: { maxWidth: 7, height: 8, horizontal: 'haround' }
@@ -127,8 +159,40 @@ suite('apis.get', function () {
 					method: 'block.search',
 					parameters: {
 						type: "layout",
+						id: [b1.id, b2.id]
+					},
+					request: {
+						'data.horizontal': "[$query.h?]"
+					}
+				}
+			}
+		}, { site: 'test' });
+
+		const bget = await app.run('apis.get', {
+			id: fetch.id
+		}, { site: 'test' });
+		assert.deepEqual(bget.items, [b1, b2]);
+	});
+
+	test('request blocks with response', async function () {
+		const { item: b1 } = await app.run('block.add', {
+			type: 'layout',
+			data: { maxWidth: 7, height: 8, horizontal: 'hcenter' }
+		}, { site: 'test' });
+		const { item: b2 } = await app.run('block.add', {
+			type: 'layout',
+			data: { maxWidth: 3, height: 2, horizontal: 'hcenter' }
+		}, { site: 'test' });
+
+		const { item: fetch } = await app.run('block.add', {
+			type: 'fetch',
+			data: {
+				action: {
+					method: 'block.search',
+					parameters: {
+						type: "layout",
 						data: {
-							horizontal: 'haround'
+							horizontal: 'hcenter'
 						}
 					},
 					response: {
