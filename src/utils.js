@@ -40,7 +40,7 @@ exports.init = async () => {
 					}
 				},
 				afterAll(ctx, val) {
-					if (ctx.expr.optional) {
+					if (ctx.expr.optional && val == null) {
 						// JSON object model - assume that we don't want undefined key/value pairs
 						ctx.filter(val, 'fail', '*');
 					}
