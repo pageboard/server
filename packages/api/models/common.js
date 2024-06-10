@@ -151,7 +151,7 @@ exports.QueryBuilder = class CommonQueryBuilder extends QueryBuilder {
 				if (!content) continue;
 				if (lang) {
 					cols.push(
-						raw(`(block_get_content(:id:, :lang)).*`, {
+						raw(`(block_get_content_row(:id:, :lang)).*`, {
 							id: ref('_id').from(table),
 							lang
 						})

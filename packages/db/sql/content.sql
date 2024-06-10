@@ -79,7 +79,7 @@ CREATE INDEX IF NOT EXISTS block_content_name_lang ON block (
 	(data->>'lang')
 ) WHERE type='content';
 
-CREATE OR REPLACE FUNCTION block_get_content (
+CREATE OR REPLACE FUNCTION block_get_content_row (
 	block_id INTEGER,
 	_lang TEXT
 ) RETURNS type_content_translated
