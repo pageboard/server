@@ -38,6 +38,13 @@ exports.init = async () => {
 							ctx.$data = null;
 						}
 					}
+				},
+				afterAll(ctx, val) {
+					if (ctx.expr.optional) {
+						// JSON object model - assume that we don't want undefined key/value pairs
+						ctx.filter(val, 'fail', '*');
+					}
+					return val;
 				}
 			},
 			formats: {
