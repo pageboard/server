@@ -148,7 +148,7 @@ module.exports = class TranslateService {
 		if (!lang) throw new HttpError.BadRequest("Missing site.data.languages");
 		const blocks = await Block.relatedQuery('children', trx).for(site)
 			.patch({
-				content: raw(`(block_get_content(:id:, :lang)).content`, {
+				content: raw(`(block_get_content_row(:id:, :lang)).content`, {
 					id: ref('_id'),
 					lang
 				})

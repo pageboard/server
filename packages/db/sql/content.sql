@@ -81,7 +81,7 @@ CREATE INDEX IF NOT EXISTS block_content_name_lang ON block (
 
 DROP FUNCTION IF EXISTS block_get_content(INTEGER, TEXT);
 
-CREATE OR REPLACE FUNCTION block_get_content (
+CREATE OR REPLACE FUNCTION block_get_content_row (
 	block_id INTEGER,
 	_lang TEXT,
 	_content TEXT DEFAULT NULL
