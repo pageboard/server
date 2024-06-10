@@ -220,25 +220,37 @@ module.exports = class BlockService {
 		}
 
 		if (parents) {
-			eagers.parents = {
-				$modify: ['parentsFilter']
-			};
+			if (parents.count) {
+				const qc = site.$relatedQuery('children', trx).alias('parents');
+				whereSub(qc, parents, 'parents');
+				qc.joinRelated('children', { alias: 'children' })
+					.where('children._id', ref('block._id'));
+				q.select(
+					Block.query(trx).count().from(qc.as('sub')).as('parents_count')
+				);
+			} else {
+				eagers.parents = {
+					$relation: 'parents',
+					$modify: ['parentsFilter']
+				};
+			}
 		}
 
 		if (children) {
-			eagers.items = {
-				$relation: 'children',
-				$modify: ['itemsFilter']
-			};
-			const qc = site.$relatedQuery('children', trx).alias('children');
-			whereSub(qc, children, 'children');
-			qc.joinRelated('parents', { alias: 'parents' })
-				.where('parents._id', ref('block._id'));
-			q.select(
-				Block.query(trx).count().from(
-					qc.as('sub')
-				).as('count')
-			);
+			if (children.count) {
+				const qc = site.$relatedQuery('children', trx).alias('children');
+				whereSub(qc, children, 'children');
+				qc.joinRelated('parents', { alias: 'parents' })
+					.where('parents._id', ref('block._id'));
+				q.select(
+					Block.query(trx).count().from(qc.as('sub')).as('children_count')
+				);
+			} else {
+				eagers.items = {
+					$relation: 'children',
+					$modify: ['itemsFilter']
+				};
+			}
 		}
 		const hasComplexContent = (data.content == null || data.content.length) && data.type.some(type => {
 			const { contents = [] } = site.$schema(type);
@@ -272,7 +284,7 @@ module.exports = class BlockService {
 
 		const [rows, count] = await Promise.all([
 			q,
-			q.clone().clear('limit').clear('offset').resultSize()
+			q.clone().resultSize()
 		]);
 		for (const type of data.type) {
 			req.types.add(type);
@@ -281,13 +293,24 @@ module.exports = class BlockService {
 		const ids = [];
 		for (const row of rows) {
 			ids.push(row.id);
-			if (parents && parents.first) {
+			if (parents?.count || children?.count) {
+				row.count = {};
+				if (row.children_count) {
+					row.count.children = row.children_count;
+					delete row.children_count;
+				}
+				if (row.parents_count) {
+					row.count.parents = row.parents_count;
+					delete row.parents_count;
+				}
+			}
+			if (parents?.first) {
 				if (row.parents && row.parents.length) {
 					row.parent = row.parents[0];
 				}
 				delete row.parents;
 			}
-			if (children && children.first) {
+			if (children?.first) {
 				if (row.items && row.items.length) {
 					row.child = row.items[0];
 				}
@@ -555,17 +578,10 @@ module.exports = class BlockService {
 							format: 'singleline'
 						}
 					},
-					limit: {
-						title: 'Limit',
-						type: 'integer',
-						minimum: 0,
-						maximum: 1000,
-						default: 10
-					},
-					offset: {
-						title: 'Offset',
-						type: 'integer',
-						default: 0
+					count: {
+						title: 'Count parents',
+						type: 'boolean',
+						default: false
 					},
 					content: {
 						title: 'Contents',
@@ -629,17 +645,10 @@ module.exports = class BlockService {
 							format: "singleline"
 						}
 					},
-					limit: {
-						title: 'Limit',
-						type: 'integer',
-						minimum: 0,
-						maximum: 1000,
-						default: 10
-					},
-					offset: {
-						title: 'Offset',
-						type: 'integer',
-						default: 0
+					count: {
+						title: 'Count children',
+						type: 'boolean',
+						default: false
 					},
 					content: {
 						title: 'Contents',
@@ -1074,14 +1083,16 @@ function filterSub(q, data, language) {
 			q.orderBy(Block.fn.coalesce(...args), dir);
 		}
 	}
-	if (data.offset < 0) {
-		data.limit += data.offset;
-		data.offset = 0;
-		if (data.limit < 0) {
-			throw new HttpError.BadRequest("limit cannot be negative");
+	if (data.limit != null) {
+		if (data.offset < 0) {
+			data.limit += data.offset;
+			data.offset = 0;
+			if (data.limit < 0) {
+				throw new HttpError.BadRequest("limit cannot be negative");
+			}
 		}
+		q.offset(data.offset).limit(data.limit);
 	}
-	q.offset(data.offset).limit(data.limit);
 	return valid;
 }
 
