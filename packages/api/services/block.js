@@ -1018,18 +1018,11 @@ function whereSub(q, data, alias = 'block') {
 	if (data.standalone != null) {
 		q.where(`${alias}.standalone`, data.standalone);
 	}
-	if (data.id) {
-		valid = true;
-		if (Array.isArray(data.id)) {
-			q.whereIn(`${alias}.id`, data.id);
-		} else {
-			q.where(`${alias}.id`, data.id);
-		}
-	}
 	const wobj = {};
+	for (const key of ['id', 'created_at', 'updated_at']) {
+		if (data[key] !== undefined) wobj[key] = data[key];
+	}
 	if (!Object.isEmpty(data.data)) wobj.data = data.data;
-	if (data.created_at) wobj.created_at = data.created_at;
-	if (data.updated_at) wobj.updated_at = data.updated_at;
 	if (!Object.isEmpty(wobj)) {
 		valid = true;
 		// add the generic block style
