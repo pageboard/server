@@ -159,7 +159,9 @@ module.exports = class ApiService {
 		const obj = await run(method, params);
 
 		if (Object.isEmpty(action.response)) return obj;
-		else return mergeExpressions(obj, action.response, scope);
+		const items = mergeExpressions(obj, action.response, scope);
+		if (data.hrefs) return { items, hrefs: obj.hrefs };
+		else return items;
 	}
 	static get = {
 		title: 'API Get',
@@ -175,6 +177,11 @@ module.exports = class ApiService {
 			query: {
 				type: 'object',
 				nullable: true
+			},
+			hrefs: {
+				type: 'boolean',
+				description: 'metadata for hrefs',
+				default: false
 			}
 		}
 	};

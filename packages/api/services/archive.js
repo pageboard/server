@@ -18,28 +18,28 @@ module.exports = class ArchiveService {
 	}
 
 	async bundle(req, data) {
-		const output = await req.run('apis.get', {
+		const { hrefs, items } = await req.run('apis.get', {
 			id: data.id,
-			query: data.query
+			query: data.query,
+			hrefs: true
 		});
 		const file = `${data.id}-${fileStamp()}.zip`;
-
 		const counts = {
-			items: output.items?.length,
+			items: items?.length,
 			hrefs: 0,
 			files: 0,
 			skips: [],
 			file: '/@cache/' + file
 		};
-		const { hrefs } = output;
-		delete output.hrefs;
-
 		await archiveWrap(req, file, async archive => {
-			archive.append(JSON.stringify(output), { name: 'export.json' });
-			counts.hrefs += hrefs.length;
+			archive.append(
+				JSON.stringify(data.hrefs ? { hrefs, items } : items),
+				{ name: 'export.json' }
+			);
 			const list = Object.entries(hrefs).map(
 				([url, { mime }]) => ({ url, mime })
 			);
+			counts.hrefs += list.length;
 			await archiveFiles(req, archive, list, counts, data.size);
 		});
 		return counts;
@@ -65,6 +65,11 @@ module.exports = class ArchiveService {
 			size: {
 				title: 'Resource size',
 				$ref: "#/definitions/image.get/properties/parameters/properties/size"
+			},
+			hrefs: {
+				title: 'Metadata of hrefs',
+				type: 'boolean',
+				default: false
 			}
 		}
 	};
