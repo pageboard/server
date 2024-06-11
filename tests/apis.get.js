@@ -25,6 +25,7 @@ suite('apis.get', function () {
 		const { item: fetch } = await app.run('block.add', {
 			type: 'fetch',
 			data: {
+				name: 'fetch-1',
 				action: {
 					method: 'block.get',
 					parameters: {
@@ -39,7 +40,7 @@ suite('apis.get', function () {
 		}, { site: 'test' });
 
 		const bget = await app.run('apis.get', {
-			id: fetch.id,
+			name: fetch.data.name,
 			query: {
 				id: page.id
 			}
@@ -55,6 +56,7 @@ suite('apis.get', function () {
 		const { item: fetch } = await app.run('block.add', {
 			type: 'fetch',
 			data: {
+				name: 'fetch-2',
 				action: {
 					method: 'block.get',
 					parameters: {
@@ -71,7 +73,7 @@ suite('apis.get', function () {
 		}, { site: 'test' });
 
 		const bget = await app.run('apis.get', {
-			id: fetch.id,
+			name: fetch.data.name,
 			query: {
 				id: page.id
 			}
@@ -91,6 +93,7 @@ suite('apis.get', function () {
 		const { item: fetch } = await app.run('block.add', {
 			type: 'fetch',
 			data: {
+				name: 'fetch-3',
 				action: {
 					method: 'block.search',
 					parameters: {
@@ -101,7 +104,7 @@ suite('apis.get', function () {
 		}, { site: 'test' });
 
 		const bget = await app.run('apis.get', {
-			id: fetch.id
+			name: fetch.data.name
 		}, { site: 'test' });
 		bget.items = bget.items.map(item => item.toJSON());
 		assert.deepEqual(bget, {
@@ -123,6 +126,7 @@ suite('apis.get', function () {
 		const { item: fetch } = await app.run('block.add', {
 			type: 'fetch',
 			data: {
+				name: 'fetch-4',
 				action: {
 					method: 'block.search',
 					parameters: {
@@ -136,7 +140,7 @@ suite('apis.get', function () {
 		}, { site: 'test' });
 
 		const bget = await app.run('apis.get', {
-			id: fetch.id,
+			name: fetch.data.name,
 			query: { h: 'haround' }
 		}, { site: 'test' });
 		assert.deepEqual(bget.items, [b1, b2]);
@@ -155,6 +159,7 @@ suite('apis.get', function () {
 		const { item: fetch } = await app.run('block.add', {
 			type: 'fetch',
 			data: {
+				name: 'fetch-5',
 				action: {
 					method: 'block.search',
 					parameters: {
@@ -169,7 +174,7 @@ suite('apis.get', function () {
 		}, { site: 'test' });
 
 		const bget = await app.run('apis.get', {
-			id: fetch.id
+			name: fetch.data.name
 		}, { site: 'test' });
 		assert.deepEqual(bget.items, [b1, b2]);
 	});
@@ -187,6 +192,7 @@ suite('apis.get', function () {
 		const { item: fetch } = await app.run('block.add', {
 			type: 'fetch',
 			data: {
+				name: 'fetch-6',
 				action: {
 					method: 'block.search',
 					parameters: {
@@ -203,7 +209,7 @@ suite('apis.get', function () {
 		}, { site: 'test' });
 
 		const bget = await app.run('apis.get', {
-			id: fetch.id
+			name: fetch.data.name
 		}, { site: 'test' });
 		assert.deepEqual(bget, {
 			items: [{
@@ -227,6 +233,7 @@ suite('apis.get', function () {
 		const { item: fetch } = await app.run('block.add', {
 			type: 'fetch',
 			data: {
+				name: 'fetch-7',
 				action: {
 					method: 'block.search',
 					parameters: {
@@ -244,7 +251,7 @@ suite('apis.get', function () {
 		}, { site: 'test' });
 
 		const bget = await app.run('apis.get', {
-			id: fetch.id
+			name: fetch.data.name
 		}, { site: 'test' });
 		assert.deepEqual(bget, [{
 			w: b1.data.maxWidth, h: b1.data.height
@@ -266,6 +273,7 @@ suite('apis.get', function () {
 		const { item: fetch } = await app.run('block.add', {
 			type: 'fetch',
 			data: {
+				name: 'fetch-8',
 				action: {
 					method: 'block.find',
 					parameters: {
@@ -284,7 +292,7 @@ suite('apis.get', function () {
 		}, { site: 'test' });
 
 		const bget = await app.run('apis.get', {
-			id: fetch.id,
+			name: fetch.data.name,
 			query: {
 				date: "2018-06"
 			}
@@ -292,7 +300,7 @@ suite('apis.get', function () {
 		assert.deepEqual(eventDate, bget.item);
 
 		const miss = await app.run('apis.get', {
-			id: fetch.id,
+			name: fetch.data.name,
 			query: {
 				date: "2018-05"
 			}
@@ -314,6 +322,7 @@ suite('apis.get', function () {
 		const { item: fetch } = await app.run('block.add', {
 			type: 'fetch',
 			data: {
+				name: 'fetch-9',
 				action: {
 					method: 'block.find',
 					parameters: {
@@ -328,7 +337,7 @@ suite('apis.get', function () {
 		}, { site: 'test' });
 
 		const bget = await app.run('apis.get', {
-			id: fetch.id,
+			name: fetch.data.name,
 			query: {
 				date: "2022-06"
 			}
@@ -349,6 +358,7 @@ suite('apis.get', function () {
 		const { item: fetch } = await app.run('block.add', {
 			type: 'fetch',
 			data: {
+				name: 'fetch-10',
 				action: {
 					method: 'block.find',
 					parameters: {
@@ -363,7 +373,7 @@ suite('apis.get', function () {
 		}, { site: 'test' });
 
 		const bget = await app.run('apis.get', {
-			id: fetch.id,
+			name: fetch.data.name,
 			query: {
 				date: ["2021-06-06", "2021-06-08"]
 			}
@@ -371,7 +381,7 @@ suite('apis.get', function () {
 		assert.deepEqual(eventDate, bget.item);
 
 		const miss = await app.run('apis.get', {
-			id: fetch.id,
+			name: fetch.data.name,
 			query: {
 				date: ["2021-05-06", "2021-05-08"]
 			}
@@ -392,6 +402,7 @@ suite('apis.get', function () {
 		const { item: fetch } = await app.run('block.add', {
 			type: 'fetch',
 			data: {
+				name: 'fetch-11',
 				action: {
 					method: 'block.find',
 					parameters: {
@@ -405,7 +416,7 @@ suite('apis.get', function () {
 		}, { site: 'test' });
 
 		const bget = await app.run('apis.get', {
-			id: fetch.id,
+			name: fetch.data.name,
 			query: {
 				date: "2020-06-08"
 			}
@@ -414,7 +425,7 @@ suite('apis.get', function () {
 		assert.deepEqual(eventDate, bget.item);
 
 		const miss = await app.run('apis.get', {
-			id: fetch.id,
+			name: fetch.data.name,
 			query: {
 				date: "2020-05-06"
 			}
@@ -435,6 +446,7 @@ suite('apis.get', function () {
 		const { item: fetch } = await app.run('block.add', {
 			type: 'fetch',
 			data: {
+				name: 'fetch-12',
 				action: {
 					method: 'block.find',
 					parameters: {
@@ -448,7 +460,7 @@ suite('apis.get', function () {
 		}, { site: 'test' });
 
 		const bget = await app.run('apis.get', {
-			id: fetch.id,
+			name: fetch.data.name,
 			query: {
 				date: ["2019-06-08", "2019-06-09"]
 			}
@@ -457,7 +469,7 @@ suite('apis.get', function () {
 		assert.deepEqual(eventDate, bget.item);
 
 		const miss = await app.run('apis.get', {
-			id: fetch.id,
+			name: fetch.data.name,
 			query: {
 				date: ["2019-05-08", "2019-05-09"]
 			}

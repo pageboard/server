@@ -19,7 +19,7 @@ module.exports = class ArchiveService {
 
 	async bundle(req, data) {
 		const { hrefs, items } = await req.run('apis.get', {
-			id: data.id,
+			name: data.name,
 			query: data.query,
 			hrefs: true
 		});
@@ -52,10 +52,10 @@ module.exports = class ArchiveService {
 		$cache: false,
 		required: ['id'],
 		properties: {
-			id: {
-				title: 'Fetch id',
+			name: {
+				title: 'Fetch name',
 				type: 'string',
-				format: 'id'
+				format: 'grant'
 			},
 			query: {
 				title: 'Fetch query',

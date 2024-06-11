@@ -7,13 +7,13 @@ module.exports = class ApiService {
 	apiRoutes(app) {
 		// these routes are setup after all others
 		// eventually all routes will be declared as actions ?
-		app.get(["/@api/:id", "/@api/query/:id"], req => {
+		app.get(["/@api/:name", "/@api/query/:name"], req => {
 			return req.run('apis.get', {
-				id: req.params.id,
+				name: req.params.name,
 				query: unflatten(req.query)
 			});
 		});
-		app.post(["/@api/:id", "/@api/form/:id"], req => {
+		app.post(["/@api/:name", "/@api/form/:name"], req => {
 			// TODO process multipart form data to upload files
 			// body[name] must become the relative URL of the uploaded file
 			// however, since we don't know the input_file block,
@@ -22,7 +22,7 @@ module.exports = class ApiService {
 			// however standalones are buggy and dangerous to use when they are in a page
 			// so stabilizing standalones should be a priority
 			return req.run('apis.post', {
-				id: req.params.id,
+				name: req.params.name,
 				query: unflatten(req.query),
 				body: unflatten(req.body)
 			});
@@ -32,14 +32,8 @@ module.exports = class ApiService {
 	async post(req, data) {
 		const { site, run, user, locked, trx, ref } = req;
 		const form = await site.$relatedQuery('children', trx)
-			.where(q => {
-				q.where('block.id', data.id);
-				q.orWhere(q => {
-					q.where('block.type', 'api_form');
-					q.where(ref('block.data:name').castText(), data.id);
-				});
-			})
-			.orderBy('id')
+			.where('block.type', 'api_form')
+			.where(ref('block.data:name').castText(), data.name)
 			.first().throwIfNotFound();
 		if (locked(form.lock)) {
 			throw new HttpError.Unauthorized("Check user permissions");
@@ -99,11 +93,11 @@ module.exports = class ApiService {
 		$private: true,
 		$action: 'write',
 		$tags: ['data-:site'],
-		required: ["id"],
+		required: ["name"],
 		properties: {
-			id: {
+			name: {
 				type: 'string',
-				format: 'id'
+				format: 'grant'
 			},
 			query: {
 				type: 'object',
@@ -118,14 +112,8 @@ module.exports = class ApiService {
 
 	async get({ site, run, user, locked, trx, ref }, data) {
 		const form = await site.$relatedQuery('children', trx)
-			.where(q => {
-				q.where('block.id', data.id);
-				q.orWhere(q => {
-					q.where('block.type', 'fetch');
-					q.where(ref('block.data:name').castText(), data.id);
-				});
-			})
-			.orderBy('id')
+			.where('block.type', 'fetch')
+			.where(ref('block.data:name').castText(), data.name)
 			.first().throwIfNotFound();
 		if (locked(form.lock)) {
 			throw new HttpError.Unauthorized("Check user permissions");
@@ -172,11 +160,11 @@ module.exports = class ApiService {
 		$private: true,
 		$action: 'read',
 		$tags: ['data-:site'],
-		required: ['id'],
+		required: ['name'],
 		properties: {
-			id: {
+			name: {
 				type: 'string',
-				format: 'id'
+				format: 'grant'
 			},
 			query: {
 				type: 'object',
