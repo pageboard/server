@@ -34,10 +34,12 @@ module.exports = class ApiService {
 	async post(req, data) {
 		const { site, run, user, locked, trx, ref } = req;
 		const form = await site.$relatedQuery('children', trx)
-			.where('block.id', data.id)
-			.orWhere(q => {
-				q.where('block.type', 'api_form');
-				q.where(ref('block.data:name').castText(), data.id);
+			.where(q => {
+				q.where('block.id', data.id);
+				q.orWhere(q => {
+					q.where('block.type', 'api_form');
+					q.where(ref('block.data:name').castText(), data.id);
+				});
 			})
 			.orderBy('id')
 			.first().throwIfNotFound();
@@ -109,10 +111,12 @@ module.exports = class ApiService {
 
 	async get({ site, run, user, locked, trx, ref }, data) {
 		const form = await site.$relatedQuery('children', trx)
-			.where('block.id', data.id)
-			.orWhere(q => {
-				q.where('block.type', 'fetch');
-				q.where(ref('block.data:name').castText(), data.id);
+			.where(q => {
+				q.where('block.id', data.id);
+				q.orWhere(q => {
+					q.where('block.type', 'fetch');
+					q.where(ref('block.data:name').castText(), data.id);
+				});
 			})
 			.orderBy('id')
 			.first().throwIfNotFound();
