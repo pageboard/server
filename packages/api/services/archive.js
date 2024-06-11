@@ -50,7 +50,7 @@ module.exports = class ArchiveService {
 		$private: true,
 		$lock: 'webmaster',
 		$cache: false,
-		required: ['id'],
+		required: ['name'],
 		properties: {
 			name: {
 				title: 'Fetch name',
