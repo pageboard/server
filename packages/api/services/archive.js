@@ -23,7 +23,7 @@ module.exports = class ArchiveService {
 			query: data.query,
 			hrefs: true
 		});
-		const file = `${data.id}-${fileStamp()}.zip`;
+		const file = `${data.name}-${fileStamp()}.zip`;
 		const counts = {
 			items: items?.length,
 			hrefs: 0,
