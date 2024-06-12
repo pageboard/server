@@ -311,7 +311,7 @@ class Block extends Model {
 				Object.assign(copy.$pkg, this.$pkg);
 				return copy;
 			}
-			async #uniqueProperty(context) {
+			async #uniqueProperty(context, patch) {
 				const el = this.$schema();
 				const { unique } = el?.properties?.data ?? {};
 				if (!unique || !this.type) return;
@@ -324,10 +324,11 @@ class Block extends Model {
 					const key = `data.${field}`;
 					const val = dget(this, key);
 					if (val == null) {
+						if (val === undefined && patch) continue;
 						const parent = dget(el.properties, key.split('.').join('.properties.'));
 						if (parent?.nullable) continue;
 						throw new HttpError.BadRequest(
-							`Element requires unique ${key} but value is null`
+							`Element ${el.name} requires unique ${key} but value is null`
 						);
 					}
 					hasCheck = true;
@@ -345,7 +346,7 @@ class Block extends Model {
 			}
 			async $beforeUpdate(opt, context) {
 				await super.$beforeUpdate(opt, context);
-				await this.#uniqueProperty(context);
+				await this.#uniqueProperty(context, opt.patch);
 			}
 			$beforeValidate(jsonSchema, json) {
 				if (json.id === null) delete json.id;
