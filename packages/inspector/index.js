@@ -22,6 +22,7 @@ module.exports = class InspectorModule {
 
 	async get({ url, local }) {
 		try {
+			if (local && !url.startsWith('file://')) url = `file://${url}`;
 			const meta = await (local ? this.local.look(url) : this.remote.look(url));
 			const result = this.#filterResult(meta);
 			return this.#preview(result);
