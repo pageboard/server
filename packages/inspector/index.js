@@ -20,26 +20,40 @@ module.exports = class InspectorModule {
 		return this.Inspector.get(urlObj);
 	}
 
-	async get({ url, local }) {
+	async get({ url }) {
+		const localFile = this.app.statics.urlToPath(url);
+		const local = Boolean(localFile);
 		try {
-			if (local && !url.startsWith('file://')) url = `file://${url}`;
-			const meta = await (local ? this.local.look(url) : this.remote.look(url));
-			const result = this.#filterResult(meta);
-			return this.#preview(result);
+			if (local) {
+				const meta = await this.local.look(`file://${localFile}`);
+				const result = this.#filterResult(meta, url);
+				const obj = await this.#preview(result);
+				return obj;
+			} else {
+				const meta = await this.remote.look(url);
+				const result = this.#filterResult(meta);
+				const obj = await this.#preview(result);
+				return obj;
+			}
 		} catch (err) {
 			if (typeof err == 'number') throw new HttpError[err]("Inspector failure");
 			else throw err;
 		}
 	}
 
-	#filterResult(result) {
+	#filterResult(result, localUrl) {
 		const obj = { meta: {} };
 		['mime', 'url', 'type', 'title', 'icon', 'site']
 			.forEach(key => {
 				if (result[key] !== undefined) obj[key] = result[key];
 			});
 		if (obj.icon == "data:/,") delete obj.icon;
-		if (result.url) obj.pathname = (new URL(result.url)).pathname;
+		if (localUrl) {
+			obj.site = null;
+			obj.pathname = obj.url = localUrl;
+		} else if (result.url) {
+			obj.pathname = (new URL(result.url)).pathname;
+		}
 		['width', 'height', 'duration', 'size', 'thumbnail', 'description', 'source']
 			.forEach(key => {
 				if (result[key] !== undefined) obj.meta[key] = result[key];
@@ -56,14 +70,14 @@ module.exports = class InspectorModule {
 	async #preview(obj) {
 		const desc = obj.meta.description || '';
 		delete obj.meta.description;
-		const thumb = obj.meta.thumbnail;
+		const url = obj.meta.thumbnail;
 		delete obj.meta.thumbnail;
-		if (thumb != null) {
+		if (url != null) {
 			try {
-				const datauri = await this.app.run('image.thumbnail', { url: thumb });
+				const datauri = await this.app.run('image.thumbnail', { url });
 				obj.preview = `<img src="${datauri.content}" alt="${desc}" />`;
 			} catch (err) {
-				console.error("Error embedding thumbnail", thumb, err);
+				console.error("Error embedding thumbnail", url, err);
 			}
 		}
 		if (!obj.preview && desc) {

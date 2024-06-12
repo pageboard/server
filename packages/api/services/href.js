@@ -207,7 +207,7 @@ module.exports = class HrefService {
 				url: fullUrl.pathname + fullUrl.search
 			};
 		} else {
-			result = await this.inspect(req, { url: data.url, local });
+			result = await this.inspect(req, { url: data.url });
 			result.pathname = data.pathname ?? fullUrl.pathname;
 		}
 		if (!local && result.url != data.url) {
@@ -690,18 +690,8 @@ module.exports = class HrefService {
 		}
 	};
 
-	async inspect(req, { url, local }) {
-		const localFile = this.app.statics.urlToPath(url);
-		if (local === undefined) local = Boolean(localFile);
-		const obj = await this.app.inspector.get({
-			url: local ? localFile : url,
-			local: local
-		});
-		if (local) {
-			obj.site = null;
-			obj.url = url;
-		}
-		return obj;
+	async inspect(req, { url }) {
+		return this.app.inspector.get({ url });
 	}
 	static inspect = {
 		title: 'Inspect',
@@ -710,12 +700,9 @@ module.exports = class HrefService {
 		required: ['url'],
 		properties: {
 			url: {
-				title: 'URL',
-				type: 'string'
-			},
-			local: {
-				title: 'Is local',
-				type: 'boolean'
+				title: 'Address',
+				type: 'string',
+				format: 'uri'
 			}
 		}
 	};

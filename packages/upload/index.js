@@ -58,7 +58,7 @@ module.exports = class UploadModule {
 		for (const [fieldname, file] of Object.entries(req.files)) {
 			if (typeis.is(file.mimetype, types)) entries.push({
 				name: fieldname,
-				title: file.name,
+				filename: file.name,
 				path: file.tempFilePath,
 				mime: file.mimetype,
 				size: file.size
@@ -99,7 +99,11 @@ module.exports = class UploadModule {
 		const subDir = (new Date()).toISOString().split('T').shift().substring(0, 7);
 		const dir = Path.join(req.call('statics.dir', '@file'), subDir);
 		await fs.mkdir(dir, { recursive: true });
-		const parts = data.title.split('.');
+
+		if (data.filename == null) {
+			data.filename = Path.parse(data.path).base;
+		}
+		const parts = data.filename.split('.');
 		const ext = speaking(parts.pop(), {
 			truncate: 8,
 			symbols: false
@@ -114,7 +118,7 @@ module.exports = class UploadModule {
 			dir,
 			`${basename}-${ranb}.${ext}`
 		);
-		await fs.rename(data.path, filepath);
+		await fs.mv(data.path, filepath);
 		const image = await req.run('image.add', {
 			path: filepath,
 			mime: mime.lookup(ext)
@@ -131,7 +135,8 @@ module.exports = class UploadModule {
 				title: 'File path',
 				type: 'string'
 			},
-			title: {
+			filename: {
+				title: 'File name',
 				type: 'string',
 				nullable: true
 			}

@@ -170,7 +170,10 @@ module.exports = class ImageModule {
 				throw ex;
 			}
 		} else {
-			ret.buffer = await transform.toBuffer();
+			ret.buffer = (await Promise.all([
+				pipeline(inputStream, transform),
+				transform.toBuffer()
+			])).pop();
 		}
 		return ret;
 	}
@@ -274,9 +277,9 @@ module.exports = class ImageModule {
 		$private: true,
 		properties: {
 			url: {
-				title: 'URL',
+				title: 'File path',
 				type: 'string',
-				format: 'uri'
+				format: 'pathname'
 			}
 		}
 	};
@@ -319,6 +322,8 @@ module.exports = class ImageModule {
 	};
 
 	guess(req, { width, height, fit }) {
+		if (!width) width = height;
+		if (!height) height = width;
 		for (const [suffix, item] of Object.entries(ImageModule.sizes)) {
 			if (item.width >= width && item.height >= height) return suffix;
 		}
