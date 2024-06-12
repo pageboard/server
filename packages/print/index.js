@@ -1,4 +1,4 @@
-const fs = require('node:fs');
+const fs = require('node:fs/promises');
 const Path = require('node:path');
 const cups = require('node-cups');
 
@@ -195,7 +195,7 @@ module.exports = class PrintModule {
 				});
 				if (ret.stdout) console.info(ret.stdout);
 			} finally {
-				await fs.promises.unlink(path);
+				await fs.unlink(path);
 			}
 		});
 	}
@@ -216,12 +216,12 @@ module.exports = class PrintModule {
 			});
 			const dest = Path.join(storePath, block.id + '.pdf');
 			try {
-				await fs.promises.copyFile(path, dest);
+				await fs.copyFile(path, dest);
 			} catch (ex) {
 				console.error(ex);
 				throw new HttpError.InternalServerError(`Storage failure`);
 			} finally {
-				await fs.promises.unlink(path);
+				await fs.unlink(path);
 			}
 		});
 	}
@@ -423,7 +423,7 @@ module.exports = class PrintModule {
 				price: ret.total_price
 			};
 		} finally {
-			for (const file of clean) await fs.promises.unlink(file);
+			for (const file of clean) await fs.unlink(file);
 		}
 	}
 
@@ -434,7 +434,7 @@ module.exports = class PrintModule {
 		});
 		const destUrl = new URL("/@cache/" + name, site.$url);
 		const destPath = this.app.statics.urlToPath(destUrl.pathname);
-		await fs.promises.rename(res.path, destPath);
+		await fs.mv(res.path, destPath);
 
 		const count = res.headers['x-page-count'];
 		return { href: destUrl.href, path: destPath, count };
