@@ -481,7 +481,7 @@ function getParents({ site, trx }, url, lang) {
 }
 
 function stripHostname(site, block) {
-	const list = site.$hrefs[block.type];
+	const list = site.$pkg.hrefs[block.type];
 	if (!list) return;
 	for (const desc of list) {
 		const url = jsonPath.get(block.data, desc.path);

@@ -321,7 +321,7 @@ module.exports = class HrefService {
 
 	async referrers(req, { ids = [], url, limit, offset }) {
 		const { site, trx, ref } = req;
-		const hrefs = site.$hrefs;
+		const { hrefs, standalones, pages } = site.$pkg;
 		const qList = q => {
 			const urlQueries = [];
 			for (const [type, list] of Object.entries(hrefs)) {
@@ -341,8 +341,7 @@ module.exports = class HrefService {
 			}
 			q.union(urlQueries, true);
 		};
-		const pageTypes = Array.from(site.$pkg.pages);
-		const standaloneTypes = site.$pkg.standalones;
+		const pageTypes = Array.from(pages);
 		const q = site.$relatedQuery('children', trx)
 			.with('list', qList)
 			.join('list', 'list.id', 'block.id')
@@ -359,7 +358,7 @@ module.exports = class HrefService {
 				});
 				q.orWhere(q => {
 					q.whereIn('parents:roots.type', pageTypes);
-					q.whereIn('parents.type', standaloneTypes);
+					q.whereIn('parents.type', standalones);
 					q.where('parents.standalone', true);
 					if (ids.length) q.whereNotIn('parents:roots.id', ids);
 				});
@@ -413,7 +412,7 @@ module.exports = class HrefService {
 		site, trx, ref, fun, raw, Block, Href
 	}, { from, to }) {
 		if (from == to) return; // hum
-		for (const [type, list] of Object.entries(site.$hrefs)) {
+		for (const [type, list] of Object.entries(site.$pkg.hrefs)) {
 			for (const desc of list) {
 				const key = 'block.data:' + desc.path;
 				const field = ref(key).castText();
@@ -464,7 +463,7 @@ module.exports = class HrefService {
 
 	async collect(req, data) {
 		const { site, trx } = req;
-		const hrefs = site.$hrefs;
+		const { hrefs } = site.$pkg;
 		const qList = q => {
 			const urlQueries = [];
 			for (const [type, list] of Object.entries(hrefs)) {
@@ -571,7 +570,7 @@ module.exports = class HrefService {
 	};
 
 	#collectBlockUrls({ site, trx }, data, level) {
-		const hrefs = site.$hrefs;
+		const { hrefs } = site.$pkg;
 		const types = Object.keys(hrefs);
 		const table = ['root', 'root:block', 'root:shared:block'][level];
 
@@ -610,12 +609,12 @@ module.exports = class HrefService {
 
 	async reinspect(req, data) {
 		const { site, trx } = req;
-		const hrefs = site.$hrefs;
+		const { hrefs, pages } = site.$pkg;
 		const fhrefs = {};
 		for (const [type, list] of Object.entries(hrefs)) {
 			if (data.block != type) continue;
 			const flist = list.filter(desc => desc.types.includes(data.href));
-			if (site.$pkg.pages.has(type)) flist.push({
+			if (pages.has(type)) flist.push({
 				path: 'url',
 				types: ['link']
 			});

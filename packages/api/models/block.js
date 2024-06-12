@@ -292,17 +292,13 @@ class Block extends Model {
 				return DomainBlock.schema(type);
 			}
 
-			static #hrefs = hrefs;
-			get $hrefs() {
-				return DomainBlock.#hrefs;
-			}
-
 			#pkg = {
 				bundles: new Map(),
 				standalones: Array.from(standalones),
 				pages: groups.page ?? [],
 				textblocks: Array.from(textblocks),
 				hashtargets: Array.from(hashtargets),
+				hrefs,
 				tag,
 				dir: pkg.dir
 			};
