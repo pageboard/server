@@ -278,9 +278,9 @@ module.exports = class SiteService {
 		}
 	};
 
-	async gc({ trx, raw, site, ref, fun }, { days }) {
+	async gc({ trx, raw, site, ref, fun }, { age }) {
 		const { count } = await site.$query(trx).select(
-			fun('block_delete_orphans', ref('block._id'), days)
+			fun('block_delete_orphans', ref('block._id'), age)
 				.as('count')
 		);
 		return { count };
