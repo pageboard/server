@@ -295,7 +295,7 @@ module.exports = class ImageModule {
 		const npath = Path.format({
 			...parts,
 			base: null,
-			ext: null
+			ext: '.webp'
 		});
 		await fs.rename(path, npath);
 		path = npath;
@@ -330,7 +330,7 @@ module.exports = class ImageModule {
 		const srcParts = Path.parse(srcPath);
 		srcParts.base = null;
 		if (srcParts.ext == ".svg") return srcPath;
-		srcParts.ext = null;
+		srcParts.ext = ".webp";
 		srcPath = Path.format(srcParts);
 		if (!size) return srcPath;
 
@@ -414,8 +414,22 @@ module.exports = class ImageModule {
 				];
 				const list = await glob(patterns);
 				if (list.length == 0) {
-					console.warn("Missing image file:", filePath);
-					continue;
+					const noextlist = await glob(Path.format({
+						...parts,
+						ext: null
+					}) + '*', {
+						ignore: Path.format({
+							...parts,
+							ext: '.*'
+						})
+					});
+					if (noextlist.length == 1) {
+						console.warn("Restoring webp extension");
+						list.push(noextlist[0]);
+					} else {
+						console.warn("Missing image file:", filePath);
+						continue;
+					}
 				}
 				const origIndex = list.findIndex(item => item.endsWith('.orig'));
 				let orig = origIndex >= 0 ? list[origIndex] : null;
@@ -428,10 +442,10 @@ module.exports = class ImageModule {
 					list.sort();
 					orig = list.pop(); // the webp or any other
 				}
-				parts.ext = null;
+				parts.ext = '.webp';
 				filePath = Path.format(parts);
 				await fs.rename(orig, filePath);
-				urlPath = this.app.statics.pathToUrl(filePath) + ".webp";
+				urlPath = this.app.statics.pathToUrl(filePath);
 				for (const item of list) {
 					await fs.unlink(item);
 				}
