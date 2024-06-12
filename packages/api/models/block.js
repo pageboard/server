@@ -361,10 +361,30 @@ class Block extends Model {
 			}
 			async $afterUpdate({ patch, old }, context) {
 				await super.$afterUpdate(context);
-				const url = this.data?.url ?? old?.data?.url;
-				if (!url || url.startsWith('/.') || !this.content) return;
+				await this.#updatePageHref(context);
+			}
+			async $afterInsert(context) {
+				await super.$afterInsert(context);
+				await this.#updatePageHref(context);
+			}
+			async $afterDelete(context) {
+				await super.$afterDelete(context);
+				const { type, data } = this;
+				if (!type || !data) return;
 				const { req } = context.transaction;
-				const { title } = this.content;
+				if (!req.site.$pkg.pages.has(type)) return;
+				const { url } = data;
+				if (!url) return;
+				await req.run('href.del', { url });
+			}
+			async #updatePageHref(context) {
+				const { type, content, data } = this;
+				if (!type || !content || !data) return;
+				const { req } = context.transaction;
+				if (!req.site.$pkg.pages.has(type)) return;
+				const { url } = data;
+				if (!url) return;
+				const { title } = content;
 				try {
 					await req.run('href.save', {
 						url,
@@ -374,22 +394,6 @@ class Block extends Model {
 					// forgiving - lots of href are missing
 					await req.run('href.add', { url });
 				}
-			}
-			async $afterInsert(context) {
-				await super.$afterInsert(context);
-				const { url } = this.data ?? {};
-				if (!url || url.startsWith('/.') || !this.content) return;
-				const { title } = this.content;
-				if (title == null) return;
-				const { req } = context.transaction;
-				await req.run('href.add', { url });
-			}
-			async $afterDelete(context) {
-				await super.$afterDelete(context);
-				const { url } = this.data ?? {};
-				if (!url || url.startsWith('/.')) return;
-				const { req } = context.transaction;
-				await req.run('href.del', { url });
 			}
 		}
 
