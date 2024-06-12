@@ -234,7 +234,7 @@ module.exports = class Domains {
 			};
 		} else if (req.path !== this.wk.git) {
 			const domains = castArray(site.data.domains);
-			if (domains.length && req.hostname != domains[0] && !req.path.startsWith('/.')) {
+			if (domains.length && req.hostname != domains[0] && !req.path.startsWith('/@')) {
 				Object.defineProperty(req, 'hostname', {
 					value: domains[0]
 				});
