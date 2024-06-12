@@ -15,3 +15,18 @@ if (!RegExp.escape) {
 		return String(s).replace(/[\\^$*+?.()|[\]{}]/g, '\\$&');
 	};
 }
+
+const fs = require('fs/promises');
+
+fs.mv ??= async function (oldPath, newPath) {
+	try {
+		await fs.rename(oldPath, newPath);
+	} catch (err) {
+		if (err.code == "EXDEV") {
+			await fs.copyFile(oldPath, newPath);
+			await fs.unlink(oldPath);
+		} else {
+			throw err;
+		}
+	}
+};
