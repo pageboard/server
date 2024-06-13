@@ -302,7 +302,7 @@ module.exports = class Pageboard {
 			res.sendStatus(204);
 			return;
 		}
-		if (typeof obj == "string") {
+		if (typeof obj == "string" || Buffer.isBuffer(obj)) {
 			if (!res.get('Content-Type')) res.type('text/plain');
 			res.send(obj);
 			return;
