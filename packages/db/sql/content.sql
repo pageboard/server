@@ -76,8 +76,11 @@ CREATE INDEX IF NOT EXISTS block_content_name_lang ON block (
 
 DROP FUNCTION IF EXISTS block_get_content(INTEGER, TEXT);
 DROP FUNCTION IF EXISTS block_get_content (INTEGER, TEXT, TEXT);
-DROP TYPE IF EXISTS type_content_translated;
+-- This is used by block_get_content_row(INTEGER, TEXT, TEXT)
+-- pageboard 0.13 and 0.14
+-- DROP TYPE IF EXISTS type_content_translated;
 
+-- pageboard >= 0.15
 CREATE OR REPLACE FUNCTION block_get_content (
 	block_id INTEGER,
 	_lang TEXT,
