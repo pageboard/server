@@ -259,18 +259,19 @@ module.exports = class ImageModule {
 		});
 		const path = await req.call('image.get', { url, size });
 		if (!path) throw new HttpError.NotFound();
+		const format = "webp";
 		const ret = await req.run('image.resize', {
 			input: path,
 			height: 64,
 			enlarge: true,
 			background: 'white',
 			format: {
-				name: 'webp',
+				name: format,
 				quality: 50
 			}
 		});
 		const dtu = new DatauriParser();
-		return dtu.format('.web', ret.buffer);
+		return dtu.format(`.${format}`, ret.buffer).content;
 	}
 	static thumbnail = {
 		title: 'Thumbnail',
