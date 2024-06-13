@@ -55,7 +55,7 @@ module.exports = class ArchiveService {
 			name: {
 				title: 'Fetch name',
 				type: 'string',
-				format: 'grant'
+				format: 'name'
 			},
 			query: {
 				title: 'Fetch query',

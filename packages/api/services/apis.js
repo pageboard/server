@@ -97,7 +97,7 @@ module.exports = class ApiService {
 		properties: {
 			name: {
 				type: 'string',
-				format: 'grant'
+				format: 'name'
 			},
 			query: {
 				type: 'object',
@@ -164,7 +164,7 @@ module.exports = class ApiService {
 		properties: {
 			name: {
 				type: 'string',
-				format: 'grant'
+				format: 'name'
 			},
 			query: {
 				type: 'object',
