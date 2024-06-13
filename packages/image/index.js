@@ -6,6 +6,7 @@ const {
 const { pipeline } = require('node:stream/promises');
 const Path = require('node:path');
 const { glob } = require.lazy('glob');
+const bwipjs = require.lazy('bwip-js');
 
 const DatauriParser = require.lazy('datauri/parser');
 const allowedParameters = {
@@ -475,5 +476,108 @@ module.exports = class ImageModule {
 		$global: false,
 		$action: 'write',
 		$lock: ['webmaster']
+	};
+
+	async barcode(req, data) {
+		const opts = {
+			...data,
+			includetext: true,
+			textalign: 'center'
+		};
+		delete opts.format;
+		opts.textcolor = opts.barcolor = opts.bordercolor = data.color;
+		const ret = {};
+		if (data.format == "svg") {
+			ret.type = ".svg";
+			ret.mime = "image/svg+xml";
+			ret.buf = bwipjs.toSVG(opts);
+		} else if (data.format == "png") {
+			ret.type = ".png";
+			ret.mime = "image/png";
+			ret.buf = await bwipjs.toBuffer(opts);
+		}
+		if (data.uri) {
+			const dtu = new DatauriParser();
+			return dtu.format(ret.type, ret.buf).content;
+		} else {
+			req.res.type(ret.mime);
+			return ret.buf;
+		}
+	}
+	static barcode = {
+		title: 'Get Barcode',
+		$action: 'read',
+		properties: {
+			format: {
+				title: 'Image format',
+				anyOf: [{
+					const: "svg",
+					title: 'svg'
+				}, {
+					const: "png",
+					title: 'png'
+				}]
+			},
+			uri: {
+				title: 'Data Uri',
+				type: 'boolean',
+				default: false
+			},
+			bcid: {
+				title: 'Barcode type',
+				anyOf: [{
+					const: 'qrcode',
+					title: 'QR Code'
+				}, {
+					const: 'ean13',
+					title: 'EAN-13'
+				}, {
+					const: 'upca',
+					title: 'UPC-A'
+				}, {
+					const: 'isbn',
+					title: 'ISBN'
+				}],
+				default: 'qrcode'
+			},
+			text: {
+				title: 'Text to encode',
+				type: 'string',
+				format: 'singleline'
+			},
+			scaleX: {
+				title: 'X scale',
+				type: 'integer',
+				default: 2
+			},
+			scaleY: {
+				title: 'Y scale',
+				type: 'integer',
+				default: 2
+			},
+			color: {
+				title: 'Front color',
+				type: 'string',
+				format: 'hex-color',
+				$helper: 'color',
+				default: '#000000'
+			},
+			rotate: {
+				title: 'Rotate',
+				anyOf: [{
+					type: 'null',
+					title: 'No'
+				}, {
+					const: 'R',
+					title: 'Right',
+				}, {
+					const: 'L',
+					title: 'Left',
+				}, {
+					const: 'I',
+					title: 'Inverted'
+				}]
+			}
+		}
 	};
 };
