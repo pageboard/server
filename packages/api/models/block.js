@@ -386,12 +386,13 @@ class Block extends Model {
 				const { url } = data;
 				if (!url) return;
 				const { title } = content;
+				if (title == null) return; // no href without title anyway
 				try {
 					await req.run('href.save', {
 						url,
 						title
 					});
-				} catch (ex) {
+				} catch {
 					// forgiving - lots of href are missing
 					await req.run('href.add', { url });
 				}
