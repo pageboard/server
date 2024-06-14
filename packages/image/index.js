@@ -545,6 +545,25 @@ module.exports = class ImageModule {
 				type: 'string',
 				format: 'singleline'
 			},
+			textxalign: {
+				title: 'Text X align',
+				anyOf: [{
+					const: "center",
+					title: 'Center'
+				}, {
+					const: "left",
+					title: 'Left'
+				}, {
+					const: "center",
+					title: 'Center'
+				}, {
+					const: "Right",
+					title: 'Right'
+				}, {
+					const: "justify",
+					title: 'Justify'
+				}]
+			},
 			scaleX: {
 				title: 'X scale',
 				type: 'integer',
