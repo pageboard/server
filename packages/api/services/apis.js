@@ -70,6 +70,8 @@ module.exports = class ApiService {
 		// overwrite to avoid injection
 		Object.assign(scope, {
 			$request: reqBody ?? {},
+			$lang: req.call('translate.lang', data).lang,
+			$origin: site.$url.origin,
 			$query: query,
 			$site: site.id,
 			$user: user
@@ -113,7 +115,8 @@ module.exports = class ApiService {
 		}
 	};
 
-	async get({ site, run, user, locked, trx, ref }, data) {
+	async get(req, data) {
+		const { site, run, user, locked, trx, ref } = req;
 		const form = await site.$relatedQuery('children', trx)
 			.where('block.type', 'fetch')
 			.where(q => {
@@ -143,6 +146,8 @@ module.exports = class ApiService {
 		}
 		// overwrite to avoid injection
 		Object.assign(scope, {
+			$lang: req.call('translate.lang', data).lang,
+			$origin: site.$url.origin,
 			$query: query,
 			$site: site.id,
 			$user: user
