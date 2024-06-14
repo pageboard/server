@@ -108,7 +108,10 @@ module.exports = class ArchiveService {
 			archive.append(jstream, { name: 'export.ndjson' });
 			jstream.write(nsite);
 
-			const colOpts = { lang, content: Boolean(lang) };
+			const colOpts = {
+				lang,
+				content: lang ? null : []
+			};
 
 			const modifiers = {
 				blocks(q) {

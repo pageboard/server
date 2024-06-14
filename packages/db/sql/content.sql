@@ -84,7 +84,7 @@ DROP FUNCTION IF EXISTS block_get_content (INTEGER, TEXT, TEXT);
 CREATE OR REPLACE FUNCTION block_get_content (
 	block_id INTEGER,
 	_lang TEXT,
-	_content TEXT DEFAULT NULL
+	_content TEXT[] DEFAULT NULL
 ) RETURNS JSONB
 	LANGUAGE sql
 	PARALLEL SAFE
@@ -100,7 +100,7 @@ FROM (
 	FROM relation AS r, block
 	WHERE r.parent_id = block_id AND block._id = r.child_id
 	AND block.type = 'content' AND block.data->>'lang' = _lang
-	AND (CASE WHEN _content IS NOT NULL THEN block.data->>'name' = _content ELSE TRUE END)
+	AND (CASE WHEN _content IS NOT NULL THEN block.data->>'name' = ANY(_content) ELSE TRUE END)
 ) AS contents
 $BODY$;
 

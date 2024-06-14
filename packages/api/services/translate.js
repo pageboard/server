@@ -71,7 +71,7 @@ module.exports = class TranslateService {
 			lang = shared?.data.languages?.[0];
 		}
 		return Block.query(trx).whereSite('shared')
-			.columns({ content: null, lang }).where('block.type', 'language');
+			.columns({ lang }).where('block.type', 'language');
 	}
 	static available = {
 		title: 'List available shared languages',

@@ -276,7 +276,7 @@ module.exports = class BlockService {
 				}
 			},
 			childrenFilter(query) {
-				query.columns({ lang: language.lang, content: true })
+				query.columns({ lang: language.lang })
 					.where('standalone', false)
 					.whereNot('type', 'content');
 			}

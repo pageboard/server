@@ -51,10 +51,7 @@ module.exports = class PageService {
 
 	#QueryPage({ site, trx, ref, val, fun }, { url, lang, type }) {
 		return site.$relatedQuery('children', trx)
-			.columns({
-				lang,
-				content: null
-			})
+			.columns({ lang })
 			.first()
 			// eager load children (in which there are standalones)
 			// and children of standalones
@@ -63,12 +60,12 @@ module.exports = class PageService {
 				children(standalonesFilter) as standalones .children(childrenFilter)
 			]`).modifiers({
 				childrenFilter(q) {
-					q.columns({ lang, content: null })
+					q.columns({ lang })
 						.where('block.standalone', false)
 						.whereNot('block.type', 'content');
 				},
 				standalonesFilter(q) {
-					q.columns({ lang, content: null })
+					q.columns({ lang })
 						.where('block.standalone', true)
 						.whereNot('block.type', 'content');
 				}
@@ -363,7 +360,7 @@ module.exports = class PageService {
 		const { site, trx, fun, ref } = req;
 		const { lang } = req.call('translate.lang', data);
 		const q = site.$relatedQuery('children', trx)
-			.columns({ lang, content: 'title' })
+			.columns({ lang, content: ['title'] })
 			.whereIn('block.type', data.type ?? Array.from(site.$pkg.pages))
 			.where('block.standalone', true);
 
@@ -474,7 +471,7 @@ function getParents({ site, trx }, url, lang) {
 		urlParents.push(urlParts.slice(0, i + 1).join('/'));
 	}
 	return site.$relatedQuery('children', trx)
-		.columns({lang, content: 'title'})
+		.columns({ lang, content: ['title'] })
 		.whereIn('block.type', Array.from(site.$pkg.pages))
 		.whereJsonText('block.data:url', 'IN', urlParents)
 		.orderByRaw("length(block.data->>'url') DESC");

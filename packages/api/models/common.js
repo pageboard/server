@@ -143,7 +143,7 @@ exports.QueryBuilder = class CommonQueryBuilder extends QueryBuilder {
 		});
 		return super.select(list);
 	}
-	columns({ table, lang, content } = {}) {
+	columns({ table, lang, content = null } = {}) {
 		const model = this.modelClass();
 		if (!table) table = this.tableRefFor(model);
 		const cols = [];
@@ -156,11 +156,12 @@ exports.QueryBuilder = class CommonQueryBuilder extends QueryBuilder {
 						raw(`(block_get_content(:id:, :lang, :content)) AS content`, {
 							id: ref('_id').from(table),
 							lang,
-							content: content ?? null
+							content
 						})
 					);
 					continue;
-				} else if (Array.isArray(content)) {
+				} else if (content) {
+					// single language old sites
 					cols.push(
 						raw(`jsonb_build_object(
 							${content.map(_ => '?, content[??]').join(', ')}
