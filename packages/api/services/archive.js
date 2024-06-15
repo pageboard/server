@@ -1,6 +1,8 @@
+const Path = require('node:path');
 const { createReadStream, createWriteStream, promises: fs } = require('node:fs');
 const { pipeline } = require('node:stream/promises');
-const Path = require('node:path');
+const { createHash } = require('node:crypto');
+const { Deferred } = require.lazy('class-deferred');
 const ndjson = require.lazy('ndjson');
 const Upgrader = require.lazy('../upgrades');
 const Archiver = require.lazy('archiver');
@@ -23,18 +25,20 @@ module.exports = class ArchiveService {
 			query: data.query,
 			hrefs: true
 		});
-		const file = `${data.name}-${fileStamp()}.zip`;
 		const counts = {
 			items: items?.length,
 			hrefs: 0,
 			files: 0,
-			skips: [],
-			file: '/@cache/' + file
+			skips: []
 		};
-		await archiveWrap(req, file, async archive => {
+		const prefix = [data.name, ...Object.values(data.query)].join('-');
+		const archivePath = await archiveWrap(req, prefix, async archive => {
 			archive.append(
 				JSON.stringify(data.hrefs ? { hrefs, items } : items),
-				{ name: 'export.json' }
+				{
+					name: 'export.json',
+					date: new Date(req.site.updated_at)
+				}
 			);
 			const list = Object.entries(hrefs).map(
 				([url, { mime }]) => ({ url, mime })
@@ -42,6 +46,7 @@ module.exports = class ArchiveService {
 			counts.hrefs += list.length;
 			await archiveFiles(req, archive, list, counts, data.size);
 		});
+		counts.file = this.app.statics.pathToUrl(archivePath);
 		return counts;
 	}
 	static bundle = {
@@ -76,22 +81,19 @@ module.exports = class ArchiveService {
 
 	async export(req, data) {
 		const { site, trx, ref, fun } = req;
-		const { id } = site;
 		const lang = site.data.languages?.length == 0 ? req.call('translate.lang') : null;
 		const urls = data.urls;
 		const ids = (data.ids ?? []).slice();
-		const file = `${id}-${fileStamp()}.zip`;
 		const counts = {
 			users: 0,
 			blocks: 0,
 			hrefs: 0,
 			files: 0,
 			skips: [],
-			orphaned: 0,
-			file: '/@cache/' + file
+			orphaned: 0
 		};
 
-		await archiveWrap(req, file, async archive => {
+		const archivePath = await archiveWrap(req, site.id, async archive => {
 			if (urls?.length) {
 				const urlIds = await site.$relatedQuery('children', trx)
 					.select('block.id')
@@ -105,7 +107,10 @@ module.exports = class ArchiveService {
 			const nsite = site.toJSON();
 			delete nsite.data.domains;
 			const jstream = ndjson.stringify();
-			archive.append(jstream, { name: 'export.ndjson' });
+			archive.append(jstream, {
+				name: 'export.ndjson',
+				date: site.updated_at
+			});
 			jstream.write(nsite);
 
 			const colOpts = {
@@ -217,6 +222,7 @@ module.exports = class ArchiveService {
 			}
 			jstream.end();
 		});
+		counts.file = this.app.statics.pathToUrl(archivePath);
 		return counts;
 	}
 	static export = {
@@ -479,7 +485,7 @@ function writeBlocks(jstream, parent, key, ids) {
 	return count;
 }
 
-async function archiveWrap(req, file, fn) {
+async function archiveWrap(req, prefix, fn) {
 	const archive = new Archiver('zip');
 	archive.on('warning', err => {
 		if (err.code === 'ENOENT') {
@@ -490,11 +496,31 @@ async function archiveWrap(req, file, fn) {
 	});
 	const pubDir = req.call('statics.dir', '@cache');
 	await fs.mkdir(pubDir, { recursive: true });
-	const out = createWriteStream(Path.join(pubDir, file));
+	const tmpfile = Path.join(pubDir, `${prefix}-${fileStamp()}.zip`);
+	const out = createWriteStream(tmpfile);
 	const d = pipeline(archive, out);
 	await fn(archive);
-	await archive.finalize();
-	await d;
+	const [hash] = await Promise.all([
+		digestStream(archive),
+		archive.finalize(),
+		d,
+	]);
+	const destfile = Path.join(pubDir, `${prefix}-${hash}.zip`);
+	await fs.mv(tmpfile, destfile);
+	return destfile;
+}
+
+async function digestStream(stream) {
+	const d = new Deferred();
+	const hash = createHash('sha1');
+	stream.pipe(hash).on('readable', () => {
+		const bin = hash.read();
+		if (bin == null) return;
+		d.resolve(
+			bin.toString('base64url').replaceAll(/[_-]/g, 'x').slice(0, 8)
+		);
+	});
+	return d;
 }
 
 async function archiveFiles(req, archive, hrefs, counts, size) {
@@ -513,7 +539,10 @@ async function archiveFiles(req, archive, hrefs, counts, size) {
 			} else {
 				archive.file(
 					filePath,
-					{ name: url.substring(1) }
+					{
+						name: url.substring(1),
+						date: (await fs.stat(filePath)).mtime
+					}
 				);
 				counts.files++;
 			}
