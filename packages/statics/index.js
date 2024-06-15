@@ -66,9 +66,16 @@ module.exports = class StaticsModule {
 	}
 
 	pathToUrl(path) {
-		for (const [mount, [mountDir]] of Object.entries(this.opts.mounts)) {
+		for (const [mount, [mountDir, age, site]] of Object.entries(this.opts.mounts)) {
 			if (path.startsWith(Path.join(mountDir, mount))) {
-				return path.substring(mountDir.length);
+				const sub = path.substring(mountDir.length);
+				if (site) {
+					const list = sub.split('/');
+					list.splice(2, 1);
+					return list.join('/');
+				} else {
+					return sub;
+				}
 			}
 		}
 	}
