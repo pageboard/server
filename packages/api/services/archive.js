@@ -30,28 +30,28 @@ module.exports = class ArchiveService {
 			files: 0,
 			skips: []
 		};
-		const prefix = [data.name, ...Object.values(data.query)].join('-');
+
 		const lastUpdate = Math.max(...items.map(item => item.updated_at));
-		const archivePath = await archiveWrap(req, prefix, async archive => {
+		const archivePath = await archiveWrap(req, async archive => {
 			const hash = createHash('sha1');
 			const json = JSON.stringify(data.hrefs ? { hrefs, items } : items);
-			hash.update(json);
+			if (!data.version) hash.update(json);
 			archive.append(json, {
 				name: 'export.json',
 				date: lastUpdate
 			});
 			const list = Object.entries(hrefs).map(
 				([url, { mime }]) => {
-					hash.update(url);
+					if (!data.version) hash.update(url);
 					return { url, mime };
 				}
 			);
 
 			counts.hrefs += list.length;
 			await archiveFiles(req, archive, list, counts, data.size);
-			return hash.digest('base64url')
+			return [data.name, data.version ?? hash.digest('base64url')
 				.replaceAll(/[_-]/g, 'x')
-				.slice(0, 8);
+				.slice(0, 8)].join('-');
 		});
 		counts.file = this.app.statics.pathToUrl(archivePath);
 		return counts;
@@ -72,6 +72,12 @@ module.exports = class ArchiveService {
 			query: {
 				title: 'Fetch query',
 				type: 'object',
+				nullable: true
+			},
+			version: {
+				title: 'Version',
+				type: 'string',
+				format: 'singleline',
 				nullable: true
 			},
 			size: {
@@ -100,7 +106,7 @@ module.exports = class ArchiveService {
 			orphaned: 0
 		};
 
-		const archivePath = await archiveWrap(req, site.id, async archive => {
+		const archivePath = await archiveWrap(req, async archive => {
 			if (urls?.length) {
 				const urlIds = await site.$relatedQuery('children', trx)
 					.select('block.id')
@@ -229,7 +235,7 @@ module.exports = class ArchiveService {
 			}
 			jstream.end();
 
-			return fileStamp();
+			return [site.id, fileStamp()].join('-');
 		});
 		counts.file = this.app.statics.pathToUrl(archivePath);
 		return counts;
@@ -494,7 +500,7 @@ function writeBlocks(jstream, parent, key, ids) {
 	return count;
 }
 
-async function archiveWrap(req, prefix, fn) {
+async function archiveWrap(req, fn) {
 	const archive = new Archiver('zip');
 	archive.on('warning', err => {
 		if (err.code === 'ENOENT') {
@@ -506,8 +512,8 @@ async function archiveWrap(req, prefix, fn) {
 
 	const pubDir = req.call('statics.dir', '@cache');
 	await fs.mkdir(pubDir, { recursive: true });
-	const hash = await fn(archive);
-	const filePath = Path.join(pubDir, `${prefix}-${hash}.zip`);
+	const filename = await fn(archive);
+	const filePath = Path.join(pubDir, `${filename}.zip`);
 	const d = pipeline(archive, createWriteStream(filePath));
 	await archive.finalize();
 	await d;
