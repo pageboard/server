@@ -515,14 +515,15 @@ module.exports = class HrefService {
 			if (data.preview) {
 				meta = `jsonb_set(${meta}, '{preview}', to_jsonb(href.preview))`;
 			}
-			q.select(req.raw(`jsonb_object_agg(
+			q.select(req.raw(`json_object_agg(
 				href.url,
 				${meta}
+				ORDER BY href.url
 			) AS hrefs`));
 			const [{ hrefs }] = await q;
 			return hrefs ?? {};
 		} else {
-			q.columns();
+			q.columns().orderBy('href.url');
 			return q;
 		}
 	}

@@ -2,7 +2,6 @@ const Path = require('node:path');
 const { createReadStream, createWriteStream, promises: fs } = require('node:fs');
 const { pipeline } = require('node:stream/promises');
 const { createHash } = require('node:crypto');
-const { Deferred } = require.lazy('class-deferred');
 const ndjson = require.lazy('ndjson');
 const Upgrader = require.lazy('../upgrades');
 const Archiver = require.lazy('archiver');
@@ -32,19 +31,27 @@ module.exports = class ArchiveService {
 			skips: []
 		};
 		const prefix = [data.name, ...Object.values(data.query)].join('-');
+		const lastUpdate = Math.max(...items.map(item => item.updated_at));
 		const archivePath = await archiveWrap(req, prefix, async archive => {
-			archive.append(
-				JSON.stringify(data.hrefs ? { hrefs, items } : items),
-				{
-					name: 'export.json',
-					date: new Date(req.site.updated_at)
+			const hash = createHash('sha1');
+			const json = JSON.stringify(data.hrefs ? { hrefs, items } : items);
+			hash.update(json);
+			archive.append(json, {
+				name: 'export.json',
+				date: lastUpdate
+			});
+			const list = Object.entries(hrefs).map(
+				([url, { mime }]) => {
+					hash.update(url);
+					return { url, mime };
 				}
 			);
-			const list = Object.entries(hrefs).map(
-				([url, { mime }]) => ({ url, mime })
-			);
+
 			counts.hrefs += list.length;
 			await archiveFiles(req, archive, list, counts, data.size);
+			return hash.digest('base64url')
+				.replaceAll(/[_-]/g, 'x')
+				.slice(0, 8);
 		});
 		counts.file = this.app.statics.pathToUrl(archivePath);
 		return counts;
@@ -221,6 +228,8 @@ module.exports = class ArchiveService {
 				}
 			}
 			jstream.end();
+
+			return fileStamp();
 		});
 		counts.file = this.app.statics.pathToUrl(archivePath);
 		return counts;
@@ -494,33 +503,15 @@ async function archiveWrap(req, prefix, fn) {
 			throw err;
 		}
 	});
+
 	const pubDir = req.call('statics.dir', '@cache');
 	await fs.mkdir(pubDir, { recursive: true });
-	const tmpfile = Path.join(pubDir, `${prefix}-${fileStamp()}.zip`);
-	const out = createWriteStream(tmpfile);
-	const d = pipeline(archive, out);
-	await fn(archive);
-	const [hash] = await Promise.all([
-		digestStream(archive),
-		archive.finalize(),
-		d,
-	]);
-	const destfile = Path.join(pubDir, `${prefix}-${hash}.zip`);
-	await fs.mv(tmpfile, destfile);
-	return destfile;
-}
-
-async function digestStream(stream) {
-	const d = new Deferred();
-	const hash = createHash('sha1');
-	stream.pipe(hash).on('readable', () => {
-		const bin = hash.read();
-		if (bin == null) return;
-		d.resolve(
-			bin.toString('base64url').replaceAll(/[_-]/g, 'x').slice(0, 8)
-		);
-	});
-	return d;
+	const hash = await fn(archive);
+	const filePath = Path.join(pubDir, `${prefix}-${hash}.zip`);
+	const d = pipeline(archive, createWriteStream(filePath));
+	await archive.finalize();
+	await d;
+	return filePath;
 }
 
 async function archiveFiles(req, archive, hrefs, counts, size) {
@@ -537,13 +528,9 @@ async function archiveFiles(req, archive, hrefs, counts, size) {
 			if (!filePath) {
 				counts.skips.push(url);
 			} else {
-				archive.file(
-					filePath,
-					{
-						name: url.substring(1),
-						date: (await fs.stat(filePath)).mtime
-					}
-				);
+				archive.file(filePath, {
+					name: url.substring(1)
+				});
 				counts.files++;
 			}
 		}
