@@ -1,5 +1,3 @@
-// const { nestie } = require.lazy('nestie');
-const { flattie } = require.lazy('flattie');
 const dget = require.lazy('dlv');
 const getSlug = require.lazy('speakingurl');
 const { access } = require('node:fs/promises');
@@ -65,8 +63,8 @@ exports.unflatten = function(query) {
 	return nestie(query) ?? {};
 };
 
-exports.flatten = function (obj) {
-	return flattie(obj);
+exports.flatten = function (obj, opts) {
+	return flattie(obj, opts);
 };
 
 exports.mergeExpressions = function (data, flats, scope) {
@@ -131,8 +129,33 @@ function nestie(input, glue) {
 	return output;
 }
 
-exports.nestie = nestie;
+function iterFlat(output, nullish, sep, val, key, array) {
+	let k;
+	const pfx = key ? (key + sep) : key;
 
+	if (val == null) {
+		if (nullish) output[key] = val;
+	} else if (typeof val != 'object') {
+		output[key] = val;
+	} else if (Array.isArray(val)) {
+		if (array) output[key] = val;
+		else for (k = 0; k < val.length; k++) {
+			iterFlat(output, nullish, sep, val[k], pfx + k, array);
+		}
+	} else {
+		for (k in val) {
+			iterFlat(output, nullish, sep, val[k], pfx + k, array);
+		}
+	}
+}
+
+function flattie(input, { glue, toNull, array }) {
+	const output = {};
+	if (typeof input == 'object') {
+		iterFlat(output, Boolean(toNull), glue || '.', input, '', array);
+	}
+	return output;
+}
 
 exports.exists = async function(path) {
 	try {
