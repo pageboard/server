@@ -145,8 +145,9 @@ module.exports = class ApiModule {
 				app.cache.for(schema.$cache)(req, req.res, () => { });
 			}
 		}
-		if (schema.$tags && req.res) {
-			app.cache.tag(...schema.$tags)(req, req.res, () => { });
+		if (req.res) {
+			const { $tags = ['data-:site'] } = schema;
+			app.cache.tag(...$tags)(req, req.res, () => { });
 		}
 		if (schema.$lock != null && schema.$lock !== true) {
 			if (req.locked?.(schema.$lock)) {
