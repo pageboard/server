@@ -454,7 +454,7 @@ function asPaths(obj, ret, pre, schemas = []) {
 				ret[cur] = val;
 			}
 		} else if (Array.isArray(val) || val == null || typeof val != "object") {
-			let dval;
+			let dval = val;
 			if (val && curType == "string" && dateTimes.includes(schema.format)) {
 				if (op) {
 					dval = new Date(val);
