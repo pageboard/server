@@ -1,6 +1,7 @@
 const { ref, val, raw, fn: fun, Model, QueryBuilder } = require('objection');
 const Duration = require('iso8601-duration');
 const Path = require('node:path');
+const { dget, flatten } = require('../../../src/utils');
 
 const { isKnexRaw, isKnexQueryBuilder } = require(
 	Path.join(
@@ -51,7 +52,7 @@ class PatchObjectOperation extends UpdateOperation {
 	onBuildKnex(knexBuilder, builder) {
 		// this works only if $formatDatabaseJson does not stringify objects
 		const json = this.model.$toDatabaseJson(builder);
-		const jsonPaths = asPaths(json, {}, "", true, [
+		const jsonPaths = asPaths(json, {}, "", [
 			this.model.$schema()
 		]);
 		const convertedJson = convertFieldExpressionsToRaw(
@@ -210,7 +211,7 @@ exports.QueryBuilder = class CommonQueryBuilder extends QueryBuilder {
 
 		const schemas = types.map(type => mClass.schema(type));
 		const table = alias || this.tableRefFor(mClass);
-		const refs = asPaths(obj, {}, table, true, schemas);
+		const refs = asPaths(obj, {}, table, schemas);
 
 		for (const [k, cond] of Object.entries(refs)) {
 			// FIXME
@@ -383,37 +384,45 @@ function whereCond(q, key, value) {
 	}
 }
 
-function asPaths(obj, ret, pre, first, schemas) {
+function asPaths(obj, ret, pre, schemas = []) {
 	const dateTimes = ["date-time", "date"];
-	Object.keys(obj).forEach(str => {
-		let val = obj[str];
+	const flats = flatten(obj, { array: true });
+	for (const [str, val] of Object.entries(flats)) {
 		const [key, op] = str.split(/[:#]/);
 		if (op != null) {
-			delete obj[str];
-			obj[key] = val;
+			delete flats[str];
+			flats[key] = val;
 		}
-		const schem = schemas?.find(
-			item => item?.properties?.[key]
-		)?.properties?.[key];
-		if (!schem && schemas?.length) {
-			// refuse extra conditions
-			delete obj[key];
-			return;
-		}
-		let cur;
-		if (pre) {
-			if (first) {
-				cur = `${pre}.${key}`;
-			} else if (pre.endsWith(':')) {
-				cur = `${pre}${key}`;
-			} else {
-				cur = `${pre}[${key}]`;
+		let schema, parentSchema;
+		const pathKey = key.split('.');
+		const pathLen = pathKey.length;
+		const lastKey = pathKey.pop();
+		const parentSchemaPath = pathKey.join('.properties.');
+		pathKey.push(lastKey);
+		const firstKey = pathKey.shift();
+		for (const subSchema of schemas) {
+			parentSchema = parentSchemaPath ? dget(subSchema.properties, parentSchemaPath) : subSchema;
+			if (!parentSchema) continue;
+			if (parentSchema.type == "array") {
+				schema = parentSchema;
+				break;
 			}
-		} else {
-			cur = key;
+			schema = dget(parentSchema, 'properties.' + lastKey);
+			if (schema) break;
 		}
-		const curProps = schem.properties ?? {};
-		const curType = schem.type;
+		if (!schema && schemas?.length) {
+			// refuse extra conditions
+			delete flats[key];
+			continue;
+		}
+		let cur = pre ? `${pre}.` : '';
+		if (pathLen == 1) {
+			cur += lastKey;
+		} else {
+			cur += `${firstKey}:${pathKey.join('.')}`;
+		}
+		const curProps = parentSchema.properties ?? {};
+		const curType = parentSchema.type;
 		const propKeys = Object.keys(curProps);
 		if (
 			val && (
@@ -439,46 +448,48 @@ function asPaths(obj, ret, pre, first, schemas) {
 			if (range) {
 				range.names = propKeys;
 				ret[cur] = range;
-			} else if (op) ret[cur] = {
-				op: op,
-				val: val
-			};
-			else ret[cur] = val;
+			} else if (op) {
+				ret[cur] = { op, val };
+			} else {
+				ret[cur] = val;
+			}
 		} else if (Array.isArray(val) || val == null || typeof val != "object") {
-			if (val && curType == "string" && dateTimes.includes(schem.format)) {
+			let dval;
+			if (val && curType == "string" && dateTimes.includes(schema.format)) {
 				if (op) {
-					val = new Date(val);
+					dval = new Date(val);
 				} else {
 					const range = dateRange(val);
 					if (range) {
-						val = range;
+						dval = range;
 					} else {
-						val = new Date(val);
+						dval = new Date(val);
 					}
 				}
 			} else if (curType == "boolean" && typeof val != "boolean") {
 				if (!val || val == "false") {
-					if (schem.default == false) {
-						val = [false, null];
+					if (schema.default == false) {
+						dval = [false, null];
 					} else {
-						val = false;
+						dval = false;
 					}
 				} else {
-					val = true;
+					dval = true;
 				}
 			} else if (["integer", "number"].includes(curType) && typeof val == "string" && (val.includes("~") || val.includes("⩽"))) {
-				val = numericRange(val, curType);
+				dval = numericRange(val, curType);
 			}
-			if (op) ret[cur] = {
-				type: curType,
-				op,
-				val
-			};
-			else ret[cur] = val;
-		} else if (typeof val == "object") {
-			asPaths(val, ret, cur + (first ? ':' : ''), false, [schem]);
+			if (op) {
+				ret[cur] = {
+					type: curType,
+					op,
+					val: dval
+				};
+			} else {
+				ret[cur] = val;
+			}
 		}
-	});
+	}
 	return ret;
 }
 
