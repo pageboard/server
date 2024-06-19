@@ -384,8 +384,9 @@ function whereCond(q, key, value) {
 	}
 }
 
+const dateTimes = ["date-time", "date"];
+
 function asPaths(obj, ret, pre, schemas = []) {
-	const dateTimes = ["date-time", "date"];
 	const flats = flatten(obj, { array: true });
 	for (const [str, val] of Object.entries(flats)) {
 		const [key, op] = str.split(/[:#]/);
@@ -393,21 +394,20 @@ function asPaths(obj, ret, pre, schemas = []) {
 			delete flats[str];
 			flats[key] = val;
 		}
-		let schema, parentSchema;
+		let schema, parent;
 		const pathKey = key.split('.');
 		const pathLen = pathKey.length;
 		const lastKey = pathKey.pop();
 		const parentSchemaPath = pathKey.join('.properties.');
-		pathKey.push(lastKey);
 		const firstKey = pathKey.shift();
 		for (const subSchema of schemas) {
-			parentSchema = parentSchemaPath ? dget(subSchema.properties, parentSchemaPath) : subSchema;
-			if (!parentSchema) continue;
-			if (parentSchema.type == "array") {
-				schema = parentSchema;
+			parent = parentSchemaPath ? dget(subSchema.properties, parentSchemaPath) : subSchema;
+			if (!parent) continue;
+			if (parent.type == "array") {
+				schema = parent;
 				break;
 			}
-			schema = dget(parentSchema, 'properties.' + lastKey);
+			schema = dget(parent, 'properties.' + lastKey);
 			if (schema) break;
 		}
 		if (!schema && schemas?.length) {
@@ -415,47 +415,51 @@ function asPaths(obj, ret, pre, schemas = []) {
 			delete flats[key];
 			continue;
 		}
-		let cur = pre ? `${pre}.` : '';
+		let ref = pre ? `${pre}.` : '';
+		let parentRef = ref;
 		if (pathLen == 1) {
-			cur += lastKey;
+			ref += lastKey;
 		} else {
-			cur += `${firstKey}:${pathKey.join('.')}`;
+			parentRef += `${firstKey}:${pathKey.join('.')}`;
+			pathKey.push(lastKey);
+			ref += `${firstKey}:${pathKey.join('.')}`;
 		}
-		const curProps = parentSchema.properties ?? {};
-		const curType = parentSchema.type;
-		const propKeys = Object.keys(curProps);
+
+		let wasRangeSchema;
+		if (schema.type == "string" && dateTimes.includes(schema.format) || schema.type == "integer") {
+			if (isRangeSchema(parent)) {
+				wasRangeSchema = schema.type;
+				schema = parent;
+				ref = parentRef;
+			}
+		}
 		if (
 			val && (
 				typeof val == "string"
 				|| typeof val == "object" && val.start && val.end
 				|| Array.isArray(val)
 			)
-			&& curType == "object" && propKeys.length == 2
-			&& (
-				dateTimes.includes(curProps[propKeys[0]].format)
-				&& dateTimes.includes(curProps[propKeys[1]].format)
-				|| curProps[propKeys[0]].type == "integer"
-				&& curProps[propKeys[1]].type == "integer"
-			)
+			&& (wasRangeSchema || isRangeSchema(schema))
 		) {
 			// we have a date or numeric slot
+			wasRangeSchema ??= schema.type;
 			let range;
-			if (curProps[propKeys[0]].type == "integer" && curProps[propKeys[1]].type == "integer") {
+			if (wasRangeSchema == "integer") {
 				range = numericRange(val);
 			} else {
 				range = dateRange(val);
 			}
 			if (range) {
-				range.names = propKeys;
-				ret[cur] = range;
+				range.names = Object.keys(schema.properties);
+				ret[ref] = range;
 			} else if (op) {
-				ret[cur] = { op, val };
+				ret[ref] = { op, val };
 			} else {
-				ret[cur] = val;
+				ret[ref] = val;
 			}
 		} else if (Array.isArray(val) || val == null || typeof val != "object") {
 			let dval = val;
-			if (val && curType == "string" && dateTimes.includes(schema.format)) {
+			if (val && schema.type == "string" && dateTimes.includes(schema.format)) {
 				if (op) {
 					dval = new Date(val);
 				} else {
@@ -466,7 +470,7 @@ function asPaths(obj, ret, pre, schemas = []) {
 						dval = new Date(val);
 					}
 				}
-			} else if (curType == "boolean" && typeof val != "boolean") {
+			} else if (schema.type == "boolean" && typeof val != "boolean") {
 				if (!val || val == "false") {
 					if (schema.default == false) {
 						dval = [false, null];
@@ -476,21 +480,31 @@ function asPaths(obj, ret, pre, schemas = []) {
 				} else {
 					dval = true;
 				}
-			} else if (["integer", "number"].includes(curType) && typeof val == "string" && (val.includes("~") || val.includes("⩽"))) {
-				dval = numericRange(val, curType);
+			} else if (["integer", "number"].includes(schema.type) && typeof val == "string" && (val.includes("~") || val.includes("⩽"))) {
+				dval = numericRange(val, schema.type);
 			}
 			if (op) {
-				ret[cur] = {
-					type: curType,
+				ret[ref] = {
+					type: schema.type,
 					op,
 					val: dval
 				};
 			} else {
-				ret[cur] = val;
+				ret[ref] = val;
 			}
 		}
 	}
 	return ret;
+}
+
+function isRangeSchema(schema) {
+	const keys = Object.keys(schema.properties ?? {});
+	return schema.type == "object" && keys.length == 2 && (
+		dateTimes.includes(schema.properties[keys[0]].format)
+		&& dateTimes.includes(schema.properties[keys[1]].format)
+		|| schema.properties[keys[0]].type == "integer"
+		&& schema.properties[keys[1]].type == "integer"
+	);
 }
 
 function dateRange(val) {
