@@ -33,7 +33,7 @@ module.exports = class TranslateService {
 		const availables = [];
 		if (site.data.languages?.length) availables.push(...site.data.languages);
 		else if (site.data.lang) availables.push(site.data.lang);
-		if (!availables.length) return {};
+		if (!availables.length) return {}; // compatibility with unlocalized sites
 		const accepted = req.acceptsLanguages(availables) ?? 'default';
 		const language = this.app.languages[accepted] ?? this.app.languages.default;
 		if (!req.res.headersSent) {
