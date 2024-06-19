@@ -1,12 +1,8 @@
 const assert = require('node:assert');
-const Pageboard = require('../src/pageboard');
-const { site } = require('./helpers/common');
 const fs = require('node:fs/promises');
 const path = require('node:path');
 const os = require('node:os');
-
-
-const app = new Pageboard();
+const { site, app, setupHelper } = require('./helpers/common');
 
 suite('upload', function () {
 	this.timeout(require('node:inspector').url() === undefined ? 20000 : 0);
@@ -15,12 +11,7 @@ suite('upload', function () {
 
 	suiteSetup(async function () {
 		dir = await fs.mkdtemp(path.join(os.tmpdir(), 'pageboard-test-'));
-		await app.init();
-		try {
-			await app.run('site.add', site);
-		} catch (err) {
-			await app.run('site.empty', { id: site.id });
-		}
+		return setupHelper();
 	});
 
 	suiteTeardown(async function () {
@@ -36,7 +27,7 @@ suite('upload', function () {
 	test('upload.add text file', async function () {
 		const permission = await app.run('upload.add', {
 			path: await genFile('test.txt')
-		}, { site: 'test' });
+		}, { site: site.id });
 		assert.deepEqual(permission, { status: 401, locks: ['user'] });
 
 		const { href } = await app.run('upload.add', {
@@ -52,7 +43,7 @@ suite('upload', function () {
 	test('upload.add image file', async function () {
 		const { href } = await app.run('upload.add', {
 			path: await genFile('icon.png', 'iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mP8/5+hHgAHggJ/PchI7wAAAABJRU5ErkJggg==', 'base64')
-		}, { site: 'test', grant: 'user' });
+		}, { site: site.id, grant: 'user' });
 		assert.ok(href);
 		assert.equal(href.mime, 'image/png');
 		assert.equal(href.type, 'image');

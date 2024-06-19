@@ -1,26 +1,18 @@
 const assert = require('node:assert');
-const Pageboard = require('../src/pageboard');
-const { site } = require('./helpers/common');
-
-const app = new Pageboard();
+const { site, app, setupHelper } = require('./helpers/common');
 
 suite('content without lang', function () {
 	this.timeout(require('node:inspector').url() === undefined ? 20000 : 0);
 
-	suiteSetup(async function () {
-		await app.init();
+	suiteSetup(function() {
 		delete site.data.languages;
-		try {
-			await app.run('site.add', site);
-		} catch (err) {
-			await app.run('site.empty', { id: site.id });
-		}
+		return setupHelper();
 	});
 
 	test('fill block', async function () {
 		const { item: b1 } = await app.run('block.add', {
 			type: 'page', data: { url: '/testfill' }
-		}, { site: 'test' });
+		}, { site: site.id });
 
 		const { item: b2 } = await app.run('block.fill', {
 			id: b1.id,
@@ -47,7 +39,7 @@ suite('content without lang', function () {
 				type: 'paragraph',
 				content: 'Test text<br>with <b>some styling</b>'
 			}]
-		}, { site: 'test' });
+		}, { site: site.id });
 		assert.equal(b2.id, b1.id);
 		assert.equal(b2.children.length, 3);
 		assert.equal(b2.content.body, b2.children.map(
@@ -56,7 +48,7 @@ suite('content without lang', function () {
 
 		const b1c = await app.run('block.get', {
 			id: b1.id, children: true, content: null
-		}, { site: 'test' });
+		}, { site: site.id });
 		assert.equal(b1c.children.length, 3);
 		assert.deepEqual(b1c.content, b2.content);
 	});
@@ -64,14 +56,14 @@ suite('content without lang', function () {
 	test('save block with content', async function () {
 		const { item: b1 } = await app.run('block.add', {
 			type: 'page', data: { url: '/test' }
-		}, { site: 'test' });
+		}, { site: site.id });
 
 		const body = '<main><p>test body</p></main>';
 		const { item: b2 } = await app.run('block.save', {
 			id: b1.id,
 			type: 'page',
 			content: { body }
-		}, { site: 'test' });
+		}, { site: site.id });
 		assert.equal(b2.id, b1.id);
 		assert.equal(b2.content.body, body);
 	});

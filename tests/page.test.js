@@ -1,30 +1,20 @@
 const assert = require('node:assert');
-const Pageboard = require('../src/pageboard');
-const { site } = require('./helpers/common');
-
-const app = new Pageboard();
+const { site, app, setupHelper } = require('./helpers/common');
 
 suite('page', function () {
 	this.timeout(require('node:inspector').url() === undefined ? 20000 : 0);
 
-	suiteSetup(async function () {
-		await app.init();
-		try {
-			await app.run('site.add', site);
-		} catch (err) {
-			await app.run('site.empty', { id: site.id });
-		}
-	});
+	suiteSetup(setupHelper);
 
 	test('get page', async function () {
 		const { item: b } = await app.run('block.add', {
 			type: 'page', data: { url: '/test/c' }
-		}, { site: 'test' });
+		}, { site: site.id });
 		assert.ok('id' in b, 'has id');
 		assert.equal(typeof b.updated_at, "string");
 		const { item, items, hrefs, links, status, parent } = await app.run('page.get', {
 			url: '/test/c'
-		}, { site: 'test' });
+		}, { site: site.id });
 		assert.ok(item);
 		assert.equal(items.length, 0);
 		assert.deepEqual(hrefs, {});
@@ -42,26 +32,26 @@ suite('page', function () {
 		// TODO
 		await app.run('block.add', {
 			type: 'page', data: { url: '/root/special' }
-		}, { site: 'test' });
+		}, { site: site.id });
 
 		await app.run('block.add', {
 			type: 'page', data: { url: '/root/', prefix: true }
-		}, { site: 'test' });
+		}, { site: site.id });
 
 		await assert.rejects(() => app.run('block.add', {
 			type: 'page', data: { url: '/other', prefix: true }
-		}, { site: 'test' }));
+		}, { site: site.id }));
 
 		const gen = await app.run('page.get', {
 			url: '/root/generic'
-		}, { site: 'test' });
+		}, { site: site.id });
 		assert.equal(gen.status, 200);
 		assert.equal(gen.item.data.prefix, true);
 		assert.equal(gen.item.data.url, '/root/');
 
 		const spe = await app.run('page.get', {
 			url: '/root/special'
-		}, { site: 'test' });
+		}, { site: site.id });
 		assert.equal(spe.status, 200);
 		assert.equal(spe.item.data.url, '/root/special');
 		assert.equal(spe.item.data.prefix, null);

@@ -1,27 +1,17 @@
 const assert = require('node:assert');
-const Pageboard = require('../src/pageboard');
-const { site } = require('./helpers/common');
-
-const app = new Pageboard();
+const { site, app, setupHelper } = require('./helpers/common');
 
 suite('apis.get', function () {
 
 	this.timeout(require('node:inspector').url() === undefined ? 10000 : 0);
 
-	suiteSetup(async function () {
-		await app.init();
-		try {
-			await app.run('site.add', site);
-		} catch (err) {
-			await app.run('site.empty', { id: site.id });
-		}
-	});
+	suiteSetup(setupHelper);
 
 	test('request block', async function () {
 		const { item: page } = await app.run('block.add', {
 			type: 'page',
 			data: { url: '/test' }
-		}, { site: 'test' });
+		}, { site: site.id });
 		const { item: fetch } = await app.run('block.add', {
 			type: 'fetch',
 			data: {
@@ -37,14 +27,14 @@ suite('apis.get', function () {
 					}
 				}
 			}
-		}, { site: 'test' });
+		}, { site: site.id });
 
 		const bget = await app.run('apis.get', {
 			name: fetch.data.name,
 			query: {
 				id: page.id
 			}
-		}, { site: 'test' });
+		}, { site: site.id });
 		assert.deepEqual(bget, page);
 	});
 
@@ -52,7 +42,7 @@ suite('apis.get', function () {
 		const { item: page } = await app.run('block.add', {
 			type: 'page',
 			data: { url: '/test' }
-		}, { site: 'test' });
+		}, { site: site.id });
 		const { item: fetch } = await app.run('block.add', {
 			type: 'fetch',
 			data: {
@@ -70,14 +60,14 @@ suite('apis.get', function () {
 					}
 				}
 			}
-		}, { site: 'test' });
+		}, { site: site.id });
 
 		const bget = await app.run('apis.get', {
 			name: fetch.data.name,
 			query: {
 				id: page.id
 			}
-		}, { site: 'test' });
+		}, { site: site.id });
 		assert.deepEqual(bget, { id: page.id, data: { url: page.data.url } });
 	});
 
@@ -85,11 +75,11 @@ suite('apis.get', function () {
 		const { item: b1 } = await app.run('block.add', {
 			type: 'layout',
 			data: { maxWidth: 7, height: 8 }
-		}, { site: 'test' });
+		}, { site: site.id });
 		const { item: b2 } = await app.run('block.add', {
 			type: 'layout',
 			data: { maxWidth: 3, height: 2 }
-		}, { site: 'test' });
+		}, { site: site.id });
 		const { item: fetch } = await app.run('block.add', {
 			type: 'fetch',
 			data: {
@@ -101,14 +91,14 @@ suite('apis.get', function () {
 					}
 				}
 			}
-		}, { site: 'test' });
+		}, { site: site.id });
 
 		const bget = await app.run('apis.get', {
 			name: fetch.data.name
-		}, { site: 'test' });
+		}, { site: site.id });
 		bget.items = bget.items.map(item => item.toJSON());
 		assert.deepEqual(bget, {
-			count: 2, limit: 10, offset: 0, hrefs: {},
+			count: 2, limit: 10, offset: 0, hrefs: {}, lang: 'fr',
 			items: [b1.toJSON(), b2.toJSON()]
 		});
 	});
@@ -117,11 +107,11 @@ suite('apis.get', function () {
 		const { item: b1 } = await app.run('block.add', {
 			type: 'layout',
 			data: { maxWidth: 7, height: 8, horizontal: 'haround' }
-		}, { site: 'test' });
+		}, { site: site.id });
 		const { item: b2 } = await app.run('block.add', {
 			type: 'layout',
 			data: { maxWidth: 3, height: 2, horizontal: 'haround' }
-		}, { site: 'test' });
+		}, { site: site.id });
 
 		const { item: fetch } = await app.run('block.add', {
 			type: 'fetch',
@@ -137,12 +127,12 @@ suite('apis.get', function () {
 					}
 				}
 			}
-		}, { site: 'test' });
+		}, { site: site.id });
 
 		const bget = await app.run('apis.get', {
 			name: fetch.data.name,
 			query: { h: 'haround' }
-		}, { site: 'test' });
+		}, { site: site.id });
 		assert.deepEqual(bget.items, [b1, b2]);
 	});
 
@@ -150,11 +140,11 @@ suite('apis.get', function () {
 		const { item: b1 } = await app.run('block.add', {
 			type: 'layout',
 			data: { maxWidth: 7, height: 8, horizontal: 'haround' }
-		}, { site: 'test' });
+		}, { site: site.id });
 		const { item: b2 } = await app.run('block.add', {
 			type: 'layout',
 			data: { maxWidth: 3, height: 2, horizontal: 'haround' }
-		}, { site: 'test' });
+		}, { site: site.id });
 
 		const { item: fetch } = await app.run('block.add', {
 			type: 'fetch',
@@ -171,11 +161,11 @@ suite('apis.get', function () {
 					}
 				}
 			}
-		}, { site: 'test' });
+		}, { site: site.id });
 
 		const bget = await app.run('apis.get', {
 			name: fetch.data.name
-		}, { site: 'test' });
+		}, { site: site.id });
 		assert.deepEqual(bget.items, [b1, b2]);
 	});
 
@@ -183,11 +173,11 @@ suite('apis.get', function () {
 		const { item: b1 } = await app.run('block.add', {
 			type: 'layout',
 			data: { maxWidth: 7, height: 8, horizontal: 'hcenter' }
-		}, { site: 'test' });
+		}, { site: site.id });
 		const { item: b2 } = await app.run('block.add', {
 			type: 'layout',
 			data: { maxWidth: 3, height: 2, horizontal: 'hcenter' }
-		}, { site: 'test' });
+		}, { site: site.id });
 
 		const { item: fetch } = await app.run('block.add', {
 			type: 'fetch',
@@ -206,11 +196,11 @@ suite('apis.get', function () {
 					}
 				}
 			}
-		}, { site: 'test' });
+		}, { site: site.id });
 
 		const bget = await app.run('apis.get', {
 			name: fetch.data.name
-		}, { site: 'test' });
+		}, { site: site.id });
 		assert.deepEqual(bget, {
 			items: [{
 				w: b1.data.maxWidth, h: b1.data.height
@@ -224,11 +214,11 @@ suite('apis.get', function () {
 		const { item: b1 } = await app.run('block.add', {
 			type: 'layout',
 			data: { maxWidth: 7, height: 8, horizontal: 'right' }
-		}, { site: 'test' });
+		}, { site: site.id });
 		const { item: b2 } = await app.run('block.add', {
 			type: 'layout',
 			data: { maxWidth: 3, height: 2, horizontal: 'right' }
-		}, { site: 'test' });
+		}, { site: site.id });
 
 		const { item: fetch } = await app.run('block.add', {
 			type: 'fetch',
@@ -248,11 +238,11 @@ suite('apis.get', function () {
 					}
 				}
 			}
-		}, { site: 'test' });
+		}, { site: site.id });
 
 		const bget = await app.run('apis.get', {
 			name: fetch.data.name
-		}, { site: 'test' });
+		}, { site: site.id });
 		assert.deepEqual(bget, [{
 			w: b1.data.maxWidth, h: b1.data.height
 		}, {
@@ -269,7 +259,7 @@ suite('apis.get', function () {
 					end: '2018-06-10'
 				}
 			}
-		}, { site: 'test' });
+		}, { site: site.id });
 		const { item: fetch } = await app.run('block.add', {
 			type: 'fetch',
 			data: {
@@ -289,14 +279,14 @@ suite('apis.get', function () {
 					}
 				}
 			}
-		}, { site: 'test' });
+		}, { site: site.id });
 
 		const bget = await app.run('apis.get', {
 			name: fetch.data.name,
 			query: {
 				date: "2018-06"
 			}
-		}, { site: 'test' });
+		}, { site: site.id });
 		assert.deepEqual(eventDate, bget.item);
 
 		const miss = await app.run('apis.get', {
@@ -304,7 +294,7 @@ suite('apis.get', function () {
 			query: {
 				date: "2018-05"
 			}
-		}, { site: 'test' });
+		}, { site: site.id });
 		assert(miss.status, 404);
 	});
 
@@ -318,7 +308,7 @@ suite('apis.get', function () {
 					end: '2022-06-10'
 				}
 			}
-		}, { site: 'test' });
+		}, { site: site.id });
 		const { item: fetch } = await app.run('block.add', {
 			type: 'fetch',
 			data: {
@@ -334,14 +324,14 @@ suite('apis.get', function () {
 					}
 				}
 			}
-		}, { site: 'test' });
+		}, { site: site.id });
 
 		const bget = await app.run('apis.get', {
 			name: fetch.data.name,
 			query: {
 				date: "2022-06"
 			}
-		}, { site: 'test' });
+		}, { site: site.id });
 		assert.deepEqual(eventDate, bget.item);
 	});
 
@@ -354,7 +344,7 @@ suite('apis.get', function () {
 					end: '2021-06-10'
 				}
 			}
-		}, { site: 'test' });
+		}, { site: site.id });
 		const { item: fetch } = await app.run('block.add', {
 			type: 'fetch',
 			data: {
@@ -370,14 +360,14 @@ suite('apis.get', function () {
 					}
 				}
 			}
-		}, { site: 'test' });
+		}, { site: site.id });
 
 		const bget = await app.run('apis.get', {
 			name: fetch.data.name,
 			query: {
 				date: ["2021-06-06", "2021-06-08"]
 			}
-		}, { site: 'test' });
+		}, { site: site.id });
 		assert.deepEqual(eventDate, bget.item);
 
 		const miss = await app.run('apis.get', {
@@ -385,7 +375,7 @@ suite('apis.get', function () {
 			query: {
 				date: ["2021-05-06", "2021-05-08"]
 			}
-		}, { site: 'test' });
+		}, { site: site.id });
 		assert(miss.status, 404);
 	});
 
@@ -398,7 +388,7 @@ suite('apis.get', function () {
 					end: '2020-06-10'
 				}
 			}
-		}, { site: 'test' });
+		}, { site: site.id });
 		const { item: fetch } = await app.run('block.add', {
 			type: 'fetch',
 			data: {
@@ -413,14 +403,14 @@ suite('apis.get', function () {
 					}
 				}
 			}
-		}, { site: 'test' });
+		}, { site: site.id });
 
 		const bget = await app.run('apis.get', {
 			name: fetch.data.name,
 			query: {
 				date: "2020-06-08"
 			}
-		}, { site: 'test' });
+		}, { site: site.id });
 
 		assert.deepEqual(eventDate, bget.item);
 
@@ -429,7 +419,7 @@ suite('apis.get', function () {
 			query: {
 				date: "2020-05-06"
 			}
-		}, { site: 'test' });
+		}, { site: site.id });
 		assert(miss.status, 404);
 	});
 
@@ -442,7 +432,7 @@ suite('apis.get', function () {
 					end: '2019-06-10'
 				}
 			}
-		}, { site: 'test' });
+		}, { site: site.id });
 		const { item: fetch } = await app.run('block.add', {
 			type: 'fetch',
 			data: {
@@ -457,14 +447,14 @@ suite('apis.get', function () {
 					}
 				}
 			}
-		}, { site: 'test' });
+		}, { site: site.id });
 
 		const bget = await app.run('apis.get', {
 			name: fetch.data.name,
 			query: {
 				date: ["2019-06-08", "2019-06-09"]
 			}
-		}, { site: 'test' });
+		}, { site: site.id });
 
 		assert.deepEqual(eventDate, bget.item);
 
@@ -473,7 +463,7 @@ suite('apis.get', function () {
 			query: {
 				date: ["2019-05-08", "2019-05-09"]
 			}
-		}, { site: 'test' });
+		}, { site: site.id });
 		assert(miss.status, 404);
 	});
 });

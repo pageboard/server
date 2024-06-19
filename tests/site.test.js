@@ -1,9 +1,5 @@
 const assert = require('node:assert');
-
-const Pageboard = require('..');
-const { site, nullers } = require('./helpers/common');
-
-const app = new Pageboard();
+const { site, nullers, app } = require('./helpers/common');
 
 suite('site', function () {
 

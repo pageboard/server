@@ -1,28 +1,18 @@
 const assert = require('node:assert');
-const Pageboard = require('..');
-const { site } = require('./helpers/common');
-
-const app = new Pageboard();
+const { site, app, setupHelper } = require('./helpers/common');
 
 suite('block', function () {
 	this.timeout(require('node:inspector').url() === undefined ? 20000 : 0);
 
-	suiteSetup(async function () {
-		await app.init();
-		try {
-			await app.run('site.add', site);
-		} catch (err) {
-			await app.run('site.empty', { id: site.id });
-		}
-	});
+	suiteSetup(setupHelper);
 
 	test('add block', async function () {
 		const { item: b } = await app.run('block.add', {
 			type: 'page', data: { url: '/test' }
-		}, { site: 'test' });
+		}, { site: site.id });
 		const c = await app.run('block.get', {
 			id: b.id
-		}, { site: 'test' });
+		}, { site: site.id });
 		assert.ok('_id' in b, 'has _id');
 		assert.ok('id' in b, 'has id');
 		assert.equal(typeof b.updated_at, "string");
@@ -33,7 +23,7 @@ suite('block', function () {
 	test('add block: validation for missing property', async function () {
 		assert.rejects(app.run('block.add', {
 			type: 'api_form', data: {}
-		}, { site: 'test' }), {
+		}, { site: site.id }), {
 			name: 'ValidationError',
 			message: "data.action: must have required property 'action'"
 		});
@@ -42,7 +32,7 @@ suite('block', function () {
 	test('fill block', async function () {
 		const { item: b1 } = await app.run('block.add', {
 			type: 'page', data: { url: '/testfill' }
-		}, { site: 'test' });
+		}, { site: site.id });
 
 		const { item: b2 } = await app.run('block.fill', {
 			id: b1.id,
@@ -69,7 +59,7 @@ suite('block', function () {
 				type: 'paragraph',
 				content: 'Test text<br>with <b>some styling</b>'
 			}]
-		}, { site: 'test' });
+		}, { site: site.id });
 		assert.equal(b2.id, b1.id);
 		assert.equal(b2.children.length, 3);
 		assert.equal(b2.content.body, b2.children.map(
@@ -78,7 +68,7 @@ suite('block', function () {
 
 		const b1c = await app.run('block.get', {
 			id: b1.id, children: true, content: null
-		}, { site: 'test' });
+		}, { site: site.id });
 		assert.equal(b1c.children.length, 3);
 		assert.deepEqual(b1c.content, b2.content);
 	});
@@ -86,7 +76,7 @@ suite('block', function () {
 	test('clone block', async function () {
 		const { item: src } = await app.run('block.add', {
 			type: 'page', data: { url: '/test' }
-		}, { site: 'test' });
+		}, { site: site.id });
 		await app.run('block.fill', {
 			id: src.id,
 			name: 'body',
@@ -96,19 +86,19 @@ suite('block', function () {
 				type: 'main',
 				content: "<p>test</p>"
 			}]
-		}, { site: 'test' });
+		}, { site: site.id });
 
 		const clone = await app.run('block.clone', {
 			id: src.id,
 			data: {
 				url: '/test2'
 			}
-		}, { site: 'test' });
+		}, { site: site.id });
 		const obj = await app.run('block.get', {
 			id: clone.id,
 			type: 'page',
 			children: true
-		}, { site: 'test' });
+		}, { site: site.id });
 
 		assert.equal(obj.children.length, 1);
 		assert.equal(obj.data.url, '/test2');
@@ -117,13 +107,13 @@ suite('block', function () {
 	test('save block', async function () {
 		const { item: b1 } = await app.run('block.add', {
 			type: 'page', data: { url: '/test' }
-		}, { site: 'test' });
+		}, { site: site.id });
 
 		const { item: b2 } = await app.run('block.save', {
 			id: b1.id,
 			type: 'page',
 			data: { url: '/test2' }
-		}, { site: 'test' });
+		}, { site: site.id });
 		assert.equal(b2.id, b1.id);
 		assert.equal(b2.data.url, '/test2');
 	});
@@ -131,14 +121,14 @@ suite('block', function () {
 	test('save block with content', async function () {
 		const { item: b1 } = await app.run('block.add', {
 			type: 'page', data: { url: '/test' }
-		}, { site: 'test' });
+		}, { site: site.id });
 
 		const body = '<main><p>test body</p></main>';
 		const { item: b2 } = await app.run('block.save', {
 			id: b1.id,
 			type: 'page',
 			content: { body }
-		}, { site: 'test' });
+		}, { site: site.id });
 		assert.equal(b2.id, b1.id);
 		assert.equal(b2.content.body, body);
 	});
@@ -146,12 +136,12 @@ suite('block', function () {
 	test('delete block', async function () {
 		const { item: b1 } = await app.run('block.add', {
 			type: 'page', data: { url: '/test' }
-		}, { site: 'test' });
+		}, { site: site.id });
 
 		const b2 = await app.run('block.del', {
 			id: b1.id,
 			type: 'page'
-		}, { site: 'test' });
+		}, { site: site.id });
 
 		assert.deepEqual(b2, { count: 1 });
 

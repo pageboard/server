@@ -3,6 +3,9 @@ const execFile = promisify(require('node:child_process').execFile);
 const { randomBytes } = require('node:crypto');
 const Path = require('node:path');
 const merge = require('lodash.merge');
+const Pageboard = require('../../src/pageboard');
+
+const app = new Pageboard();
 
 const bin = Path.join(__dirname, '..', 'bin', 'pageboard');
 
@@ -41,4 +44,14 @@ const nullers = {
 	updated_at: null
 };
 
-Object.assign(exports, { cli, genId, merge, site, nullers });
+async function setupHelper() {
+	await app.init();
+	try {
+		await app.run('site.del', { id: site.id });
+	} catch {
+		//ignore
+	}
+	await app.run('site.add', site);
+}
+
+Object.assign(exports, { cli, genId, merge, site, nullers, setupHelper, app });
