@@ -1029,7 +1029,9 @@ function whereSub(q, data, alias = 'block') {
 	for (const key of ['id', 'created_at', 'updated_at']) {
 		if (data[key] !== undefined) wobj[key] = data[key];
 	}
-	if (!Object.isEmpty(data.data)) wobj.data = data.data;
+	if (!Object.isEmpty(data.data)) {
+		wobj.data = data.data;
+	}
 	if (!Object.isEmpty(wobj)) {
 		valid = true;
 		// add the generic block style
