@@ -42,7 +42,7 @@ module.exports = class ApiService {
 			throw new HttpError.Unauthorized("Check user permissions");
 		}
 
-		const { action = {} } = form.data ?? {};
+		const { action = {}, redirection } = form.data ?? {};
 
 		const { method } = action;
 		if (!method) {
@@ -53,7 +53,6 @@ module.exports = class ApiService {
 
 		const formData = action.parameters ?? {};
 		for (const key of Object.keys(formData)) {
-			// else mergeRecursive(body, params) will drop everything
 			if (formData[key] === null) delete formData[key];
 		}
 
@@ -79,15 +78,30 @@ module.exports = class ApiService {
 
 		const params = mergeExpressions(
 			action.parameters ?? {},
-			mergeRecursive({}, action.parameters, action.request),
+			mergeRecursive({}, action.parameters, unflatten(action.request)),
 			scope
 		);
 
 		const obj = await run(method, params);
 
-		if (Object.isEmpty(action.response)) return obj;
-		else return mergeExpressions({}, action.response, obj);
+		const response = Object.isEmpty(action.response)
+			? obj
+			: mergeExpressions({}, unflatten(action.response), obj);
 
+		const { api, name } = /^\/@api\/(?<api>query|form)\/(?<name>[^/]+)$/
+			.exec(redirection?.url)?.groups ?? {};
+
+		if (api && name) {
+			// TODO prevent recursion
+			const method = { query: "apis.get", form: "apis.post" }[api];
+			return run(method, {
+				name: name,
+				query: query,
+				body: response
+			});
+		} else {
+			return response;
+		}
 		// if (schema.templates) {
 		// 	block.expr = mergeExpressions(block.expr ?? {}, schema.templates, block);
 		// 	if (Object.isEmpty(block.expr)) block.expr = null;
@@ -152,18 +166,26 @@ module.exports = class ApiService {
 			$site: site.id,
 			$user: user
 		});
-
 		const params = mergeExpressions(
 			action.parameters ?? {},
-			mergeRecursive({}, action.parameters, action.request),
+			mergeRecursive({}, action.parameters, unflatten(action.request)),
 			scope
 		);
 
-		const obj = await run(method, params);
+		const response = await run(method, params);
 
-		if (Object.isEmpty(action.response)) return obj;
-		const items = mergeExpressions(obj, action.response, scope);
-		if (data.hrefs) return { items, hrefs: obj.hrefs };
+		if (Object.isEmpty(action.response)) {
+			return response;
+		}
+		const items = mergeExpressions(
+			response ?? {},
+			unflatten(action.response),
+			scope
+		);
+		if (data.hrefs) return {
+			items,
+			hrefs: response.hrefs
+		};
 		else return items;
 	}
 	static get = {

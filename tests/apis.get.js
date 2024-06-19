@@ -120,7 +120,10 @@ suite('apis.get', function () {
 				action: {
 					method: 'block.search',
 					parameters: {
-						type: "layout"
+						type: "layout",
+						data: {
+							horizontal: 'test'
+						}
 					},
 					request: {
 						'data.horizontal': "[$query.h]"

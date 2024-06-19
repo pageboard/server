@@ -74,9 +74,7 @@ exports.flatten = function (obj, opts) {
 	return flattie(obj, opts);
 };
 
-exports.mergeExpressions = function (data, flats, scope) {
-	if (!flats) return data;
-	const template = nestie(flats);
+exports.mergeExpressions = function (data, template, scope) {
 	if (!template) return data;
 	return sharedMd.merge(template, data, scope) || {};
 };
