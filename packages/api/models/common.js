@@ -165,7 +165,7 @@ exports.QueryBuilder = class CommonQueryBuilder extends QueryBuilder {
 					// single language old sites
 					cols.push(
 						raw(`jsonb_build_object(
-							${content.map(_ => '?, content[??]').join(', ')}
+							${content.map(_ => '?::text, content[?]').join(', ')}
 						) AS content`, content.flatMap(n => [n, n]))
 					);
 					continue;
