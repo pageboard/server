@@ -32,12 +32,17 @@ module.exports = class BlockService {
 			};
 		}
 		if (data.children) {
-			eagers.children = true;
+			eagers.children = {
+				$modify: ['withoutContent']
+			};
 		}
 		if (!Object.isEmpty(eagers)) {
 			q.withGraphFetched(eagers).modifiers({
 				withoutSite(q) {
 					q.whereNot('block.type', 'site');
+				},
+				withoutContent(q) {
+					q.whereNot('block.type', 'content');
 				}
 			});
 		}
