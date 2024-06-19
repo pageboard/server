@@ -1,4 +1,4 @@
-const { mergeRecursive } = require('../../../src/utils');
+const { fillDefaults } = require('../../../src/utils');
 
 module.exports = class SiteService {
 	static name = 'site';
@@ -196,7 +196,7 @@ module.exports = class SiteService {
 		const toMulti = initial.lang && data.languages?.length > 0;
 		const toMono = !initial.lang && data.lang;
 
-		mergeRecursive(oldSite.data, data);
+		oldSite.data = fillDefaults(data, oldSite.data);
 
 		const site = await this.app.install(oldSite);
 		await oldSite.$query(req.trx).patchObject({

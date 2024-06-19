@@ -20,7 +20,7 @@ util.inspect.defaultOptions.depth = 10;
 
 const cli = require.lazy('./cli');
 const Domains = require.lazy('./domains');
-const { mergeRecursive, init: initUtils, unflatten } = require('./utils');
+const { fillDefaults, init: initUtils, unflatten } = require('./utils');
 const Installer = require('./installer');
 
 // exceptional but so natural
@@ -95,7 +95,7 @@ module.exports = class Pageboard {
 
 		// TODO check schema of toml
 		const fileOpts = opts.config ? toml.parse(readFileSync(opts.config)) : {};
-		opts = mergeRecursive({}, Pageboard.defaults, fileOpts, opts);
+		opts = fillDefaults(opts, fillDefaults(fileOpts, Pageboard.defaults));
 
 		if (!opts.verbose) {
 			console.info = () => { };

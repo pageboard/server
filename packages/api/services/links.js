@@ -1,4 +1,4 @@
-const { mergeRecursive } = require('../../../src/utils');
+const { fillDefaults } = require('../../../src/utils');
 
 module.exports = class LinksService {
 	static name = 'links';
@@ -184,7 +184,7 @@ module.exports = class LinksService {
 			await req.run('block.add', { type: 'redirection', data });
 		}
 		for (const id of updates) {
-			const item = mergeRecursive({}, oldMap[id], itemMap[id]);
+			const item = fillDefaults(itemMap[id], oldMap[id]);
 			await req.run('block.save', {
 				id: item.id,
 				type: item.type,
