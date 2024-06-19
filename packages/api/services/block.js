@@ -51,6 +51,7 @@ module.exports = class BlockService {
 	static get = {
 		title: 'Get block',
 		$action: 'read',
+		$private: true,
 		required: ['id'],
 		properties: {
 			id: {
