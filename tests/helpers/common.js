@@ -27,7 +27,8 @@ const site = {
 	data: {
 		env: 'dev',
 		module: 'pageboard/client#master',
-		version: null
+		version: null,
+		languages: ['fr', 'en']
 	},
 	standalone: true,
 	content: {}
