@@ -833,9 +833,10 @@ module.exports = class BlockService {
 				obj.lock = data.lock;
 			}
 		}
+		await block.$query(req.trx).patchObject(obj);
 
 		return {
-			item: await block.$query(req.trx).patchObject(obj).returning('*')
+			item: block
 		};
 	}
 	static save = {
