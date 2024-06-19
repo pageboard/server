@@ -1,5 +1,5 @@
 const Block = require('../models/block');
-const { fillDefaults, dget } = require('../../../src/utils');
+const { mergeRecursive, dget } = require('../../../src/utils');
 
 module.exports = class BlockService {
 	static name = 'block';
@@ -707,10 +707,10 @@ module.exports = class BlockService {
 		});
 		const copy = {
 			type: src.type,
-			data: fillDefaults(data.data, src.data),
-			expr: fillDefaults(data.expr, src.expr),
-			content: fillDefaults({}, src.content),
-			lock: fillDefaults([], src.lock)
+			data: mergeRecursive({}, src.data, data.data),
+			expr: mergeRecursive({}, src.expr, data.expr),
+			content: mergeRecursive({}, src.content),
+			lock: mergeRecursive([], src.lock)
 		};
 
 

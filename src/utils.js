@@ -1,5 +1,4 @@
 const dget = require.lazy('dlv');
-const defu = require.lazy('defu');
 const getSlug = require.lazy('speakingurl');
 const { access } = require('node:fs/promises');
 
@@ -58,9 +57,7 @@ exports.init = async () => {
 exports.dget = dget;
 exports.dset = dset;
 
-exports.fillDefaults = (dst, src) => {
-	return defu(dst, src);
-};
+exports.mergeRecursive = require.lazy('lodash.merge');
 
 exports.unflatten = function(query) {
 	return nestie(query) ?? {};
