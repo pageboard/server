@@ -22,17 +22,17 @@ module.exports = class PrintModule {
 
 	async elements() {
 		const list = [];
-		if (this.opts.local) list.push({
-			const: 'local',
-			title: 'Local'
+		if (this.opts.printer) list.push({
+			const: 'printer',
+			title: 'Printer'
 		});
-		if (this.opts.storage) list.push({
-			const: 'storage',
-			title: 'Storage'
+		if (this.opts.offline) list.push({
+			const: 'offline',
+			title: 'Offline'
 		});
-		if (this.opts.file) list.push({
-			const: 'file',
-			title: 'File'
+		if (this.opts.online) list.push({
+			const: 'online',
+			title: 'Online'
 		});
 		if (this.opts.remote) list.push({
 			const: 'remote',
@@ -56,7 +56,7 @@ module.exports = class PrintModule {
 		const conf = this.opts[printer];
 		if (!conf) return { item };
 		const p = item.properties;
-		if (printer == "storage" || printer == "file") {
+		if (printer == "offline" || printer == "online") {
 			// nothing
 		} else if (printer == "remote") {
 			const agent = await this.#getAuthorizedAgent(conf);
@@ -83,7 +83,7 @@ module.exports = class PrintModule {
 					const: 'express', title: 'Express'
 				}]
 			};
-		} else if (printer == "local") {
+		} else if (printer == "printer") {
 			const optsList = await cups.getPrinterOptions(printer);
 			item.properties = Object.fromEntries(optsList.map(po => {
 				const obj = {
@@ -114,9 +114,9 @@ module.exports = class PrintModule {
 		const block = await req.run('block.get', data);
 		const job = {
 			remote: this.#remoteJob,
-			storage: this.#storageJob,
-			local: this.#localJob,
-			file: this.#fileJob
+			offline: this.#offlineJob,
+			printer: this.#printerJob,
+			online: this.#onlineJob
 		}[block.data.printer];
 
 		await req.try(block, (req, block) => job.call(this, req, block));
@@ -144,9 +144,9 @@ module.exports = class PrintModule {
 		});
 		const job = {
 			remote: this.#remoteJob,
-			storage: this.#storageJob,
-			local: this.#localJob,
-			file: this.#fileJob
+			offline: this.#offlineJob,
+			printer: this.#printerJob,
+			online: this.#onlineJob
 		}[block.data.printer];
 
 		await req.try(block, (req, block) => job.call(this, req, block));
@@ -159,7 +159,7 @@ module.exports = class PrintModule {
 		$ref: "/elements#/definitions/print_job/properties/data"
 	};
 
-	async #fileJob(req, block) {
+	async #onlineJob(req, block) {
 		const { url, lang, options } = block.data;
 		const pdfUrl = req.call('page.format', {
 			url, lang, ext: 'pdf'
@@ -172,7 +172,7 @@ module.exports = class PrintModule {
 		});
 	}
 
-	async #localJob(req, block) {
+	async #printerJob(req, block) {
 		const { url, lang, options } = block.data;
 		const pdfUrl = req.call('page.format', {
 			url, lang, ext: 'pdf'
@@ -200,7 +200,7 @@ module.exports = class PrintModule {
 		});
 	}
 
-	async #storageJob(req, block) {
+	async #offlineJob(req, block) {
 		const { url, lang, options } = block.data;
 		const storePath = this.opts.storage?.[req.site.data.env];
 		if (!storePath) {
