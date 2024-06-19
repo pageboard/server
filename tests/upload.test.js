@@ -50,7 +50,7 @@ suite('upload', function () {
 		assert.ok(href.url, href.pathname);
 		assert.ok(href.url.startsWith('/@file/'));
 		assert.ok(
-			href.preview.startsWith('<img src="data:application/octet-stream;base64,')
+			href.preview.startsWith('<img src="data:image/webp;base64,')
 		);
 	});
 
