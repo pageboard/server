@@ -1,5 +1,6 @@
 const dget = require.lazy('dlv');
 const getSlug = require.lazy('speakingurl');
+const mergeWith = require.lazy('lodash.mergewith');
 const { access } = require('node:fs/promises');
 
 let sharedMd;
@@ -57,7 +58,13 @@ exports.init = async () => {
 exports.dget = dget;
 exports.dset = dset;
 
-exports.mergeRecursive = require.lazy('lodash.merge');
+exports.mergeRecursive = (...args) => {
+	return mergeWith(...args, (obj, src) => {
+		if (Array.isArray(obj) && Array.isArray(src)) {
+			return src;
+		}
+	});
+};
 
 exports.unflatten = function(query) {
 	return nestie(query) ?? {};

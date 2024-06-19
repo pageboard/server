@@ -2,7 +2,6 @@ const { promisify } = require('node:util');
 const execFile = promisify(require('node:child_process').execFile);
 const { randomBytes } = require('node:crypto');
 const Path = require('node:path');
-const merge = require('lodash.merge');
 const Pageboard = require('../../src/pageboard');
 
 const app = new Pageboard();
@@ -54,4 +53,4 @@ async function setupHelper() {
 	await app.run('site.add', site);
 }
 
-Object.assign(exports, { cli, genId, merge, site, nullers, setupHelper, app });
+Object.assign(exports, { cli, genId, site, nullers, setupHelper, app });
