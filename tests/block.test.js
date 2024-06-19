@@ -77,7 +77,7 @@ suite('block', function () {
 		).join(''));
 
 		const b1c = await app.run('block.get', {
-			id: b1.id, children: true
+			id: b1.id, children: true, content: null
 		}, { site: 'test' });
 		assert.equal(b1c.children.length, 3);
 		assert.deepEqual(b1c.content, b2.content);
