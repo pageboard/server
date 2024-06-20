@@ -90,6 +90,9 @@ suite('apis.post', function () {
 					},
 					request: {
 						id: '[$query.id]'
+					},
+					response: {
+						url: '[data.url]'
 					}
 				}
 			}
@@ -101,8 +104,7 @@ suite('apis.post', function () {
 				id: page.id
 			}
 		}, { site: site.id });
-		assert.equal(bpost.id, page.id);
-		assert.equal(bpost.data.url, '/testpage');
+		assert.equal(bpost.url, '/testpage');
 	});
 
 	test('Chaing two api forms one after another', async function () {
