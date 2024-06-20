@@ -332,9 +332,9 @@ module.exports = class Pageboard {
 			}
 			delete obj.cookies;
 		}
-		if (req.user.grants.length) obj.grants = Object.fromEntries(
-			req.user.grants.map(grant => [grant, true])
-		);
+		if (req.user.grants.length) {
+			res.set('X-Pageboard-Grants', req.user.grants.join(','));
+		}
 		if (obj.status) {
 			const code = Number.parseInt(obj.status);
 			if (code < 200 || code >= 600 || Number.isNaN(code)) {
@@ -353,9 +353,13 @@ module.exports = class Pageboard {
 			// 403 Forbidden: authenticated but not authorized
 			res.status(req.user.id ? 403 : 401);
 		}
-		if (req.granted) res.set('X-Granted', 1);
+		if (req.granted) {
+			res.set('X-Pageboard-Granted', 1);
+		}
 
-		if (req.types.size > 0) obj.types = Array.from(req.types);
+		if (req.types.size > 0) {
+			res.set('X-Pageboard-Elements', Array.from(req.types).join(','));
+		}
 
 		res.json(obj);
 	}
