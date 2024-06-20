@@ -7,6 +7,47 @@ suite('apis.post', function () {
 
 	suiteSetup(setupHelper);
 
+	test('Verify token', async function () {
+		const email = 'test@test.localhost.localdomain';
+		const grant = 'webmaster';
+
+		await app.run('settings.grant', {
+			email, grant
+		}, { site: site.id, grant: 'root' });
+
+		const token = new URLSearchParams((await app.run('login.link', {
+			email, grant
+		}, { site: site.id, grant: 'root' })).split('?').pop()).get('token');
+
+		const { item: form } = await app.run('block.add', {
+			type: 'api_form',
+			data: {
+				action: {
+					method: 'login.grant',
+					parameters: {
+						grant
+					},
+					request: {
+						token: "[$request.token]",
+						email: "[$request.email]"
+					},
+					response: {
+						bearer: '[cookies.bearer.value]'
+					}
+				}
+			}
+		}, { site: site.id });
+
+		const bpost = await app.run('apis.post', {
+			name: form.id,
+			body: {
+				token,
+				email
+			}
+		}, { site: site.id });
+		assert.deepEqual(Object.keys(bpost), ['bearer']);
+		assert.ok(bpost.bearer);
+	});
 	test('Chaing two api forms one after another', async function () {
 		const { item: page } = await app.run('block.add', {
 			type: 'page',
