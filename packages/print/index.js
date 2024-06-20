@@ -202,9 +202,9 @@ module.exports = class PrintModule {
 
 	async #offlineJob(req, block) {
 		const { url, lang, options } = block.data;
-		const storePath = this.opts.storage?.[req.site.data.env];
+		const storePath = this.opts.offline?.[req.site.data.env];
 		if (!storePath) {
-			throw new HttpError.BadRequest("No storage printer");
+			throw new HttpError.BadRequest("No offline job option");
 		}
 		const pdfUrl = req.call('page.format', {
 			url, lang, ext: 'pdf'
@@ -219,7 +219,7 @@ module.exports = class PrintModule {
 				await fs.copyFile(path, dest);
 			} catch (ex) {
 				console.error(ex);
-				throw new HttpError.InternalServerError(`Storage failure`);
+				throw new HttpError.InternalServerError(`Offline job failure`);
 			} finally {
 				await fs.unlink(path);
 			}
