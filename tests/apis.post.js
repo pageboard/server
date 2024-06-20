@@ -48,6 +48,63 @@ suite('apis.post', function () {
 		assert.deepEqual(Object.keys(bpost), ['bearer']);
 		assert.ok(bpost.bearer);
 	});
+
+	test('Identity method can be used to redirect to a parametrized api', async function () {
+		const { item: page } = await app.run('block.add', {
+			type: 'page',
+			data: { url: '/testpage' }
+		}, { site: site.id });
+
+		const { item: form } = await app.run('block.add', {
+			type: 'api_form',
+			data: {
+				action: {
+					request: {
+						id: '[$request.id]'
+					}
+				},
+				redirection: {
+					url: '/@api/query/select1',
+					parameters: {
+						id: '[$response.id]'
+						// TODO rename parameters to query here
+						// action.response could be used directly
+						// instead of having another layer of variables
+						// however, when redirecting externally,
+						// this is necessary
+						// so it is always good practice to separate
+						// redirection.query from action.response
+					}
+				}
+			}
+		}, { site: site.id });
+
+		const { item: fetch } = await app.run('block.add', {
+			type: 'fetch',
+			data: {
+				name: 'select1',
+				action: {
+					method: 'block.get',
+					parameters: {
+						type: "page"
+					},
+					request: {
+						id: '[$query.id]'
+					}
+				}
+			}
+		}, { site: site.id });
+
+		const bpost = await app.run('apis.post', {
+			name: form.id,
+			body: {
+				id: page.id
+			}
+		}, { site: site.id });
+		assert.equal(bpost.id, page.id);
+		assert.equal(bpost.data.url, '/testpage');
+	});
+
 	test('Chaing two api forms one after another', async function () {
 		const { item: page } = await app.run('block.add', {
 			type: 'page',

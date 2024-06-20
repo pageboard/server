@@ -45,9 +45,6 @@ module.exports = class ApiService {
 		const { action = {}, redirection } = form.data ?? {};
 
 		const { method } = action;
-		if (!method) {
-			throw new HttpError.BadRequest("Missing method");
-		}
 
 		const reqBody = data.body ?? {};
 
@@ -82,7 +79,7 @@ module.exports = class ApiService {
 			scope
 		);
 
-		const response = await run(method, params);
+		const response = method ? await run(method, params) : params;
 
 		const result = Object.isEmpty(action.response)
 			? response
@@ -151,9 +148,7 @@ module.exports = class ApiService {
 		const { action = {} } = form.data ?? {};
 
 		const { method } = action;
-		if (!method) {
-			throw new HttpError.BadRequest("Missing method");
-		}
+
 		const { query = {} } = data;
 		const scope = {};
 
@@ -178,7 +173,7 @@ module.exports = class ApiService {
 			scope
 		);
 
-		const response = await run(method, params);
+		const response = method ? await run(method, params) : params;
 
 		const result = Object.isEmpty(action.response)
 			? response
