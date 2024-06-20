@@ -23,16 +23,19 @@ module.exports = class AuthModule {
 		}
 	}
 
+	async init() {
+		const keys = await this.#keygen(
+			Path.join(this.app.dirs.data, 'keys.json')
+		);
+		Object.assign(this.opts, keys);
+		this.#lock = Upcache.lock(this.opts);
+	}
+
 	async elements() {
 		return import('./src/elements.mjs');
 	}
 
 	async apiRoutes(app) {
-		const keys = await this.#keygen(
-			Path.join(app.dirs.data, 'keys.json')
-		);
-		Object.assign(this.opts, keys);
-		this.#lock = Upcache.lock(this.opts);
 		app.use((req, res, next) => {
 			req.locks = [];
 			onHeaders(res, () => {
