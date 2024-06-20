@@ -205,11 +205,11 @@ module.exports = class SettingsService {
 		if (res.status != 404) throw new HttpError[res.status]();
 		const user = await req.run('user.add', { email });
 		const block = {
+			id: await req.Block.genId(),
 			type: 'settings',
 			parents: [user]
 		};
 		const { site, trx } = req;
-		await site.$beforeInsert.call(block); // prepopulate block.id
 		block.lock = [`id-${block.id}`];
 		const settings = await site.$relatedQuery('children', trx)
 			.insertGraph(block, {
