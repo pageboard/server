@@ -21,7 +21,7 @@ suite('auth', function () {
 
 		const { item, cookies } = await app.run('login.grant', {
 			email, grant, token
-		}, { site: site.id, grant: 'root' });
+		}, { site: site.id });
 
 		assert.ok(cookies.bearer.value);
 		assert.ok(cookies.bearer.maxAge);
