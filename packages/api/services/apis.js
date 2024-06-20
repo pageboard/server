@@ -86,7 +86,7 @@ module.exports = class ApiService {
 
 		const response = Object.isEmpty(action.response)
 			? obj
-			: mergeExpressions({}, unflatten(action.response), obj);
+			: mergeExpressions(obj, unflatten(action.response), scope);
 
 		const { api, name } = /^\/@api\/(?<api>query|form)\/(?<name>[^/]+)$/
 			.exec(redirection?.url)?.groups ?? {};
