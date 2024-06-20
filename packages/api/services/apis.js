@@ -82,11 +82,11 @@ module.exports = class ApiService {
 			scope
 		);
 
-		const obj = await run(method, params);
+		const response = await run(method, params);
 
-		const response = Object.isEmpty(action.response)
-			? obj
-			: mergeExpressions(obj, unflatten(action.response), scope);
+		const result = Object.isEmpty(action.response)
+			? response
+			: mergeExpressions(response, unflatten(action.response), scope);
 
 		const { api, name } = /^\/@api\/(?<api>query|form)\/(?<name>[^/]+)$/
 			.exec(redirection?.url)?.groups ?? {};
@@ -94,13 +94,19 @@ module.exports = class ApiService {
 		if (api && name) {
 			// TODO prevent recursion
 			const method = { query: "apis.get", form: "apis.post" }[api];
-			return run(method, {
-				name: name,
-				query: query,
-				body: response
-			});
+			// FIXME: if form is redirecting to fetch,
+			// the form response must be fed into the query
+			// by the redirection.url/parameters
+			scope.$response = result;
+			const redirParams = mergeExpressions({}, redirection.parameters, scope);
+			const opts = {
+				name,
+				query: redirParams
+			};
+			if (method == "form") opts.body = result;
+			return run(method, opts);
 		} else {
-			return response;
+			return result;
 		}
 		// if (schema.templates) {
 		// 	block.expr = mergeExpressions(block.expr ?? {}, schema.templates, block);
@@ -174,19 +180,15 @@ module.exports = class ApiService {
 
 		const response = await run(method, params);
 
-		if (Object.isEmpty(action.response)) {
-			return response;
-		}
-		const items = mergeExpressions(
-			response ?? {},
-			unflatten(action.response),
-			scope
-		);
+		const result = Object.isEmpty(action.response)
+			? response
+			: mergeExpressions(response ?? {}, unflatten(action.response), scope);
+
 		if (data.hrefs) return {
-			items,
+			items: result,
 			hrefs: response.hrefs
 		};
-		else return items;
+		else return result;
 	}
 	static get = {
 		title: 'API Get',
