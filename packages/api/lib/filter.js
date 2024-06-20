@@ -2,6 +2,7 @@ module.exports = class ResponseFilter {
 	#filters = [];
 
 	run(req, obj) {
+		if (!obj || typeof obj != "object") return obj;
 		const { item, items } = obj;
 		if (!item && !items) {
 			return this.#recurse(req, obj);
