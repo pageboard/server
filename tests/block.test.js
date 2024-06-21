@@ -150,4 +150,44 @@ suite('block', function () {
 		});
 	});
 
+	test('find block by integer comparison of different columns', async function () {
+		const { item: block } = await app.run('block.add', {
+			type: 'input_number',
+			data: {
+				name: 'blurg',
+				min: 11,
+				max: 15
+			}
+		}, { site: site.id });
+		const { item } = await app.run('block.find', {
+			type: "input_number",
+			data: {
+				'max#lte': '16',
+				'min#gte': '2'
+			}
+		}, { site: site.id });
+
+		assert.deepEqual(block, item);
+	});
+
+	test('find block by integer comparison of same column', async function () {
+		const { item: page } = await app.run('block.add', {
+			type: 'page',
+			data: {
+				url: '/testindex',
+				index: 12
+			}
+		}, { site: site.id });
+		const { item } = await app.run('block.find', {
+			type: "page",
+			data: {
+				'index#lte': '16',
+				'index#gte': '2'
+
+			}
+		}, { site: site.id });
+
+		assert.deepEqual(page, item);
+	});
+
 });

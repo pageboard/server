@@ -242,107 +242,109 @@ function getCast(val) {
 	}
 }
 
+const comparisons = {
+	lt: '<',
+	lte: '<=',
+	gt: '>',
+	gte: '>='
+};
+
 function whereCondObject(q, refk, cond) {
-	const comps = {
-		lt: '<',
-		lte: '<=',
-		gt: '>',
-		gte: '>='
-	};
-	if (cond.op in comps) {
-		if (cond.val instanceof Date) {
+	const { type, op, range, names, start, end, val: cval } = cond;
+	if (op in comparisons) {
+		if (cval instanceof Date) {
 			// DEAD CODE because asPaths doesn't return such a cond
-			q.where(refk.castTo('date'), comps[cond.op], cond.val);
+			q.where(refk.castTo('date'), comparisons[op], cval);
 		} else if (["integer", "number"].includes(cond.type)) {
-			q.where(refk.castFloat(), comps[cond.op], cond.val);
+			q.where(refk.castFloat(), comparisons[op], cval);
 		} else {
-			q.where(refk.castText(), comps[cond.op], cond.val);
+			q.where(refk.castText(), comparisons[op], cval);
 		}
-	} else if (cond.range == "date") {
-		if (cond.names) {
+	} else if (range == "date") {
+		if (names) {
 			// slot intersection
-			const start = `${refk.expression}.${cond.names[0]}`;
-			const end = `${refk.expression}.${cond.names[1]}`;
-			q.whereNotNull(ref(start)); // TODO optional start
-			q.whereNotNull(ref(end)); // TODO optional end
-			if (cond.start == cond.end) {
+			const rstart = ref(`${refk.expression}.${names[0]}`);
+			const rend = ref(`${refk.expression}.${names[1]}`);
+			q.whereNotNull(rstart); // TODO optional start
+			q.whereNotNull(rend); // TODO optional end
+			if (start == end) {
 				q.whereRaw(`(daterange(:start:, :end:) @> :at OR (:start: = :at AND :end: = :at))`, {
-					start: ref(start).castTo('date'),
-					end: ref(end).castTo('date'),
-					at: val(cond.start).castTo('date')
+					start: rstart.castTo('date'),
+					end: rend.castTo('date'),
+					at: val(start).castTo('date')
 				});
 			} else {
 				q.whereRaw(`daterange(:from, :to) && daterange(:start:, :end:)`, {
-					start: ref(start).castTo('date'),
-					end: ref(end).castTo('date'),
-					from: val(cond.start).castTo('date'),
-					to: val(cond.end).castTo('date')
+					start: rstart.castTo('date'),
+					end: rend.castTo('date'),
+					from: val(start).castTo('date'),
+					to: val(end).castTo('date')
 				});
 			}
 		} else {
 			q.whereNotNull(refk);
-			if (cond.start == cond.end) {
+			if (start == end) {
 				q.whereIn(refk.castTo('date'), [
-					val(cond.start).castTo('date'),
-					val(cond.end).castTo('date')
+					val(start).castTo('date'),
+					val(end).castTo('date')
 				]);
 			} else {
 				q.whereRaw(`(daterange(:from, :to) @> :at: OR (:at: = :from AND :at: = :to))`, {
-					from: val(cond.start).castTo('date'),
-					to: val(cond.end).castTo('date'),
+					from: val(start).castTo('date'),
+					to: val(end).castTo('date'),
 					at: refk.castTo('date')
 				});
 			}
 		}
-	} else if (cond.op == "not") {
-		q.whereNot(refk.castText(), cond.val);
-	} else if (cond.op == "end") {
-		q.where(refk.castText(), "ilike", '%' + cond.val);
-	} else if (cond.op == "start") {
-		q.where(refk.castText(), "ilike", cond.val + '%');
-	} else if (cond.op == "has") {
-		if (cond.type == "string" && typeof cond.val == "string") {
+	} else if (op == "not") {
+		q.whereNot(refk.castText(), cval);
+	} else if (op == "end") {
+		q.where(refk.castText(), "ilike", '%' + cval);
+	} else if (op == "start") {
+		q.where(refk.castText(), "ilike", cval + '%');
+	} else if (op == "has") {
+		if (type == "string" && typeof cval == "string") {
 			// ref is a string and it contains that value
-			q.where(refk.castText(), "ilike", '%' + cond.val + '%');
+			q.where(refk.castText(), "ilike", '%' + cval + '%');
 		} else {
 			// ref is a json text or array, and it intersects any of the values
-			const val = typeof cond.val == "string" ? [cond.val] : cond.val;
-			if (val != null) q.whereRaw('?? \\?| ?', [refk, val]);
+			const rval = typeof cval == "string" ? [cval] : cval;
+			if (rval != null) q.whereRaw('?? \\?| ?', [refk, rval]);
 		}
-	} else if (cond.op == "in") {
-		if (cond.type == "string" && typeof cond.val == "string") {
+	} else if (op == "in") {
+		if (type == "string" && typeof cval == "string") {
 			// ref is a string and it is contained in that value
-			q.whereRaw("? ilike '%' || ?? || '%'", [cond.val, refk.castText()]);
+			q.whereRaw("? ilike '%' || ?? || '%'", [cval, refk.castText()]);
 		} else {
 			// ref is a json string, and it is in the values
-			const val = typeof cond.val == "string" ? [cond.val] : cond.val;
-			if (val != null) q.whereRaw('?? \\?& ?', [refk, val]);
+			const rval = typeof cval == "string" ? [cval] : cval;
+			if (rval != null) q.whereRaw('?? \\?& ?', [refk, rval]);
 		}
-	} else if (cond.range == "numeric") {
-		if (cond.names) {
-			const start = `${refk.expression}.${cond.names[0]}`;
-			const end = `${refk.expression}.${cond.names[1]}`;
-			q.whereNotNull(ref(start)); // TODO optional start
-			q.whereNotNull(ref(end)); // TODO optional end
-			if (cond.start == cond.end) {
+	} else if (range == "numeric") {
+		if (names) {
+			const rstart = ref(`${refk.expression}.${cond.names[0]}`);
+			const rend = ref(`${refk.expression}.${cond.names[1]}`);
+			q.whereNotNull(rstart); // TODO optional start
+			q.whereNotNull(rend); // TODO optional end
+			if (start == end) {
 				q.whereRaw(`(numrange(:start:, :end:) @> :at OR (:start: = :at AND :end: = :at))`, {
-					start: ref(start).castTo('numeric'),
-					end: ref(end).castTo('numeric'),
-					at: val(cond.start).castTo('numeric')
+					start: rstart.castTo('numeric'),
+					end: rend.castTo('numeric'),
+					at: val(start).castTo('numeric')
 				});
 			} else {
 				q.whereRaw(`numrange(:from, :to) && numrange(:start:, :end:)`, {
-					start: ref(start).castTo('numeric'),
-					end: ref(end).castTo('numeric'),
-					from: val(cond.start).castTo('numeric'),
-					to: val(cond.end).castTo('numeric')
+					start: rstart.castTo('numeric'),
+					end: rend.castTo('numeric'),
+					from: val(start).castTo('numeric'),
+					to: val(end).castTo('numeric')
 				});
 			}
 		} else {
 			q.whereRaw(':col: <@ numrange(:from, :to)', {
-				col: refk,
-				from: val(cond.start).castTo('numeric'),
-				to: val(cond.end).castTo('numeric')
+				col: refk.castTo('numeric'),
+				from: val(start).castTo('numeric'),
+				to: val(end).castTo('numeric')
 			});
 		}
 	} else {
@@ -392,7 +394,6 @@ function asPaths(obj, ret, pre, schemas = []) {
 		const [key, op] = str.split(/[:#]/);
 		if (op != null) {
 			delete flats[str];
-			flats[key] = val;
 		}
 		let schema, parent;
 		const pathKey = key.split('.');
@@ -451,11 +452,11 @@ function asPaths(obj, ret, pre, schemas = []) {
 			}
 			if (range) {
 				range.names = Object.keys(schema.properties);
-				ret[ref] = range;
+				setCondition(ret, ref, range);
 			} else if (op) {
-				ret[ref] = { op, val };
+				setCondition(ret, ref, { op, val });
 			} else {
-				ret[ref] = val;
+				setCondition(ret, ref, val);
 			}
 		} else if (Array.isArray(val) || val == null || typeof val != "object") {
 			let dval = val;
@@ -484,17 +485,35 @@ function asPaths(obj, ret, pre, schemas = []) {
 				dval = numericRange(val, schema.type);
 			}
 			if (op) {
-				ret[ref] = {
+				setCondition(ret, ref, {
 					type: schema.type,
 					op,
 					val: dval
-				};
+				});
 			} else {
-				ret[ref] = val;
+				setCondition(ret, ref, val);
 			}
 		}
 	}
 	return ret;
+}
+
+function setCondition(ret, ref, obj) {
+	const prev = ret[ref];
+	if (prev) {
+		if (prev.op && obj.op && prev.op != obj.op && ['lte', 'gte'].includes(prev.op) && ['lte', 'gte'].includes(obj.op)) {
+			// a range
+			ret[ref] = {
+				range: 'numeric',
+				start: prev.op == "gte" ? prev.val : obj.val,
+				end: obj.op == "lte" ? obj.val : prev.val
+			};
+		} else {
+			throw new Error("Conflicting conditions: " + JSON.stringify(prev) + ", " + JSON.stringify(obj));
+		}
+	} else {
+		ret[ref] = obj;
+	}
 }
 
 function isRangeSchema(schema) {
