@@ -253,7 +253,7 @@ function whereCondObject(q, refk, cond) {
 		if (cond.val instanceof Date) {
 			// DEAD CODE because asPaths doesn't return such a cond
 			q.where(refk.castTo('date'), comps[cond.op], cond.val);
-		} else if (typeof cond.val == "number") {
+		} else if (["integer", "number"].includes(cond.type)) {
 			q.where(refk.castFloat(), comps[cond.op], cond.val);
 		} else {
 			q.where(refk.castText(), comps[cond.op], cond.val);
