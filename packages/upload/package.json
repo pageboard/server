@@ -1,6 +1,6 @@
 {
   "name": "@pageboard/upload",
-  "version": "0.15.0",
+  "version": "0.15.1",
   "description": "",
   "main": "index.js",
   "scripts": {
@@ -17,9 +17,8 @@
   },
   "homepage": "https://github.com/pageboard/server#readme",
   "dependencies": {
-    "express-fileupload": "^1.5.0",
+    "busboy": "^1.6.0",
     "mime-types": "^2.1.35",
-    "speakingurl": "^14.0.1",
-    "type-is": "^1.6.18"
+    "speakingurl": "^14.0.1"
   }
 }
