@@ -1,12 +1,12 @@
 const assert = require('node:assert');
-const { site, app, setupHelper } = require('./helpers/common');
+const { site, setupApp } = require('./helpers/common');
 
 suite('content without lang', function () {
 	this.timeout(require('node:inspector').url() === undefined ? 20000 : 0);
 
 	suiteSetup(function() {
 		delete site.data.languages;
-		return setupHelper();
+		return setupApp();
 	});
 
 	test('fill block', async function () {

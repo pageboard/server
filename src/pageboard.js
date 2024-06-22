@@ -393,6 +393,10 @@ module.exports = class Pageboard {
 		console.info(`port:\t${this.opts.server.port}`);
 	}
 
+	async stop() {
+		await this.#server[Symbol.asyncDispose]();
+	}
+
 	async #initDirs(dirs) {
 		for (const [key, dir] of Object.entries(dirs)) {
 			Log.core("init dir", dir);

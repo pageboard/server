@@ -1,13 +1,11 @@
 const assert = require('node:assert');
-const { site, nullers, app } = require('./helpers/common');
+const { site, nullers, setupApp } = require('./helpers/common');
 
 suite('site', function () {
 
 	this.timeout(require('node:inspector').url() === undefined ? 10000 : 0);
 
-	suiteSetup(async function () {
-		await app.init();
-	});
+	suiteSetup(setupApp);
 
 	test('site does not exist', async function () {
 		let result, err;

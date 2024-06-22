@@ -60,6 +60,10 @@ module.exports = class CacheModule {
 	}
 
 	install(site) {
+		if (site?.$url?.protocol == "http:") {
+			// didn't go through a proxy
+			return;
+		}
 		if (!site?.$url) {
 			console.info("No url to invalidate the cache", site?.id);
 			return;

@@ -4,8 +4,6 @@ const { randomBytes } = require('node:crypto');
 const Path = require('node:path');
 const Pageboard = require('../../src/pageboard');
 
-const app = new Pageboard();
-
 const bin = Path.join(__dirname, '..', 'bin', 'pageboard');
 
 async function cli(...args) {
@@ -43,7 +41,8 @@ const nullers = {
 	updated_at: null
 };
 
-async function setupHelper() {
+async function setup(start) {
+	const app = new Pageboard({ cli: !start });
 	await app.init();
 	try {
 		await app.run('site.del', { id: site.id });
@@ -51,6 +50,30 @@ async function setupHelper() {
 		//ignore
 	}
 	await app.run('site.add', site);
+	global.app = app;
 }
 
-Object.assign(exports, { cli, genId, site, nullers, setupHelper, app });
+async function setupApp() {
+	return setup(false);
+}
+
+async function setupServer() {
+	return setup(true);
+}
+
+async function teardownServer() {
+	await global?.app.stop();
+}
+
+const shortImg = 'iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mP8/5+hHgAHggJ/PchI7wAAAABJRU5ErkJggg==';
+
+Object.assign(exports, {
+	cli,
+	genId,
+	site,
+	nullers,
+	setupApp,
+	setupServer,
+	teardownServer,
+	shortImg
+});

@@ -1,10 +1,10 @@
 const assert = require('node:assert');
-const { site, app, setupHelper } = require('./helpers/common');
+const { site, setupApp } = require('./helpers/common');
 
 suite('block', function () {
 	this.timeout(require('node:inspector').url() === undefined ? 20000 : 0);
 
-	suiteSetup(setupHelper);
+	suiteSetup(setupApp);
 
 	test('add block', async function () {
 		const { item: b } = await app.run('block.add', {

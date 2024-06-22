@@ -1,11 +1,11 @@
 const assert = require('node:assert');
-const { site, app, setupHelper } = require('./helpers/common');
+const { site, setupApp } = require('./helpers/common');
 
 suite('auth', function () {
 
 	this.timeout(require('node:inspector').url() === undefined ? 10000 : 0);
 
-	suiteSetup(setupHelper);
+	suiteSetup(setupApp);
 
 	test('grant, get token, verify it', async function () {
 		const email = 'test@test.localhost.localdomain';

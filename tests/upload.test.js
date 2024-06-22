@@ -2,7 +2,7 @@ const assert = require('node:assert');
 const fs = require('node:fs/promises');
 const path = require('node:path');
 const os = require('node:os');
-const { site, app, setupHelper } = require('./helpers/common');
+const { site, setupServer, teardownServer, shortImg } = require('./helpers/common');
 
 suite('upload', function () {
 	this.timeout(require('node:inspector').url() === undefined ? 20000 : 0);
@@ -11,11 +11,12 @@ suite('upload', function () {
 
 	suiteSetup(async function () {
 		dir = await fs.mkdtemp(path.join(os.tmpdir(), 'pageboard-test-'));
-		return setupHelper();
+		return setupServer();
 	});
 
 	suiteTeardown(async function () {
 		await fs.rm(dir, { recursive: true, force: true });
+		await teardownServer();
 	});
 
 	async function genFile(name, data = 'Some text', encoding = 'utf8') {

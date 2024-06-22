@@ -88,6 +88,9 @@
         "files": [
           "tests/*.js"
         ],
+        "globals": {
+          "app": true
+        },
         "env": {
           "mocha": true
         },
