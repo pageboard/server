@@ -78,8 +78,7 @@ module.exports = class Pageboard {
 		],
 		server: {
 			log: ':method :status :time :size :site :url',
-			port: 3000,
-			start: false
+			port: 3000
 		},
 		commons: {},
 		upstreams: {},
@@ -100,7 +99,6 @@ module.exports = class Pageboard {
 		if (!opts.verbose) {
 			console.info = () => { };
 		}
-		if (opts.cli == null) opts.cli = !opts.server?.start;
 
 		const upstream = opts.upstreams[opts.version];
 		if (upstream) opts.server.port = upstream.split(':').pop();
@@ -203,7 +201,7 @@ module.exports = class Pageboard {
 		this.#initServices();
 		await this.#initPlugins();
 
-		if (!this.opts.server.start) return;
+		if (this.opts.cli) return;
 
 		await this.#initLog();
 
@@ -231,7 +229,7 @@ module.exports = class Pageboard {
 		);
 
 		// call plugins#view
-		if (!this.opts.cli) await this.#initPlugins('view');
+		await this.#initPlugins('view');
 
 		server.use((err, req, res, next) =>
 			this.#viewsError(err, req, res, next)

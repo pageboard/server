@@ -18,7 +18,7 @@ if (!process.env.HOME) {
 	delete opts.grant;
 	delete opts.help;
 	if (!opts.server) opts.server = {};
-	opts.server.start = !command && !help;
+	opts.cli = command || help;
 	if (opts.verbose === undefined && !help) opts.verbose = !command;
 
 	const app = new Pageboard(opts);
