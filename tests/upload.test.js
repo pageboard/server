@@ -25,6 +25,41 @@ suite('upload', function () {
 		return file;
 	}
 
+	test('upload form data to apis.post', async function () {
+		await app.run('block.add', {
+			type: 'api_form',
+			data: {
+				name: 'addtest',
+				action: {
+					method: 'block.add',
+					parameters: {
+						type: "image"
+					},
+					request: {
+						'data.url': '[$request.src]',
+						'data.alt': '[$request.alt]'
+					}
+				}
+			}
+		}, { site: site.id });
+		const body = new FormData();
+		body.set("src", new Blob(Buffer.from(shortImg, "base64")), "icon2.png");
+		body.set("alt", "test alt");
+		const appUrl = `http://${site.id}.localhost.localdomain:${app.opts.server.port}`;
+		const res = await fetch(new URL('/@api/addtest', appUrl), {
+			redirect: 'error',
+			headers: {
+				'X-Forwarded-By': '127.0.0.1'
+			},
+			method: 'POST', body
+		});
+		assert.equal(res.status, 200);
+		const { item } = await res.json();
+		assert.equal(item.type, 'image');
+		assert.equal(item.data.alt, 'test alt');
+		assert.ok(item.data.url);
+	});
+
 	test('upload.add text file', async function () {
 		const permission = await app.run('upload.add', {
 			path: await genFile('test.txt')
