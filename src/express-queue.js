@@ -5,7 +5,7 @@ module.exports = class Queue {
 	#wait;
 	#err;
 	#done;
-	#hold = Promise.resolve();
+	#hold = new Deferred();
 
 	constructor(final) {
 		this.#wait = new Deferred();
