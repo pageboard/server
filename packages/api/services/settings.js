@@ -138,6 +138,7 @@ module.exports = class SettingsService {
 				}
 			});
 		}
+		return obj;
 	}
 	static grant = {
 		title: 'Grant user permission',
@@ -177,6 +178,7 @@ module.exports = class SettingsService {
 				}
 			});
 		}
+		return obj;
 	}
 	static revoke = {
 		title: 'Revoke user permission',
