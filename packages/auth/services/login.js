@@ -161,7 +161,11 @@ module.exports = class LoginModule {
 		return {
 			item: settings,
 			cookies: {
-				bearer: await req.run('auth.cookie', { maxAge: data.maxAge })
+				bearer: await req.run('auth.bearer', {
+					id: user.id,
+					grants: user.grants,
+					maxAge: data.maxAge
+				})
 			}
 		};
 	}

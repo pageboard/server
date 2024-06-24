@@ -48,28 +48,39 @@ module.exports = class AuthModule {
 		});
 	}
 
-	cookie({ site, user }, { maxAge }) {
+	bearer(req, { maxAge, id, grants }) {
 		return {
-			value: this.#lock.sign({
-				id: user.id,
-				grants: user.grants
-			}, {
-				issuer: site.$url.hostname,
+			value: this.#lock.sign({ id,	grants }, {
+				issuer: req.site.$url.hostname,
 				maxAge,
 				...this.opts
 			}),
 			maxAge: maxAge * 1000
 		};
 	}
-	static cookie = {
-		title: 'Create cookie',
+	static bearer = {
+		title: 'Authorization Bearer',
 		$private: true,
+		required: ['id', 'grants'],
 		properties: {
 			maxAge: {
 				title: 'Max Age',
 				description: 'max age of cookie in seconds',
 				type: 'integer',
 				default: 60 * 60 * 24
+			},
+			id: {
+				title: 'User ID',
+				type: 'string',
+				format: 'id'
+			},
+			grants: {
+				title: 'Grants',
+				type: 'array',
+				items: {
+					type: 'string',
+					format: 'grant'
+				}
 			}
 		}
 	};
