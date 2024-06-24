@@ -95,10 +95,11 @@ class AjvValidatorExt extends AjvValidator {
 	}
 
 	wrapValidator(validator) {
-		return function (json) {
-			let ret = validator.call(this, json);
+		function newValidator(json) {
+			delete newValidator.errors;
+			const ret = validator.call(this, json);
 			if (validator.errors?.length > 0) {
-				validator.errors = validator.errors.filter(e => {
+				const errors = validator.errors.filter(e => {
 					const {
 						instancePath: path,
 						keyword, params
@@ -114,11 +115,15 @@ class AjvValidatorExt extends AjvValidator {
 					}
 					return true;
 				});
-				ret = validator.errors.length == 0;
-				if (ret) delete validator.errors;
+				if (errors.length == 0) {
+					return true;
+				} else {
+					newValidator.errors = errors;
+				}
 			}
 			return ret;
-		};
+		}
+		return newValidator;
 	}
 }
 
@@ -289,6 +294,49 @@ module.exports = class Validation {
 			schemaType: ["string", "array", "object"]
 		});
 		ajv.addKeyword({
+			// properties that can accept an uploaded file
+			keyword: '$file',
+			metaSchema: {
+				type: 'object',
+				properties: {
+					size: {
+						type: 'integer',
+						default: 100000000
+					},
+					types: {
+						type: 'array',
+						items: {
+							type: 'string'
+						},
+						default: ['*/*']
+					}
+				}
+			},
+			error: {
+				message: 'File rejected because of its size or mime type'
+			},
+			validate({ size, types }, data) {
+				if (!data) return true;
+				const href = global.AllHrefs[data];
+				if (href) {
+					if (size > 0 && href.meta.size > size) {
+						return false;
+					}
+					if (!href.mime) return false;
+					if (types?.length > 0) {
+						const [ctype, csub] = href.mime.split('/');
+						return types.some(pat => {
+							const [type, sub] = pat.split('/');
+							return (type == "*" || type == ctype) && (sub == "*" || sub == csub);
+						});
+					}
+				} else {
+					// FIXME use async validation and do a DB request here
+				}
+				return true;
+			}
+		});
+		ajv.addKeyword({
 			// cache
 			keyword: '$cache',
 			schemaType: ["string", "boolean"]
@@ -393,9 +441,9 @@ module.exports = class Validation {
 		return ajv;
 	}
 
-	validate(data, site) {
-		const validator = site ?
-			site.$modelClass.getValidator().ajv
+	validate(req, data) {
+		const validator = req.site ?
+			req.site.$modelClass.getValidator().ajv
 			: this.#servicesValidator;
 		validator.validate('/services', data);
 		const { errors } = validator;

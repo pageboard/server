@@ -13,14 +13,9 @@ module.exports = class ApiService {
 				query: unflatten(req.query)
 			});
 		});
-		app.post(["/@api/:name", "/@api/form/:name"], req => {
-			// TODO process multipart form data to upload files
-			// body[name] must become the relative URL of the uploaded file
-			// however, since we don't know the input_file block,
-			// we can't use to configure that upload (set limits, file type, etc...)
-			// Inputs should be affiliated to their forms - forms should always be standalone,
-			// however standalones are buggy and dangerous to use when they are in a page
-			// so stabilizing standalones should be a priority
+		app.post(["/@api/:name", "/@api/form/:name"], async req => {
+			await req.run('upload.parse', {});
+
 			return req.run('apis.post', {
 				name: req.params.name,
 				query: unflatten(req.query),

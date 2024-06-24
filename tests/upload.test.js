@@ -19,11 +19,50 @@ suite('upload', function () {
 		await teardownServer();
 	});
 
-	async function genFile(name, data = 'Some text', encoding = 'utf8') {
-		const file = path.join(dir, name);
-		await fs.writeFile(file, data, { encoding });
-		return file;
-	}
+	test('upload.files using apis.post', async function () {
+		await app.run('block.add', {
+			type: 'api_form',
+			data: {
+				name: 'uploadfiles',
+				action: {
+					method: 'upload.files',
+					parameters: {
+						size: 200,
+						types: ['image/*']
+					},
+					request: {
+						files: '[$request.files]'
+					}
+				}
+			}
+		}, { site: site.id });
+		const grant = 'user';
+		const email = 'test@example.com';
+		const { item: settings } = await app.run('settings.grant', {
+			email, grant
+		}, { site: site.id, grant: 'root' });
+		const bearer = await app.run('auth.bearer', {
+			id: settings.parent.id,
+			grants: [grant],
+		}, { site: site.id, grant: 'root' });
+
+		const body = new FormData();
+		body.set("files", new Blob([shortImg]), "icon2.png");
+		const appUrl = `http://${site.id}.localhost.localdomain:${app.opts.server.port}`;
+		const res = await fetch(new URL('/@api/uploadfiles', appUrl), {
+			redirect: 'error',
+			headers: {
+				'Cookie': 'bearer=' + bearer.value,
+				'X-Forwarded-By': '127.0.0.1'
+			},
+			method: 'POST',
+			body
+		});
+		assert.equal(res.status, 200);
+		const { hrefs } = await res.json();
+		const [href] = hrefs;
+		assert.equal(href.type, 'image');
+	});
 
 	test('upload form data to apis.post', async function () {
 		await app.run('block.add', {
@@ -42,16 +81,28 @@ suite('upload', function () {
 				}
 			}
 		}, { site: site.id });
+		const grant = 'user';
+		const email = 'test@example.com';
+		const { item: settings } = await app.run('settings.grant', {
+			email, grant
+		}, { site: site.id, grant: 'root' });
+		const bearer = await app.run('auth.bearer', {
+			id: settings.parent.id,
+			grants: [grant],
+		}, { site: site.id, grant: 'root' });
+
 		const body = new FormData();
-		body.set("src", new Blob(Buffer.from(shortImg, "base64")), "icon2.png");
+		body.set("src", new Blob([shortImg]), "icon2.png");
 		body.set("alt", "test alt");
 		const appUrl = `http://${site.id}.localhost.localdomain:${app.opts.server.port}`;
 		const res = await fetch(new URL('/@api/addtest', appUrl), {
 			redirect: 'error',
 			headers: {
+				'Cookie': 'bearer=' + bearer.value,
 				'X-Forwarded-By': '127.0.0.1'
 			},
-			method: 'POST', body
+			method: 'POST',
+			body
 		});
 		assert.equal(res.status, 200);
 		const { item } = await res.json();
@@ -60,35 +111,79 @@ suite('upload', function () {
 		assert.ok(item.data.url);
 	});
 
-	test('upload.add text file', async function () {
-		const permission = await app.run('upload.add', {
-			path: await genFile('test.txt')
+	test('upload form data and fail with wrong mime type', async function () {
+		await app.run('block.add', {
+			type: 'api_form',
+			data: {
+				name: 'addfailtest',
+				action: {
+					method: 'block.add',
+					parameters: {
+						type: "image"
+					},
+					request: {
+						'data.url': '[$request.src]',
+						'data.alt': '[$request.alt]'
+					}
+				}
+			}
 		}, { site: site.id });
-		assert.deepEqual(permission, { status: 401, locks: ['user'] });
+		const grant = 'user';
+		const email = 'test@example.com';
+		const { item: settings } = await app.run('settings.grant', {
+			email, grant
+		}, { site: site.id, grant: 'root' });
+		const bearer = await app.run('auth.bearer', {
+			id: settings.parent.id,
+			grants: [grant],
+		}, { site: site.id, grant: 'root' });
 
-		const { href } = await app.run('upload.add', {
-			path: await genFile('test.txt')
+		const body = new FormData();
+		body.set("src", new Blob([Buffer.from("console.log('toto');")]), "test.js");
+		body.set("alt", "test alt");
+		const appUrl = `http://${site.id}.localhost.localdomain:${app.opts.server.port}`;
+		const res = await fetch(new URL('/@api/addfailtest', appUrl), {
+			redirect: 'error',
+			headers: {
+				'Cookie': 'bearer=' + bearer.value,
+				'X-Forwarded-By': '127.0.0.1'
+			},
+			method: 'POST',
+			body
+		});
+		assert.equal(res.status, 400);
+		const obj = await res.json();
+		assert.equal(obj.status, 400);
+		assert.equal(obj.item.type, 'error');
+		assert.equal(obj.item.data['data.url'][0].keyword, '$file');
+	});
+
+	/*
+	test('upload a fake href', async function () {
+		const filePath = '/@file/2019-01/test.txt';
+		global.AllHrefs[filePath] = {
+			mime: 'text/plain', size: 100, type: 'link',
+			url: filePath,
+			pathname: filePath
+		};
+		try {
+			await app.run('upload.files', {
+				files: [filePath]
+			}, { site: site.id });
+		} catch (err) {
+			assert.equal(err.status, 401);
+		}
+
+		const hrefs = await app.run('upload.files', {
+			files: [filePath]
 		}, { site: 'test', grant: 'user' });
-		assert.ok(href);
+		assert.ok(hrefs);
+		assert.equal(hrefs.length, 1);
+		const href = hrefs[0];
 		assert.equal(href.mime, 'text/plain');
 		assert.equal(href.type, 'link');
 		assert.ok(href.url, href.pathname);
 		assert.ok(href.url.startsWith('/@file/'));
 	});
-
-	test('upload.add image file', async function () {
-		const { href } = await app.run('upload.add', {
-			path: await genFile('icon.png', 'iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mP8/5+hHgAHggJ/PchI7wAAAABJRU5ErkJggg==', 'base64')
-		}, { site: site.id, grant: 'user' });
-		assert.ok(href);
-		assert.equal(href.mime, 'image/png');
-		assert.equal(href.type, 'image');
-		assert.ok(href.url, href.pathname);
-		assert.ok(href.url.startsWith('/@file/'));
-		assert.ok(
-			href.preview.startsWith('<img src="data:image/webp;base64,')
-		);
-	});
-
-
+	*/
 });

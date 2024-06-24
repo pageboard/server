@@ -72,7 +72,7 @@ module.exports = class PrerenderModule {
 		if (lang && !site.data.languages?.includes(lang)) {
 			return ret;
 		}
-		if (this.app.api.check({
+		if (this.app.api.check(req, {
 			method: 'page.parse', parameters: { pathname }
 		}) === false) {
 			// shouldn't req.call be req.run above ?

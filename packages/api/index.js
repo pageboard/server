@@ -93,17 +93,17 @@ module.exports = class ApiModule {
 		return this.#packager.makeBundles(site, pkg);
 	}
 
-	check(data, site) {
+	check(req, data) {
 		try {
-			this.validation.validate(data, site);
+			this.validation.validate(req, data);
 			return true;
 		} catch (err) {
 			return false;
 		}
 	}
 
-	validate(data, site) {
-		this.validation.validate(data, site);
+	validate(req, data) {
+		this.validation.validate(req, data);
 		return data;
 	}
 
@@ -157,7 +157,8 @@ module.exports = class ApiModule {
 				};
 			}
 		}
-		this.validate(data, req.site);
+
+		this.validate(req, data);
 
 		// start a transaction on set trx object on site
 		let hadTrx = false;
