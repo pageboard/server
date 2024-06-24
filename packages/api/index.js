@@ -151,10 +151,11 @@ module.exports = class ApiModule {
 		}
 		if (schema.$lock != null && schema.$lock !== true) {
 			if (req.locked?.(schema.$lock)) {
-				return {
-					status: req.user?.grants?.length == 0 ? 401 : 403,
-					locks: req.locks
-				};
+				if (req.user?.grants?.length == 0) {
+					throw new HttpError.Unauthorized(schema.$lock.join(', '));
+				} else {
+					throw new HttpError.Forbidden(schema.$lock.join(', '));
+				}
 			}
 		}
 
