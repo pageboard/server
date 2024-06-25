@@ -152,9 +152,9 @@ module.exports = class ApiModule {
 		if (schema.$lock != null && schema.$lock !== true) {
 			if (req.locked?.(schema.$lock)) {
 				if (req.user?.grants?.length == 0) {
-					throw new HttpError.Unauthorized(schema.$lock.join(', '));
+					throw new HttpError.Unauthorized(schema.$lock);
 				} else {
-					throw new HttpError.Forbidden(schema.$lock.join(', '));
+					throw new HttpError.Forbidden(schema.$lock);
 				}
 			}
 		}
