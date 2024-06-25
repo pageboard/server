@@ -22,6 +22,7 @@ suite('apis.post', function () {
 		const { item: form } = await app.run('block.add', {
 			type: 'api_form',
 			data: {
+				name: 'form1',
 				action: {
 					method: 'login.grant',
 					parameters: {
@@ -39,7 +40,7 @@ suite('apis.post', function () {
 		}, { site: site.id });
 
 		const bpost = await app.run('apis.post', {
-			name: form.id,
+			name: form.data.name,
 			body: {
 				token,
 				email
@@ -49,7 +50,7 @@ suite('apis.post', function () {
 		assert.ok(bpost.bearer);
 	});
 
-	test('Identity method can be used to redirect to a parametrized api', async function () {
+	test('Repeat method can be used to redirect to a parametrized api', async function () {
 		const { item: page } = await app.run('block.add', {
 			type: 'page',
 			data: { url: '/testpage' }
@@ -58,6 +59,7 @@ suite('apis.post', function () {
 		const { item: form } = await app.run('block.add', {
 			type: 'api_form',
 			data: {
+				name: 'myform',
 				action: {
 					method: 'repeat.post',
 					request: {
@@ -65,7 +67,7 @@ suite('apis.post', function () {
 					}
 				},
 				redirection: {
-					url: '/@api/query/select1',
+					name: 'select1',
 					parameters: {
 						id: '[$response.id]'
 						// TODO rename parameters to query here
@@ -85,7 +87,7 @@ suite('apis.post', function () {
 			data: {
 				name: 'select1',
 				action: {
-					method: 'block.get',
+					method: 'block.find',
 					parameters: {
 						type: "page"
 					},
@@ -93,14 +95,14 @@ suite('apis.post', function () {
 						id: '[$query.id]'
 					},
 					response: {
-						url: '[data.url]'
+						url: '[item.data.url]'
 					}
 				}
 			}
 		}, { site: site.id });
 
 		const bpost = await app.run('apis.post', {
-			name: form.id,
+			name: form.data.name,
 			body: {
 				id: page.id
 			}
@@ -122,6 +124,7 @@ suite('apis.post', function () {
 		const { item: form } = await app.run('block.add', {
 			type: 'api_form',
 			data: {
+				name: 'ljhfgdg',
 				action: {
 					method: 'block.save',
 					parameters: {
@@ -131,7 +134,7 @@ suite('apis.post', function () {
 					}
 				},
 				redirection: {
-					url: '/@api/form/two',
+					name: 'two',
 					parameters: { // TODO rename parameters to query here
 						// action.response could be used directly
 						// instead of having another layer of variables
@@ -160,7 +163,7 @@ suite('apis.post', function () {
 		}, { site:site.id });
 
 		const bpost = await app.run('apis.post', {
-			name: form.id,
+			name: form.data.name,
 			query: {
 				id: page.id
 			}

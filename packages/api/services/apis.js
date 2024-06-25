@@ -7,13 +7,13 @@ module.exports = class ApiService {
 	apiRoutes(app) {
 		// these routes are setup after all others
 		// eventually all routes will be declared as actions ?
-		app.get(["/@api/:name", "/@api/query/:name"], req => {
+		app.get(["/@api/:name"], req => {
 			return req.run('apis.get', {
 				name: req.params.name,
 				query: unflatten(req.query)
 			});
 		});
-		app.post(["/@api/:name", "/@api/form/:name"], async req => {
+		app.post(["/@api/:name"], async req => {
 			await req.run('upload.parse', {});
 
 			return req.run('apis.post', {
@@ -28,10 +28,7 @@ module.exports = class ApiService {
 		const { site, run, user, locked, trx, ref } = req;
 		const form = await site.$relatedQuery('children', trx)
 			.where('block.type', 'api_form')
-			.where(q => {
-				q.where('block.id', data.name);
-				q.orWhere(ref('block.data:name').castText(), data.name);
-			})
+			.where(ref('block.data:name').castText(), data.name)
 			.first().throwIfNotFound();
 		if (locked(form.lock)) {
 			throw new HttpError.Unauthorized("Check user permissions");
@@ -80,23 +77,27 @@ module.exports = class ApiService {
 			? response
 			: mergeExpressions(response, unflatten(action.response), scope);
 
-		const { api, name } = /^\/@api\/(?<api>query|form)\/(?<name>[^/]+)$/
-			.exec(redirection?.url)?.groups ?? {};
+		if (redirection?.name) {
+			const api = await site.$relatedQuery('children', trx)
+				.select('type')
+				.whereIn('block.type', ['api_form', 'fetch'])
+				.where(ref('block.data:name').castText(), redirection.name)
+				.first().throwIfNotFound();
 
-		if (api && name) {
-			// TODO prevent recursion
-			const method = { query: "apis.get", form: "apis.post" }[api];
-			// FIXME: if form is redirecting to fetch,
-			// the form response must be fed into the query
-			// by the redirection.url/parameters
 			scope.$response = result;
 			const redirParams = mergeExpressions({}, redirection.parameters, scope);
-			const opts = {
-				name,
-				query: redirParams
-			};
-			if (method == "form") opts.body = result;
-			return run(method, opts);
+			if (api.type == 'api_form') {
+				return run('apis.post', {
+					name: redirection.name,
+					query: redirParams,
+					body: result
+				});
+			} else {
+				return run('apis.get', {
+					name: redirection.name,
+					query: redirParams
+				});
+			}
 		} else {
 			return result;
 		}
@@ -131,10 +132,7 @@ module.exports = class ApiService {
 		const { site, run, user, locked, trx, ref } = req;
 		const form = await site.$relatedQuery('children', trx)
 			.where('block.type', 'fetch')
-			.where(q => {
-				q.where('block.id', data.name);
-				q.orWhere(ref('block.data:name').castText(), data.name);
-			})
+			.where(ref('block.data:name').castText(), data.name)
 			.first().throwIfNotFound();
 		if (locked(form.lock)) {
 			throw new HttpError.Unauthorized("Check user permissions");
