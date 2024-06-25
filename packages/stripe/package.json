@@ -1,6 +1,6 @@
 {
   "name": "@pageboard/stripe",
-  "version": "0.14.0",
+  "version": "0.15.0",
   "description": "Stripe API",
   "main": "index.js",
   "scripts": {
@@ -22,6 +22,6 @@
   },
   "homepage": "https://github.com/pageboard/server#readme",
   "dependencies": {
-    "stripe": "^14.21.0"
+    "stripe": "^16.0.0"
   }
 }

@@ -1,6 +1,6 @@
 {
   "name": "@pageboard/mail",
-  "version": "0.10.0",
+  "version": "0.15.0",
   "description": "",
   "main": "index.js",
   "scripts": {
@@ -18,7 +18,7 @@
   "homepage": "https://github.com/pageboard/server#readme",
   "dependencies": {
     "addressparser": "^1.0.1",
-    "nodemailer": "^6.9.13",
+    "nodemailer": "^6.9.14",
     "nodemailer-postmark-transport": "^6.0.0"
   }
 }

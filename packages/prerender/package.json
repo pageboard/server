@@ -1,6 +1,6 @@
 {
   "name": "@pageboard/prerender",
-  "version": "0.14.0",
+  "version": "0.15.0",
   "description": "setup prerendering of views in pageboard",
   "main": "index.js",
   "scripts": {
@@ -23,6 +23,6 @@
   "homepage": "https://github.com/pageboard/server#readme",
   "dependencies": {
     "express-dom": "^8.11.4",
-    "express-dom-pdf": "^8.11.2"
+    "express-dom-pdf": "^8.12.0"
   }
 }

@@ -1,6 +1,6 @@
 {
   "name": "@pageboard/api",
-  "version": "0.14.0",
+  "version": "0.15.1",
   "description": "",
   "main": "index.js",
   "scripts": {
@@ -19,7 +19,7 @@
   "dependencies": {
     "@apideck/better-ajv-errors": "^0.3.6",
     "@kapouer/path": "^4.2.1",
-    "ajv": "^8.14.0",
+    "ajv": "^8.16.0",
     "ajv-formats": "^3.0.1",
     "ajv-keywords": "^5.1.0",
     "archiver": "^7.0.1",
