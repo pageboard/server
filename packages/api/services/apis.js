@@ -7,13 +7,13 @@ module.exports = class ApiService {
 	apiRoutes(app) {
 		// these routes are setup after all others
 		// eventually all routes will be declared as actions ?
-		app.get(["/@api/:name"], req => {
+		app.get(["/@api/:name", "/@api/query/:name"], req => {
 			return req.run('apis.get', {
 				name: req.params.name,
 				query: unflatten(req.query)
 			});
 		});
-		app.post(["/@api/:name"], async req => {
+		app.post(["/@api/:name", "/@api/form/:name"], async req => {
 			await req.run('upload.parse', {});
 
 			return req.run('apis.post', {
@@ -28,7 +28,10 @@ module.exports = class ApiService {
 		const { site, run, user, locked, trx, ref } = req;
 		const form = await site.$relatedQuery('children', trx)
 			.where('block.type', 'api_form')
-			.where(ref('block.data:name').castText(), data.name)
+			.where(q => {
+				q.where('block.id', data.name);
+				q.orWhere(ref('block.data:name').castText(), data.name);
+			})
 			.first().throwIfNotFound();
 		if (locked(form.lock)) {
 			throw new HttpError.Unauthorized("Check user permissions");
@@ -132,7 +135,10 @@ module.exports = class ApiService {
 		const { site, run, user, locked, trx, ref } = req;
 		const form = await site.$relatedQuery('children', trx)
 			.where('block.type', 'fetch')
-			.where(ref('block.data:name').castText(), data.name)
+			.where(q => {
+				q.where('block.id', data.name);
+				q.orWhere(ref('block.data:name').castText(), data.name);
+			})
 			.first().throwIfNotFound();
 		if (locked(form.lock)) {
 			throw new HttpError.Unauthorized("Check user permissions");
