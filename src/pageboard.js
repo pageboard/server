@@ -389,12 +389,13 @@ module.exports = class Pageboard {
 	async #start() {
 		const server = http.createServer(this.#server);
 		server.listen(this.opts.server.port);
+		this.#server.stop = () => server[Symbol.asyncDispose]();
 		await once(server, 'listening');
 		console.info(`port:\t${this.opts.server.port}`);
 	}
 
 	async stop() {
-		await this.#server[Symbol.asyncDispose]();
+		await this.#server.stop();
 	}
 
 	async #initDirs(dirs) {
