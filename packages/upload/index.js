@@ -57,7 +57,7 @@ module.exports = class UploadModule {
 			defers.push(d);
 			const pathObj = Path.parse(filename);
 			const ext = pathObj.ext.toLowerCase();
-			if (/^\.[a-z]{2,4}$/.test(ext) == false) {
+			if (/^\.[a-z]{3,4}$/.test(ext) == false) {
 				// unsupported file extension format
 				stream.resume();
 				d.reject(new HttpError.BadRequest("Unsupported file extension: " + ext));
