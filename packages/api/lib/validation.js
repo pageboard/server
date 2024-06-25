@@ -185,9 +185,8 @@ module.exports = class Validation {
 		if (modelClass?.jsonSchema.$id == "/elements") {
 			// add /standalones ?
 		}
-		AjvFormats(ajv);
 		AjvKeywords(ajv);
-
+		AjvFormats(ajv);
 		this.#customKeywords(ajv);
 		ajv.removeKeyword("multipleOf");
 		ajv.addKeyword({
@@ -216,10 +215,6 @@ module.exports = class Validation {
 				type: "number"
 			},
 		});
-		// otherwise the `format` keyword would validate before `$coerce`
-		// https://github.com/epoberezkin/ajv/issues/986
-		const rules = ajv.RULES.types.string.rules;
-		rules.unshift(rules.pop());
 		return ajv;
 	}
 	createValidator(modelClass) {
@@ -378,9 +373,11 @@ module.exports = class Validation {
 			schemaType: ["object", "string"]
 		});
 		ajv.addKeyword({
+			// NOTE: there is no actual guarantee that format
+			// is applied before $coerce, but it seems it is the case.
 			keyword: '$coerce',
-			modifying: true,
 			schemaType: 'boolean',
+			valid: true,
 			errors: false,
 			code(cxt) {
 				const { gen, parentSchema, data, it } = cxt;
@@ -389,13 +386,15 @@ module.exports = class Validation {
 
 				if (parentSchema.type == 'array') {
 					gen.if(_`${data} instanceof Set`, () => {
-						gen.assign(_`${parentData}[${parentDataProperty}]`, _`Array.from(${data})`);
+						gen.assign(data, _`Array.from(${data})`);
+						gen.assign(_`${parentData}[${parentDataProperty}]`, data);
 					});
 				} else if ('const' in parentSchema && typeof parentSchema.const == "number") {
 					gen.if(_`typeof ${data} == "string" && ${data} != null`, () => {
 						const num = gen.const("num", _`Number(${data})`);
 						gen.if(_`!Number.isNaN(${num})`, () => {
-							gen.assign(_`${parentData}[${parentDataProperty}]`, num);
+							gen.assign(data, num);
+							gen.assign(_`${parentData}[${parentDataProperty}]`, data);
 						});
 					});
 				} else if (parentSchema.anyOf?.length > 1) {
@@ -409,32 +408,37 @@ module.exports = class Validation {
 						.else()
 						.assign(expr, _`${data}`)
 						.endIf();
-					gen.assign(_`${parentData}[${parentDataProperty}]`, expr);
+					gen.assign(data, expr);
+					gen.assign(_`${parentData}[${parentDataProperty}]`, data);
 				} else if (parentSchema.type == "string") {
 					if (parentSchema.default !== undefined) {
 						gen.if(_`${data} === ""`, () => {
-							gen.assign(_`${parentData}[${parentDataProperty}]`, _`${parentSchema.default}`);
+							gen.assign(data, _`${parentSchema.default}`);
+							gen.assign(_`${parentData}[${parentDataProperty}]`, data);
 						});
 					} else if (parentSchema.nullable) {
 						gen.if(_`${data} === ""`, () => {
-							gen.code(_`delete ${parentData}[${parentDataProperty}]`);
+							gen.assign(data, _`undefined`);
+							gen.assign(_`${parentData}[${parentDataProperty}]`, data);
 						});
 					}
-				} else if (["date", "time", "date-time"].includes(format)) {
-					const d = gen.const("d", _`new Date(${data})`);
-					gen.if(_`Number.isNaN(${d}.getTime())`, () => {
-						gen.assign(_`${parentData}[${parentDataProperty}]`, null);
-					});
-					gen.else(() => {
+					if (["date", "time", "date-time"].includes(format)) {
+						const d = gen.const("d", _`new Date(${data})`);
+						gen.if(_`Number.isNaN(${d}.getTime())`);
+						gen.assign(data, null);
+						gen.assign(_`${parentData}[${parentDataProperty}]`, data);
+						gen.else();
 						const dstr = gen.const("dstr", _`${d}.toISOString()`);
 						if (format == "date") {
-							gen.assign(_`${parentData}[${parentDataProperty}]`, _`${dstr}.split('T').shift()`);
+							gen.assign(data, _`${dstr}.split('T').shift()`);
 						} else if (format == "time") {
-							gen.assign(_`${parentData}[${parentDataProperty}]`, _`${dstr}.split('T').pop()`);
+							gen.assign(data, _`${dstr}.split('T').pop()`);
 						} else {
-							gen.assign(_`${parentData}[${parentDataProperty}]`, dstr);
+							gen.assign(data, dstr);
 						}
-					});
+						gen.assign(_`${parentData}[${parentDataProperty}]`, data);
+						gen.endIf();
+					}
 				}
 			}
 		});

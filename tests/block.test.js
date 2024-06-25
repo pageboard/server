@@ -29,6 +29,44 @@ suite('block', function () {
 		});
 	});
 
+	test('add block: coerce date time', async function () {
+		const { item } = await app.run('block.add', {
+			type: 'event_date',
+			data: {
+				slot: {
+					start: '2018-06-07',
+					end: '2018-06-10'
+				}
+			}
+		}, { site: site.id });
+
+		assert.equal(
+			item.data.slot.start.split('.')[0],
+			'2018-06-07T00:00:00.000Z'.split('.')[0]
+		);
+
+		const { item: block } = await app.run('block.find', {
+			id: item.id, type: item.type
+		}, { site: site.id });
+
+		assert.equal(
+			block.data.slot.start.split('.')[0],
+			'2018-06-07T00:00:00.000Z'.split('.')[0]
+		);
+	});
+
+	test('add block: coerce wrong date time', async function () {
+		const { item: eventDate } = await app.run('block.add', {
+			type: 'event_date',
+			data: {
+				slot: {
+					start: 'aa2018-06-07'
+				}
+			}
+		}, { site: site.id });
+		assert.equal(eventDate.data.slot.start, null);
+	});
+
 	test('fill block', async function () {
 		const { item: b1 } = await app.run('block.add', {
 			type: 'page', data: { url: '/testfill' }
