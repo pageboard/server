@@ -1,11 +1,11 @@
-module.exports = class RepeatService {
-	static name = 'repeat';
+module.exports = class RedirectService {
+	static name = 'redirect';
 
 	get(req, data) {
 		return data;
 	}
 	static get = {
-		title: 'Redirect',
+		title: 'Get',
 		$action: 'read'
 	};
 
@@ -13,7 +13,7 @@ module.exports = class RepeatService {
 		return data;
 	}
 	static post = {
-		title: 'Redirect',
+		title: 'Post',
 		$action: 'write'
 	};
 };
