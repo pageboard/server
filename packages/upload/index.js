@@ -150,7 +150,7 @@ module.exports = class UploadModule {
 	}
 
 	static files = {
-		title: 'Upload files',
+		title: 'Files',
 		$action: 'write',
 		$lock: ['user'],
 		properties: {

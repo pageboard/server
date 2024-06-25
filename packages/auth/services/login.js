@@ -213,7 +213,7 @@ module.exports = class LoginModule {
 		}).toString();
 	}
 	static link = {
-		title: 'Internal login link',
+		title: 'Internal link',
 		$action: 'write',
 		$lock: 'root',
 		required: ['email', 'grant'],
@@ -276,7 +276,7 @@ module.exports = class LoginModule {
 		}
 	}
 	static key = {
-		title: 'Get user otp key',
+		title: 'Get otp key',
 		$action: 'read',
 		required: ['email'],
 		properties: {

@@ -97,7 +97,7 @@ module.exports = class LinksService {
 		return lines.join('\n');
 	}
 	static robot = {
-		title: 'Get robots.txt',
+		title: 'Robots.txt',
 		$tags: ['data-:site'],
 		$private: true,
 		$action: 'read',
@@ -263,7 +263,7 @@ module.exports = class LinksService {
 		};
 	}
 	static rebuild = {
-		title: 'Reprovision all hrefs for pages',
+		title: 'Rebuild href pages',
 		$private: true,
 		$action: 'write'
 	};

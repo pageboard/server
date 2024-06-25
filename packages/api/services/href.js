@@ -28,7 +28,7 @@ module.exports = class HrefService {
 		return { href };
 	}
 	static find = {
-		title: 'Get URL metadata',
+		title: 'Find',
 		$action: 'read',
 		$lock: 'user',
 		required: ['url'],
@@ -123,7 +123,7 @@ module.exports = class HrefService {
 	}
 
 	static search = {
-		title: 'Search URL metadata',
+		title: 'Search',
 		$action: 'read',
 		$lock: 'webmaster',
 		properties: {
@@ -229,7 +229,7 @@ module.exports = class HrefService {
 	}
 
 	static add = {
-		title: 'Add URL',
+		title: 'Add',
 		$action: 'write',
 		$tags: ['data-:site'],
 		$lock: 'user',
@@ -262,7 +262,7 @@ module.exports = class HrefService {
 			.returning(Href.columns);
 	}
 	static update = {
-		title: 'Update Href',
+		title: 'Update title and pathname',
 		$action: 'write',
 		$private: true,
 		required: ['url'],
@@ -286,7 +286,7 @@ module.exports = class HrefService {
 		return req.call('image.update', data);
 	}
 	static save = {
-		title: 'Update Href Title',
+		title: 'Update title',
 		$action: 'write',
 		required: ['url', 'title'],
 		properties: {
@@ -306,7 +306,7 @@ module.exports = class HrefService {
 		return { count };
 	}
 	static del = {
-		title: 'Delete URL',
+		title: 'Delete',
 		$action: 'write',
 		$tags: ['data-:site'],
 		$lock: 'webmaster',
@@ -375,7 +375,7 @@ module.exports = class HrefService {
 		};
 	}
 	static referrers = {
-		title: 'Referrers',
+		title: 'List referrers',
 		$private: true,
 		$action: 'read',
 		properties: {
@@ -445,7 +445,7 @@ module.exports = class HrefService {
 		await q;
 	}
 	static change = {
-		title: 'Change Url',
+		title: 'Change all',
 		$private: true,
 		properties: {
 			from: {
@@ -529,7 +529,7 @@ module.exports = class HrefService {
 	}
 
 	static collect = {
-		title: 'Collect hrefs',
+		title: 'Collect all',
 		$private: true,
 		$action: 'read',
 		properties: {
@@ -672,7 +672,7 @@ module.exports = class HrefService {
 		};
 	}
 	static reinspect = {
-		title: 'Batch reinspection',
+		title: 'Reinspect many',
 		$private: true,
 		$action: 'write',
 		required: ['block', 'href'],
@@ -732,7 +732,7 @@ module.exports = class HrefService {
 		return { removals: list };
 	}
 	static gc = {
-		title: 'Garbage Collector',
+		title: 'Garbage collect',
 		description: 'Delete orphaned hrefs',
 		$private: true,
 		$action: 'write',

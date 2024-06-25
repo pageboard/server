@@ -273,7 +273,7 @@ module.exports = class PrerenderModule {
 		};
 	}
 	static save = {
-		title: 'Save prerendered URL',
+		title: 'Save',
 		$private: true,
 		$action: 'write',
 		required: ['url'],

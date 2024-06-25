@@ -57,7 +57,7 @@ module.exports = class ArchiveService {
 		return counts;
 	}
 	static bundle = {
-		title: 'Bundle',
+		title: 'Bundle by fetch',
 		$action: 'read',
 		$private: true,
 		$lock: 'webmaster',

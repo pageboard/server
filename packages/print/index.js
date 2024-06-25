@@ -99,7 +99,7 @@ module.exports = class PrintModule {
 		return { item };
 	}
 	static options = {
-		title: 'Get printer options',
+		title: 'Options',
 		description: 'Returns options as JSON-schema',
 		$action: 'read',
 		required: ['printer'],
@@ -123,7 +123,7 @@ module.exports = class PrintModule {
 		return block;
 	}
 	static again = {
-		title: 'Rerun print task',
+		title: 'Reprint',
 		$action: 'write',
 		required: ['id'],
 		properties: {
@@ -154,7 +154,7 @@ module.exports = class PrintModule {
 	}
 
 	static run = {
-		title: 'Run print task',
+		title: 'Print',
 		$action: 'write',
 		$ref: "/elements#/definitions/print_job/properties/data"
 	};
@@ -234,7 +234,7 @@ module.exports = class PrintModule {
 		return agent.fetch(`/data/deliveries-by-courier/${iso_code}`);
 	}
 	static couriers = {
-		title: 'List couriers',
+		title: 'Couriers',
 		$action: 'read',
 		$global: true,
 		required: ['iso_code'],

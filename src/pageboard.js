@@ -439,6 +439,7 @@ module.exports = class Pageboard {
 				const func = plugin[key];
 				if (typeof func != "function") continue;
 				service[key] = desc;
+				desc.title = `${name}: ${desc.title}`;
 				defined = true;
 				const method = `${name}.${key}`;
 				const schema = {

@@ -110,7 +110,7 @@ module.exports = class ApiService {
 		// }
 	}
 	static post = {
-		title: 'API Post',
+		title: 'Post',
 		$private: true,
 		$action: 'write',
 		$tags: ['data-:site'],
@@ -185,7 +185,7 @@ module.exports = class ApiService {
 		else return result;
 	}
 	static get = {
-		title: 'API Get',
+		title: 'Get',
 		$private: true,
 		$action: 'read',
 		$tags: ['data-:site'],

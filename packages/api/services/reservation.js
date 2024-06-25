@@ -81,7 +81,7 @@ module.exports = class ReservationService {
 	}
 
 	static add = {
-		title: 'Add reservation',
+		title: 'Add',
 		$action: 'write',
 		required: ['date', 'email'],
 		properties: {
@@ -223,7 +223,7 @@ module.exports = class ReservationService {
 		});
 	}
 	static save = {
-		title: 'Save reservation',
+		title: 'Save',
 		$action: 'write',
 		required: ['id'],
 		properties: Object.assign({
@@ -279,7 +279,7 @@ module.exports = class ReservationService {
 		return {};
 	}
 	static del = {
-		title: 'Delete reservation',
+		title: 'Delete',
 		$action: 'write',
 		required: ['reservation'],
 		properties: {
@@ -310,7 +310,7 @@ module.exports = class ReservationService {
 		});
 	}
 	static pay = {
-		title: 'Pay reservation',
+		title: 'Pay',
 		$action: 'write',
 		required: ['reservation'],
 		properties: {
@@ -380,7 +380,7 @@ module.exports = class ReservationService {
 		return { item: eventDate, items };
 	}
 	static search = {
-		title: 'Search reservations',
+		title: 'Search',
 		$action: 'read',
 		required: ['id'],
 		properties: {

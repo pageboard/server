@@ -61,7 +61,7 @@ module.exports = class TranslateService {
 		};
 	}
 	static languages = {
-		title: 'List site languages',
+		title: 'Languages',
 		$action: 'read'
 	};
 
@@ -74,7 +74,7 @@ module.exports = class TranslateService {
 			.columns({ lang }).where('block.type', 'language');
 	}
 	static available = {
-		title: 'List available shared languages',
+		title: 'List available languages',
 		$private: true,
 		$global: true,
 		properties: {
@@ -111,7 +111,7 @@ module.exports = class TranslateService {
 		}
 	}
 	static provision = {
-		title: 'Provision shared language',
+		title: 'Provision available language',
 		$private: true,
 		$global: true,
 		properties: {
@@ -211,7 +211,7 @@ module.exports = class TranslateService {
 		};
 	}
 	static list = {
-		title: 'List translations',
+		title: 'List',
 		$action: 'read',
 		required: ['lang', 'id'],
 		properties: {
@@ -323,7 +323,7 @@ module.exports = class TranslateService {
 	}
 
 	static fill = {
-		title: 'Fill translations',
+		title: 'Fill',
 		$action: 'write',
 		required: ['lang', 'id'],
 		properties: {

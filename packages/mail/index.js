@@ -95,7 +95,7 @@ module.exports = class MailModule {
 		return checks.some(ok => Boolean(ok));
 	}
 	static receive = {
-		title: 'Receive email',
+		title: 'Receive',
 		$private: true,
 		$action: 'write',
 		additionalProperties: true,
@@ -145,7 +145,7 @@ module.exports = class MailModule {
 		}
 	}
 	static to = {
-		title: 'Send email to',
+		title: 'Send to',
 		$private: true,
 		$action: 'write',
 		required: ['subject', 'to', 'text'],
@@ -342,7 +342,7 @@ module.exports = class MailModule {
 		return block;
 	}
 	static send = {
-		title: 'Send email',
+		title: 'Send',
 		$action: 'write',
 		$ref: "/elements#/definitions/mail_job/properties/data"
 	};
@@ -353,7 +353,7 @@ module.exports = class MailModule {
 		return block;
 	}
 	static again = {
-		title: 'Rerun send task',
+		title: 'Resend',
 		$action: 'write',
 		required: ['id'],
 		properties: {

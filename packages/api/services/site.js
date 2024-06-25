@@ -36,7 +36,7 @@ module.exports = class SiteService {
 		return { item };
 	}
 	static find = {
-		title: 'Find Site',
+		title: 'Find',
 		$action: 'read',
 		$global: false
 	};
@@ -45,7 +45,7 @@ module.exports = class SiteService {
 		return this.#QuerySite(req, data).throwIfNotFound().columns();
 	}
 	static get = {
-		title: 'Get site',
+		title: 'Get',
 		$action: 'read',
 		$private: true,
 		properties: {
@@ -95,7 +95,7 @@ module.exports = class SiteService {
 			});
 	}
 	static search = {
-		title: 'Search user sites',
+		title: 'Search',
 		$action: 'read',
 		$private: true,
 		required: ['email'],
@@ -144,7 +144,7 @@ module.exports = class SiteService {
 		}
 	}
 	static add = {
-		title: 'Add site',
+		title: 'Add',
 		$action: 'write',
 		$private: true,
 		required: ['id'],
@@ -166,7 +166,7 @@ module.exports = class SiteService {
 		return this.update(req, data);
 	}
 	static save = {
-		title: 'Save site',
+		title: 'Save',
 		$action: 'write',
 		$private: true, // or lock: site-manager ?
 		required: ['id', 'data'],
@@ -210,7 +210,7 @@ module.exports = class SiteService {
 		return site;
 	}
 	static update = {
-		title: 'Update site',
+		title: 'Update',
 		$action: 'write',
 		$ref: "/elements#/definitions/site/properties/data",
 		$global: false
@@ -226,7 +226,7 @@ module.exports = class SiteService {
 		return q;
 	}
 	static all = {
-		title: 'List all sites',
+		title: 'List all',
 		$action: 'read',
 		$private: true,
 		properties: {
@@ -244,7 +244,7 @@ module.exports = class SiteService {
 		return ret;
 	}
 	static del = {
-		title: 'Delete a site',
+		title: 'Delete',
 		$action: 'write',
 		$private: true,
 		required: ['id'],
@@ -265,7 +265,7 @@ module.exports = class SiteService {
 		return ret;
 	}
 	static empty = {
-		title: 'Empty site',
+		title: 'Empty',
 		$action: 'write',
 		$private: true,
 		required: ['id'],

@@ -179,7 +179,7 @@ module.exports = class ImageModule {
 		return ret;
 	}
 	static resize = {
-		title: 'Resize image',
+		title: 'Resize',
 		$private: true,
 		properties: {
 			input: {
@@ -307,7 +307,7 @@ module.exports = class ImageModule {
 		return { path };
 	}
 	static add = {
-		title: 'Add image',
+		title: 'Add',
 		required: ['path', 'mime'],
 		$private: true,
 		$action: 'write',
@@ -375,7 +375,7 @@ module.exports = class ImageModule {
 		return destSized;
 	}
 	static get = {
-		title: 'Get image path at given size',
+		title: 'Get path at given size',
 		$private: true,
 		$action: 'read',
 		required: ['url'],

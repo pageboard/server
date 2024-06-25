@@ -8,25 +8,6 @@ module.exports = class HelpService {
 		this.app = app;
 	}
 
-	doc(req, { command, schema }) {
-		return jsonDoc(this.app.elements, command, schema, this.app.opts.cli);
-	}
-	static doc = {
-		title: 'Get json doc',
-		$private: true,
-		required: ['command', 'schema'],
-		properties: {
-			command: {
-				title: 'Command',
-				type: 'string'
-			},
-			schema: {
-				title: 'Schema',
-				type: 'object'
-			}
-		}
-	};
-
 	command(req, { command }) {
 		let schema;
 		const [modName, funName] = (command || "").split('.');
@@ -42,10 +23,10 @@ module.exports = class HelpService {
 		} else {
 			schema = this.app.api.getService(command)?.[0];
 		}
-		return this.doc(req, { command, schema });
+		return jsonDoc(this.app.elements, command, schema, this.app.opts.cli);
 	}
 	static command = {
-		title: 'Help on command',
+		title: 'Document command',
 		$private: true,
 		properties: {
 			command: {

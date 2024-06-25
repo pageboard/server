@@ -22,7 +22,7 @@ module.exports = class UserService {
 		return this.#QueryUser(req, data);
 	}
 	static get = {
-		title: 'Get user',
+		title: 'Get',
 		$private: true,
 		$action: 'read',
 		anyOf: [{
@@ -59,7 +59,7 @@ module.exports = class UserService {
 		return user;
 	}
 	static add = {
-		title: 'Add user',
+		title: 'Add',
 		$private: true,
 		$action: 'write',
 		required: ['email'],
@@ -80,7 +80,7 @@ module.exports = class UserService {
 		return user;
 	}
 	static save = {
-		title: 'Save user',
+		title: 'Save',
 		$private: true,
 		$action: 'write',
 		required: ['id', 'data'],

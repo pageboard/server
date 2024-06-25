@@ -49,7 +49,7 @@ module.exports = class BlockService {
 		return q.first().throwIfNotFound();
 	}
 	static get = {
-		title: 'Get block',
+		title: 'Get',
 		$action: 'read',
 		$private: true,
 		required: ['id'],
@@ -349,7 +349,7 @@ module.exports = class BlockService {
 		return obj;
 	}
 	static search = {
-		title: 'Search blocks',
+		title: 'Search',
 		$action: 'read',
 		required: ['type'],
 		properties: {
@@ -688,7 +688,7 @@ module.exports = class BlockService {
 		return ret;
 	}
 	static find = {
-		title: 'Find one block',
+		title: 'Find',
 		$action: 'read',
 		required: ['type'],
 		get properties() {
@@ -734,7 +734,7 @@ module.exports = class BlockService {
 			}).returning(Block.columns);
 	}
 	static clone = {
-		title: 'Clone a block',
+		title: 'Clone one',
 		$action: 'write',
 		required: ['id'],
 		properties: {
@@ -789,7 +789,7 @@ module.exports = class BlockService {
 		return { item: block };
 	}
 	static add = {
-		title: 'Add a block',
+		title: 'Add',
 		description: 'Standalone block type only',
 		$action: 'write',
 		required: ['type'],
@@ -840,7 +840,7 @@ module.exports = class BlockService {
 		};
 	}
 	static save = {
-		title: 'Modify a block',
+		title: 'Save',
 		description: 'Standalone block type only',
 		$action: 'write',
 		required: ['id', 'type'],
@@ -868,7 +868,7 @@ module.exports = class BlockService {
 		return { count: row?.count ?? 0 };
 	}
 	static del = {
-		title: 'Delete block',
+		title: 'Delete',
 		description: 'Recursive delete of standalone block',
 		$action: 'write',
 		required: ['id'],
@@ -892,7 +892,7 @@ module.exports = class BlockService {
 	}
 
 	static write = {
-		title: 'Write multiple blocks',
+		title: 'Write many',
 		$action: 'write',
 		$private: true,
 		$lock: 'webmaster',
@@ -980,7 +980,7 @@ module.exports = class BlockService {
 		return { item: block };
 	}
 	static fill = {
-		title: 'Fill block content',
+		title: 'Fill content',
 		$action: 'write',
 		required: ['id', 'type'],
 		properties: {

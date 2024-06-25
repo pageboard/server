@@ -92,7 +92,7 @@ module.exports = class DatabaseModule {
 		return file;
 	}
 	static setup = {
-		title: 'Setup tenant database',
+		title: 'Setup tenant',
 		$private: true,
 		$action: 'write',
 		required: ['file', 'tenant'],
@@ -116,7 +116,7 @@ module.exports = class DatabaseModule {
 		await req.run('database.restore', { file, tenant });
 	}
 	static copy = {
-		title: 'Copy current database to tenant database',
+		title: 'Copy to tenant',
 		$action: 'write',
 		$private: true,
 		required: ['tenant'],
@@ -146,7 +146,7 @@ module.exports = class DatabaseModule {
 		return file;
 	}
 	static dump = {
-		title: 'Dump database',
+		title: 'Dump',
 		$action: 'read',
 		required: ['file'],
 		$private: true,
@@ -189,7 +189,7 @@ module.exports = class DatabaseModule {
 		return file;
 	}
 	static restore = {
-		title: 'Restore dump to tenant database',
+		title: 'Restore to tenant',
 		$action: 'write',
 		$private: true,
 		required: ['file', 'tenant'],

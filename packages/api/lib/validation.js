@@ -484,6 +484,6 @@ function keepDefinitions(schema, key, val) {
 			list.push({ $ref: `${id}#/definitions/${name}` });
 		}
 	}
-	schema.oneOf = list;
+	schema.oneOf = list.sort((a, b) => a.$ref.localeCompare(b.$ref));
 	return schema;
 }

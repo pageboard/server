@@ -21,7 +21,7 @@ module.exports = class SettingsService {
 		});
 	}
 	static get = {
-		title: 'Get user settings',
+		title: 'Get',
 		$action: 'read',
 		required: ['id'],
 		properties: {
@@ -49,7 +49,7 @@ module.exports = class SettingsService {
 		});
 	}
 	static find = {
-		title: 'Find user settings',
+		title: 'Find',
 		required: ['email'],
 		properties: {
 			email: {
@@ -91,7 +91,7 @@ module.exports = class SettingsService {
 		return obj;
 	}
 	static list = {
-		title: 'List user emails by grant',
+		title: 'List granted',
 		$action: 'read',
 		properties: {
 			grant: {
@@ -142,7 +142,7 @@ module.exports = class SettingsService {
 		return obj;
 	}
 	static grant = {
-		title: 'Grant user permission',
+		title: 'Grant',
 		description: 'A higher permission is needed to grant a lower permission',
 		$action: 'write',
 		required: ['email', 'grant'],
@@ -182,7 +182,7 @@ module.exports = class SettingsService {
 		return obj;
 	}
 	static revoke = {
-		title: 'Revoke user permission',
+		title: 'Revoke',
 		description: 'A higher permission is needed to revoke a lower permission',
 		$action: 'write',
 		required: ['email', 'grant'],
@@ -224,7 +224,7 @@ module.exports = class SettingsService {
 	}
 
 	static have = {
-		title: 'Have user settings',
+		title: 'Have email',
 		$action: 'write',
 		required: ['email'],
 		properties: {
@@ -262,7 +262,7 @@ module.exports = class SettingsService {
 	}
 
 	static save = {
-		title: 'Save user settings',
+		title: 'Save',
 		$action: 'write',
 		required: ['id'],
 		$lock: 'webmaster',

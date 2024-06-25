@@ -96,7 +96,7 @@ module.exports = class PageService {
 		};
 	}
 	static parse = {
-		title: 'Parse url',
+		title: 'Parse URL',
 		$private: true,
 		properties: {
 			url: {
@@ -188,7 +188,7 @@ module.exports = class PageService {
 		return obj;
 	}
 	static get = {
-		title: 'Get page',
+		title: 'Get',
 		$private: true,
 		$action: 'read',
 		required: ['url'],
@@ -228,7 +228,7 @@ module.exports = class PageService {
 		});
 	}
 	static search = {
-		title: 'Search pages',
+		title: 'Search',
 		$action: 'read',
 		required: ['text'],
 		properties: {
@@ -319,7 +319,7 @@ module.exports = class PageService {
 		return returning;
 	}
 	static write = {
-		title: 'Write to page',
+		title: 'Write content',
 		$private: true,
 		$lock: ['webmaster'],
 		$tags: ['data-:site'],
@@ -403,7 +403,7 @@ module.exports = class PageService {
 		return obj;
 	}
 	static list = {
-		title: 'List pages',
+		title: 'List',
 		$action: 'read',
 		properties: {
 			prefix: {

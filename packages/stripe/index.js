@@ -38,7 +38,7 @@ module.exports = class StripeModule {
 		};
 	}
 	static config = {
-		title: 'Get stripe config',
+		title: 'Get config',
 		$action: 'read'
 	};
 
@@ -55,7 +55,7 @@ module.exports = class StripeModule {
 		};
 	}
 	static intent = {
-		title: 'Stripe get payment intent',
+		title: 'Get payment intent',
 		$action: 'read',
 		required: ['amount', 'currency'],
 		properties: {
@@ -90,7 +90,7 @@ module.exports = class StripeModule {
 	}
 
 	static hook = {
-		title: 'Stripe webhook',
+		title: 'Webhook',
 		$action: 'write',
 		required: [],
 		properties: {
