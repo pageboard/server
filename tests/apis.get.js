@@ -17,7 +17,7 @@ suite('apis.get', function () {
 			data: {
 				name: 'fetch-1',
 				action: {
-					method: 'block.get',
+					method: 'block.find',
 					parameters: {
 						type: "page",
 						content: null
@@ -29,13 +29,13 @@ suite('apis.get', function () {
 			}
 		}, { site: site.id });
 
-		const bget = await app.run('apis.get', {
+		const { item: found } = await app.run('apis.get', {
 			name: fetch.data.name,
 			query: {
 				id: page.id
 			}
 		}, { site: site.id });
-		assert.deepEqual(bget, page);
+		assert.deepEqual(found, page);
 	});
 
 	test('request block with response', async function () {
@@ -48,15 +48,15 @@ suite('apis.get', function () {
 			data: {
 				name: 'fetch-2',
 				action: {
-					method: 'block.get',
+					method: 'block.find',
 					parameters: {
 						id: page.id,
 						type: "page",
 						content: null
 					},
 					response: {
-						id: "[id]",
-						'data.url': "[data.url]"
+						id: "[item.id]",
+						'data.url': "[item.data.url]"
 					}
 				}
 			}

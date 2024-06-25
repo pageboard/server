@@ -139,7 +139,7 @@ suite('upload', function () {
 		}, { site: site.id, grant: 'root' });
 
 		const body = new FormData();
-		body.set("src", new Blob([Buffer.from("console.log('toto');")]), "test.js");
+		body.set("src", new Blob([Buffer.from("console.log('toto');")]), "test.bin");
 		body.set("alt", "test alt");
 		const appUrl = `http://${site.id}.localhost.localdomain:${app.opts.server.port}`;
 		const res = await fetch(new URL('/@api/addfailtest', appUrl), {
