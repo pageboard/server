@@ -43,6 +43,7 @@ module.exports = class UploadModule {
 	}
 
 	async parse(req, options) {
+		if (req.headers['content-type'] != "multipart/form-data") return [];
 		const bb = busboy({
 			headers: req.headers,
 			limits: this.opts.limits
