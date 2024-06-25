@@ -17,7 +17,7 @@ module.exports = class ApiModule {
 	static priority = -1;
 	static plugins = [
 		'help', 'user', 'site', 'archive', 'settings', 'page', 'links',
-		'block', 'href', 'reservation', 'translate', 'apis'
+		'block', 'href', 'reservation', 'translate', 'repeat', 'apis'
 	].map(name => Path.join(__dirname, 'services', name));
 
 	#packager;

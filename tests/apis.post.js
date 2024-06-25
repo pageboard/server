@@ -59,6 +59,7 @@ suite('apis.post', function () {
 			type: 'api_form',
 			data: {
 				action: {
+					method: 'repeat.post',
 					request: {
 						id: '[$request.id]'
 					}
