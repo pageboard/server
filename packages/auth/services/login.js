@@ -91,7 +91,7 @@ module.exports = class LoginModule {
 		return {};
 	}
 	static send = {
-		title: 'Send token',
+		title: 'Send',
 		$action: 'write',
 		required: ['email'],
 		properties: {
@@ -170,8 +170,8 @@ module.exports = class LoginModule {
 		};
 	}
 	static verify = {
-		title: 'Verify Bearer',
-		description: 'Sets cookie with grants',
+		title: 'Verify',
+		description: 'Check token to get bearer',
 		$action: 'write',
 		required: ['email', 'token'],
 		properties: {

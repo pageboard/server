@@ -734,7 +734,7 @@ module.exports = class BlockService {
 			}).returning(Block.columns);
 	}
 	static clone = {
-		title: 'Clone one',
+		title: 'Clone',
 		$action: 'write',
 		required: ['id'],
 		properties: {
