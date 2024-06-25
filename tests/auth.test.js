@@ -19,7 +19,7 @@ suite('auth', function () {
 			email, grant
 		}, { site: site.id, grant: 'root' })).split('?').pop()).get('token');
 
-		const { item, cookies } = await app.run('login.grant', {
+		const { item, cookies } = await app.run('login.verify', {
 			email, grant, token
 		}, { site: site.id });
 

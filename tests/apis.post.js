@@ -24,7 +24,7 @@ suite('apis.post', function () {
 			data: {
 				name: 'form1',
 				action: {
-					method: 'login.grant',
+					method: 'login.verify',
 					parameters: {
 						grant
 					},

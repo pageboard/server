@@ -43,7 +43,7 @@ These services expose get, add, save, del functions.
 Permissions
 -----------
 
-login.grant can grant scopes to a requester by sending him a jwt cookie.
+login.verify can grant scopes to a requester by sending him a jwt cookie.
 Elements have `$lock` property (a map)
 blocks have `locks` property (a map).
 

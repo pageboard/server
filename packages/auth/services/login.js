@@ -13,7 +13,7 @@ module.exports = class LoginModule {
 	}
 	apiRoutes(app, server) {
 		app.post("/@api/login/send", 'login.send');
-		app.post("/@api/login/grant", 'login.grant');
+		app.post("/@api/login/grant", 'login.verify');
 		app.post("/@api/login/out", 'login.clear');
 	}
 
@@ -142,7 +142,7 @@ module.exports = class LoginModule {
 		return verified;
 	}
 
-	async grant(req, data) {
+	async verify(req, data) {
 		const { user } = req;
 		const verified = await this.#verifyToken(req, data);
 		if (!verified) throw new HttpError.BadRequest("Bad token");
@@ -169,8 +169,8 @@ module.exports = class LoginModule {
 			}
 		};
 	}
-	static grant = {
-		title: 'Grant',
+	static verify = {
+		title: 'Verify Bearer',
 		description: 'Sets cookie with grants',
 		$action: 'write',
 		required: ['email', 'token'],
