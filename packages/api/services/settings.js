@@ -123,7 +123,8 @@ module.exports = class SettingsService {
 	};
 
 	async grant(req, { email, grant }) {
-		if (req.locked([grant], true)) { // TODO req.user must also have a "grant" manager permission
+		if (req.locked([grant], true)) {
+			// TODO req.user must also have a "grant" manager permission
 			throw new HttpError.Forbidden("Higher grant is needed");
 		}
 		const obj = await req.run('settings.have', { email });
