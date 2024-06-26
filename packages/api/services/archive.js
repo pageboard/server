@@ -53,7 +53,7 @@ module.exports = class ArchiveService {
 				.replaceAll(/[_-]/g, 'x')
 				.slice(0, 8)].join('-');
 		});
-		counts.file = this.app.statics.pathToUrl(archivePath);
+		counts.file = this.app.statics.pathToUrl(req, archivePath);
 		return counts;
 	}
 	static bundle = {
@@ -237,7 +237,7 @@ module.exports = class ArchiveService {
 
 			return [site.id, fileStamp()].join('-');
 		});
-		counts.file = this.app.statics.pathToUrl(archivePath);
+		counts.file = this.app.statics.pathToUrl(req, archivePath);
 		return counts;
 	}
 	static export = {
@@ -529,7 +529,7 @@ async function archiveFiles(req, archive, hrefs, counts, size) {
 					url, size
 				});
 			} else {
-				filePath = this.app.statics.urlToPath(url);
+				filePath = this.app.statics.urlToPath(req, url);
 			}
 			if (!filePath) {
 				counts.skips.push(url);

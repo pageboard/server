@@ -16,12 +16,12 @@ module.exports = class InspectorModule {
 		this.remote = new Inspector(this.opts);
 	}
 
-	async request(urlObj) {
-		return this.Inspector.get(urlObj);
+	async request(req, urlObj) {
+		return this.Inspector.get(req, urlObj);
 	}
 
-	async get({ url }) {
-		const localFile = this.app.statics.urlToPath(url);
+	async get(req, { url }) {
+		const localFile = this.app.statics.urlToPath(req, url);
 		const local = Boolean(localFile);
 		try {
 			if (local) {

@@ -57,15 +57,20 @@ module.exports = class StaticsModule {
 		);
 	}
 
-	urlToPath(url) {
-		for (const [mount, [mountDir]] of Object.entries(this.opts.mounts)) {
+	urlToPath(req, url) {
+		for (const [mount, [mountDir, age, site]] of Object.entries(this.opts.mounts)) {
 			if (url.startsWith(`/${mount}/`)) {
+				if (site) {
+					const list = url.split('/');
+					list.splice(2, 0, req.site.id);
+					url = list.join('/');
+				}
 				return Path.join(mountDir, url);
 			}
 		}
 	}
 
-	pathToUrl(path) {
+	pathToUrl(req, path) {
 		for (const [mount, [mountDir, age, site]] of Object.entries(this.opts.mounts)) {
 			if (path.startsWith(Path.join(mountDir, mount))) {
 				const sub = path.substring(mountDir.length);

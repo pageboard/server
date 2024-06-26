@@ -151,7 +151,7 @@ module.exports = class ImageModule {
 		}
 		let inputStream;
 		if (/^https?:\/\//.test(input)) {
-			inputStream = (await this.app.inspector.request(new URL(input))).res;
+			inputStream = (await this.app.inspector.request(req, new URL(input))).res;
 		} else {
 			inputStream = createReadStream(input.startsWith('file://') ? input.substring(7) : input);
 		}
@@ -332,7 +332,7 @@ module.exports = class ImageModule {
 	}
 
 	async get(req, { url, size }) {
-		let srcPath = this.app.statics.urlToPath(url);
+		let srcPath = this.app.statics.urlToPath(req, url);
 		if (!srcPath) return;
 		const srcParts = Path.parse(srcPath);
 		srcParts.base = null;
@@ -406,7 +406,7 @@ module.exports = class ImageModule {
 				if (!urlPath.startsWith('/@file/') || !req.Href.isImage(href.mime)) {
 					continue;
 				}
-				let filePath = this.app.statics.urlToPath(urlPath);
+				let filePath = this.app.statics.urlToPath(req, urlPath);
 				const parts = Path.parse(filePath);
 				parts.base = null;
 				const patterns = [
@@ -452,7 +452,7 @@ module.exports = class ImageModule {
 				parts.ext = '.webp';
 				filePath = Path.format(parts);
 				await fs.rename(orig, filePath);
-				urlPath = this.app.statics.pathToUrl(filePath);
+				urlPath = this.app.statics.pathToUrl(req, filePath);
 				for (const item of list) {
 					await fs.unlink(item);
 				}

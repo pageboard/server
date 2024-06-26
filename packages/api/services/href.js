@@ -692,7 +692,7 @@ module.exports = class HrefService {
 	};
 
 	async inspect(req, { url }) {
-		return this.app.inspector.get({ url });
+		return this.app.inspector.get(req, { url });
 	}
 	static inspect = {
 		title: 'Inspect',
@@ -721,7 +721,7 @@ module.exports = class HrefService {
 					continue;
 				}
 				list.push(item.url);
-				const filePath = this.app.statics.urlToPath(item.url);
+				const filePath = this.app.statics.urlToPath(req, item.url);
 				if (filePath) await fs.unlink(filePath);
 				const { count } = await req.run('href.del', { url: item.url });
 				if (count != 1) {

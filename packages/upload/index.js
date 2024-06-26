@@ -84,7 +84,7 @@ module.exports = class UploadModule {
 					path: filePath,
 					mime: mime.lookup(ext)
 				}) ?? { path: filePath };
-				const url = this.app.statics.pathToUrl(image.path);
+				const url = this.app.statics.pathToUrl(req, image.path);
 				const { href } = await req.run('href.add', { url, pathname: url });
 				this.#fill(req.body, name, url);
 				global.AllHrefs[url] = href;
