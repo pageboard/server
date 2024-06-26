@@ -12,33 +12,47 @@ module.exports = class StaticsModule {
 			...opts,
 			bundlerCache: Path.join(app.dirs.cache, "bundler"),
 			mounts: {
-				'@file': [app.dirs.data, '1 year'],
-				'@cache': [app.dirs.cache, '1 day', true],
-				'@site': [app.dirs.data, '1 year', true],
-				'@tmp': [app.dirs.tmp, '1 hour']
+				'@file': {
+					dir: app.dirs.data,
+					owned: false,
+					age: '1 year'
+				},
+				'@cache': {
+					dir: app.dirs.cache,
+					owned: true,
+					maxAge: '1 day'
+				},
+				'@site': {
+					dir: app.dirs.data,
+					owned: true,
+					maxAge: '1 year'
+				},
+				'@tmp': {
+					dir: app.dirs.tmp,
+					owned: false,
+					maxAge: '1 hour'
+				}
 			}
 		};
 	}
 
 	async init() {
-		for (const [mount, [dir]] of Object.entries(this.opts.mounts)) {
+		for (const [mount, { dir }] of Object.entries(this.opts.mounts)) {
 			await fs.mkdir(Path.join(dir, mount), { recursive: true });
 		}
 	}
 
 	fileRoutes(app, server) {
-		for (const [mount, [mountDir, mountAge, mountSite]] of Object.entries(this.opts.mounts)) {
+		for (const [mount, { dir, owned, maxAge }] of Object.entries(this.opts.mounts)) {
 			server.get(`/${mount}/*`,
-				req => {
-					req.url = (mountSite ? `/${req.site.id}` : '') + req.path.substring(mount.length + 1);
-				},
 				app.cache.tag('app-:site').for({
 					immutable: true,
-					maxAge: mountAge
+					maxAge
 				}),
 				(req, res, next) => {
-					res.set('X-Accel-Redirect', Path.join("/@internal", mountDir, mount, req.url));
-					res.send();
+					req.url = (owned ? `/${req.site.id}` : '') + req.path.substring(mount.length + 1);
+					res.set('X-Accel-Redirect', Path.join("/@internal", dir, mount, req.url));
+					res.sendStatus(200);
 				}
 			);
 		}
@@ -58,23 +72,23 @@ module.exports = class StaticsModule {
 	}
 
 	urlToPath(req, url) {
-		for (const [mount, [mountDir, age, site]] of Object.entries(this.opts.mounts)) {
+		for (const [mount, { dir, owned }] of Object.entries(this.opts.mounts)) {
 			if (url.startsWith(`/${mount}/`)) {
-				if (site) {
+				if (owned) {
 					const list = url.split('/');
 					list.splice(2, 0, req.site.id);
 					url = list.join('/');
 				}
-				return Path.join(mountDir, url);
+				return Path.join(dir, url);
 			}
 		}
 	}
 
 	pathToUrl(req, path) {
-		for (const [mount, [mountDir, age, site]] of Object.entries(this.opts.mounts)) {
-			if (path.startsWith(Path.join(mountDir, mount))) {
-				const sub = path.substring(mountDir.length);
-				if (site) {
+		for (const [mount, { dir, owned }] of Object.entries(this.opts.mounts)) {
+			if (path.startsWith(Path.join(dir, mount))) {
+				const sub = path.substring(dir.length);
+				if (owned) {
 					const list = sub.split('/');
 					list.splice(2, 1);
 					return list.join('/');
@@ -88,7 +102,7 @@ module.exports = class StaticsModule {
 	dir(req, mount) {
 		const def = this.opts.mounts[mount];
 		if (!def) throw new HttpError.InternalServerError("No mount for " + mount);
-		return Path.join(def[0], mount, def[2] ? req.site.id : '');
+		return Path.join(def.dir, mount, def.owned ? req.site.id : '');
 	}
 
 	async bundle(site, { inputs, output, dry = false, local = false }) {

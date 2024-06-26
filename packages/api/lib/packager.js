@@ -315,7 +315,7 @@ module.exports = class Packager {
 		const sourceUrl = `/@site/${tag}/${filename}`;
 		const sourcePath = this.app.statics.urlToPath(
 			{ site },
-			`/@site/${site.id}/${tag}/${filename}`
+			`/@site/${tag}/${filename}`
 		);
 		if (source) {
 			if (typeof source == "object") {
