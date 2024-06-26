@@ -180,6 +180,7 @@ module.exports = class Domains {
 					req
 				);
 				jreq.trx = await req.genTrx();
+
 				const { response } = block.data;
 				const start = performance.now();
 				response.status = null;
@@ -195,11 +196,22 @@ module.exports = class Domains {
 					throw ex;
 				} finally {
 					response.time = performance.now() - start;
-					await jreq.run('block.save', {
-						id: block.id,
-						type: block.type,
-						data: block.data
-					});
+					try {
+						await jreq.run('block.save', {
+							id: block.id,
+							type: block.type,
+							data: block.data
+						});
+					} catch (err) {
+						console.error("Cannot save job response", block.id, response);
+						if (!jreq.trx.isCompleted()) {
+							await jreq.trx.rollback();
+						}
+					} finally {
+						if (!jreq.trx.isCompleted()) {
+							await jreq.trx.commit();
+						}
+					}
 				}
 			});
 		};
