@@ -1,6 +1,6 @@
 export const print_job = {
 	title: 'Print Job',
-	required: ['url', 'printer'],
+	required: ['url', 'printer', 'device'],
 	bundle: true,
 	standalone: true,
 	$lock: {

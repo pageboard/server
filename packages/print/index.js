@@ -160,11 +160,11 @@ module.exports = class PrintModule {
 	};
 
 	async #onlineJob(req, block) {
-		const { url, lang, options } = block.data;
+		const { url, lang, device } = block.data;
 		const pdfUrl = req.call('page.format', {
 			url, lang, ext: 'pdf'
 		});
-		pdfUrl.searchParams.set('pdf', options.device);
+		pdfUrl.searchParams.set('pdf', device);
 		req.postTry(block, async () => {
 			await this.#publicPdf(
 				req, pdfUrl, `${block.id}.pdf`
@@ -173,11 +173,11 @@ module.exports = class PrintModule {
 	}
 
 	async #printerJob(req, block) {
-		const { url, lang, options } = block.data;
+		const { url, lang, device, options } = block.data;
 		const pdfUrl = req.call('page.format', {
 			url, lang, ext: 'pdf'
 		});
-		pdfUrl.searchParams.set('pdf', options.device ?? 'printer');
+		pdfUrl.searchParams.set('pdf', device);
 
 		const list = await cups.getPrinterNames();
 		if (!list.find(name => name == this.opts.local)) {
@@ -201,7 +201,7 @@ module.exports = class PrintModule {
 	}
 
 	async #offlineJob(req, block) {
-		const { url, lang, options } = block.data;
+		const { url, lang, device } = block.data;
 		const storePath = this.opts.offline?.[req.site.data.env];
 		if (!storePath) {
 			throw new HttpError.BadRequest("No offline job option");
@@ -209,7 +209,7 @@ module.exports = class PrintModule {
 		const pdfUrl = req.call('page.format', {
 			url, lang, ext: 'pdf'
 		});
-		pdfUrl.searchParams.set('pdf', options.device ?? 'printer');
+		pdfUrl.searchParams.set('pdf', device);
 		req.postTry(block, async () => {
 			const { path } = await req.run('prerender.save', {
 				url: pdfUrl.pathname + pdfUrl.search
@@ -302,14 +302,14 @@ module.exports = class PrintModule {
 		if (!orderEndpoint) {
 			throw new HttpError.BadRequest("No remote order end point");
 		}
-		const { options } = block.data;
+		const { device, options } = block.data;
 		block.data.order = {};
 		const pdfUrl = req.call('page.format', {
 			url: block.data.url,
 			lang: block.data.lang,
 			ext: 'pdf'
 		});
-		pdfUrl.searchParams.set('pdf', options.device ?? 'printer');
+		pdfUrl.searchParams.set('pdf', device);
 
 		const printProduct = {
 			pdf: pdfUrl,
@@ -325,7 +325,7 @@ module.exports = class PrintModule {
 				lang: block.data.lang,
 				ext: 'pdf'
 			});
-			coverUrl.searchParams.set('pdf', options.device ?? 'printer');
+			coverUrl.searchParams.set('pdf', device);
 			printProduct.cover_pdf = coverUrl;
 		}
 		if (options.discount_code) {
