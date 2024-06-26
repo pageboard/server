@@ -199,7 +199,7 @@ module.exports = class StaticsModule {
 
 	async install(site, { directories } = {}) {
 		if (!site.$url) return;
-		const siteDir = this.app.statics.dir({ site }, '@site');
+		const siteDir = this.dir({ site }, '@site');
 		await fs.mkdir(siteDir, { recursive: true });
 		const baseDir = Path.join(siteDir, "..");
 		if (directories) for (const mount of directories) {
