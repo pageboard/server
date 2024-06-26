@@ -320,7 +320,7 @@ module.exports = class MailModule {
 
 	async send(req, data) {
 		if (!data.from && !data.replyTo) {
-			throw new HttpError.NotFound("Missing parameters");
+			throw new HttpError.NotFound("Missing parameters: from or replyTo");
 		}
 		if (!Mailers[data.purpose]) {
 			throw new Error("Unknown mailer purpose " + data.purpose);
