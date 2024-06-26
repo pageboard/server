@@ -54,7 +54,7 @@ module.exports = class StaticsModule {
 					if (owned) path.push(req.site.id);
 					path.push(req.path.substring(mount.length + 2));
 					res.set('X-Accel-Redirect', path.join('/'));
-					res.sendStatus(200);
+					res.end();
 				}
 			);
 		}
