@@ -434,6 +434,7 @@ module.exports = class PrintModule {
 		});
 		const destUrl = new URL("/@cache/" + name, site.$url);
 		const destPath = this.app.statics.urlToPath(req, destUrl.pathname);
+		await fs.mkdir(Path.parse(destPath).dir, { recursive: true });
 		await fs.mv(res.path, destPath);
 
 		const count = res.headers['x-page-count'];
