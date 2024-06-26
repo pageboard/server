@@ -163,7 +163,11 @@ module.exports = class ApiModule {
 
 		// start a transaction on set trx object on site
 		let hadTrx = false;
-		const { locals = {} } = req.res || {};
+		req.genTrx ??= (async function (req) {
+			const { locals = {} } = req.res || {};
+			return transaction.start(app.database.tenant(locals.tenant));
+		}).bind(this, req);
+
 		if (req.trx?.isCompleted()) {
 			req.trx = null;
 		}
@@ -171,7 +175,7 @@ module.exports = class ApiModule {
 		if (req.trx) {
 			hadTrx = true;
 		} else {
-			req.trx = await transaction.start(app.database.tenant(locals.tenant));
+			req.trx = await req.genTrx();
 			req.trx.req = req; // needed by objection hooks
 		}
 		Object.assign(req, { Block, Href, ref, val, raw, fun });
@@ -196,7 +200,7 @@ module.exports = class ApiModule {
 		} finally {
 			if (req.trx && req.trx.isCompleted()) {
 				if (hadTrx) {
-					req.trx = await transaction.start(app.database.tenant(locals.tenant));
+					req.trx = await req.genTrx();
 				} else {
 					// top-lost run call
 					delete req.trx;

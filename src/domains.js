@@ -173,13 +173,19 @@ module.exports = class Domains {
 		req.try = async (block, job) => {
 			// trying in repetition with same key makes next tries
 			// wait for the first one
-			return this.#kqueue.push(`${req.site?.id}-${block.id}`, async () => {
+			return this.#kqueue.push(req.site?.id, async () => {
+				// new transaction for each job
+				const jreq = Object.assign(
+					Object.create(Object.getPrototypeOf(req)),
+					req
+				);
+				jreq.trx = await req.genTrx();
 				const { response } = block.data;
 				const start = performance.now();
 				response.status = null;
 				response.text = null;
 				try {
-					const result = await job(req, block);
+					const result = await job(jreq, block);
 					response.status = 200;
 					response.text = 'OK';
 					return result;
@@ -189,7 +195,7 @@ module.exports = class Domains {
 					throw ex;
 				} finally {
 					response.time = performance.now() - start;
-					await req.run('block.save', {
+					await jreq.run('block.save', {
 						id: block.id,
 						type: block.type,
 						data: block.data
