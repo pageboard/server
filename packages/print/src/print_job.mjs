@@ -94,35 +94,10 @@ export const print_job = {
 				}
 			}
 		},
-		tracking: { // tracking_url
-			title: 'Tracking',
-			type: 'object',
-			nullable: true,
-			properties: {
-				url: {
-					title: 'URL',
-					type: 'string',
-					format: "uri-reference"
-				},
-				parcel: { // package_number
-					title: 'Parcel',
-					type: 'string',
-					format: 'singleline'
-				},
-				quantity: { // packages_amount
-					title: 'Quantity',
-					type: 'integer'
-				},
-				since: { // created
-					title: 'Since',
-					type: 'string',
-					format: 'date-time'
-				}
-			}
-		},
 		options: {
 			title: 'Print options',
 			type: 'object',
+			nullable: true,
 			properties: {
 				product: {
 					title: 'Product',
@@ -247,6 +222,32 @@ export const print_job = {
 					title: 'Zip Code',
 					type: 'string',
 					format: 'singleline'
+				}
+			}
+		},
+		tracking: { // tracking_url
+			title: 'Tracking',
+			type: 'object',
+			nullable: true,
+			properties: {
+				url: {
+					title: 'URL',
+					type: 'string',
+					format: "uri-reference"
+				},
+				parcel: { // package_number
+					title: 'Parcel',
+					type: 'string',
+					format: 'singleline'
+				},
+				quantity: { // packages_amount
+					title: 'Quantity',
+					type: 'integer'
+				},
+				since: { // created
+					title: 'Since',
+					type: 'string',
+					format: 'date-time'
 				}
 			}
 		}
