@@ -61,7 +61,7 @@ suite('apis.post', function () {
 			data: {
 				name: 'myform',
 				action: {
-					method: 'repeat.post',
+					method: 'redirect.post',
 					request: {
 						id: '[$request.id]'
 					}
