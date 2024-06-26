@@ -50,8 +50,10 @@ module.exports = class StaticsModule {
 					maxAge
 				}),
 				(req, res, next) => {
-					req.url = (owned ? `/${req.site.id}` : '') + req.path.substring(mount.length + 1);
-					res.set('X-Accel-Redirect', Path.join("/@internal", dir, mount, req.url));
+					const path = ["/@internal" + dir, mount];
+					if (owned) path.push(req.site.id);
+					path.push(req.path.substring(mount.length + 2));
+					res.set('X-Accel-Redirect', path.join('/'));
 					res.sendStatus(200);
 				}
 			);
