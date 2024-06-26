@@ -155,7 +155,7 @@ module.exports = class Installer {
 		const branch = getSiteBranch(site);
 		const { version } = site.data;
 		let tag = version;
-		if (version == null) {
+		if (version == null || version == "HEAD") {
 			// do nothing
 			if (/^\w+$/.test(branch) == false) {
 				throw new Error(`${site.id} has invalid branch ${branch}`);
