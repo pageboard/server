@@ -37,7 +37,7 @@ module.exports = class ApiService {
 			throw new HttpError.Unauthorized("Check user permissions");
 		}
 
-		const { action = {}, redirection } = form.data ?? {};
+		const { action = {} } = form.data ?? {};
 
 		const { method } = action;
 
@@ -85,27 +85,26 @@ module.exports = class ApiService {
 				scope
 			);
 
-		if (redirection?.name) {
+		scope.$response = result;
+		const redirection = mergeExpressions({}, form.data.redirection, scope);
+
+		if (redirection.name) {
 			const api = await site.$relatedQuery('children', trx)
 				.select('type')
 				.whereIn('block.type', ['api_form', 'fetch'])
 				.where(ref('block.data:name').castText(), redirection.name)
 				.first().throwIfNotFound();
 
-			scope.$response = result;
-			const redirParams = mergeExpressions(
-				{}, redirection.parameters, scope
-			);
 			if (api.type == 'api_form') {
 				return run('apis.post', {
 					name: redirection.name,
-					query: redirParams,
+					query: redirection.parameters,
 					body: result
 				});
 			} else {
 				return run('apis.get', {
 					name: redirection.name,
-					query: redirParams
+					query: redirection.parameters
 				});
 			}
 		} else {
