@@ -6,7 +6,9 @@ module.exports = class RedirectService {
 	}
 	static get = {
 		title: 'Get',
-		$action: 'read'
+		$action: 'read',
+		additionalProperties: true,
+		properties: {}
 	};
 
 	post(req, data) {
@@ -14,6 +16,8 @@ module.exports = class RedirectService {
 	}
 	static post = {
 		title: 'Post',
-		$action: 'write'
+		$action: 'write',
+		additionalProperties: true,
+		properties: {}
 	};
 };
