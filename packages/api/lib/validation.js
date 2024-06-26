@@ -137,6 +137,7 @@ module.exports = class Validation {
 		ownProperties: true,
 		coerceTypes: 'array',
 		invalidDefaults: 'log',
+		multipleOfPrecision: 4,
 		formats: require('./formats'),
 		code: {
 			optimize: false // much faster compilation
@@ -188,33 +189,6 @@ module.exports = class Validation {
 		AjvKeywords(ajv);
 		AjvFormats(ajv);
 		this.#customKeywords(ajv);
-		ajv.removeKeyword("multipleOf");
-		ajv.addKeyword({
-			keyword: "multipleOf",
-			type: "number",
-			code(cxt) {
-				const { schema, data } = cxt;
-				const { _ } = Ajv;
-				let decimalPlaces = 0;
-				if (!Number.isNaN(schema)) {
-					const parts = schema.toString().split('e');
-					if (parts.length === 2) {
-						if (parts[1][0] === '-') {
-							decimalPlaces = Number(parts[1].slice(1));
-						}
-					}
-					const decimalParts = parts[0].split('.');
-					if (decimalParts.length === 2) {
-						decimalPlaces += decimalParts[1].length;
-					}
-				}
-				cxt.pass(_`Number.isInteger((1e${decimalPlaces} * ${data}) / (1e${decimalPlaces} * ${schema}))`);
-			},
-			errors: false,
-			metaSchema: {
-				type: "number"
-			},
-		});
 		return ajv;
 	}
 	createValidator(modelClass) {
