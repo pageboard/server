@@ -43,9 +43,9 @@ module.exports = class ApiService {
 
 		const reqBody = data.body ?? {};
 
-		const formData = action.parameters ?? {};
-		for (const key of Object.keys(formData)) {
-			if (formData[key] === null) delete formData[key];
+		const fields = action.parameters ?? {};
+		for (const key of Object.keys(fields)) {
+			if (fields[key] === null) delete fields[key];
 		}
 
 		const { query = {} } = data;
@@ -68,17 +68,22 @@ module.exports = class ApiService {
 			$user: user
 		});
 
-		const params = mergeExpressions(
-			action.parameters ?? {},
-			mergeRecursive({}, action.parameters, unflatten(action.request)),
-			scope
-		);
+		const params = Object.isEmpty(action.request)
+			? mergeRecursive(reqBody, fields)
+			: mergeExpressions(fields,
+				mergeRecursive({}, fields, unflatten(action.request)),
+				scope
+			);
 
 		const response = method ? await run(method, params) : params;
 
 		const result = Object.isEmpty(action.response)
 			? response
-			: mergeExpressions(response, unflatten(action.response), scope);
+			: mergeExpressions(
+				response,
+				unflatten(action.response),
+				scope
+			);
 
 		if (redirection?.name) {
 			const api = await site.$relatedQuery('children', trx)
@@ -88,7 +93,9 @@ module.exports = class ApiService {
 				.first().throwIfNotFound();
 
 			scope.$response = result;
-			const redirParams = mergeExpressions({}, redirection.parameters, scope);
+			const redirParams = mergeExpressions(
+				{}, redirection.parameters, scope
+			);
 			if (api.type == 'api_form') {
 				return run('apis.post', {
 					name: redirection.name,
@@ -148,7 +155,13 @@ module.exports = class ApiService {
 
 		const { method } = action;
 
+		const fields = action.parameters ?? {};
+		for (const key of Object.keys(fields)) {
+			if (fields[key] === null) delete fields[key];
+		}
+
 		const { query = {} } = data;
+
 		const scope = {};
 
 		for (const [key, val] of Object.entries(query)) {
@@ -166,17 +179,23 @@ module.exports = class ApiService {
 			$site: site.id,
 			$user: user
 		});
-		const params = mergeExpressions(
-			action.parameters ?? {},
-			mergeRecursive({}, action.parameters, unflatten(action.request)),
-			scope
-		);
+
+		const params = Object.isEmpty(action.request)
+			? mergeRecursive(query, fields)
+			: mergeExpressions(fields,
+				mergeRecursive({}, fields, unflatten(action.request)),
+				scope
+			);
 
 		const response = method ? await run(method, params) : params;
 
 		const result = Object.isEmpty(action.response)
 			? response
-			: mergeExpressions(response ?? {}, unflatten(action.response), scope);
+			: mergeExpressions(
+				response,
+				unflatten(action.response),
+				scope
+			);
 
 		if (data.hrefs) return {
 			items: result,
