@@ -76,7 +76,7 @@ exports.flatten = function (obj, opts) {
 
 exports.mergeExpressions = function (data, template, scope) {
 	if (!template) return data;
-	return sharedMd.merge(template, data, scope) || {};
+	return sharedMd.merge(template, data, structuredClone(scope)) || {};
 };
 
 // https://github.com/bgoscinski/dset
