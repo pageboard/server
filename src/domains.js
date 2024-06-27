@@ -2,7 +2,6 @@ const { promises: dns, setDefaultResultOrder } = require.lazy('node:dns');
 const { performance } = require.lazy('node:perf_hooks');
 const { Deferred } = require.lazy('class-deferred');
 const Queue = require.lazy('./express-queue');
-const KQueue = require('./kqueue');
 
 // const localhost4 = "127.0.0.1";
 // const localhost6 = "::1";
@@ -36,7 +35,6 @@ class Host {
 
 module.exports = class Domains {
 	#wait = new Deferred();
-	#kqueue = new KQueue();
 	#ips = {};
 	#suffixes = [];
 	#allDomainsCalled = false;
@@ -171,65 +169,52 @@ module.exports = class Domains {
 		};
 
 		req.try = async (block, job) => {
-			// trying in repetition with same key makes next tries
-			// wait for the first one
-			return this.#kqueue.push(req.site?.id, async () => {
-				// new transaction for each job
-				const jreq = Object.assign(
-					Object.create(Object.getPrototypeOf(req)),
-					req
-				);
-				jreq.trx = await req.genTrx();
+			const { response } = block.data;
+			const start = performance.now();
+			response.status = null;
+			response.text = null;
+			try {
+				const result = await job(req, block);
+				response.status = 200;
+				response.text = 'OK';
+				return result;
+			} catch (ex) {
+				response.status = ex.statusCode ?? 500;
+				response.text = ex.message ?? null;
 
-				const { response } = block.data;
-				const start = performance.now();
-				response.status = null;
-				response.text = null;
+			} finally {
+				response.time = performance.now() - start;
 				try {
-					const result = await job(jreq, block);
-					response.status = 200;
-					response.text = 'OK';
-					return result;
-				} catch (ex) {
-					response.status = ex.statusCode ?? 500;
-					response.text = ex.message ?? null;
-					throw ex;
-				} finally {
-					response.time = performance.now() - start;
-					try {
-						await jreq.run('block.save', {
-							id: block.id,
-							type: block.type,
-							data: block.data
-						});
-					} catch (err) {
-						console.error("Cannot save job response", block.id, response);
-						if (!jreq.trx.isCompleted()) {
-							await jreq.trx.rollback();
-						}
-					} finally {
-						if (!jreq.trx.isCompleted()) {
-							await jreq.trx.commit();
-						}
-					}
+					await req.run('block.save', {
+						id: block.id,
+						type: block.type,
+						data: block.data
+					});
+				} catch (err) {
+					console.error("Cannot save job response", block.id, response);
+					console.error(err);
 				}
-			});
+			}
 		};
 		req.postTries = [];
 		req.postTry = (block, job) => {
 			req.postTries.push([block, job]);
 		};
-		req.postTryProcess = () => {
+		req.postTryProcess = async () => {
 			const { postTries: list } = req;
-			if (list.length) Promise.resolve().then(async () => {
-				while (list.length) {
-					try {
-						await req.try(...list.shift());
-					} catch (ex) {
-						console.error(ex);
+			if (!list.length) return;
+			while (list.length) {
+				req.trx = await req.genTrx();
+				try {
+					await req.try.apply(req, list.shift());
+				} catch (ex) {
+					console.error(ex);
+				} finally {
+					if (!req.trx.isCompleted()) {
+						await req.trx.commit();
 					}
 				}
-			});
+			}
 		};
 	}
 
