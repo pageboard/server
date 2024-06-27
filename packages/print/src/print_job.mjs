@@ -70,6 +70,12 @@ export const print_job = {
 				}
 			}
 		},
+		email: {
+			title: 'Contact Email',
+			type: 'string',
+			format: 'email',
+			nullable :true
+		},
 		order: {
 			title: 'Order response',
 			$filter: 'hide',
