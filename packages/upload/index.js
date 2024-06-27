@@ -42,8 +42,15 @@ module.exports = class UploadModule {
 		});
 	}
 
+	#acceptable(req) {
+		const { headers } = req;
+		return (
+			'transfer-encoding' in headers || 'content-length' in headers && headers['content-length'] !== '0'
+		) && headers['content-type']?.startsWith('multipart/form-data');
+	}
+
 	async parse(req, options) {
-		if (!req.accepts(['multipart/form-data'])) return [];
+		if (!this.#acceptable(req)) return [];
 		const bb = busboy({
 			headers: req.headers,
 			limits: this.opts.limits
