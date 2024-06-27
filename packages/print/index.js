@@ -7,8 +7,8 @@ module.exports = class PrintModule {
 	static priority = 100;
 	#bearer = {
 		token: null,
-		updated: 0,
-		maxAge: 60 * 60 * 24 * 1000
+		lastUpdate: 0,
+		maxAge: 60 * 60 * 24 * 1000 // refresh token every day
 	};
 
 	constructor(app, opts) {
