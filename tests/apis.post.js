@@ -172,5 +172,42 @@ suite('apis.post', function () {
 		assert.equal(bpost.item.content.title, 'page test 2');
 	});
 
+	test('Add block with parent id in request', async function () {
+		const { item: event } = await app.run('block.add', {
+			type: 'event',
+			data: { title: 'event title' }
+		}, { site: site.id });
+		const { item: form } = await app.run('block.add', {
+			type: 'api_form',
+			data: {
+				name: 'form1',
+				action: {
+					method: 'block.add',
+					parameters: {
+						type: 'event_date',
+						parents: [{ type: 'event' }]
+					},
+					request: {
+						'parents.0.id': "[$request.id]"
+					}
+				}
+			}
+		}, { site: site.id });
+
+		const bpost = await app.run('apis.post', {
+			name: form.data.name,
+			body: {
+				id: event.id
+			}
+		}, { site: site.id });
+		const { item } = await app.run('block.find', {
+			type: "event_date",
+			parent: {
+				type: 'event',
+				id: event.id
+			}
+		}, { site: site.id });
+		assert.equal(item.id, bpost.item.id);
+	});
 
 });

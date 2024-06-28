@@ -67,6 +67,28 @@ suite('block', function () {
 		assert.equal(eventDate.data.slot.start, null);
 	});
 
+	test('add block to parent', async function () {
+		const { item: event } = await app.run('block.add', {
+			type: 'event',
+			data: { title: 'event title' }
+		}, { site: site.id });
+		const { item: eventDate } = await app.run('block.add', {
+			type: 'event_date',
+			data: {},
+			parents: [{
+				id: event.id,
+				type: 'event'
+			}]
+		}, { site: site.id });
+		const { item } = await app.run('block.find', {
+			type: "event_date",
+			parent: {
+				type: 'event',
+				id: event.id
+			}
+		}, { site: site.id });
+		assert.equal(item.id, eventDate.id);
+	});
 	test('fill block', async function () {
 		const { item: b1 } = await app.run('block.add', {
 			type: 'page', data: { url: '/testfill' }
