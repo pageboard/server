@@ -182,7 +182,7 @@ module.exports = class Domains {
 			} catch (ex) {
 				response.status = ex.statusCode ?? 500;
 				response.text = ex.message ?? null;
-
+				throw ex;
 			} finally {
 				response.time = performance.now() - start;
 				try {
@@ -455,6 +455,8 @@ async function postTryProcess(req) {
 			await req.try(...list.shift());
 		} catch (ex) {
 			console.error(ex);
+			// stop there
+			list.splice(0, list.length);
 		} finally {
 			if (!req.trx.isCompleted()) {
 				await req.trx.commit();
