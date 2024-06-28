@@ -57,6 +57,7 @@ suite('site', function () {
 		delete save.data.server;
 		assert.equal(typeof save.updated_at, "string");
 		site.data.languages = ['en'];
+		site.data.version = null;
 		assert.deepEqual({ ...save.toJSON(), ...nullers }, { ...site, ...nullers });
 	});
 
