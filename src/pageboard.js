@@ -122,17 +122,18 @@ module.exports = class Pageboard {
 		}, express.request);
 		req.res = Object.setPrototypeOf({
 			headersSent: true,
-			locals: {}
+			locals: {},
+			writeHead() {}
 		}, express.response);
 		req.res.getHeader = req.res.setHeader = () => { };
 		req.res.attachment = filename => {
 			return createWriteStream(filename);
 		};
+		this.domains.extendRequest(req, this);
+
 		req.res.locals.tenant = this.opts.database.tenant;
 		req.user ??= { grants: [] };
 		req.locks ??= [];
-		req.writeHead = () => { };
-		this.domains.extendRequest(req, this);
 		if (grant) req.user.grants.push(grant);
 		if (site) {
 			let siteInst = this.domains.siteById[site];
@@ -155,7 +156,7 @@ module.exports = class Pageboard {
 		try {
 			return this.api.run(req, command, data);
 		} finally {
-			req.writeHead(); // triggers finitions
+			req.res.writeHead(); // triggers finitions
 		}
 	}
 

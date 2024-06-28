@@ -197,7 +197,7 @@ module.exports = class Domains {
 				}
 			}
 		};
-		OnHeaders(req, () => {
+		OnHeaders(req.res, () => {
 			while (req.finitions.length) req.finitions.shift()(req);
 		});
 		req.finitions = [];
