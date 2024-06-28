@@ -27,12 +27,12 @@ module.exports = class InspectorModule {
 			if (local) {
 				const meta = await this.local.look(`file://${localFile}`);
 				const result = this.#filterResult(meta, url);
-				const obj = await this.#preview(result);
+				const obj = await this.#preview(req, result);
 				return obj;
 			} else {
 				const meta = await this.remote.look(url);
 				const result = this.#filterResult(meta);
-				const obj = await this.#preview(result);
+				const obj = await this.#preview(req, result);
 				return obj;
 			}
 		} catch (err) {
@@ -67,14 +67,14 @@ module.exports = class InspectorModule {
 		return obj;
 	}
 
-	async #preview(obj) {
+	async #preview(req, obj) {
 		const desc = obj.meta.description || '';
 		delete obj.meta.description;
 		const url = obj.meta.thumbnail;
 		delete obj.meta.thumbnail;
 		if (url != null) {
 			try {
-				const datauri = await this.app.run('image.thumbnail', { url });
+				const datauri = await req.run('image.thumbnail', { url });
 				obj.preview = `<img src="${datauri}" alt="${desc}" />`;
 			} catch (err) {
 				console.error("Error embedding thumbnail", url, err);
