@@ -59,7 +59,12 @@ exports.dget = dget;
 exports.dset = dset;
 
 exports.mergeRecursive = (...args) => {
-	return mergeWith(...args);
+	return mergeWith(...args, (dst, src) => {
+		if (Array.isArray(dst) && Array.isArray(src)) {
+			const ret = new Set(mergeWith(dst, src));
+			return Array.from(ret);
+		}
+	});
 };
 
 exports.unflatten = function(query) {
