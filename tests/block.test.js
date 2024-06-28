@@ -89,6 +89,28 @@ suite('block', function () {
 		}, { site: site.id });
 		assert.equal(item.id, eventDate.id);
 	});
+
+	test('unicity of field with block.add', async function () {
+		await app.run('block.add', {
+			type: 'api_form',
+			data: {
+				name: 'form45',
+				action: {
+					method: 'redirect.post'
+				}
+			}
+		}, { site: site.id });
+
+		await assert.rejects(() => app.run('block.add', {
+			type: 'api_form',
+			data: {
+				name: 'form45',
+				action: {
+					method: 'redirect.post'
+				}
+			}
+		}, { site: site.id }));
+	});
 	test('fill block', async function () {
 		const { item: b1 } = await app.run('block.add', {
 			type: 'page', data: { url: '/testfill' }
