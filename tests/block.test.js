@@ -144,16 +144,17 @@ suite('block', function () {
 
 	test('save block', async function () {
 		const { item: b1 } = await app.run('block.add', {
-			type: 'page', data: { url: '/test' }
+			type: 'page', data: { url: '/test', index: 2 }
 		}, { site: site.id });
 
 		const { item: b2 } = await app.run('block.save', {
 			id: b1.id,
 			type: 'page',
-			data: { url: '/test2' }
+			data: { url: '/test2', index: null }
 		}, { site: site.id });
 		assert.equal(b2.id, b1.id);
 		assert.equal(b2.data.url, '/test2');
+		assert.equal(b2.data.index, 0);
 	});
 
 	test('save block with content', async function () {

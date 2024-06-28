@@ -195,6 +195,7 @@ module.exports = class SiteService {
 			;
 		const toMulti = initial.lang && data.languages?.length > 0;
 		const toMono = !initial.lang && data.lang;
+		if (data.version == "HEAD") data.version = null;
 
 		mergeRecursive(oldSite.data, data);
 

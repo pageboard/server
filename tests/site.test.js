@@ -42,6 +42,7 @@ suite('site', function () {
 	});
 
 	test('save site', async function () {
+		site.data.version = 'HEAD';
 		try {
 			await app.run('site.add', site);
 		} catch (err) {
@@ -49,8 +50,9 @@ suite('site', function () {
 		}
 		const save = await app.run('site.save', {
 			id: site.id,
-			data: { languages: ['en'] }
+			data: { languages: ['en'], version: null }
 		});
+		assert.equal(save.data.version, null);
 		assert.ok(save.data.server);
 		delete save.data.server;
 		assert.equal(typeof save.updated_at, "string");
