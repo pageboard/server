@@ -17,7 +17,6 @@
   },
   "homepage": "https://github.com/pageboard/server#readme",
   "dependencies": {
-    "on-headers": "^1.0.2",
     "otplib": "^12.0.1",
     "qrcode": "^1.5.3",
     "upcache": "^2.8.2"

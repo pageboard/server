@@ -2,6 +2,7 @@ const { promises: dns, setDefaultResultOrder } = require.lazy('node:dns');
 const { performance } = require.lazy('node:perf_hooks');
 const { Deferred } = require.lazy('class-deferred');
 const Queue = require.lazy('./express-queue');
+const OnHeaders = require('on-headers');
 
 // const localhost4 = "127.0.0.1";
 // const localhost6 = "::1";
@@ -196,25 +197,17 @@ module.exports = class Domains {
 				}
 			}
 		};
+		OnHeaders(req, () => {
+			while (req.finitions.length) req.finitions.shift()(req);
+		});
+		req.finitions = [];
+		req.finish = fn => {
+			req.finitions.push(fn);
+		};
 		req.postTries = [];
 		req.postTry = (block, job) => {
+			if (req.postTries.length == 0) req.finish(postTryProcess);
 			req.postTries.push([block, job]);
-		};
-		req.postTryProcess = async () => {
-			const { postTries: list } = req;
-			if (!list.length) return;
-			while (list.length) {
-				req.trx = await req.genTrx();
-				try {
-					await req.try.apply(req, list.shift());
-				} catch (ex) {
-					console.error(ex);
-				} finally {
-					if (!req.trx.isCompleted()) {
-						await req.trx.commit();
-					}
-				}
-			}
 		};
 	}
 
@@ -452,3 +445,20 @@ function castArray(prop) {
 	else throw new Error("Cannot castArray " + typeof prop);
 }
 
+async function postTryProcess(req) {
+	const { postTries: list } = req;
+	if (!list.length) return;
+	req.postTries = [];
+	while (list.length) {
+		req.trx = await req.genTrx();
+		try {
+			await req.try(...list.shift());
+		} catch (ex) {
+			console.error(ex);
+		} finally {
+			if (!req.trx.isCompleted()) {
+				await req.trx.commit();
+			}
+		}
+	}
+}

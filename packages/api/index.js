@@ -174,7 +174,7 @@ module.exports = class ApiModule {
 
 		if (req.trx) {
 			hadTrx = true;
-		} else {
+		} else if (schema.$action) {
 			req.trx = await req.genTrx();
 			req.trx.req = req; // needed by objection hooks
 		}
@@ -192,7 +192,7 @@ module.exports = class ApiModule {
 			}
 		} catch(err) {
 			Log.api("error %s:\n%O", method, err);
-			if (!hadTrx && !req.trx.isCompleted()) {
+			if (!hadTrx && req.trx && !req.trx.isCompleted()) {
 				await req.trx.rollback();
 			}
 			if (!err.method) err.method = method;
@@ -200,11 +200,8 @@ module.exports = class ApiModule {
 		} finally {
 			if (req.trx && req.trx.isCompleted()) {
 				if (hadTrx) {
+					// regenerate completed trx
 					req.trx = await req.genTrx();
-				} else {
-					// top-lost run call
-					delete req.trx;
-					req.postTryProcess();
 				}
 			}
 		}

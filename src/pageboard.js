@@ -129,9 +129,10 @@ module.exports = class Pageboard {
 			return createWriteStream(filename);
 		};
 		req.res.locals.tenant = this.opts.database.tenant;
-		this.domains.extendRequest(req, this);
 		req.user ??= { grants: [] };
 		req.locks ??= [];
+		req.writeHead = () => { };
+		this.domains.extendRequest(req, this);
 		if (grant) req.user.grants.push(grant);
 		if (site) {
 			let siteInst = this.domains.siteById[site];
@@ -151,7 +152,11 @@ module.exports = class Pageboard {
 		} else {
 			await this.api.install({ id: "*", data: {} });
 		}
-		return this.api.run(req, command, data);
+		try {
+			return this.api.run(req, command, data);
+		} finally {
+			req.writeHead(); // triggers finitions
+		}
 	}
 
 	#loadPlugin(path, sub) {

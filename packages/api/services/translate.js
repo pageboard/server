@@ -77,6 +77,7 @@ module.exports = class TranslateService {
 		title: 'List available languages',
 		$private: true,
 		$global: true,
+		$action: 'read',
 		properties: {
 			lang: {
 				title: 'Titles language',
@@ -114,6 +115,7 @@ module.exports = class TranslateService {
 		title: 'Provision available language',
 		$private: true,
 		$global: true,
+		$action: 'write',
 		properties: {
 			title: {
 				title: 'Title',
