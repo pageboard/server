@@ -265,8 +265,11 @@ module.exports = class PrerenderModule {
 		const fileName = await req.Block.genId(9);
 		const filePath = Path.join(dirName, fileName + '.' + ext);
 
-		if (res.body) await writeFile(filePath, res.body);
-		else await waitPipeline(res, createWriteStream(filePath));
+		if (res.body) {
+			await writeFile(filePath, res.body);
+		} else {
+			await waitPipeline(res, createWriteStream(filePath));
+		}
 		return {
 			path: filePath,
 			headers: res.headers
