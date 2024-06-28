@@ -209,6 +209,8 @@ module.exports = class Pageboard {
 
 		if (this.opts.cli) return;
 
+		process.title = "pageboard@" + this.version;
+
 		await this.#initLog();
 
 		// call plugins#file
