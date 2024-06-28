@@ -180,7 +180,7 @@ suite('apis.post', function () {
 		const { item: form } = await app.run('block.add', {
 			type: 'api_form',
 			data: {
-				name: 'form1',
+				name: 'form154',
 				action: {
 					method: 'block.add',
 					parameters: {
