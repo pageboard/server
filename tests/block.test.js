@@ -111,6 +111,33 @@ suite('block', function () {
 			}
 		}, { site: site.id }));
 	});
+
+	test('search blocks and order by field', async function () {
+		const type = 'event';
+		await app.run('block.add', {
+			type, data: { title: 'A' }
+		}, { site: site.id });
+		await app.run('block.add', {
+			type, data: { title: 'B' }
+		}, { site: site.id });
+		await app.run('block.add', {
+			type, data: { title: 'C' }
+		}, { site: site.id });
+		await app.run('block.add', {
+			type, data: { title: 'D' }
+		}, { site: site.id });
+		const titles = ['D', 'A', 'C', 'B'];
+		const { items } = await app.run('block.search', {
+			type,
+			data: {
+				title: titles
+			},
+			order: ['data.title']
+		}, { site: site.id });
+		const list = items.map(item => item.data.title);
+		assert.deepEqual(list, titles);
+	});
+
 	test('fill block', async function () {
 		const { item: b1 } = await app.run('block.add', {
 			type: 'page', data: { url: '/testfill' }
