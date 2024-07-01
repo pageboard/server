@@ -5,7 +5,7 @@ const { dget, flatten } = require('../../../src/utils');
 
 const { isKnexRaw, isKnexQueryBuilder } = require(
 	Path.join(
-		require.resolve('objection'),
+		require.resolve('@kapouer/objection'),
 		'..',
 		'utils/knexUtils'
 	)
@@ -13,7 +13,7 @@ const { isKnexRaw, isKnexQueryBuilder } = require(
 
 const { isObject } = require(
 	Path.join(
-		require.resolve('objection'),
+		require.resolve('@kapouer/objection'),
 		'..',
 		'utils/objectUtils'
 	)
@@ -21,7 +21,7 @@ const { isObject } = require(
 
 const { UpdateOperation } = require(
 	Path.join(
-		require.resolve('objection'),
+		require.resolve('@kapouer/objection'),
 		'..',
 		'queryBuilder/operations/UpdateOperation'
 	)
@@ -29,7 +29,7 @@ const { UpdateOperation } = require(
 
 const { InstanceUpdateOperation } = require(
 	Path.join(
-		require.resolve('objection'),
+		require.resolve('@kapouer/objection'),
 		'..',
 		'queryBuilder/operations/InstanceUpdateOperation'
 	)
