@@ -243,6 +243,24 @@ suite('block', function () {
 		assert.equal(b2.content.body, body);
 	});
 
+	test('save block with content with empty id', async function () {
+		const { item: b1 } = await app.run('block.add', {
+			type: 'language',
+			data: { lang: 'xx' },
+			content: { '': 'title' }
+		}, { site: site.id });
+		const { item: b2 } = await app.run('block.save', {
+			id: b1.id,
+			type: 'language',
+			content: { '': 'title' }
+		}, { site: site.id });
+		const { item } = await app.run('block.find', {
+			type: "language",
+			id: b1.id
+		}, { site: site.id });
+		assert.equal(item.content, b2.content);
+	});
+
 	test('delete block', async function () {
 		const { item: b1 } = await app.run('block.add', {
 			type: 'page', data: { url: '/test' }
