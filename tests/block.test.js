@@ -258,7 +258,7 @@ suite('block', function () {
 			type: "language",
 			id: b1.id
 		}, { site: site.id });
-		assert.equal(item.content, b2.content);
+		assert.deepEqual(item.content, b2.content);
 	});
 
 	test('delete block', async function () {
