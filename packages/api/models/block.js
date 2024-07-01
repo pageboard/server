@@ -295,7 +295,7 @@ class Block extends Model {
 			#pkg = {
 				bundles: new Map(),
 				standalones: Array.from(standalones),
-				pages: groups.page ?? [],
+				pages: groups.page ?? new Set(),
 				textblocks: Array.from(textblocks),
 				hashtargets: Array.from(hashtargets),
 				hrefs,
