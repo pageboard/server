@@ -1,4 +1,4 @@
-const { transaction, fn: fun, val, ref, raw } = require('objection');
+const { transaction, fn: fun, val, ref, raw } = require('@kapouer/objection');
 const Path = require('node:path');
 
 const jsonPath = require.lazy('@kapouer/path');

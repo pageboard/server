@@ -1,4 +1,4 @@
-const { Model } = require('objection');
+const { Model } = require('@kapouer/objection');
 const common = require('./common');
 
 class Href extends common.Model {

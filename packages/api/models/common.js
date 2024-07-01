@@ -1,4 +1,4 @@
-const { ref, val, raw, fn: fun, Model, QueryBuilder } = require('objection');
+const { ref, val, raw, fn: fun, Model, QueryBuilder } = require('@kapouer/objection');
 const Duration = require('iso8601-duration');
 const Path = require('node:path');
 const { dget, flatten } = require('../../../src/utils');

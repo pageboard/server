@@ -1,4 +1,4 @@
-const { AjvValidator } = require('objection');
+const { AjvValidator } = require('@kapouer/objection');
 const Ajv = require('ajv');
 const { _ } = Ajv;
 const AjvKeywords = require('ajv-keywords');
