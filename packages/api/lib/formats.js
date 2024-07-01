@@ -6,7 +6,7 @@ module.exports = {
 	id: /^[A-Za-z0-9]+$/,
 	name: /^[-\w]*$/, // this should be the "type" format
 	grant: /^[a-z0-9-]+$/, // this should be the name format !
-	lang: /^[a-z]{2}$/,
+	lang: /^[a-z]{2}(-[a-z]{2})?$/,
 	ext: /^[a-z]{3,4}$/,
 	phone: /^[+(\s.\-/\d)]{5,30}$/
 };
