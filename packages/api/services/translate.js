@@ -89,26 +89,27 @@ module.exports = class TranslateService {
 	};
 
 	async provision(req, { title, lang, tsconfig, translate }) {
-		const shared = await req.run('site.get', { id: 'shared' });
-		const reqShared = Object.assign({}, req, { site: shared });
-		const { item } = await reqShared.run('block.find', {
+		const { app } = this;
+		const { item } = await app.run('block.find', {
 			standalone: true, type: 'language', data: { lang }
-		});
+		}, { site: 'shared'});
 		if (!item) {
-			return reqShared.run('block.add', {
+			return app.run('block.add', {
 				type: 'language',
 				data: {
 					lang, tsconfig, translate
 				},
 				content: { '': title }
-			});
+			}, { site: 'shared' });
 		} else {
-			return reqShared.run('block.save', {
+			return app.run('block.save', {
+				id: item.id,
+				type: item.type,
 				data: {
-					tsconfig, translate
+					lang, tsconfig, translate
 				},
 				content: { '': title }
-			});
+			}, { site: 'shared' });
 		}
 	}
 	static provision = {
@@ -116,6 +117,7 @@ module.exports = class TranslateService {
 		$private: true,
 		$global: true,
 		$action: 'write',
+		required: ['lang'],
 		properties: {
 			title: {
 				title: 'Title',
@@ -124,7 +126,7 @@ module.exports = class TranslateService {
 			},
 			lang: {
 				title: 'Language identifier',
-				description: 'Two-letters code',
+				description: 'language-locale code',
 				type: 'string',
 				format: 'lang'
 			},
