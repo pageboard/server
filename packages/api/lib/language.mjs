@@ -1,6 +1,7 @@
 export const language = {
 	title: 'Language',
 	description: 'Global constants',
+	unique: ['lang'],
 	properties: {
 		lang: {
 			title: 'Language Code',

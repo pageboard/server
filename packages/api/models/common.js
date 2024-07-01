@@ -421,9 +421,8 @@ function asPaths(obj, ret, pre, schemas = []) {
 		if (pathLen == 1) {
 			ref += lastKey;
 		} else {
-			parentRef += `${firstKey}:${pathKey.join('.')}`;
-			pathKey.push(lastKey);
-			ref += `${firstKey}:${pathKey.join('.')}`;
+			parentRef += `${firstKey}:${buildRef(pathKey)}`;
+			ref = parentRef + buildRef([lastKey]);
 		}
 
 		let wasRangeSchema;
@@ -496,6 +495,10 @@ function asPaths(obj, ret, pre, schemas = []) {
 		}
 	}
 	return ret;
+}
+
+function buildRef(list) {
+	return list.map(key => `[${key}]`).join('');
 }
 
 function setCondition(ret, ref, obj) {
