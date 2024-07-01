@@ -311,20 +311,21 @@ class Block extends Model {
 				Object.assign(copy.$pkg, this.$pkg);
 				return copy;
 			}
-			async #uniqueProperty(context, patch) {
+			async #uniqueProperty(context, opt = {}) {
 				const el = this.$schema();
 				const { unique } = el?.properties?.data ?? {};
 				if (!unique || !this.type) return;
 				const { req: { trx, site } } = context.transaction;
 				const q = site.$relatedQuery('children', trx)
 					.where('block.type', this.type);
-				if (this.id) q.whereNot('block.id', this.id);
+				const id = opt.old?.id ?? this.id;
+				if (id != null) q.whereNot('block.id', id);
 				let hasCheck = false;
 				for (const field of unique) {
 					const key = `data.${field}`;
-					const val = dget(this, key);
+					const val = dget(opt.old || this, key);
 					if (val == null) {
-						if (val === undefined && patch) continue;
+						if (val === undefined && opt.patch) continue;
 						const parent = dget(el.properties, key.split('.').join('.properties.'));
 						if (parent?.nullable) continue;
 						throw new HttpError.BadRequest(
@@ -346,7 +347,7 @@ class Block extends Model {
 			}
 			async $beforeUpdate(opt, context) {
 				await super.$beforeUpdate(opt, context);
-				await this.#uniqueProperty(context, opt.patch);
+				await this.#uniqueProperty(context, opt);
 			}
 			$beforeValidate(jsonSchema, json) {
 				if (json.id === null) delete json.id;
