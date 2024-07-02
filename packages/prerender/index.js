@@ -233,7 +233,10 @@ module.exports = class PrerenderModule {
 		}
 		res.type('text/html');
 		res.set('Link', links.join(','));
-		const { lang } = req.call('page.parse', { url: req.path });
+		const { lang } = req.call(
+			'translate.lang',
+			req.call('page.parse', { url: req.path })
+		);
 		res.send(Text`
 			<!DOCTYPE html>
 			<html lang="${lang}">
