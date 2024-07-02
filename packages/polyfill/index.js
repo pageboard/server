@@ -140,22 +140,30 @@ module.exports = class PolyfillModule {
 		}
 
 		await Promise.all(
-			Array.from(flatList).map(async featureName => {
-				const polyfill = await this.getPolyfill(featureName);
+			Array.from(flatList).map(async name => {
+				const longLocale = /\.~locale\.[a-z]{2}(?:-[a-zA-Z]{2})?$/.test(name);
+				if (longLocale) {
+					name = name.replace(/(-[a-zA-Z]{2})$/, (m, p) => p.toUpperCase());
+				}
+				let polyfill = await this.getPolyfill(name);
+				if (!polyfill && longLocale) {
+					name = name.replace(/(-[a-zA-Z]{2})$/, "");
+					polyfill = await this.getPolyfill(name);
+				}
 				if (!polyfill) {
-					warnings.unknown.push(featureName);
+					warnings.unknown.push(name);
 				} else {
-					featureNodes.push(featureName);
-					if (polyfill.dependencies) {
+					featureNodes.push(name);
+					if (polyfill.dependencies && detectMap) {
 						for (let depName of polyfill.dependencies) {
 							// some deps are set on a specific language, use our template instead
 							depName = depName.replace(/(\.~locale\.)([a-z]{2})$/, '$1*');
 							const dep = await this.getPolyfill(depName);
 							if (!dep) {
 								warnings.unknown.push(dep);
-							} else if (detectMap == Boolean(dep.detectSource)) {
+							} else if (dep.detectSource) {
 								featureNodes.push(depName);
-								featureEdges.push([depName, featureName]);
+								featureEdges.push([depName, name]);
 							}
 						}
 					}
