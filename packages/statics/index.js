@@ -50,11 +50,10 @@ module.exports = class StaticsModule {
 					maxAge
 				}),
 				(req, res, next) => {
-					const path = ["/@internal" + dir, mount];
+					const path = [dir, mount];
 					if (owned) path.push(req.site.id);
 					path.push(req.path.substring(mount.length + 2));
-					res.set('X-Accel-Redirect', path.join('/'));
-					res.end();
+					res.accelerate(path.join('/'));
 				}
 			);
 		}
@@ -107,13 +106,13 @@ module.exports = class StaticsModule {
 		return Path.join(def.dir, mount, def.owned ? req.site.id : '');
 	}
 
-	async bundle(site, { inputs, output, dry = false, local = false }) {
+	async bundle(site, { inputs, output, dry = false, local = false, force }) {
 		if (inputs.length == 0) return [];
 		const suffix = {
 			production: ".min",
 			staging: ".max",
 			dev: ""
-		}[site.data.env] || "";
+		}[site.data.env] || (force ? ".max" : "");
 		const { dir } = site.$pkg;
 		if (!suffix || !dir || !site.$url) {
 			return inputs;
@@ -163,7 +162,9 @@ module.exports = class StaticsModule {
 		}
 		const inList = [];
 		inputs.forEach(url => {
-			if (local) {
+			if (force) {
+				inList.push(url);
+			} else if (local) {
 				if (url.startsWith('/@site/')) inList.push(url);
 				else console.error("file not in project", url);
 			} else if (/^https?:\/\//.test(url)) {

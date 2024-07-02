@@ -151,6 +151,10 @@ module.exports = class Domains {
 		req.opts = app.opts;
 		const { res } = req;
 		if (!res.locals) res.locals = {};
+		res.accelerate = path => {
+			res.set('X-Accel-Redirect', "/@internal" + path);
+			res.end();
+		};
 		req.call = (command, data) => {
 			const [mod, name] = command.split('.');
 			return app[mod][name](req, data);

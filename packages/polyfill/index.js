@@ -86,36 +86,55 @@ module.exports = class PolyfillModule {
 			}),
 			async (req, res, next) => {
 				try {
-					const list = req.query.features?.split('+') ?? [];
-					if (!list.length) throw new HttpError.BadRequest("No features requested");
-					const features = await this.getFeatures(list);
-					const inputs = features.map(name => {
-						return this.polyfills[name]?.source ?? join(
-							polyfillModuleDir, 'polyfills/__dist', name, "raw.js"
-						);
-					});
-					if (inputs.length == 0) {
-						res.sendStatus(204);
-						return;
-					}
-
-					const hash = crypto.createHash('sha1');
-					hash.update(list.join('+'));
-
-					const [output] = await this.app.statics.bundle(req.site, {
-						inputs,
-						output: 'polyfill-' + hash.digest('base64url')
-							.replaceAll(/[_-]/g, 'x') + '.js',
-						local: true,
-						sourceMap: false
-					});
-					res.sendFile(output);
+					const features = req.query.features?.split('!') ?? [];
+					const output = await req.run('polyfill.bundle', { features });
+					if (!output) return res.sendStatus(204);
+					res.accelerate(output);
 				} catch (err) {
 					next(err);
 				}
 			}
 		);
 	}
+
+	async bundle(req, { features }) {
+		if (!features.length) throw new HttpError.BadRequest("No features requested");
+		const list = await this.getFeatures(features);
+		const inputs = list.map(name => {
+			return this.polyfills[name]?.source ?? join(
+				polyfillModuleDir, 'polyfills/__dist', name, "raw.js"
+			);
+		});
+		if (inputs.length == 0) {
+			return;
+		}
+		const hash = crypto.createHash('sha1');
+		hash.update(features.join('!'));
+
+		const [output] = await this.app.statics.bundle(req.site, {
+			inputs,
+			output: 'polyfill-' + hash.digest('base64url')
+				.replaceAll(/[_-]/g, 'x') + '.js',
+			local: true,
+			sourceMap: false,
+			force: true
+		});
+		return output;
+	}
+	static bundle = {
+		title: 'Bundle',
+		$private: true,
+		required: ['features'],
+		properties: {
+			features: {
+				title: 'Features',
+				type: 'array',
+				items: {
+					type: 'string'
+				}
+			}
+		}
+	};
 
 	async getPolyfill(name) {
 		return this.polyfills[name] ?? polyfills.describePolyfill(name);
