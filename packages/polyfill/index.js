@@ -54,6 +54,25 @@ module.exports = class PolyfillModule {
 						return true;
 					}
 				})()`
+			},
+			'Intl.NumberFormat.~locale.*': {
+				detectSource: `self.Intl?.NumberFormat && function() {
+					try {
+						new Intl.NumberFormat(document.documentElement.lang, {
+							style: "unit",
+							unit: "byte"
+						});
+						return true;
+					} catch(t) {
+						return false;
+					}
+				}() && Intl.NumberFormat.supportedLocalesOf?.(document.documentElement.lang)?.length`
+			},
+			'Intl.DateTimeFormat.~locale.*': {
+				detectSource: `self.Intl?.DateTimeFormat?.prototype?.formatRangeToParts && Intl.DateTimeFormat.supportedLocalesOf(document.documentElement.lang).length`
+			},
+			'Intl.RelativeTimeFormat.~locale.*': {
+				detectSource: `self.Intl?.RelativeTimeFormat?.supportedLocalesOf?.(document.documentElement.lang)?.length`
 			}
 		};
 	}
@@ -128,7 +147,9 @@ module.exports = class PolyfillModule {
 				} else {
 					featureNodes.push(featureName);
 					if (polyfill.dependencies) {
-						for (const depName of polyfill.dependencies) {
+						for (let depName of polyfill.dependencies) {
+							// some deps are set on a specific language, use our template instead
+							depName = depName.replace(/(\.~locale\.)([a-z]{2})$/, '$1*');
 							const dep = await this.getPolyfill(depName);
 							if (!dep) {
 								warnings.unknown.push(dep);

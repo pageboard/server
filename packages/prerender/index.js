@@ -223,8 +223,8 @@ module.exports = class PrerenderModule {
 		return this.#mailMw(...args);
 	}
 
-	source({ site }, res) {
-		const core = site.$pkg.bundles.get('core');
+	source(req, res) {
+		const core = req.site.$pkg.bundles.get('core');
 		const scripts = [];
 		const links = [];
 		for (const src of core?.scripts ?? []) {
@@ -233,9 +233,10 @@ module.exports = class PrerenderModule {
 		}
 		res.type('text/html');
 		res.set('Link', links.join(','));
+		const { lang } = req.call('page.parse', { url: req.path });
 		res.send(Text`
 			<!DOCTYPE html>
-			<html>
+			<html lang="${lang}">
 				<head>
 					<title></title>
 					${scripts.join('\n')}
