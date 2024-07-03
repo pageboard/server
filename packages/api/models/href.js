@@ -38,6 +38,9 @@ class Href extends common.Model {
 			title: {
 				type: 'string'
 			},
+			description: {
+				type: 'string'
+			},
 			icon: {
 				type: 'string',
 				format: 'uri-reference',

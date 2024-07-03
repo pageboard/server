@@ -1,5 +1,9 @@
+const { OpenAI } = require.lazy('openai');
+
 module.exports = class InspectorModule {
 	static name = 'inspector';
+
+	#openai;
 
 	constructor(app, opts) {
 		this.app = app;
@@ -80,11 +84,51 @@ module.exports = class InspectorModule {
 				console.error("Error embedding thumbnail", url, err);
 			}
 		}
-		if (!obj.preview && desc) {
-			obj.preview = desc;
+		if (desc == null && obj.site == null && obj.type == 'image') {
+			obj.description = await this.#vision(req, obj.url);
 		}
 		return obj;
 	}
+
+	async vision(req, { url }) {
+		const abs = new URL(url, req.site.$url);
+		const language = req.call('translate.default');
+		return this.#vision(abs.href, language.content[""]);
+	}
+	static vision = {
+		title: 'See image',
+		properties: {
+			url: {
+				title: 'Image',
+				type: 'string',
+				format: 'pathname'
+			}
+		}
+	};
+
+	async #vision(url, language) {
+		if (!this.opts.openai) {
+			console.info("openai vision disabled");
+			return;
+		}
+		if (!this.#openai) this.#openai = new OpenAI.OpenAI(this.opts.openai);
+		const response = await this.#openai.chat.completions.create({
+			model: "gpt-4o",
+			messages: [{
+				role: "system",
+				content: "Give answers in " + language
+			}, {
+				role: "user",
+				content: [{
+					type: "text",
+					text: "Describe this image using a single sentence of less than 25 words"
+				}, {
+					type: "image_url",
+					image_url: { url }
+				}]
+			}]
+		});
+		return response?.choices?.[0]?.message?.content;
+	}
+
 };
-
-

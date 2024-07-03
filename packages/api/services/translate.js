@@ -24,6 +24,14 @@ module.exports = class TranslateService {
 		app.get("/@api/languages", 'translate.languages');
 	}
 
+	default(req) {
+		return this.app.languages.default;
+	}
+	static default = {
+		title: 'Default language',
+		$private: true
+	}
+
 	lang(req, { lang } = {}) {
 		const { site } = req;
 		if (req.headers['accept-language'] && !req.res.headersSent) {
