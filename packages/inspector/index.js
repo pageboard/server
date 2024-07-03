@@ -101,7 +101,7 @@ module.exports = class InspectorModule {
 			url: {
 				title: 'Image',
 				type: 'string',
-				format: 'pathname'
+				format: 'uri'
 			}
 		}
 	};
@@ -121,7 +121,7 @@ module.exports = class InspectorModule {
 				role: "user",
 				content: [{
 					type: "text",
-					text: "Describe this image using a single sentence of less than 25 words"
+					text: "Describe this image using less than 40 words"
 				}, {
 					type: "image_url",
 					image_url: { url }
