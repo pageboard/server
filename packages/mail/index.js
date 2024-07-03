@@ -147,7 +147,6 @@ module.exports = class MailModule {
 	static to = {
 		title: 'Send to',
 		$private: true,
-		$action: 'write',
 		required: ['subject', 'to', 'text'],
 		properties: {
 			purpose: {
