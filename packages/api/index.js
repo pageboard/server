@@ -171,12 +171,25 @@ module.exports = class ApiModule {
 		if (req.trx?.isCompleted()) {
 			req.trx = null;
 		}
+		let hadRead = false;
+		let hadWrite = false;
 
 		if (req.trx) {
 			hadTrx = true;
 		} else if (schema.$action) {
 			req.trx = await req.genTrx();
 			req.trx.req = req; // needed by objection hooks
+			req.trx.on('query', data => {
+				if (!data.method) {
+					if (['COMMIT;', 'ROLLBACK;'].includes(data.sql) == false) {
+						console.warn("unknown", data);
+					}
+				} else if (data.method == "select") {
+					hadRead = true;
+				} else if (['insert', 'update', 'delete'].includes(data.method)) {
+					hadWrite = true;
+				}
+			});
 		}
 		Object.assign(req, { Block, Href, ref, val, raw, fun });
 
@@ -198,10 +211,20 @@ module.exports = class ApiModule {
 			if (!err.method) err.method = method;
 			throw err;
 		} finally {
-			if (req.trx && req.trx.isCompleted()) {
+			if (req.trx) {
 				if (hadTrx) {
 					// regenerate completed trx
-					req.trx = await req.genTrx();
+					if (req.trx.isCompleted()) req.trx = await req.genTrx();
+				} else if (hadWrite) {
+					if (schema.$action != "write") {
+						console.warn(method, "had write transaction with $action", schema.$action);
+					}
+				} else if (hadRead) {
+					if (schema.$action != "read") {
+						console.warn(method, "had read transaction with $action", schema.$action);
+					}
+				} else {
+					console.warn(method, "had no transaction with $action", schema.$action);
 				}
 			}
 		}
