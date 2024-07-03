@@ -27,6 +27,53 @@ suite('page', function () {
 		assert.equal(item.data.url, '/test/c');
 	});
 
+	test('parse url', async function () {
+		assert.deepEqual(await app.run('page.parse', {
+			url: '/sub/test'
+		}, { site: site.id }), {
+			ext: undefined,
+			lang: undefined,
+			pathname: '/sub/test',
+			url: '/sub/test'
+		});
+
+		assert.deepEqual(await app.run('page.parse', {
+			url: '/sub/test~en'
+		}, { site: site.id }), {
+			ext: undefined,
+			lang: 'en',
+			pathname: '/sub/test',
+			url: '/sub/test'
+		});
+
+		assert.deepEqual(await app.run('page.parse', {
+			url: '/sub/test~en-gb'
+		}, { site: site.id }), {
+			ext: undefined,
+			lang: 'en-gb',
+			pathname: '/sub/test',
+			url: '/sub/test'
+		});
+
+		assert.deepEqual(await app.run('page.parse', {
+			url: '/sub/test.pdf'
+		}, { site: site.id }), {
+			ext: 'pdf',
+			lang: undefined,
+			pathname: '/sub/test',
+			url: '/sub/test'
+		});
+
+		assert.deepEqual(await app.run('page.parse', {
+			url: '/sub/test~pt-br.pdf'
+		}, { site: site.id }), {
+			ext: 'pdf',
+			lang: 'pt-br',
+			pathname: '/sub/test',
+			url: '/sub/test'
+		});
+	});
+
 	/*
 	test('page match', async function () {
 		// TODO

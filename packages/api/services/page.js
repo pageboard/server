@@ -102,7 +102,7 @@ module.exports = class PageService {
 			url: {
 				title: 'Url path',
 				type: 'string',
-				format: 'pathname'
+				format: 'path'
 			}
 		}
 	};
