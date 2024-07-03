@@ -88,7 +88,7 @@ module.exports = class TranslateService {
 		}
 	};
 
-	async provision(req, { title, lang, tsconfig, translate }) {
+	async provision(req, { title, lang, tsconfig, translation }) {
 		const { app } = this;
 		const { item } = await app.run('block.find', {
 			standalone: true, type: 'language', data: { lang }
@@ -97,7 +97,7 @@ module.exports = class TranslateService {
 			return app.run('block.add', {
 				type: 'language',
 				data: {
-					lang, tsconfig, translate
+					lang, tsconfig, translation
 				},
 				content: { '': title }
 			}, { site: 'shared' });
@@ -106,7 +106,7 @@ module.exports = class TranslateService {
 				id: item.id,
 				type: item.type,
 				data: {
-					lang, tsconfig, translate
+					lang, tsconfig, translation
 				},
 				content: { '': title }
 			}, { site: 'shared' });
@@ -125,22 +125,13 @@ module.exports = class TranslateService {
 				format: 'singleline'
 			},
 			lang: {
-				title: 'Language identifier',
-				description: 'language-locale code',
-				type: 'string',
-				format: 'lang'
+				$ref: "/elements#/definitions/language/properties/data/properties/lang",
 			},
 			tsconfig: {
-				title: 'Text search configuration',
-				description: 'One of SELECT cfgname FROM pg_ts_config',
-				type: 'string',
-				format: 'grant'
+				$ref: "/elements#/definitions/language/properties/data/properties/tsconfig",
 			},
-			translate: {
-				title: 'Translation identifier',
-				description: 'External translation id',
-				type: 'string',
-				format: 'grant'
+			translation: {
+				$ref: "/elements#/definitions/language/properties/data/properties/translation",
 			}
 		}
 	};

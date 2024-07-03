@@ -13,7 +13,7 @@ export const language = {
 			title: 'Translation Code',
 			description: 'Code used for translation API',
 			type: 'string',
-			format: 'id',
+			format: 'lang',
 			nullable: true
 		},
 		tsconfig: {
