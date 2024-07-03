@@ -74,6 +74,33 @@ suite('page', function () {
 		});
 	});
 
+	test('format url', async function () {
+		assert.deepEqual((await app.run('page.format', {
+			url: '/sub/test'
+		}, { site: site.id })).pathname, '/sub/test');
+
+		assert.deepEqual((await app.run('page.format', {
+			url: '/sub/test',
+			lang: 'en'
+		}, { site: site.id })).pathname, '/sub/test~en');
+
+		assert.deepEqual((await app.run('page.format', {
+			url: '/sub/test',
+			lang: 'en-gb'
+		}, { site: site.id })).pathname, '/sub/test~en-gb');
+
+		assert.deepEqual((await app.run('page.format', {
+			url: '/sub/test',
+			ext: 'pdf'
+		}, { site: site.id })).pathname, '/sub/test.pdf');
+
+		assert.deepEqual((await app.run('page.format', {
+			url: '/sub/test',
+			ext: 'pdf',
+			lang: 'en-gb'
+		}, { site: site.id })).pathname, '/sub/test~en-gb.pdf');
+	});
+
 	/*
 	test('page match', async function () {
 		// TODO
