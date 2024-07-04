@@ -85,7 +85,7 @@ module.exports = class InspectorModule {
 			}
 		}
 		if (desc == null && obj.site == null && obj.type == 'image') {
-			obj.meta.alt = await this.#vision(req, obj.url);
+			obj.meta.alt = await req.call('inspector.vision', { url });
 		} else if (desc) {
 			obj.meta.alt = desc;
 		}
@@ -93,32 +93,17 @@ module.exports = class InspectorModule {
 	}
 
 	async vision(req, { url }) {
-		const abs = new URL(url, req.site.$url);
-		const language = req.call('translate.default');
-		return this.#vision(abs.href, language.content[""]);
-	}
-	static vision = {
-		title: 'See image',
-		properties: {
-			url: {
-				title: 'Image',
-				type: 'string',
-				format: 'uri'
-			}
-		}
-	};
-
-	async #vision(url, language) {
 		if (!this.opts.openai) {
 			console.info("openai vision disabled");
 			return;
 		}
 		if (!this.#openai) this.#openai = new OpenAI.OpenAI(this.opts.openai);
+		const languageTitle = req.call('translate.default').content[""];
 		const response = await this.#openai.chat.completions.create({
 			model: "gpt-4o",
 			messages: [{
 				role: "system",
-				content: "Give answers in " + language
+				content: "Give answers in " + languageTitle
 			}, {
 				role: "user",
 				content: [{
@@ -126,11 +111,33 @@ module.exports = class InspectorModule {
 					text: "Describe this image using less than 40 words"
 				}, {
 					type: "image_url",
-					image_url: { url }
+					image_url: {
+						detail: "low",
+						url: await req.call('image.thumbnail', { url, height: 512 })
+					}
 				}]
 			}]
 		});
-		return response?.choices?.[0]?.message?.content;
+		const choice = response.choices?.[0];
+		if (!choice) {
+			console.error(response);
+			throw new HttpError.InternalServerError("Missing assistant response");
+		}
+		if (choice.message?.role != "assistant") {
+			console.error(choice);
+			throw new HttpError.InternalServerError("Bad assistant response");
+		}
+		return choice.message?.content;
 	}
+	static vision = {
+		title: 'Describe Image',
+		properties: {
+			url: {
+				title: 'Image',
+				type: 'string',
+				format: 'pathname'
+			}
+		}
+	};
 
 };
