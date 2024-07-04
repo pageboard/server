@@ -108,12 +108,12 @@ module.exports = class InspectorModule {
 				role: "user",
 				content: [{
 					type: "text",
-					text: "Describe this image using less than 40 words"
+					text: "Describe this image using less than 30 words"
 				}, {
 					type: "image_url",
 					image_url: {
 						detail: "low",
-						url: await req.call('image.thumbnail', { url, height: 512 })
+						url: await req.call('image.thumbnail', { url, height: 256 })
 					}
 				}]
 			}]
