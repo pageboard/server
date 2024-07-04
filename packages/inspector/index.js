@@ -72,7 +72,7 @@ module.exports = class InspectorModule {
 	}
 
 	async #preview(req, obj) {
-		const desc = obj.meta.description || '';
+		const desc = obj.meta.description;
 		delete obj.meta.description;
 		const url = obj.meta.thumbnail;
 		delete obj.meta.thumbnail;
