@@ -85,7 +85,9 @@ module.exports = class InspectorModule {
 			}
 		}
 		if (desc == null && obj.site == null && obj.type == 'image') {
-			obj.description = await this.#vision(req, obj.url);
+			obj.meta.alt = await this.#vision(req, obj.url);
+		} else if (desc) {
+			obj.meta.alt = desc;
 		}
 		return obj;
 	}
