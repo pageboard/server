@@ -310,7 +310,6 @@ module.exports = class ImageModule {
 		title: 'Add',
 		required: ['path', 'mime'],
 		$private: true,
-		$action: 'write',
 		properties: {
 			path: {
 				title: 'Path',
@@ -378,7 +377,6 @@ module.exports = class ImageModule {
 	static get = {
 		title: 'Get path at given size',
 		$private: true,
-		$action: 'read',
 		required: ['url'],
 		properties: {
 			url: {
