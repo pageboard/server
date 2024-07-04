@@ -30,7 +30,7 @@ module.exports = class TranslateService {
 	static default = {
 		title: 'Default language',
 		$private: true
-	}
+	};
 
 	lang(req, { lang } = {}) {
 		const { site } = req;
