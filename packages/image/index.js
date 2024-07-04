@@ -50,6 +50,8 @@ module.exports = class ImageModule {
 		}
 	};
 
+	static regSizes = new RegExp(`-(${Object.keys(this.sizes).join('|')})$`);
+
 	constructor(app, opts) {
 		this.app = app;
 		this.opts = {
@@ -323,9 +325,10 @@ module.exports = class ImageModule {
 		}
 	};
 
-	guess(req, { width, height, fit }) {
+	guess(req, { width = 0, height = 0, fit }) {
 		if (!width) width = height;
 		if (!height) height = width;
+		if (!width && !height) return 'm';
 		for (const [suffix, item] of Object.entries(ImageModule.sizes)) {
 			if (item.width >= width && item.height >= height) return suffix;
 		}
@@ -343,7 +346,7 @@ module.exports = class ImageModule {
 
 		const destPath = Path.join(this.app.dirs.cache, url.replace(/^\/@file/, '/images'));
 		const parts = Path.parse(destPath);
-		parts.name = parts.name.replace(/-(xs|s|m|l|xl)$/, '');
+		parts.name = parts.name.replace(ImageModule.regSizes, '');
 		const { width, height } = ImageModule.sizes[size];
 		parts.name += '-' + size;
 		parts.base = null;
@@ -387,10 +390,12 @@ module.exports = class ImageModule {
 			},
 			size: {
 				title: 'Size',
-				anyOf: Object.entries(ImageModule.sizes).map(([size, { title, width, height }]) => ({
-					const: size,
-					title
-				}))
+				anyOf: Object.entries(ImageModule.sizes)
+					.map(([size, { title, width, height }]) => ({
+						const: size,
+						title,
+						description: `${width}x${height}`
+					}))
 			}
 		}
 	};
