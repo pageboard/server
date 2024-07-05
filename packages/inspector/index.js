@@ -72,7 +72,7 @@ module.exports = class InspectorModule {
 	}
 
 	async #preview(req, obj) {
-		const desc = obj.meta.description;
+		const desc = obj.meta.description ?? '';
 		delete obj.meta.description;
 		const url = obj.meta.thumbnail;
 		delete obj.meta.thumbnail;
@@ -84,26 +84,24 @@ module.exports = class InspectorModule {
 				console.error("Error embedding thumbnail", url, err);
 			}
 		}
-		if (desc == null && obj.site == null && obj.type == 'image') {
-			obj.meta.alt = await req.call('inspector.vision', { url });
-		} else if (desc) {
+		if (desc) {
 			obj.meta.alt = desc;
 		}
 		return obj;
 	}
 
-	async vision(req, { url }) {
+	async vision(req, { url, lang }) {
 		if (!this.opts.openai) {
 			console.info("openai vision disabled");
 			return;
 		}
 		if (!this.#openai) this.#openai = new OpenAI.OpenAI(this.opts.openai);
-		const languageTitle = req.call('translate.default').content[""];
+		const language = req.call('translate.lang', { lang });
 		const response = await this.#openai.chat.completions.create({
 			model: "gpt-4o",
 			messages: [{
 				role: "system",
-				content: "Give answers in " + languageTitle
+				content: "Give answers in " + language.title
 			}, {
 				role: "user",
 				content: [{
@@ -136,6 +134,12 @@ module.exports = class InspectorModule {
 				title: 'Image',
 				type: 'string',
 				format: 'pathname'
+			},
+			lang: {
+				title: 'Lang',
+				type: 'string',
+				format: 'lang',
+				nullable: true
 			}
 		}
 	};
