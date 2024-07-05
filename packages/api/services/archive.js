@@ -320,9 +320,11 @@ module.exports = class ArchiveService {
 			} else if (obj.type == "site") {
 				if (reset) {
 					await req.run('site.empty', { id: req.site.id });
-					Object.assign(obj.data, reset);
-					delete obj.data.server;
-					site = await req.run('site.update', obj.data);
+					const data = {};
+					for (const key of reset) {
+						if (obj.data[key] != null) data[key] = obj.data[key];
+					}
+					site = await req.run('site.update', data);
 					upgrader.DomainBlock = site.$modelClass;
 				}
 			} else if (obj.type == "user") {
@@ -454,9 +456,12 @@ module.exports = class ArchiveService {
 				default: {}
 			},
 			reset: {
-				title: 'Erase all and save site settings',
-				type: 'object',
-				$ref: "/elements#/definitions/site/properties/data"
+				title: 'Erase all and keep those site.data keys',
+				type: 'array',
+				items: {
+					type: 'string',
+					format: 'name'
+				}
 			},
 			excludes: {
 				title: 'Excluded types',
