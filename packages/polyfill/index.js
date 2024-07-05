@@ -179,7 +179,7 @@ module.exports = class PolyfillModule {
 							depName = depName.replace(/(\.~locale\.)([a-z]{2})$/, '$1*');
 							const dep = await this.getPolyfill(depName);
 							if (!dep) {
-								warnings.unknown.push(dep);
+								warnings.unknown.push(depName);
 							} else if (dep.detectSource) {
 								featureNodes.push(depName);
 								featureEdges.push([depName, name]);
