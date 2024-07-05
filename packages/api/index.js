@@ -181,7 +181,7 @@ module.exports = class ApiModule {
 			req.trx.req = req; // needed by objection hooks
 			req.trx.on('query', data => {
 				if (!data.method) {
-					if (['COMMIT;', 'ROLLBACK;'].includes(data.sql) == false) {
+					if (!data.sql || /^(COMMIT|ROLLBACK);?$/.test(data.sql) == false) {
 						console.warn("unknown", data);
 					}
 				} else if (data.method == "select") {
