@@ -47,7 +47,7 @@ module.exports = class TranslateService {
 		if (!req.res.headersSent) {
 			req.res.set('Content-Language', language.data.lang);
 		}
-		return language.data;
+		return { ...language.data, title: language.content[''] };
 	}
 	static lang = {
 		title: 'Get language',
