@@ -52,8 +52,7 @@ module.exports = class ApiService {
 		const scope = {};
 
 		for (const [key, val] of Object.entries(query)) {
-			if (key.startsWith('$')) {
-				// allows client to pass $pathname $lang and others
+			if (["$lang", "$pathname"].includes(key)) {
 				scope[key] = val;
 				delete query[key];
 			}
@@ -61,7 +60,6 @@ module.exports = class ApiService {
 		// overwrite to avoid injection
 		Object.assign(scope, {
 			$request: reqBody ?? {},
-			$lang: req.call('translate.lang', data).lang,
 			$origin: site.$url.origin,
 			$query: query,
 			$site: site.id,
@@ -164,15 +162,13 @@ module.exports = class ApiService {
 		const scope = {};
 
 		for (const [key, val] of Object.entries(query)) {
-			if (key.startsWith('$')) {
-				// allows client to pass $pathname $lang and others
+			if (["$lang", "$pathname"].includes(key)) {
 				scope[key] = val;
 				delete query[key];
 			}
 		}
 		// overwrite to avoid injection
 		Object.assign(scope, {
-			$lang: req.call('translate.lang', data).lang,
 			$origin: site.$url.origin,
 			$query: query,
 			$site: site.id,
