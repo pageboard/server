@@ -175,22 +175,8 @@ class Block extends Model {
 				contents.nodes = contents.spec;
 				delete contents.spec;
 			}
-			if (!contents.nodes) {
-				// support old version
-				contents = Object.keys(contents).map(key => {
-					let val = contents[key];
-					if (typeof val == "string") {
-						val = {nodes: val};
-					} else {
-						val = { ...val };
-						if (val.spec) {
-							val.nodes = val.spec;
-							delete val.spec;
-						}
-					}
-					val.id = key;
-					return val;
-				});
+			if (!contents.nodes && !contents.id) {
+				throw new Error("Unsupported element contents:\n" + JSON.stringify(contents));
 			} else {
 				contents = [contents];
 			}
