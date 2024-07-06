@@ -86,8 +86,8 @@ module.exports = class PageService {
 	parse(req, { url }) {
 		const loc = new URL(url, req.site.$url);
 		const [, pathname, lang, ext] = loc.pathname.match(
-			/(.+?)(?:~([a-z]{2}(?:-[a-z]{2})?))?(?:\.([a-z]{3,4}))?$/
-		);
+			/^((?:\/.well-known\/\d{3})|(?:(?:\/[a-zA-Z0-9-]*)+?))(?:~([a-z]{2}(?:-[a-z]{2})?))?(?:\.([a-z]{3,4}))?$/
+		) ?? [];
 		return {
 			url: pathname + loc.search,
 			pathname,
