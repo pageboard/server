@@ -66,7 +66,7 @@ module.exports = class PrerenderModule {
 			pathname, lang, ext = 'page'
 		} = req.call('page.parse', { url: path });
 		const ret = { pathname, schema: null };
-		if (!site.$pkg.pages.has(ext)) {
+		if (pathname == null || !site.$pkg.pages.has(ext)) {
 			return ret;
 		}
 		if (lang && !site.data.languages?.includes(lang)) {
