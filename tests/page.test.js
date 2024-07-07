@@ -72,6 +72,33 @@ suite('page', function () {
 			pathname: '/sub/test',
 			url: '/sub/test'
 		});
+
+		assert.deepEqual(await app.run('page.parse', {
+			url: '/test.tar.gz'
+		}, { site: site.id }), {
+			ext: undefined,
+			lang: undefined,
+			pathname: undefined,
+			url: undefined
+		});
+
+		assert.deepEqual(await app.run('page.parse', {
+			url: '/.well-known/404'
+		}, { site: site.id }), {
+			ext: undefined,
+			lang: undefined,
+			pathname: '/.well-known/404',
+			url: '/.well-known/404'
+		});
+
+		assert.deepEqual(await app.run('page.parse', {
+			url: '/.git/config'
+		}, { site: site.id }), {
+			ext: undefined,
+			lang: undefined,
+			pathname: undefined,
+			url: undefined
+		});
 	});
 
 	test('format url', async function () {
