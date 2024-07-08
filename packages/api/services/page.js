@@ -89,7 +89,7 @@ module.exports = class PageService {
 			/^((?:\/.well-known\/\d{3})|(?:(?:\/[a-zA-Z0-9-]*)+?))(?:~([a-z]{2}(?:-[a-z]{2})?))?(?:\.([a-z]{3,4}))?$/
 		) ?? [];
 		return {
-			url: pathname + loc.search,
+			url: pathname == null ? undefined : pathname + loc.search,
 			pathname,
 			lang,
 			ext
