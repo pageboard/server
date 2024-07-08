@@ -60,36 +60,37 @@ module.exports = class PrerenderModule {
 		);
 	}
 
-	#requestedRenderingSchema(req, { path }) {
+	async #requestedRenderingSchema(req, { url }) {
 		const { site } = req;
-		const {
-			pathname, lang, ext = 'page'
-		} = req.call('page.parse', { url: path });
-		const ret = { pathname, schema: null };
-		if (pathname == null || !site.$pkg.pages.has(ext)) {
+		try {
+			const ret = await req.run('page.parse', { url });
+			const {
+				pathname, lang, ext = 'page'
+			} = ret;
+			ret.schema = null;
+			if (pathname == null || !site.$pkg.pages.has(ext)) {
+				return ret;
+			}
+			if (lang && !site.data.languages?.includes(lang)) {
+				ret.lang = null;
+				return ret;
+			}
+			ret.schema = site.$schema(ext);
 			return ret;
+		} catch (ex) {
+			return {};
 		}
-		if (lang && !site.data.languages?.includes(lang)) {
-			return ret;
-		}
-		if (this.app.api.check(req, {
-			method: 'page.parse', parameters: { pathname }
-		}) === false) {
-			// shouldn't req.call be req.run above ?
-			return ret;
-		}
-		ret.schema = site.$schema(ext);
-		return ret;
 	}
 
-	check(req, res, next) {
-		const { site } = req;
+	async check(req, res, next) {
 		res.vary('Accept');
 
 		const {
 			pathname,
-			schema
-		} = this.#requestedRenderingSchema(req, { path: req.path });
+			schema,
+			lang,
+			ext
+		} = await this.#requestedRenderingSchema(req, { url: req.path });
 
 		if (pathname == null || schema == null) {
 			if (req.accepts(['image/*', 'json', 'html']) != 'html') {
@@ -99,7 +100,10 @@ module.exports = class PrerenderModule {
 				// so that prerendering is only done for "static/default" pages.
 				// the query parts are done by the client
 				// TODO likewise for /.well-known/401 (vary upon grants)
-				const url = new URL('/.well-known/404', site.$url);
+				const url = req.call('page.format', {
+					url: '/.well-known/404',
+					lang
+				});
 				const agent = url.protocol == "https:" ? https : http;
 				const subReq = agent.request(url, {
 					headers: req.headers,
@@ -107,6 +111,7 @@ module.exports = class PrerenderModule {
 				}, subRes => {
 					res.status(404);
 					res.set(subRes.headers);
+					req.call('cache.map', "/.well-known/404");
 					pipeline(subRes, res, err => {
 						if (err) next(err);
 					});
@@ -124,7 +129,9 @@ module.exports = class PrerenderModule {
 				}
 			});
 			if (invalid) {
-				const redUrl = new URL(pathname, site.$url);
+				const redUrl = req.call('page.format', {
+					url: pathname, lang, ext
+				});
 				for (const key in query) redUrl.searchParams.append(key, query[key]);
 				return res.redirect(redUrl);
 			}
@@ -173,9 +180,10 @@ module.exports = class PrerenderModule {
 
 	#callHtmlMw(...args) {
 		if (!this.#htmlMw) this.#htmlMw = dom().route((phase, req, res) => {
-			const { site } = req;
-			const { settings, online, visible } = phase;
+			const { site, schema } = req;
+			const { settings, online, visible, policies } = phase;
 			if (visible) {
+				// full render
 				const { plugins } = settings;
 				plugins.add('redirect');
 				plugins.add('preloads');
@@ -187,17 +195,7 @@ module.exports = class PrerenderModule {
 					settings.enabled = false;
 				}
 			} else if (online) {
-				const { groups: {
-					code
-				} } = /^\.well-known\/(?<code>\d{3})$/.exec(req.path) ?? {
-					groups: {}
-				};
-				if (code) {
-					req.call('cache.map', req.path);
-					res.status(Number.parseInt(code));
-				} else {
-					req.call('cache.map', "/.well-known/200");
-				}
+				cspSchemaToPhase(policies, schema.csp);
 			}
 		});
 		return this.#htmlMw(...args);
@@ -208,14 +206,14 @@ module.exports = class PrerenderModule {
 			handler.online.enabled = true;
 		}).route((phase, req, res) => {
 			const { schema } = req;
-			const { settings, policies } = phase;
-			if (phase.visible) {
+			const { settings, online, visible, policies } = phase;
+			if (visible) {
 				const { plugins } = settings;
 				plugins.add('nopreload');
 				plugins.add('inlinestyle');
 				plugins.add('serialize');
 				settings.enabled = true;
-			} else if (phase.online) {
+			} else if (online) {
 				// pass to next middleware
 				cspSchemaToPhase(policies, schema.csp);
 			}
@@ -224,6 +222,7 @@ module.exports = class PrerenderModule {
 	}
 
 	source(req, res) {
+		req.call('cache.map', "/.well-known/source");
 		const core = req.site.$pkg.bundles.get('core');
 		const scripts = [];
 		const links = [];
@@ -255,7 +254,7 @@ module.exports = class PrerenderModule {
 		}
 		const {
 			schema
-		} = this.#requestedRenderingSchema(req, { path: url });
+		} = await this.#requestedRenderingSchema(req, { url });
 
 		req.url = url;
 		req.schema = schema;
