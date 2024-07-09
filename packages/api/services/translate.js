@@ -34,15 +34,20 @@ module.exports = class TranslateService {
 
 	lang(req, { lang } = {}) {
 		const { site } = req;
-		if (req.headers['accept-language'] && !req.res.headersSent) {
+		if (!req.res.headersSent) {
 			req.res.vary('Accept-Language');
 		}
-		if (lang) req.headers['accept-language'] = lang;
+		if (lang) {
+			req.headers['accept-language'] = lang;
+		}
 		const availables = [];
-		if (site.data.languages?.length) availables.push(...site.data.languages);
-		else if (site.data.lang) availables.push(site.data.lang);
+		if (site.data.languages?.length) {
+			availables.push(...site.data.languages);
+		} else if (site.data.lang) {
+			availables.push(site.data.lang);
+		}
 		if (!availables.length) return {}; // compatibility with unlocalized sites
-		const accepted = req.acceptsLanguages(availables) ?? 'default';
+		const accepted = req.acceptsLanguages(availables) || availables[0];
 		const language = this.app.languages[accepted] ?? this.app.languages.default;
 		if (!req.res.headersSent) {
 			req.res.set('Content-Language', language.data.lang);
@@ -79,7 +84,7 @@ module.exports = class TranslateService {
 			lang = shared?.data.languages?.[0];
 		}
 		return Block.query(trx).whereSite('shared')
-			.columns({ lang }).where('block.type', 'language');
+			.columns({ lang }).where('block.type', 'language').orderBy('block.created_at');
 	}
 	static available = {
 		title: 'List available languages',
