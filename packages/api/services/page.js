@@ -143,7 +143,11 @@ module.exports = class PageService {
 		if (lang != data.lang) {
 			data.lang = lang;
 			const mapUrl = new URL(req.url, site.$url);
-			mapUrl.searchParams.set('lang', lang);
+			mapUrl.searchParams.set('url', this.format(req, {
+				url: data.url,
+				lang: data.lang,
+				ext: data.type
+			}).pathname);
 			req.call('cache.map', mapUrl.pathname + mapUrl.search);
 		}
 		const obj = {
