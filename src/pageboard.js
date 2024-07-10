@@ -534,11 +534,11 @@ module.exports = class Pageboard {
 			status: err.statusCode || err.status || err.code || 400,
 			item: {
 				type: 'error',
-				data: err.data ?? {
+				data: Object.assign({
 					method: err.method,
 					message: err.message
-				},
-				content: err.content ?? err.toString() // FIXME content is multilang ?
+				}, err.data),
+				content: (err.method ? `${err.method}: ` : '') + (err.content ?? err.toString())
 			}
 		};
 		if (!res.headersSent) res.status(code).send(obj);
