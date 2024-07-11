@@ -95,6 +95,7 @@ module.exports = class PrerenderModule {
 		if (pathname == null || schema == null) {
 			if (req.accepts(['image/*', 'json', 'html']) != 'html') {
 				next(new HttpError.NotAcceptable("Malformed path"));
+				return;
 			} else {
 				// TODO factor this to subrequest /pathname when req.query is not empty,
 				// so that prerendering is only done for "static/default" pages.
