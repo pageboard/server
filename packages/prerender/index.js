@@ -55,8 +55,8 @@ module.exports = class PrerenderModule {
 		server.get(
 			'*',
 			app.cache.tag('app-:site'),
-			(req, res, next) => this.check(req, res, next),
-			(req, res, next) => this.source(req, res, next)
+			async (req, res, next) => this.check(req, res, next),
+			async (req, res, next) => this.source(req, res, next)
 		);
 	}
 
