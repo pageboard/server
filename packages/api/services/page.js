@@ -102,7 +102,7 @@ module.exports = class PageService {
 			url: {
 				title: 'Url path',
 				type: 'string',
-				format: 'path'
+				format: 'uri-reference'
 			}
 		}
 	};
@@ -120,7 +120,7 @@ module.exports = class PageService {
 			url: {
 				title: 'Url path',
 				type: 'string',
-				format: 'pathname'
+				format: 'uri-reference'
 			},
 			lang: {
 				title: 'Lang',
