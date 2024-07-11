@@ -56,7 +56,7 @@ module.exports = class PrerenderModule {
 			'*',
 			app.cache.tag('app-:site'),
 			async (req, res, next) => this.check(req, res, next),
-			async (req, res, next) => this.source(req, res, next)
+			(req, res) => this.source(req, res)
 		);
 	}
 
@@ -94,7 +94,7 @@ module.exports = class PrerenderModule {
 
 		if (pathname == null || schema == null) {
 			if (req.accepts(['image/*', 'json', 'html']) != 'html') {
-				throw new HttpError.NotAcceptable("Malformed path");
+				next(new HttpError.NotAcceptable("Malformed path"));
 			} else {
 				// TODO factor this to subrequest /pathname when req.query is not empty,
 				// so that prerendering is only done for "static/default" pages.
