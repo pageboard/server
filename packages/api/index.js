@@ -219,12 +219,8 @@ module.exports = class ApiModule {
 					if (schema.$action != "write") {
 						console.warn(method, "had write transaction with $action", schema.$action);
 					}
-				} else if (hadRead) {
-					if (!['read', 'write'].includes(schema.$action)) {
-						console.warn(method, "had read transaction with $action", schema.$action);
-					}
-				} else {
-					console.warn(method, "had no transaction with $action", schema.$action);
+				} else if (hadRead && !schema.$action) {
+					console.warn(method, "had read transaction without $action");
 				}
 			}
 		}
