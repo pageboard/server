@@ -291,7 +291,7 @@ module.exports = class TranslateService {
 			q.resultSize()
 		]);
 
-		if (total == 0) return { ...data, total };
+		if (total == 0) return { ...data, count: 0, total };
 
 		const translations = await req.run('ai.translate', {
 			strings: items.map(item => item.source_text),
