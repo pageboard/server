@@ -189,12 +189,19 @@ module.exports = class SiteService {
 			data.languages.push(this.app.languages.default);
 		}
 		const languagesChanged = data.languages !== undefined &&
-			(data.languages ?? []).join(' ')
+			(data.languages?.slice() ?? []).sort().join(' ')
 			!=
-			(initial.languages?.slice() ?? []).join(' ')
+			(initial.languages?.slice() ?? []).sort().join(' ')
 			;
 		const toMulti = initial.lang && data.languages?.length > 0;
 		const toMono = !initial.lang && data.lang;
+		const src = initial.languages?.[0] ?? initial.lang;
+		const dst = data.languages?.[0] ?? data.lang;
+
+		if (src != dst) {
+			await req.run('translate.all', { lang: dst });
+		}
+
 		if (data.version == "HEAD") data.version = null;
 
 		mergeRecursive(oldSite.data, data);
