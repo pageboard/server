@@ -11,9 +11,15 @@ module.exports = class AiModule {
 		this.app = app;
 		this.opts = opts;
 		if (this.opts.name == "anthropic") {
-			this.#ai = new Anthropic({ apiKey: this.opts.apiKey });
+			this.#ai = new Anthropic({
+				apiKey: this.opts.apiKey,
+				timeout: 20 * 1000
+			});
 		} else if (this.opts.name == "openai") {
-			this.#ai = new OpenAI.OpenAI({ apiKey: this.opts.apiKey });
+			this.#ai = new OpenAI.OpenAI({
+				apiKey: this.opts.apiKey,
+				timeout: 20 * 1000
+			});
 		} else {
 			console.info("Bad value for option: ai.name");
 		}
@@ -36,9 +42,13 @@ module.exports = class AiModule {
 
 		const response = await this.#ai.messages.create({
 			model: this.opts.model,
-			max_tokens: 4096,
+			max_tokens: 8192,
 			temperature: 0.1, // default 1
 			messages
+		}, {
+			headers: {
+				'anthropic-beta': 'max-tokens-3-5-sonnet-2024-07-15'
+			}
 		});
 		const { content } = response;
 		if (content.length != 1) {
