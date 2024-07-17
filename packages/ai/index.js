@@ -62,29 +62,32 @@ module.exports = class AiModule {
 		return [{
 			role: "system",
 			content: directive,
-		}, ...contents.map(content => {
-			if (typeof content == "string") {
-				return {
-					role: "user",
-					content
-				};
-			} else if (content.uri) {
-				return {
-					type: "image_url",
-					image_url: {
-						detail: "low",
-						url: content.uri
-					}
-				};
-			}
-		})];
+		}, {
+			role: "user",
+			content: contents.map(content => {
+				if (typeof content == "string") {
+					return {
+						type: "text",
+						content
+					};
+				} else if (content.uri) {
+					return {
+						type: "image_url",
+						image_url: {
+							detail: "low",
+							url: content.uri
+						}
+					};
+				}
+			})
+		}];
 	}
 
 	async #anthropicRequest(messages) {
 		const response = await this.#ai.messages.create({
 			model: this.opts.model,
 			max_tokens: MAX_TOKENS,
-			temperature: 0.1, // default 1
+			temperature: 0, // default 1
 			messages
 		});
 		const { content } = response;
@@ -109,7 +112,7 @@ module.exports = class AiModule {
 				type: "json_object"
 			},
 			max_tokens: MAX_TOKENS,
-			temperature: 0.1, // default 1
+			temperature: 0, // default 1
 			messages
 		});
 		const { choices } = response;
@@ -128,13 +131,17 @@ module.exports = class AiModule {
 
 	async #makeRequest(directive, contents) {
 		const messages = this.#openaiMessages(directive, contents);
-		const estimate = ChatTokens.promptTokensEstimate({ messages });
-		if (estimate > MAX_TOKENS) {
-			if (contents.length >= 2) {
-				return this.#makeRequest(directive, contents.slice(0, Math.ceil(contents.length / 2)));
-			} else {
-				throw new HttpError.BadRequest("Too many tokens: " + estimate);
+		try {
+			const estimate = ChatTokens.promptTokensEstimate({ messages });
+			if (estimate > MAX_TOKENS) {
+				if (contents.length >= 2) {
+					return this.#makeRequest(directive, contents.slice(0, Math.ceil(contents.length / 2)));
+				} else {
+					throw new HttpError.BadRequest("Too many tokens: " + estimate);
+				}
 			}
+		} catch (err) {
+			if (err.message != "text.match is not a function") throw err;
 		}
 		if (this.opts.name == "openai") {
 			return this.#openaiRequest(messages);
@@ -156,7 +163,6 @@ module.exports = class AiModule {
 		});
 
 		return this.#makeRequest(directive, strings);
-
 	}
 	static translate = {
 		title: 'Translate',
