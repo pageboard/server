@@ -1,6 +1,8 @@
-const { Anthropic } = require.lazy('@anthropic-ai/sdk');
-const { OpenAI } = require.lazy('openai');
+const Anthropic = require.lazy('@anthropic-ai/sdk');
+const OpenAI = require.lazy('openai');
+const ChatTokens = require.lazy('openai-chat-tokens');
 const { merge } = require('../../src/utils');
+const MAX_TOKENS = 4096;
 
 module.exports = class AiModule {
 	static name = 'ai';
@@ -16,7 +18,7 @@ module.exports = class AiModule {
 				timeout: 20 * 1000
 			});
 		} else if (this.opts.name == "openai") {
-			this.#ai = new OpenAI.OpenAI({
+			this.#ai = new OpenAI({
 				apiKey: this.opts.apiKey,
 				timeout: 20 * 1000
 			});
@@ -25,8 +27,8 @@ module.exports = class AiModule {
 		}
 	}
 
-	async #anthropicRequest(directive, contents) {
-		const messages = [{
+	#anthropicMessages(directive, contents) {
+		return [{
 			role: "user",
 			content: [{
 				type: "text",
@@ -39,16 +41,24 @@ module.exports = class AiModule {
 			role: "assistant",
 			content: "Here is the JSON requested:"
 		}];
+	}
 
+	#openaiMessages(directive, contents) {
+		return [{
+			role: "system",
+			content: directive,
+		}, ...contents.map(content => ({
+			role: 'user',
+			content
+		}))];
+	}
+
+	async #anthropicRequest(messages) {
 		const response = await this.#ai.messages.create({
 			model: this.opts.model,
-			max_tokens: 8192,
+			max_tokens: MAX_TOKENS,
 			temperature: 0.1, // default 1
 			messages
-		}, {
-			headers: {
-				'anthropic-beta': 'max-tokens-3-5-sonnet-2024-07-15'
-			}
 		});
 		const { content } = response;
 		if (content.length != 1) {
@@ -63,20 +73,15 @@ module.exports = class AiModule {
 		}
 	}
 
-	async #openaiRequest(directive, contents) {
-		const messages = [{
-			role: "system",
-			content: directive,
-		}, ...contents.map(content => ({
-			role: 'user',
-			content
-		}))];
 
+
+	async #openaiRequest(messages) {
 		const response = await this.#ai.chat.completions.create({
 			model: this.opts.model,
 			response_format: {
 				type: "json_object"
 			},
+			max_tokens: MAX_TOKENS,
 			temperature: 0.1, // default 1
 			messages
 		});
@@ -95,10 +100,19 @@ module.exports = class AiModule {
 	}
 
 	async #makeRequest(directive, contents) {
+		const messages = this.#openaiMessages(directive, contents);
+		const estimate = ChatTokens.promptTokensEstimate({ messages });
+		if (estimate > MAX_TOKENS) {
+			if (contents.length >= 2) {
+				return this.#makeRequest(directive, contents.slice(0, Math.ceil(contents.length / 2)));
+			} else {
+				throw new HttpError.BadRequest("Too many tokens: " + estimate);
+			}
+		}
 		if (this.opts.name == "openai") {
-			return this.#openaiRequest(directive, contents);
+			return this.#openaiRequest(messages);
 		} else if (this.opts.name == "anthropic") {
-			return this.#anthropicRequest(directive, contents);
+			return this.#anthropicRequest(this.#anthropicMessages(directive, contents));
 		}
 	}
 
@@ -134,9 +148,11 @@ module.exports = class AiModule {
 		const target = this.app.languages[lang];
 		if (!source) throw new HttpError.BadRequest("Missing source language: " + srcLang);
 		if (!target) throw new HttpError.BadRequest("Missing target language: " + lang);
+
 		const directive = merge(this.opts.directives.translate, {
 			source: source.content[''], target: target.content['']
 		});
+
 		return this.#makeRequest(directive, strings);
 
 	}
