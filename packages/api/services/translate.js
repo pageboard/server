@@ -126,7 +126,7 @@ module.exports = class TranslateService {
 		}
 	}
 	static provision = {
-		title: 'Provision available language',
+		title: 'Provision language',
 		$private: true,
 		$global: true,
 		$action: 'write',
