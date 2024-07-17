@@ -456,7 +456,7 @@ module.exports = class ArchiveService {
 				default: {}
 			},
 			reset: {
-				title: 'Erase all and keep those site.data keys',
+				title: 'Erase all and import these site.data properties',
 				type: 'array',
 				items: {
 					type: 'string',
