@@ -33,10 +33,25 @@ module.exports = class AiModule {
 			content: [{
 				type: "text",
 				text: directive
-			}, ...contents.map(text => ({
-				type: "text",
-				text
-			}))]
+			}, ...contents.map(text => {
+				if (typeof text == "string") {
+					return {
+						type: "text",
+						text
+					};
+				}	else if (text.uri) {
+					const [header, data] = text.uri.split(',');
+					const [media_type] = header.substring('data:'.length).split(';');
+					return {
+						type: "image",
+						source: {
+							type: "base64",
+							media_type,
+							data
+						}
+					};
+				}
+			})]
 		}, {
 			role: "assistant",
 			content: "Here is the JSON requested:"
@@ -47,10 +62,22 @@ module.exports = class AiModule {
 		return [{
 			role: "system",
 			content: directive,
-		}, ...contents.map(content => ({
-			role: 'user',
-			content
-		}))];
+		}, ...contents.map(content => {
+			if (typeof content == "string") {
+				return {
+					role: "user",
+					content
+				};
+			} else if (content.uri) {
+				return {
+					type: "image_url",
+					image_url: {
+						detail: "low",
+						url: content.uri
+					}
+				};
+			}
+		})];
 	}
 
 	async #anthropicRequest(messages) {
@@ -66,7 +93,7 @@ module.exports = class AiModule {
 			throw new HttpError.InternalServerError("Bad AI answer");
 		}
 		try {
-			return JSON.parse(content[0].text).translations;
+			return JSON.parse(content[0].text).response;
 		} catch (err) {
 			console.error(response);
 			throw new HttpError.InternalServerError("Bad AI answer");
@@ -92,7 +119,7 @@ module.exports = class AiModule {
 		}
 		const { content } = choices[0].message ?? {};
 		try {
-			return JSON.parse(content).translations;
+			return JSON.parse(content).response;
 		} catch (err) {
 			console.error(response);
 			throw new HttpError.InternalServerError("Bad AI answer");
@@ -114,31 +141,6 @@ module.exports = class AiModule {
 		} else if (this.opts.name == "anthropic") {
 			return this.#anthropicRequest(this.#anthropicMessages(directive, contents));
 		}
-	}
-
-	async #makeSmallImage(req, url) {
-		const uri = await req.call('image.thumbnail', { url, height: 256 });
-		if (this.opts.name == "openai") {
-			return {
-				type: "image_url",
-				image_url: {
-					detail: "low",
-					url: uri
-				}
-			};
-		} else if (this.opts.name == "anthropic") {
-			const [header, data] = uri.split(',');
-			const [media_type] = header.substring('data:'.length).split(';');
-			return {
-				type: "image",
-				source: {
-					type: "base64",
-					media_type,
-					data
-				}
-			};
-		}
-
 	}
 
 	async translate(req, { strings, lang }) {
@@ -181,9 +183,9 @@ module.exports = class AiModule {
 		const directive = merge(this.opts.directives.describe, {
 			target: language.title
 		});
-		return this.#makeRequest(directive, [
-			await this.#makeSmallImage(req, url)
-		]);
+		return this.#makeRequest(directive, [{
+			uri: await req.call('image.thumbnail', { url, height: 256 })
+		}]);
 	}
 	static describe = {
 		title: 'Describe image',
