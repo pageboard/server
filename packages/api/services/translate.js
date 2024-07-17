@@ -296,30 +296,13 @@ module.exports = class TranslateService {
 
 		if (count == 0) return { ...data, count };
 
-		const body = new URLSearchParams({
-			tag_handling: 'html',
-			preserve_formatting: 1,
-			source_lang: source.data.translation,
-			target_lang: target.data.translation
+		const translations = await req.run('ai.translate', {
+			strings: items.map(item => item.source_text),
+			lang: data.lang
 		});
-		for (const row of items) {
-			body.append('text', row.source.replaceAll(/>&nbsp;/g, '><nbsp/>'));
-		}
 
-		const res = await fetch(this.opts.url, {
-			method: 'post',
-			headers: {
-				Authorization: this.opts.key,
-				'Content-Type': 'application/x-www-form-urlencoded'
-			},
-			body
-		});
-		if (res.status != 200) {
-			throw new HttpError[res.status](res.statusText);
-		}
-		const obj = await res.json();
-		for (let i = 0; i < obj.translations.length; i++) {
-			const target = obj.translations[i].text.replaceAll(/><nbsp\/>/g, '>&nbsp;');
+		for (let i = 0; i < translations.length; i++) {
+			const target = translations[i];
 			await site.$relatedQuery('children', trx)
 				.where('block._id', items[i].target_id)
 				.patch({

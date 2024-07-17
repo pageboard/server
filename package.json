@@ -27,6 +27,7 @@
     "packages/*"
   ],
   "dependencies": {
+    "@pageboard/ai": "workspace:*",
     "@pageboard/api": "workspace:*",
     "@pageboard/auth": "workspace:*",
     "@pageboard/cache": "workspace:*",

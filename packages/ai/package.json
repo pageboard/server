@@ -1,5 +1,5 @@
 {
-  "name": "@pageboard/inspector",
+  "name": "@pageboard/ai",
   "version": "0.15.0",
   "description": "",
   "main": "index.js",
@@ -17,6 +17,7 @@
   },
   "homepage": "https://github.com/pageboard/server#readme",
   "dependencies": {
-    "url-inspector": "^8.5.0"
+    "@anthropic-ai/sdk": "^0.24.3",
+    "openai": "^4.52.3"
   }
 }

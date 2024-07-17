@@ -80,6 +80,10 @@ exports.mergeExpressions = function (data, template, scope) {
 	return sharedMd.merge(template, data, structuredClone(scope)) || {};
 };
 
+exports.merge = function (template, data) {
+	return sharedMd.merge(template, data);
+};
+
 // https://github.com/bgoscinski/dset
 // MIT License © Luke Edwards
 function dset(obj, keys, val) {

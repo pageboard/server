@@ -1,9 +1,5 @@
-const { OpenAI } = require.lazy('openai');
-
 module.exports = class InspectorModule {
 	static name = 'inspector';
-
-	#openai;
 
 	constructor(app, opts) {
 		this.app = app;
@@ -89,59 +85,5 @@ module.exports = class InspectorModule {
 		}
 		return obj;
 	}
-
-	async vision(req, { url, lang }) {
-		if (!this.opts.openai) {
-			console.info("openai vision disabled");
-			return;
-		}
-		if (!this.#openai) this.#openai = new OpenAI.OpenAI(this.opts.openai);
-		const language = req.call('translate.lang', { lang });
-		const response = await this.#openai.chat.completions.create({
-			model: "gpt-4o",
-			messages: [{
-				role: "system",
-				content: "Give answers in " + language.title
-			}, {
-				role: "user",
-				content: [{
-					type: "text",
-					text: "Describe this image using less than 30 words"
-				}, {
-					type: "image_url",
-					image_url: {
-						detail: "low",
-						url: await req.call('image.thumbnail', { url, height: 256 })
-					}
-				}]
-			}]
-		});
-		const choice = response.choices?.[0];
-		if (!choice) {
-			console.error(response);
-			throw new HttpError.InternalServerError("Missing assistant response");
-		}
-		if (choice.message?.role != "assistant") {
-			console.error(choice);
-			throw new HttpError.InternalServerError("Bad assistant response");
-		}
-		return choice.message?.content;
-	}
-	static vision = {
-		title: 'Describe Image',
-		properties: {
-			url: {
-				title: 'Image',
-				type: 'string',
-				format: 'pathname'
-			},
-			lang: {
-				title: 'Lang',
-				type: 'string',
-				format: 'lang',
-				nullable: true
-			}
-		}
-	};
 
 };

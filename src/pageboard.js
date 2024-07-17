@@ -62,6 +62,7 @@ module.exports = class Pageboard {
 			tmp: Path.join(xdg.data, '../tmp', pkgApp.name)
 		},
 		plugins: [
+			"@pageboard/ai",
 			"@pageboard/api",
 			"@pageboard/auth",
 			"@pageboard/cache",
