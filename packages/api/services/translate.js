@@ -289,12 +289,12 @@ module.exports = class TranslateService {
 			.where(fun.coalesce(ref('target.data:text'), val('').castJson()), val('').castJson())
 			.orderBy('target._id', 'desc');
 
-		const [items, count] = await Promise.all([
+		const [items, total] = await Promise.all([
 			q.limit(data.limit).offset(data.offset),
 			q.resultSize()
 		]);
 
-		if (count == 0) return { ...data, count };
+		if (total == 0) return { ...data, total };
 
 		const translations = await req.run('ai.translate', {
 			strings: items.map(item => item.source_text),
@@ -310,7 +310,7 @@ module.exports = class TranslateService {
 					'data:text': val(target).castJson()
 				});
 		}
-		return { ...data, count };
+		return { ...data, count: translations.length, total };
 	}
 
 	static fill = {
