@@ -259,18 +259,15 @@ module.exports = class TranslateService {
 		}
 	};
 
-	async fill({ site, trx, ref, val, fun }, data) {
-		const lang = site.data.languages?.[0];
-		if (!lang) throw new HttpError.BadRequest("Missing site.data.languages");
-		const source = this.app.languages[lang];
-		if (!source) throw new HttpError.BadRequest("Missing source language: " + lang);
-		const target = this.app.languages[data.lang];
-		if (!target) throw new HttpError.BadRequest("Missing target language: " + data.lang);
-
+	async fill(req, data) {
+		const { site, trx, ref, val, fun } = req;
+		if (site.data.languages?.length <= 1) {
+			throw new HttpError.BadRequest('site languages must have at least two items');
+		}
 		const q = site.$relatedQuery('children', trx)
 			.distinct(
 				ref('target._id').as('target_id'),
-				ref('source.data:text').castText().as('source')
+				ref('source.data:text').castText().as('source_text')
 			);
 		if (!data.self) {
 			q.joinRelated('[parents, children as source, children as target]')
@@ -282,7 +279,7 @@ module.exports = class TranslateService {
 		q.whereNot('block.type', 'content')
 			.whereIn('block.type', site.$pkg.textblocks)
 			.where('source.type', 'content')
-			.where(ref('source.data:lang').castText(), lang)
+			.where(ref('source.data:lang').castText(), site.data.languages[0])
 			.where('target.type', 'content')
 			.where(ref('target.data:name'), ref('source.data:name'))
 			.where(ref('target.data:lang').castText(), data.lang)
