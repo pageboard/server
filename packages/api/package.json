@@ -18,6 +18,7 @@
   "homepage": "https://github.com/pageboard/server#readme",
   "dependencies": {
     "@apideck/better-ajv-errors": "^0.3.6",
+    "@kapouer/objection": "^3.1.4",
     "@kapouer/path": "^4.2.1",
     "ajv": "^8.16.0",
     "ajv-formats": "^3.0.1",
@@ -29,7 +30,6 @@
     "json-schema-traverse": "^1.0.0",
     "ndjson": "2.0.0",
     "node-schedule": "^2.1.1",
-    "@kapouer/objection": "^3.1.4",
     "table": "^6.8.2",
     "tosource": "2.0.0-alpha.3"
   }
