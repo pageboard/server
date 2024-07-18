@@ -201,7 +201,7 @@ module.exports = class AiModule {
 			target: language.title
 		});
 		const text = await this.#makeRequest(directive, [{
-			uri: await req.call('image.thumbnail', { url, height: 256 })
+			uri: await req.call('image.thumbnail', { url, height: 512 })
 		}]);
 		return {
 			item: {
