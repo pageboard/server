@@ -13,8 +13,8 @@ module.exports = class LoginModule {
 	}
 	apiRoutes(app, server) {
 		app.post("/@api/login/send", 'login.send');
-		app.post("/@api/login/grant", 'login.verify');
-		app.post("/@api/login/out", 'login.clear');
+		app.post("/@api/login/verify", 'login.verify');
+		app.post("/@api/login/clear", 'login.clear');
 	}
 
 	async priv({ trx }, user) {
@@ -206,7 +206,7 @@ module.exports = class LoginModule {
 
 	async link(req, data) {
 		const token = await this.#generate(req, data);
-		return "/@api/login/grant?" + new URLSearchParams({
+		return "/@api/login/verify?" + new URLSearchParams({
 			email: data.email,
 			grant: data.grant,
 			token

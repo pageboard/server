@@ -96,7 +96,7 @@ export const mail_job = {
 			nullable: true,
 			$helper: {
 				name: 'datalist',
-				url: '/@api/languages'
+				url: '/@api/translate/languages'
 			}
 		}
 	}

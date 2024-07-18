@@ -13,7 +13,7 @@ module.exports = class SiteService {
 	}
 
 	apiRoutes(app, server) {
-		app.post("/@api/site", 'site.update');
+		app.post("/@api/site/update", 'site.update');
 	}
 
 	#QuerySite({ trx, Block }, data) {

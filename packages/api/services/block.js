@@ -9,9 +9,9 @@ module.exports = class BlockService {
 	}
 
 	apiRoutes(app) {
-		app.get("/@api/block", 'block.get');
-		app.get("/@api/blocks", 'block.search');
-		app.post('/@api/blocks', 'block.write');
+		app.get("/@api/block/get", 'block.get');
+		app.get("/@api/block/search", 'block.search');
+		app.post('/@api/block/write', 'block.write');
 	}
 
 	get(req, data) {

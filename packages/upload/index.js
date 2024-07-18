@@ -27,16 +27,18 @@ module.exports = class UploadModule {
 		};
 	}
 	async apiRoutes(app, server) {
-		app.post('/@api/upload/:id?', async req => {
+		app.post('/@api/upload/add', async req => {
+			const hrefs = await this.parse(req);
+			return { hrefs };
+		});
+		app.post('/@api/upload/:id', async req => {
 			// everything here is deprecated
 			const limits = { ...this.opts.limits };
-			if (req.params.id) {
-				const input = await req.run('block.get', { id: req.params.id });
-				if (req.locked(input.lock)) {
-					throw new HttpError.Unauthorized("Check user permissions");
-				}
-				Object.assign(limits, input.data.limits);
+			const input = await req.run('block.get', { id: req.params.id });
+			if (req.locked(input.lock)) {
+				throw new HttpError.Unauthorized("Check user permissions");
 			}
+			Object.assign(limits, input.data.limits);
 			const hrefs = await this.parse(req);
 			return { hrefs };
 		});

@@ -10,9 +10,9 @@ module.exports = class HrefService {
 	}
 
 	apiRoutes(app) {
-		app.get("/@api/hrefs", 'href.search');
-		app.get("/@api/href", 'href.find');
-		app.post("/@api/href", 'href.add');
+		app.get("/@api/href/search", 'href.search');
+		app.get("/@api/href/find", 'href.find');
+		app.post("/@api/href/add", 'href.add');
 	}
 
 	get({ Href, site, trx }, data) {

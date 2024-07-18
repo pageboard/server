@@ -21,7 +21,7 @@ module.exports = class TranslateService {
 	}
 
 	apiRoutes(app) {
-		app.get("/@api/languages", 'translate.languages');
+		app.get("/@api/translate/languages", 'translate.languages');
 	}
 
 	default(req) {

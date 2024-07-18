@@ -27,7 +27,7 @@ export const print_job = {
 			nullable: true,
 			$helper: {
 				name: 'datalist',
-				url: '/@api/languages'
+				url: '/@api/translate/languages'
 			}
 		},
 		printer: {

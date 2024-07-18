@@ -4,7 +4,7 @@ module.exports = class PageService {
 	static name = 'page';
 
 	apiRoutes(app) {
-		app.get('/@api/page', async req => {
+		app.get('/@api/page/get', async req => {
 			const { site, query } = req;
 			const { url, lang, ext } = req.call('page.parse', query);
 			const isWebmaster = !req.locked(['webmaster']) && query.url == url;
@@ -27,7 +27,7 @@ module.exports = class PageService {
 			obj.commons = app.opts.commons;
 			return obj;
 		});
-		app.get('/@api/pages', async req => {
+		app.get('/@api/page/search', async req => {
 			const { query, site } = req;
 			const isWebmaster = !req.locked(['webmaster']);
 			if (isWebmaster) {
@@ -46,7 +46,7 @@ module.exports = class PageService {
 			return obj;
 		});
 
-		app.post('/@api/page', 'page.write');
+		app.post('/@api/page/write', 'page.write');
 	}
 
 	#QueryPage({ site, trx, ref, val, fun }, { url, lang, type }) {

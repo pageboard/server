@@ -2,13 +2,13 @@ module.exports = class SettingsService {
 	static name = 'settings';
 
 	apiRoutes(app) {
-		app.get("/@api/settings", async req => {
+		app.get("/@api/settings/get", async req => {
 			return req.run('settings.get', {
 				id: req.user.id
 			});
 		});
 
-		app.post('/@api/settings', 'settings.save');
+		app.post('/@api/settings/save', 'settings.save');
 	}
 	async get(req, { id }) {
 		return req.run('block.find', {
