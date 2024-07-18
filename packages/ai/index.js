@@ -27,6 +27,10 @@ module.exports = class AiModule {
 		}
 	}
 
+	apiRoutes(app) {
+		app.get("/@api/ai/describe", 'ai.describe');
+	}
+
 	#anthropicMessages(directive, contents) {
 		return [{
 			role: "user",
@@ -195,6 +199,10 @@ module.exports = class AiModule {
 	}
 	static describe = {
 		title: 'Describe image',
+		$action: 'read',
+		$private: true,
+		$lock: 'webmaster',
+		required: ['url'],
 		properties: {
 			url: {
 				title: 'Image',
