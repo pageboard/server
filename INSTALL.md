@@ -35,7 +35,7 @@ data.module=pageboard/site-semantic-ui
 domain, module, env can be changed using site.save.
 
 also add a github hook in your github project settings, sending application/json payloads to
-http://myproject.pageboard.io/@api/github
+http://myproject.pageboard.io/.well-known/git
 
 How to set a user as webmaster for a site ?
 -------------------------------------------
