@@ -293,21 +293,21 @@ module.exports = class TranslateService {
 
 		if (total == 0) return { ...data, count: 0, total };
 
-		const translations = await req.run('ai.translate', {
+		const obj = await req.run('ai.translate', {
 			strings: items.map(item => item.source_text),
 			lang: data.lang
 		});
 
-		for (let i = 0; i < translations.length; i++) {
-			const target = translations[i];
+		for (let i = 0; i < obj.items.length; i++) {
+			const item = obj.items[i];
 			await site.$relatedQuery('children', trx)
 				.where('block._id', items[i].target_id)
 				.patch({
 					type: 'content',
-					'data:text': val(target).castJson()
+					'data:text': val(item.data.text).castJson()
 				});
 		}
-		return { ...data, count: translations.length, total };
+		return { ...data, count: obj.items.length, total };
 	}
 
 	static fill = {
