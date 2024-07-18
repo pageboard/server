@@ -166,7 +166,14 @@ module.exports = class AiModule {
 			source: source.content[''], target: target.content['']
 		});
 
-		return this.#makeRequest(directive, strings);
+		const list = await this.#makeRequest(directive, strings);
+
+		return {
+			items: list.map(text => ({
+				type: 'content',
+				data: { text }
+			}))
+		};
 	}
 	static translate = {
 		title: 'Translate',
@@ -193,9 +200,15 @@ module.exports = class AiModule {
 		const directive = merge(this.opts.directives.describe, {
 			target: language.title
 		});
-		return this.#makeRequest(directive, [{
+		const text = await this.#makeRequest(directive, [{
 			uri: await req.call('image.thumbnail', { url, height: 256 })
 		}]);
+		return {
+			item: {
+				type: 'content',
+				data: { text }
+			}
+		};
 	}
 	static describe = {
 		title: 'Describe image',
