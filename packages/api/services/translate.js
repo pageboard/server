@@ -259,11 +259,8 @@ module.exports = class TranslateService {
 		}
 	};
 
-	async fill(req, data) {
+	async #batchFill(req, data) {
 		const { site, trx, ref, val, fun } = req;
-		if (site.data.languages?.length <= 1) {
-			throw new HttpError.BadRequest('site languages must have at least two items');
-		}
 		const q = site.$relatedQuery('children', trx)
 			.distinct(
 				ref('target._id').as('target_id'),
@@ -287,7 +284,7 @@ module.exports = class TranslateService {
 			.orderBy('target._id', 'desc');
 
 		const [items, total] = await Promise.all([
-			q.limit(data.limit).offset(data.offset),
+			q.limit(100),
 			q.resultSize()
 		]);
 
@@ -310,8 +307,43 @@ module.exports = class TranslateService {
 		return { ...data, count: obj.items.length, total };
 	}
 
+	async fill(req, data) {
+		const { site } = req;
+		if (site.data.languages?.length <= 1) {
+			throw new HttpError.BadRequest('site languages must have at least two items');
+		}
+
+		const counts = {
+			count: -1,
+			total: 0,
+			cumul: 0
+		};
+
+		while (counts.count < counts.total) {
+			const ret = await this.#batchFill(req, {
+				id: data.id,
+				self: true,
+				lang: data.lang
+			});
+			Object.assign(counts, ret);
+			counts.cumul += ret.count;
+		}
+		counts.count = -1;
+		counts.total = 0;
+		while (counts.count < counts.total) {
+			const ret = await this.#batchFill(req, {
+				id: data.id,
+				self: false,
+				lang: data.lang
+			});
+			Object.assign(counts, ret);
+			counts.cumul += ret.count;
+		}
+		return { count: counts.cumul, ...data };
+	}
+
 	static fill = {
-		title: 'Fill',
+		title: 'Fill All',
 		$action: 'write',
 		required: ['lang', 'id'],
 		properties: {
@@ -324,23 +356,6 @@ module.exports = class TranslateService {
 				title: 'ID of parent block',
 				type: 'string',
 				format: 'id'
-			},
-			self: {
-				title: 'Only parent',
-				type: 'boolean',
-				default: false
-			},
-			limit: {
-				title: 'Limit',
-				type: 'integer',
-				minimum: 0,
-				maximum: 100,
-				default: 10
-			},
-			offset: {
-				title: 'Offset',
-				type: 'integer',
-				default: 0
 			}
 		}
 	};
