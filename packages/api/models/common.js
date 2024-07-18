@@ -209,7 +209,11 @@ exports.QueryBuilder = class CommonQueryBuilder extends QueryBuilder {
 		if (types == null) types = [];
 		else if (typeof types == "string") types = [types];
 
-		const schemas = types.map(type => mClass.schema(type));
+		const schemas = types.map(type => {
+			const sch = mClass.schema(type);
+			if (!sch) throw new HttpError.BadRequest("Missing schema for: " + type);
+			return sch;
+		});
 		const table = alias || this.tableRefFor(mClass);
 		const refs = asPaths(obj, {}, table, schemas);
 
