@@ -4,7 +4,7 @@ module.exports = class PageService {
 	static name = 'page';
 
 	apiRoutes(app) {
-		app.get('/@api/page/get', async req => {
+		app.get('/@api/page/find', async req => {
 			const { site, query } = req;
 			const { url, lang, ext } = req.call('page.parse', query);
 			const isWebmaster = !req.locked(['webmaster']) && query.url == url;
