@@ -284,12 +284,11 @@ module.exports = class TranslateService {
 			.orderBy('target._id', 'desc');
 
 		const [items, total] = await Promise.all([
-			q.limit(100),
+			q.limit(100).offset(0),
 			q.resultSize()
 		]);
 
 		if (total == 0) return { ...data, count: 0, total };
-
 		const obj = await req.run('ai.translate', {
 			strings: items.map(item => item.source_text),
 			lang: data.lang
@@ -297,6 +296,10 @@ module.exports = class TranslateService {
 
 		for (let i = 0; i < obj.items.length; i++) {
 			const item = obj.items[i];
+			const { text } = item.data;
+			if (typeof text != "string") {
+				throw new HttpError.InternalServerError("Bad AI translation");
+			}
 			await site.$relatedQuery('children', trx)
 				.where('block._id', items[i].target_id)
 				.patch({

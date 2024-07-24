@@ -32,18 +32,27 @@ module.exports = class AiModule {
 	}
 
 	#anthropicMessages(directive, contents) {
-		return [{
+		const list = [{
+			type: "text",
+			text: directive
+		}];
+		const messages = [{
 			role: "user",
-			content: [{
-				type: "text",
-				text: directive
-			}, ...contents.map(text => {
+			content: list
+		}];
+		if (contents.every(item => typeof item == "string")) {
+			list.push({
+				type: 'text',
+				text: JSON.stringify(contents)
+			});
+		} else {
+			list.push(...contents.map(text => {
 				if (typeof text == "string") {
 					return {
 						type: "text",
 						text
 					};
-				}	else if (text.uri) {
+				} else if (text.uri) {
 					const [header, data] = text.uri.split(',');
 					const [media_type] = header.substring('data:'.length).split(';');
 					return {
@@ -55,36 +64,41 @@ module.exports = class AiModule {
 						}
 					};
 				}
-			})]
-		}, {
+			}));
+		}
+		messages.push({
 			role: "assistant",
-			content: "Here is the JSON requested:"
-		}];
+			content: "{"
+		});
+		return messages;
 	}
 
 	#openaiMessages(directive, contents) {
 		return [{
 			role: "system",
 			content: directive,
-		}, {
-			role: "user",
-			content: contents.map(content => {
-				if (typeof content == "string") {
-					return {
-						type: "text",
-						content
-					};
-				} else if (content.uri) {
-					return {
+		}, ...contents.map(content => {
+			if (typeof content == "string") {
+				return {
+					role: "user",
+					type: "text",
+					content
+				};
+			} else if (content.uri) {
+				return {
+					role: "user",
+					content: [{
 						type: "image_url",
 						image_url: {
 							detail: "low",
 							url: content.uri
 						}
-					};
-				}
-			})
-		}];
+					}]
+				};
+			} else {
+				throw new HttpError.BadRequest("Unknown content type");
+			}
+		})];
 	}
 
 	async #anthropicRequest(messages) {
@@ -100,7 +114,7 @@ module.exports = class AiModule {
 			throw new HttpError.InternalServerError("Bad AI answer");
 		}
 		try {
-			return JSON.parse(content[0].text).response;
+			return JSON.parse('{' + content[0].text).response;
 		} catch (err) {
 			console.error(response);
 			throw new HttpError.InternalServerError("Bad AI answer");
