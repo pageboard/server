@@ -11,19 +11,20 @@ module.exports = class AiModule {
 
 	constructor(app, opts) {
 		this.app = app;
-		this.opts = opts;
-		if (this.opts.name == "anthropic") {
+		this.opts = opts[opts.provider];
+		this.opts.provider = opts.provider;
+		if (opts.provider == "anthropic") {
 			this.#ai = new Anthropic({
 				apiKey: this.opts.apiKey,
 				timeout: 20 * 1000
 			});
-		} else if (this.opts.name == "openai") {
+		} else if (opts.provider == "openai") {
 			this.#ai = new OpenAI({
 				apiKey: this.opts.apiKey,
 				timeout: 20 * 1000
 			});
 		} else {
-			console.info("Bad value for option: ai.name");
+			console.info("Unknown ai.provider");
 		}
 	}
 
@@ -161,9 +162,9 @@ module.exports = class AiModule {
 		} catch (err) {
 			if (err.message != "text.match is not a function") throw err;
 		}
-		if (this.opts.name == "openai") {
+		if (this.opts.provider == "openai") {
 			return this.#openaiRequest(messages);
-		} else if (this.opts.name == "anthropic") {
+		} else if (this.opts.provider == "anthropic") {
 			return this.#anthropicRequest(this.#anthropicMessages(directive, contents));
 		}
 	}
@@ -176,7 +177,7 @@ module.exports = class AiModule {
 		if (!source) throw new HttpError.BadRequest("Missing source language: " + srcLang);
 		if (!target) throw new HttpError.BadRequest("Missing target language: " + lang);
 
-		const directive = merge(this.opts.directives.translate, {
+		const directive = merge(this.opts.translate, {
 			source: source.content[''], target: target.content['']
 		});
 
@@ -211,7 +212,7 @@ module.exports = class AiModule {
 
 	async describe(req, { url, lang }) {
 		const language = req.call('translate.lang', { lang });
-		const directive = merge(this.opts.directives.describe, {
+		const directive = merge(this.opts.describe, {
 			target: language.title
 		});
 		const text = await this.#makeRequest(directive, [{
