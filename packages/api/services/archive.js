@@ -48,7 +48,7 @@ module.exports = class ArchiveService {
 			);
 
 			counts.hrefs += list.length;
-			await archiveFiles(req, archive, list, counts, data.size);
+			await this.#archiveFiles(req, archive, list, counts, data.size);
 			return [data.name, data.version ?? hash.digest('base64url')
 				.replaceAll(/[_-]/g, 'x')
 				.slice(0, 8)].join('-');
@@ -59,7 +59,6 @@ module.exports = class ArchiveService {
 	static bundle = {
 		title: 'Bundle by fetch',
 		$action: 'read',
-		$private: true,
 		$lock: 'webmaster',
 		$cache: false,
 		required: ['name'],
@@ -230,7 +229,7 @@ module.exports = class ArchiveService {
 					jstream.write(href);
 				}
 				if (data.files) {
-					await archiveFiles(req, archive, list, counts, null);
+					await this.#archiveFiles(req, archive, list, counts, null);
 				}
 			}
 			jstream.end();
@@ -243,7 +242,6 @@ module.exports = class ArchiveService {
 	static export = {
 		title: 'Export site',
 		$action: 'read',
-		$private: true,
 		$lock: 'webmaster',
 		$cache: false,
 		properties: {
@@ -271,7 +269,7 @@ module.exports = class ArchiveService {
 			files: {
 				title: 'Include files',
 				type: 'boolean',
-				default: true
+				default: false
 			}
 		}
 	};
@@ -440,7 +438,6 @@ module.exports = class ArchiveService {
 	static import = {
 		title: 'Import site',
 		$action: 'write',
-		$private: true,
 		$lock: 'webmaster',
 		$tags: ['data-:site'],
 		required: ['file'],
@@ -473,6 +470,29 @@ module.exports = class ArchiveService {
 			}
 		}
 	};
+
+	async #archiveFiles(req, archive, hrefs, counts, size) {
+		for (const { url, mime } of hrefs) {
+			if (url.startsWith('/@file/')) {
+				let filePath;
+				if (req.Href.isImage(mime)) {
+					filePath = await req.run('image.get', {
+						url, size
+					});
+				} else {
+					filePath = this.app.statics.urlToPath(req, url);
+				}
+				if (!filePath) {
+					counts.skips.push(url);
+				} else {
+					archive.file(filePath, {
+						name: url.substring(1)
+					});
+					counts.files++;
+				}
+			}
+		}
+	}
 };
 
 function fileStamp(d = new Date()) {
@@ -525,25 +545,4 @@ async function archiveWrap(req, fn) {
 	return filePath;
 }
 
-async function archiveFiles(req, archive, hrefs, counts, size) {
-	for (const { url, mime } of hrefs) {
-		if (url.startsWith('/@file/')) {
-			let filePath;
-			if (req.Href.isImage(mime)) {
-				filePath = await req.run('image.get', {
-					url, size
-				});
-			} else {
-				filePath = this.app.statics.urlToPath(req, url);
-			}
-			if (!filePath) {
-				counts.skips.push(url);
-			} else {
-				archive.file(filePath, {
-					name: url.substring(1)
-				});
-				counts.files++;
-			}
-		}
-	}
-}
+
