@@ -386,12 +386,15 @@ module.exports = class ImageModule {
 			},
 			size: {
 				title: 'Size',
-				anyOf: Object.entries(ImageModule.sizes)
-					.map(([size, { title, width, height }]) => ({
-						const: size,
-						title,
-						description: `${width}x${height}`
-					}))
+				anyOf: [
+					{ type: "null", title: "Original" },
+					...Object.entries(ImageModule.sizes)
+						.map(([size, { title, width, height }]) => ({
+							const: size,
+							title,
+							description: `${width}x${height}`
+						}))
+				]
 			}
 		}
 	};
