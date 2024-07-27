@@ -26,7 +26,7 @@ module.exports = class AiModule {
 	}
 
 	apiRoutes(app) {
-		app.get("/@api/ai/describe", 'ai.describe');
+		app.get("/@api/ai/depict", 'ai.depict');
 	}
 
 	async translate(req, { strings, lang }) {
