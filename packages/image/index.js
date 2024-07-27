@@ -325,7 +325,7 @@ module.exports = class ImageModule {
 	guess(req, { width = 0, height = 0, fit }) {
 		if (!width) width = height;
 		if (!height) height = width;
-		if (!width && !height) return 'm';
+		if (!width && !height) return null;
 		for (const [suffix, item] of Object.entries(ImageModule.sizes)) {
 			if (item.width >= width && item.height >= height) return suffix;
 		}
