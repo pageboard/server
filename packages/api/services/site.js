@@ -13,7 +13,7 @@ module.exports = class SiteService {
 	}
 
 	apiRoutes(app, server) {
-		app.post("/@api/site/update", 'site.update');
+		app.post("/@api/site/save", 'site.save');
 	}
 
 	#QuerySite({ trx, Block }, data) {
@@ -160,29 +160,7 @@ module.exports = class SiteService {
 		}
 	};
 
-	async save(req, { id, data }) {
-		const oldSite = await this.get(req, { id });
-		req.site = oldSite;
-		return this.update(req, data);
-	}
-	static save = {
-		title: 'Save',
-		$action: 'write',
-		$private: true, // or lock: site-manager ?
-		required: ['id', 'data'],
-		properties: {
-			id: {
-				title: 'Site ID',
-				type: 'string',
-				format: 'id'
-			},
-			data: {
-				$ref: "/elements#/definitions/site/properties/data"
-			}
-		}
-	};
-
-	async update(req, data) {
+	async save(req, data) {
 		const oldSite = req.site;
 		const { data: initial } = oldSite;
 		if (data.languages?.length === 0 && !data.lang) {
@@ -217,8 +195,8 @@ module.exports = class SiteService {
 		}
 		return site;
 	}
-	static update = {
-		title: 'Update',
+	static save = {
+		title: 'Save',
 		$action: 'write',
 		$ref: "/elements#/definitions/site/properties/data",
 		$global: false

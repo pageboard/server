@@ -49,9 +49,8 @@ suite('site', function () {
 			// pass
 		}
 		const save = await app.run('site.save', {
-			id: site.id,
-			data: { languages: ['en'], version: null }
-		});
+			languages: ['en'], version: null
+		}, { site: site.id });
 		assert.equal(save.data.version, null);
 		assert.ok(save.data.server);
 		delete save.data.server;

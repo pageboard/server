@@ -322,7 +322,7 @@ module.exports = class ArchiveService {
 					for (const key of reset) {
 						if (obj.data[key] != null) data[key] = obj.data[key];
 					}
-					site = await req.run('site.update', data);
+					site = await req.run('site.save', data);
 					upgrader.DomainBlock = site.$modelClass;
 				}
 			} else if (obj.type == "user") {
