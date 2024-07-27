@@ -174,10 +174,10 @@ module.exports = class SiteService {
 		const toMulti = initial.lang && data.languages?.length > 0;
 		const toMono = !initial.lang && data.lang;
 		const src = initial.languages?.[0] ?? initial.lang;
-		const dst = data.languages?.[0] ?? data.lang;
+		const dst = data.languages?.[0] ?? data.lang ?? initial.languages?.[0];
 
 		if (src != dst) {
-			await req.run('translate.all', { lang: dst });
+			await req.run('translate.file', { id: oldSite.id, lang: dst });
 		}
 
 		if (data.version == "HEAD") data.version = null;
