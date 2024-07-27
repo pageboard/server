@@ -346,7 +346,7 @@ module.exports = class TranslateService {
 	}
 
 	static fill = {
-		title: 'Fill All',
+		title: 'Fill',
 		$action: 'write',
 		required: ['lang', 'id'],
 		properties: {
