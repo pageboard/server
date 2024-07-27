@@ -66,18 +66,17 @@ module.exports = class MailModule {
 			if (parts.pop() != mailer.domain) return false;
 			parts = parts[0].split('.');
 			if (parts.length != 2) return false;
-			const site = await req.run('site.get', { id: parts[0] });
-			req.site = site;
+			const id = parts[0];
 			try {
 				const [fromSettings, toSettings] = await Promise.all([
-					req.run('settings.find', { email: senders }),
-					req.run('settings.get', { id: parts[1] })
+					req.run('settings.find', { email: senders }, { site: id }),
+					req.run('settings.get', { id: parts[1] }, { site: id })
 				]);
 
 				await req.run('mail.to', {
 					from: {
-						name: site.data.title,
-						address: `${site.id}.${fromSettings.id}@${mailer.domain}`
+						name: req.site.data.title,
+						address: `${req.site.id}.${fromSettings.id}@${mailer.domain}`
 					},
 					to: {
 						name: toSettings.data.name || undefined,
