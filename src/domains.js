@@ -263,7 +263,7 @@ module.exports = class Domains {
 		const siteMap = {};
 		const hostMap = {};
 		for (const site of list) {
-			Object.assign(domains, this.#domainMapping(site));
+			this.#domainMapping(domains, site);
 			const cur = siteMap[site.id] = this.siteById[site.id];
 			if (cur) {
 				Object.assign(cur, site);
@@ -281,17 +281,26 @@ module.exports = class Domains {
 		return { domains };
 	}
 
-	#domainMapping(site) {
-		const map = {};
+	#domainMapping(map, site) {
 		const version = site.data.server || this.app.version;
 		const upstream = this.app.opts.upstreams[version];
 		const domains = [ ...castArray(site.data.domains) ];
 		const domain = domains.shift();
 		if (domain != null) {
-			for (const secondary of [ ...domains, site.id]) {
-				map[secondary] = '=' + domain;
+			for (const secondary of [...domains, site.id]) {
+				if (map[secondary]) {
+					console.error("Seconday domain already declared", site.id, secondary);
+				} else {
+					map[secondary] = '=' + domain;
+				}
 			}
-			map[domain] = upstream;
+			if (map[domain]) {
+				console.error("Primary domain already declared", site.id, upstream);
+			} else {
+				map[domain] = upstream;
+			}
+		} else if (map[site.id]) {
+			console.error("id already declared as a domain", site.id);
 		} else {
 			map[site.id] = upstream;
 		}
