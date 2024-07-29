@@ -90,16 +90,16 @@ module.exports = class Domains {
 					if (!this.#suffixes.includes(hn)) this.#suffixes.push(hn);
 				});
 				const idMap = {};
-				for (const id in this.siteById) {
-					const site = this.siteById[id];
+				for (const [id, site] of Object.entries(this.siteById)) {
 					for (const domain of castArray(site.data.domains)) {
 						idMap[domain] = id;
 					}
+				}
+				for (const id of Object.keys(this.siteById)) {
 					for (const suffix of this.#suffixes) {
 						const domain = `${id}${suffix}`;
-						if (idMap[domain]) {
-							console.error("Ignoring domain collision with suffix", domain);
-						} else {
+						if (!idMap[domain]) {
+							// only if no domain already have that one
 							idMap[domain] = id;
 						}
 					}
