@@ -138,7 +138,7 @@ module.exports = class ApiService {
 	async get(req, data) {
 		const { site, run, user, locked, trx, ref } = req;
 		const form = await site.$relatedQuery('children', trx)
-			.where('block.type', 'fetch')
+			.whereIn('block.type', ['fetch', 'mail_fetch'])
 			.where(q => {
 				q.where('block.id', data.name);
 				q.orWhere(ref('block.data:name').castText(), data.name);
