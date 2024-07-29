@@ -96,7 +96,12 @@ module.exports = class Domains {
 						idMap[domain] = id;
 					}
 					for (const suffix of this.#suffixes) {
-						idMap[`${id}${suffix}`] = id;
+						const domain = `${id}${suffix}`;
+						if (idMap[domain]) {
+							console.error("Ignoring domain collision with suffix", domain);
+						} else {
+							idMap[domain] = id;
+						}
 					}
 				}
 				this.idByDomain = idMap;
