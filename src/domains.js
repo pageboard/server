@@ -295,11 +295,9 @@ module.exports = class Domains {
 			} else {
 				map[domain] = upstream;
 			}
-		} else if (map[site.id]) {
-			console.error("id already declared as a domain", site.id);
-		} else {
-			map[site.id] = upstream;
 		}
+		// the proxy tries the full domain first, and then the prefix
+		map[site.id] = upstream;
 		return map;
 	}
 
