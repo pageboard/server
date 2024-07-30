@@ -11,6 +11,13 @@ module.exports = class PageService {
 			const forWebmaster = Boolean(query.nested);
 			delete query.nested;
 
+			if (isWebmaster || forWebmaster) {
+				// override browser accepted-language
+				req.call('translate.lang', {
+					lang: lang ?? site.data.languages?.[0] ?? site.data.lang
+				});
+			}
+
 			const obj = {};
 			if (isWebmaster && !forWebmaster) {
 				obj.item = {
