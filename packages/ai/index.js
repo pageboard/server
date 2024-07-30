@@ -37,7 +37,10 @@ module.exports = class AiModule {
 		if (!source) throw new HttpError.BadRequest("Missing source language: " + srcLang);
 		if (!target) throw new HttpError.BadRequest("Missing target language: " + lang);
 
-		const list = await this.#getTranslator().ask('translate', { source: source.data.translation, target: target.data.translation }, strings);
+		const list = await this.#getTranslator().ask('translate', {
+			source: source.data.translation.split('-').shift(),
+			target: target.data.translation
+		}, strings);
 
 		return {
 			items: list.map(text => ({
