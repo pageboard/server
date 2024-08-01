@@ -63,6 +63,7 @@ module.exports = class ApiService {
 			$origin: site.$url.origin,
 			$query: query,
 			$site: site.id,
+			$languages: site.data.languages,
 			$user: user
 		});
 
@@ -172,6 +173,7 @@ module.exports = class ApiService {
 			$origin: site.$url.origin,
 			$query: query,
 			$site: site.id,
+			$languages: site.data.languages,
 			$user: user
 		});
 
