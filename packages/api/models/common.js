@@ -433,7 +433,7 @@ function asPaths(obj, ret, pre, schemas = []) {
 		if (
 			val && (
 				typeof val == "string"
-				|| typeof val == "object" && val.start && val.end
+				|| typeof val == "object"
 				|| Array.isArray(val)
 			)
 			&& (wasRangeSchema || isRangeSchema(schema))
@@ -442,7 +442,7 @@ function asPaths(obj, ret, pre, schemas = []) {
 			wasRangeSchema ??= schema.type;
 			let range;
 			if (wasRangeSchema == "integer") {
-				range = numericRange(val);
+				range = numericRange(val, schema);
 			} else {
 				range = dateRange(val);
 			}
@@ -478,7 +478,7 @@ function asPaths(obj, ret, pre, schemas = []) {
 					dval = true;
 				}
 			} else if (["integer", "number"].includes(schema.type) && typeof val == "string" && (val.includes("~") || val.includes("⩽"))) {
-				dval = numericRange(val, schema.type);
+				dval = numericRange(val, schema);
 			}
 			if (op) {
 				setCondition(ret, ref, {
@@ -487,7 +487,7 @@ function asPaths(obj, ret, pre, schemas = []) {
 					val: dval
 				});
 			} else {
-				setCondition(ret, ref, val);
+				setCondition(ret, ref, dval);
 			}
 		}
 	}
@@ -576,16 +576,26 @@ function partialDateRange(val) {
 	return [start, end];
 }
 
-function numericRange(val, type) {
-	const [start, end] = val.split(/~|⩽/).map(n => {
-		return (type == "integer" ? parseInt : parseFloat)(n);
-	});
-
-	return {
-		range: "numeric",
-		start: start,
-		end: end ?? start
-	};
+function numericRange(val, schema) {
+	if (typeof val == "string") {
+		const [start, end] = val.split(/~|⩽/).map(n => {
+			return (schema.type == "integer" ? parseInt : parseFloat)(n);
+		});
+		return {
+			range: "numeric",
+			start: start,
+			end: end ?? start
+		};
+	} else if (typeof val == "object") {
+		const keys = Object.keys(schema.properties);
+		const start = val[keys[0]];
+		const end = val[keys[1]];
+		return {
+			range: "numeric",
+			start,
+			end: end ?? start
+		};
+	}
 }
 
 function deepAssign(model, obj) {
