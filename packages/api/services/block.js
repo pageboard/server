@@ -301,11 +301,11 @@ module.exports = class BlockService {
 			ids.push(row.id);
 			if (parents?.count || children?.count) {
 				row.count = {};
-				if (row.children_count) {
+				if (row.children_count != null) {
 					row.count.children = row.children_count;
 					delete row.children_count;
 				}
-				if (row.parents_count) {
+				if (row.parents_count != null) {
 					row.count.parents = row.parents_count;
 					delete row.parents_count;
 				}
