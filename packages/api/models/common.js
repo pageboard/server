@@ -430,13 +430,6 @@ function asPaths(obj, ret, pre, schemas = []) {
 		}
 
 		let wasRangeSchema;
-		if (schema.type == "string" && dateTimes.includes(schema.format) || schema.type == "integer") {
-			if (isRangeSchema(parent)) {
-				wasRangeSchema = schema.type;
-				schema = parent;
-				ref = parentRef;
-			}
-		}
 		if (
 			val && (
 				typeof val == "string"
