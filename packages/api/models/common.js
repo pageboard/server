@@ -393,7 +393,7 @@ function whereCond(q, key, value) {
 const dateTimes = ["date-time", "date"];
 
 function asPaths(obj, ret, pre, schemas = []) {
-	const flats = flatten(obj, { array: true });
+	const flats = flatten(obj, { array: true, nulls: true });
 	for (const [str, val] of Object.entries(flats)) {
 		const [key, op] = str.split(/[:#]/);
 		if (op != null) {

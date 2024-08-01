@@ -142,8 +142,9 @@ function nestie(input, glue) {
 function iterFlat(output, nullish, sep, val, key, array) {
 	let k;
 	const pfx = key ? (key + sep) : key;
-
-	if (val == null) {
+	if (val === undefined) {
+		// pass
+	} else if (val === null) {
 		if (nullish) output[key] = val;
 	} else if (typeof val != 'object') {
 		output[key] = val;
@@ -159,10 +160,10 @@ function iterFlat(output, nullish, sep, val, key, array) {
 	}
 }
 
-function flattie(input, { glue, toNull, array }) {
+function flattie(input, { glue, nulls, array }) {
 	const output = {};
 	if (typeof input == 'object') {
-		iterFlat(output, Boolean(toNull), glue || '.', input, '', array);
+		iterFlat(output, Boolean(nulls), glue || '.', input, '', array);
 	}
 	return output;
 }
