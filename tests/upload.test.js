@@ -76,7 +76,7 @@ suite('upload', function () {
 					},
 					request: {
 						'data.url': '[$request.src]',
-						'data.alt': '[$request.alt]'
+						'content.alt': '[$request.alt]'
 					}
 				}
 			}
@@ -107,7 +107,7 @@ suite('upload', function () {
 		assert.equal(res.status, 200);
 		const { item } = await res.json();
 		assert.equal(item.type, 'image');
-		assert.equal(item.data.alt, 'test alt');
+		assert.equal(item.content.alt, 'test alt');
 		assert.ok(item.data.url);
 	});
 
