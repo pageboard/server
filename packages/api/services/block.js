@@ -760,7 +760,7 @@ module.exports = class BlockService {
 			type: data.type
 		};
 		if (data.id) obj.id = data.id;
-		if (!Object.isEmpty(data.data)) obj.data = data.data;
+		obj.data = data.data ?? {};
 		if (!Object.isEmpty(data.content)) obj.content = data.content;
 		if (data.lock !== undefined) {
 			if (req.locked(data.lock ?? [])) {
