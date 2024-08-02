@@ -19,14 +19,12 @@ class Block extends Model {
 				type: {
 					title: 'type',
 					type: 'string',
-					format: 'name',
-					nullable: true
+					format: 'name'
 				},
 				id: {
 					title: 'id',
 					type: 'string',
-					format: 'id',
-					nullable: true
+					format: 'id'
 				}
 			}
 		},
