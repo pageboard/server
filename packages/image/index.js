@@ -45,8 +45,13 @@ module.exports = class ImageModule {
 		},
 		xl: {
 			title: 'Extra Large',
-			width: 3200, // A4 pages
-			height: 3200
+			width: 2048,
+			height: 2048
+		},
+		xxl: {
+			title: 'Super Extra Large',
+			width: 4096,
+			height: 4096
 		}
 	};
 
