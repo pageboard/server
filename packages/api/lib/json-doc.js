@@ -5,7 +5,7 @@ module.exports = function(schemas, api, schema, formatted) {
 	if (!schema) return;
 	const lines = [];
 	const header = {};
-	if (api && schema.title) header.content = `${api}: ${schema.title}`;
+	header.content = schema.title ?? '';
 
 	traverse(schema, {
 		cb(schema, pointer, root, parentPointer, keyword, parent, name) {
@@ -39,7 +39,8 @@ module.exports = function(schemas, api, schema, formatted) {
 				}
 				const path = pointer.split('/').slice(1).filter(x => x != 'properties').join('.');
 				if (schema.default) type += `|${JSON.stringify(schema.default)}`;
-				if (!type) lines.push([path, 'object', schema.title]);
+				if (!api) lines.push([path, schema.title]);
+				else if (!type) lines.push([path, 'object', schema.title]);
 				else lines.push([path + (required ? ' *' : ''), type, schema.title || '-']);
 			}
 		}

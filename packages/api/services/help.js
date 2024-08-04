@@ -17,7 +17,7 @@ module.exports = class HelpService {
 					Object.entries(this.app.services).map(([name, schema]) => {
 						if (modName && modName != name) return [name, undefined];
 						return [name, { type: "", title: Object.keys(schema) }];
-					})
+					}).sort((a, b) => a[0].localeCompare(b[0]))
 				)
 			};
 		} else {
