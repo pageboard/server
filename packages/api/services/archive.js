@@ -93,7 +93,7 @@ module.exports = class ArchiveService {
 
 	async export(req, data) {
 		const { site, trx, ref, fun } = req;
-		const lang = site.data.languages?.length == 0 ? req.call('translate.lang') : null;
+		const lang = site.data.languages?.length == 0 ? site.data.lang : null;
 		const urls = data.urls;
 		const ids = (data.ids ?? []).slice();
 		const counts = {
