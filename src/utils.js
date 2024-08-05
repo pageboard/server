@@ -69,8 +69,8 @@ exports.mergeRecursive = (...args) => {
 
 exports.mergeRecursiveObject = (...args) => {
 	return mergeWith(...args, (dst, src) => {
-		if (Array.isArray(dst)) {
-			return dst;
+		if (Array.isArray(src)) {
+			return src;
 		}
 	});
 };
