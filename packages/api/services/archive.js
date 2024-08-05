@@ -25,7 +25,7 @@ module.exports = class ArchiveService {
 			hrefs: true
 		});
 		const counts = {
-			items: items?.length,
+			blocks: items?.length,
 			hrefs: 0,
 			files: 0,
 			skips: []
