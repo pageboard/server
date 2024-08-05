@@ -21,7 +21,7 @@ module.exports = class HelpService {
 				)
 			};
 		} else {
-			schema = this.app.api.getService(command)?.[0];
+			schema = this.app.api.getService(command)?.[0]?.properties?.parameters;
 		}
 		return jsonDoc(this.app.elements, command, schema, this.app.opts.cli);
 	}
