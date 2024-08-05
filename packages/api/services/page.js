@@ -7,6 +7,7 @@ module.exports = class PageService {
 		app.get('/@api/page/find', async req => {
 			const { site, query } = req;
 			const { url, lang, ext } = req.call('page.parse', query);
+			if (!url) throw new HttpError.BadRequest("Bad url format");
 			const isWebmaster = !req.locked(['webmaster']) && query.url == url;
 			const forWebmaster = Boolean(query.nested);
 			delete query.nested;
