@@ -1,4 +1,4 @@
-const { mergeRecursive } = require('../../../src/utils');
+const { mergeRecursiveObject } = require('../../../src/utils');
 
 module.exports = class SiteService {
 	static name = 'site';
@@ -182,7 +182,7 @@ module.exports = class SiteService {
 
 		if (data.version == "HEAD") data.version = null;
 
-		mergeRecursive(oldSite.data, data);
+		mergeRecursiveObject(oldSite.data, data);
 
 		const site = await this.app.install(oldSite);
 		await oldSite.$query(req.trx).patchObject({

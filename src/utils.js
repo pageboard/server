@@ -67,6 +67,14 @@ exports.mergeRecursive = (...args) => {
 	});
 };
 
+exports.mergeRecursiveObject = (...args) => {
+	return mergeWith(...args, (dst, src) => {
+		if (Array.isArray(dst)) {
+			return dst;
+		}
+	});
+};
+
 exports.unflatten = function(query) {
 	return nestie(query) ?? {};
 };
