@@ -872,6 +872,7 @@ module.exports = class BlockService {
 		title: 'Delete',
 		description: 'Recursive delete of standalone block',
 		$action: 'write',
+		$lock: 'webmaster',
 		required: ['id'],
 		properties: {
 			id: Block.jsonSchema.properties.id,
