@@ -12,6 +12,7 @@ module.exports = class BlockService {
 		app.get("/@api/block/get", 'block.get');
 		app.get("/@api/block/search", 'block.search');
 		app.post('/@api/block/write', 'block.write');
+		app.post('/@api/block/del', 'block.del');
 	}
 
 	get(req, data) {
