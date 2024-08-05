@@ -515,7 +515,7 @@ function applyRemove({ site, trx, ref, fun }, list, recursive) {
 	if (!recursive) {
 		q.whereNot('standalone', true).delete();
 	} else {
-		q.select(fun('recursive_delete', ref('block._id'), false).as('count'));
+		q.select(fun('recursive_delete', ref('block._id'), site.$pkg.standalones).as('count'));
 	}
 	return q;
 }

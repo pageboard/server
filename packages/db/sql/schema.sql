@@ -58,9 +58,10 @@ END
 $$;
 ALTER FUNCTION jsonb_set_recursive(data jsonb, path text[], new_value jsonb);
 
+DROP FUNCTION IF EXISTS recursive_delete;
 CREATE OR REPLACE FUNCTION recursive_delete(
     root_id integer,
-    standalones boolean
+    standalones TEXT[]
 ) RETURNS INTEGER
   LANGUAGE 'sql'
 AS $BODY$
@@ -71,7 +72,7 @@ AS $BODY$
         UNION ALL
         SELECT b._id, r.parent_id, level + 1 AS level
         FROM children, relation AS r, block AS b
-        WHERE r.parent_id = children._id AND b._id = r.child_id AND (b.standalone IS FALSE OR standalones IS TRUE) AND b.type != 'content'
+        WHERE r.parent_id = children._id AND b._id = r.child_id AND (b.standalone IS FALSE OR b.type = ANY(standalones)) AND b.type != 'content'
     ),
     dels AS (
         DELETE FROM block WHERE _id IN (SELECT _id FROM children ORDER BY level DESC) RETURNING _id
