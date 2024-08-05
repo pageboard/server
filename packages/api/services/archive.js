@@ -287,6 +287,8 @@ module.exports = class ArchiveService {
 				out: new Set()
 			}
 		};
+		const { orphaned } = await req.run('site.gc', { days: 0 });
+		counts.orphaned = orphaned;
 		const fstream = createReadStream(Path.resolve(this.app.cwd, file))
 			.pipe(ndjson.parse());
 
