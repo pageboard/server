@@ -281,6 +281,7 @@ module.exports = class ArchiveService {
 		const counts = {
 			users: 0,
 			blocks: 0,
+			contents: 0,
 			hrefs: 0,
 			langs: {
 				in: new Set(),
@@ -394,7 +395,8 @@ module.exports = class ArchiveService {
 				if (parents.length) {
 					await Block.relatedQuery('parents', trx).for(row._id).relate(parents);
 				}
-				counts.blocks += 1;
+				if (obj.type == "content") counts.contents += 1;
+				else counts.blocks += 1;
 				refs.set(obj.id, row._id);
 			}
 		};
