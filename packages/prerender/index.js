@@ -94,30 +94,14 @@ module.exports = class PrerenderModule {
 
 		if (pathname == null || schema == null) {
 			if (req.accepts(['image/*', 'json', 'html']) != 'html') {
-				next(new HttpError.NotAcceptable("Malformed path"));
+				next(new HttpError.NotAcceptable("Malformed URL"));
 				return;
 			} else {
-				// TODO factor this to subrequest /pathname when req.query is not empty,
-				// so that prerendering is only done for "static/default" pages.
-				// the query parts are done by the client
-				// TODO likewise for /.well-known/401 (vary upon grants)
-				const url = req.call('page.format', {
-					url: '/.well-known/404',
-					lang
-				});
-				const agent = url.protocol == "https:" ? https : http;
-				const subReq = agent.request(url, {
-					headers: req.headers,
-					rejectUnauthorized: false
-				}, subRes => {
-					res.status(404);
-					res.set(subRes.headers);
-					req.call('cache.map', "/.well-known/404");
-					pipeline(subRes, res, err => {
-						if (err) next(err);
-					});
-				});
-				subReq.end();
+				req.call('cache.map', "/.well-known/statics/410.html");
+				res.set('X-Accel-Redirect', "/.well-known/statics/410.html");
+				res.status(410);
+				res.removeHeader('Content-Type');
+				res.end();
 				return;
 			}
 		} else {
