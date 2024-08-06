@@ -94,7 +94,7 @@ module.exports = class PrerenderModule {
 
 		if (pathname == null || schema == null) {
 			if (req.accepts(['image/*', 'json', 'html']) != 'html') {
-				next(new HttpError.NotAcceptable("Malformed URL"));
+				next(new HttpError.NotAcceptable());
 				return;
 			} else {
 				req.call('cache.map', "/.well-known/statics/410.html");
