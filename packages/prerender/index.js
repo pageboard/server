@@ -1,9 +1,6 @@
-const { pipeline } = require('node:stream');
 const { pipeline: waitPipeline } = require('node:stream/promises');
 const { writeFile } = require('node:fs/promises');
-const http = require('node:http');
 const Path = require('node:path');
-const https = require('node:https');
 const { createWriteStream } = require('node:fs');
 const dom = require.lazy('express-dom');
 const pdf = require.lazy('express-dom-pdf');
@@ -54,8 +51,8 @@ module.exports = class PrerenderModule {
 
 		server.get(
 			'*',
-			app.cache.tag('app-:site'),
 			async (req, res, next) => this.check(req, res, next),
+			app.cache.tag('app-:site'),
 			(req, res) => this.source(req, res)
 		);
 	}
@@ -95,14 +92,12 @@ module.exports = class PrerenderModule {
 		if (pathname == null || schema == null) {
 			if (req.accepts(['image/*', 'json', 'html']) != 'html') {
 				next(new HttpError.NotAcceptable());
-				return;
 			} else {
 				req.call('cache.map', "/.well-known/statics/410.html");
 				res.set('X-Accel-Redirect', "/.well-known/statics/410.html");
 				res.status(410);
 				res.removeHeader('Content-Type');
 				res.end();
-				return;
 			}
 		} else {
 			const { query } = req;
@@ -118,12 +113,12 @@ module.exports = class PrerenderModule {
 					url: pathname, lang, ext
 				});
 				for (const key in query) redUrl.searchParams.append(key, query[key]);
-				return res.redirect(redUrl);
+				res.redirect(redUrl);
+			} else {
+				req.schema = schema;
+				this.#callMw(schema.name, req, res, next);
 			}
 		}
-
-		req.schema = schema;
-		this.#callMw(schema.name, req, res, next);
 	}
 
 	#callMw(name, req, res, next) {
