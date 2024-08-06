@@ -18,7 +18,7 @@ module.exports = class LinksService {
 			}]);
 		});
 
-		app.get('/.well-known/sitemap.txt', async req => {
+		app.get('/sitemap.txt', async req => {
 			const obj = await req.run('page.list', {
 				robot: true,
 				type: ['page']
@@ -28,7 +28,7 @@ module.exports = class LinksService {
 			}).join('\n');
 		});
 
-		app.get('/.well-known/sitemap.xml', async req => {
+		app.get('/sitemap.xml', async req => {
 			const { items } = await req.run('page.list', {
 				robot: true,
 				type: ['page']
@@ -81,7 +81,7 @@ module.exports = class LinksService {
 		const { site } = req;
 		const { env = site.data.env } = data;
 		if (env == "production") {
-			lines.push(`Sitemap: ${new URL("/.well-known/sitemap.xml", site.$url)}`);
+			lines.push(`Sitemap: ${new URL("/sitemap.xml", site.$url)}`);
 			lines.push('User-agent: *');
 			const { items } = await req.call('page.list', {
 				disallow: true,
