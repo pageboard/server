@@ -3,6 +3,7 @@ const Ajv = require('ajv');
 const { _ } = Ajv;
 const AjvKeywords = require('ajv-keywords');
 const AjvFormats = require('ajv-formats');
+const { dget } = require('../../../src/utils');
 
 const { betterAjvErrors } = require('@apideck/better-ajv-errors');
 const Traverse = require('json-schema-traverse');
@@ -104,14 +105,17 @@ class AjvValidatorExt extends AjvValidator {
 						instancePath: path,
 						keyword, params
 					} = e;
-					const { missingProperty: miss } = params ?? {};
-					if (!path || keyword != "required" || miss == null) return true;
+					if (!path) return true;
 					if (path.startsWith("/data/action/parameters")) {
-						const subPath = path.split('/').slice(4).concat([miss]).join('.');
-						if (json?.data?.action?.request?.[subPath]) {
-							// expression here, ignore requirement
-							return false;
+						const reqPath = path.split('/').slice(4);
+						if (keyword == "required" && params.missingProperty) {
+							reqPath.push(params.missingProperty);
+						} else if (keyword == "format" && !dget(json?.data?.action?.parameters, reqPath)) {
+							// maybe null, test request
+						} else {
+							return true;
 						}
+						return !json?.data?.action?.request?.[reqPath.join('.')];
 					}
 					return true;
 				});
