@@ -176,7 +176,7 @@ module.exports = class SiteService {
 		const src = initial.languages?.[0] ?? initial.lang;
 		const dst = data.languages?.[0] ?? data.lang ?? initial.languages?.[0];
 
-		if (src != dst) {
+		if (src && src != dst) {
 			await req.run('translate.fill', { id: oldSite.id, lang: dst });
 		}
 
