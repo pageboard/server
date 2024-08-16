@@ -48,11 +48,13 @@ class Block extends Model {
 			data: {
 				title: 'data',
 				type: 'object',
+				additionalProperties: true,
 				default: {}
 			},
 			expr: {
 				title: 'expr',
 				type: 'object',
+				additionalProperties: true,
 				nullable: true
 			},
 			content: {
@@ -119,6 +121,9 @@ class Block extends Model {
 		} : {
 			type: 'null'
 		};
+		if (el.additionalProperties != null) {
+			dataSchema.additionalProperties = el.additionalProperties;
+		}
 		const contentSchema = contents ? {
 			type: 'object',
 			properties: contentsNames(contents),
