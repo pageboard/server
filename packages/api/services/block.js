@@ -260,7 +260,7 @@ module.exports = class BlockService {
 			}
 		}
 		const hasComplexContent = (data.content == null || data.content.length) && data.type.some(type => {
-			const { contents = [] } = site.$schema(type);
+			const { contents = [] } = site.$schema(type) ?? {};
 			return contents.some(
 				({ id, nodes }) => (data.content == null || data.content.includes(id)) && nodes != "text*"
 			);
