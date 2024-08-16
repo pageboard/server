@@ -17,6 +17,6 @@
   },
   "homepage": "https://github.com/pageboard/server#readme",
   "dependencies": {
-    "postinstall-esbuild": "^0.14.5"
+    "postinstall-esbuild": "^0.14.6"
   }
 }
