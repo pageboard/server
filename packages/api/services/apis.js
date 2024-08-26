@@ -22,6 +22,7 @@ module.exports = class ApiService {
 				body: unflatten(req.body)
 			});
 		});
+	}
 
 	async elements() {
 		return {
