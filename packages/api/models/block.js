@@ -49,7 +49,7 @@ class Block extends Model {
 				title: 'data',
 				type: 'object',
 				additionalProperties: true,
-				default: {}
+				nullable: true
 			},
 			expr: {
 				title: 'expr',
