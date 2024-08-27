@@ -290,9 +290,7 @@ module.exports = class Domains {
 					map[secondary] = '=' + domain;
 				}
 			}
-			if (map[domain]) {
-				console.error("Primary domain already declared", site.id, upstream);
-			} else {
+			if (map[domain] == null) {
 				map[domain] = upstream;
 			}
 		}
