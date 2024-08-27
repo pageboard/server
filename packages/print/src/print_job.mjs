@@ -28,8 +28,8 @@ export const print_job = {
 			$helper: {
 				name: 'datalist',
 				url: '/@api/translate/languages',
-				value: '[item.data.lang]',
-				title: '[item.content.]'
+				value: '[data.lang]',
+				title: '[content.]'
 			}
 		},
 		printer: {
