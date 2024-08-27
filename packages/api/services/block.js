@@ -430,7 +430,9 @@ module.exports = class BlockService {
 				nullable: true,
 				$helper: {
 					name: 'datalist',
-					url: '/@api/translate/languages'
+					url: '/@api/translate/languages',
+					value: '[item.data.lang]',
+					title: '[item.content.]'
 				}
 			},
 			content: {
