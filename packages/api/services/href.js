@@ -284,7 +284,7 @@ module.exports = class HrefService {
 	};
 
 	async save(req, data) {
-		return req.call('image.update', data);
+		return req.call('href.update', data);
 	}
 	static save = {
 		title: 'Update title',
