@@ -338,7 +338,7 @@ module.exports = class MailModule {
 			data: { ...data, response: {} }
 		});
 		req.postTry(block, (req, block) => this.#sendJob(req, block));
-		return block;
+		return { item: block };
 	}
 	static send = {
 		title: 'Send',
@@ -349,7 +349,7 @@ module.exports = class MailModule {
 	async again(req, data) {
 		const block = await req.run('block.get', data);
 		await req.try(block, (req, block) => this.#sendJob(req, block));
-		return block;
+		return { item: block };
 	}
 	static again = {
 		title: 'Resend',

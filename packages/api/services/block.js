@@ -731,10 +731,11 @@ module.exports = class BlockService {
 				return child;
 			}
 		}));
-		return site.$relatedQuery('children', trx)
+		const item = await site.$relatedQuery('children', trx)
 			.insertGraph(copy, {
 				allowRefs: true
 			}).returning(Block.columns);
+		return { item };
 	}
 	static clone = {
 		title: 'Clone',

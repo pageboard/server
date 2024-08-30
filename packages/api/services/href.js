@@ -252,14 +252,15 @@ module.exports = class HrefService {
 		const { url } = data;
 		const copy = { ...data };
 		delete copy.url;
-		const href = await this.get(req, { url })
+		const { _id } = await this.get(req, { url })
 			.throwIfNotFound()
 			.forUpdate();
-		return site.$relatedQuery('hrefs', trx)
-			.where('_id', href._id)
+		const href = await site.$relatedQuery('hrefs', trx)
+			.where('_id', _id)
 			.first()
 			.patchObject(copy)
 			.returning(Href.columns);
+		return { href };
 	}
 	static update = {
 		title: 'Update title and pathname',

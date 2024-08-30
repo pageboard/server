@@ -131,17 +131,15 @@ module.exports = class SiteService {
 
 	async add({ trx, Block }, data) {
 		const site = await this.#QuerySite({ trx, Block }, { id: data.id });
-		if (site) {
-			throw new HttpError.Conflict("Site id already exists");
-		} else {
-			data = {
-				...data,
-				type: 'site',
-				standalone: true,
-				content: {}
-			};
-			return Block.query(trx).insert(data);
-		}
+		if (site) throw new HttpError.Conflict("Site id already exists");
+		data = {
+			...data,
+			type: 'site',
+			standalone: true,
+			content: {}
+		};
+		const item = await Block.query(trx).insert(data);
+		return { item };
 	}
 	static add = {
 		title: 'Add',
