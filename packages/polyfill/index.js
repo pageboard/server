@@ -73,6 +73,10 @@ module.exports = class PolyfillModule {
 			},
 			'Intl.RelativeTimeFormat.~locale.*': {
 				detectSource: `self.Intl?.RelativeTimeFormat?.supportedLocalesOf?.(document.documentElement.lang)?.length`
+			},
+			'Promise.withResolvers': {
+				source: require.resolve('@ungap/with-resolvers'),
+				detectSource: `self.Promise?.withResolvers`
 			}
 		};
 	}
