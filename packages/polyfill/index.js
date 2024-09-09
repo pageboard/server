@@ -2,10 +2,6 @@ const { join } = require('node:path');
 const crypto = require.lazy('node:crypto');
 const polyfills = require.lazy('@kapouer/polyfill-library');
 const toposort = require.lazy('toposort');
-const polyfillModuleDir = join(
-	require.resolve('@kapouer/polyfill-library'),
-	'../..'
-);
 
 module.exports = class PolyfillModule {
 	static priority = -1;
@@ -14,6 +10,9 @@ module.exports = class PolyfillModule {
 	constructor(app, opts) {
 		this.app = app;
 		this.opts = opts;
+	}
+
+	async init() {
 		this.polyfills = {
 			customElements: {
 				source: join(require.resolve('@webreflection/custom-elements'), '../../index.js'),
@@ -104,6 +103,10 @@ module.exports = class PolyfillModule {
 	async bundle(req, { features }) {
 		if (!features.length) throw new HttpError.BadRequest("No features requested");
 		const list = await this.getFeatures(features);
+		const polyfillModuleDir = join(
+			require.resolve('@kapouer/polyfill-library'),
+			'../..'
+		);
 		const inputs = list.map(name => {
 			return this.polyfills[name]?.source ?? join(
 				polyfillModuleDir, 'polyfills/__dist', name, "raw.js"
