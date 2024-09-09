@@ -865,25 +865,80 @@ module.exports = class BlockService {
 
 	async del({ site, trx, fun, ref }, data) {
 		const types = data.type ? [data.type] : site.$pkg.standalones;
-		const row = await site.$relatedQuery('children', trx)
-			.select(fun('recursive_delete', ref('block._id'), site.$pkg.standalones).as('count'))
-			.where('block.id', data.id)
-			.whereIn('block.type', types).first();
+		const q = site.$relatedQuery('children', trx);
+		if (!data.id?.length && !data.parent?.id) {
+			throw new HttpError.BadRequest("Missing id or parent.id");
+		}
+		if (data.parent?.id) {
+			data.parent.type ??= site.$pkg.standalones;
+			q.joinRelated('parents', { alias: 'parent' });
+			whereSub(q, data.parent, 'parent');
+		}
+		if (data.id?.length) {
+			q.whereIn('block.id', data.id);
+		}
+		q.whereIn('block.type', types);
+		q.select(fun('recursive_delete', ref('block._id'), site.$pkg.standalones).as('count')).first();
+		const row = await q;
 		return { count: row?.count ?? 0 };
 	}
 	static del = {
 		title: 'Delete',
-		description: 'Recursive delete of standalone block',
+		description: 'Also all sub-blocks',
 		$action: 'write',
 		$lock: 'webmaster',
-		required: ['id'],
 		properties: {
-			id: Block.jsonSchema.properties.id,
+			id: {
+				title: 'Select by ids',
+				type: 'array',
+				nullable: true,
+				items: {
+					type: 'string',
+					format: 'id'
+				}
+			},
 			type: {
-				...Block.jsonSchema.properties.type,
+				title: 'Type',
+				type: 'string',
+				format: 'name',
 				$filter: {
 					name: 'element',
 					standalone: true
+				}
+			},
+			parent: {
+				title: 'Filter by parent',
+				type: "object",
+				nullable: true,
+				properties: {
+					id: {
+						title: 'Select by id',
+						anyOf: [{ /* because nullable does not have priority */
+							type: 'null'
+						}, {
+							type: "string",
+							format: 'id'
+						}],
+						$filter: {
+							name: 'relation',
+							// TODO relation filter should propose all allowed types,
+							// and should use datalist to list all allowed block ids
+						}
+					},
+					type: {
+						title: 'Select by types',
+						nullable: true,
+						type: 'array',
+						items: {
+							type: 'string',
+							format: 'name'
+						},
+						$filter: {
+							name: 'element',
+							standalone: true,
+							contentless: true
+						}
+					}
 				}
 			}
 		}
