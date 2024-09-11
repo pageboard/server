@@ -414,6 +414,10 @@ function asPaths(obj, ret, pre, schemas = []) {
 			}
 			schema = dget(parent, 'properties.' + lastKey);
 			if (schema) break;
+			if (parent?.additionalProperties && typeof parent?.additionalProperties == "object") {
+				schema = parent.additionalProperties;
+				break;
+			}
 		}
 		if (!schema && schemas?.length) {
 			// refuse extra conditions
