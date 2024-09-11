@@ -1,6 +1,6 @@
 {
   "name": "@pageboard/polyfill",
-  "version": "0.15.1",
+  "version": "0.16.0",
   "description": "polyfill for pageboard",
   "main": "index.js",
   "scripts": {
