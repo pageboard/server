@@ -9,5 +9,6 @@ module.exports = {
 	grant: /^[a-z0-9-]+$/, // this should be the name format !
 	lang: /^[a-z]{2}(-[a-z]{2})?$/,
 	ext: /^[a-z]{3,4}$/,
-	phone: /^[+(\s.\-/\d)]{5,30}$/
+	phone: /^[+(\s.\-/\d)]{5,30}$/,
+	version: /^\d+\.\d+\.\d+$/
 };
