@@ -26,20 +26,11 @@ export const site = {
 				format: 'singleline'
 			}
 		},
-		versions: {
-			title: 'Versions',
-			type: 'object',
-			additionalProperties: {
-				type: 'string',
-				format: 'singleline'
-			}
-		},
 		server: {
 			title: 'Server version',
-			description: 'Major.minor pageboard server version',
 			nullable: true,
 			type: "string",
-			pattern: /^\d+\.\d+$/.source
+			format: 'version'
 		},
 		lang: {
 			title: 'Locale',
