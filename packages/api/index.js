@@ -81,9 +81,10 @@ module.exports = class ApiModule {
 		}));
 	}
 
-	async install(...args) {
+	async install(block, pkg) {
 		if (!this.#packager) this.#packager = new Packager(this.app, Block);
-		return this.#packager.run(...args);
+		const site = await this.#packager.run(block, pkg);
+		return site;
 	}
 
 	async makeBundles(site, pkg) {
