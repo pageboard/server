@@ -179,12 +179,10 @@ module.exports = class SiteService {
 			await req.run('translate.fill', { id: oldSite.id, lang: dst });
 		}
 
-		const oldVersions = mergeRecursiveObject({}, oldSite.data.versions);
-
 		mergeRecursiveObject(oldSite.data, data);
-
+		const oldVersions = oldSite.$pkg.versions;
 		const site = await this.app.install(oldSite);
-		await this.migrate(req, oldVersions, oldSite.data.versions);
+		await this.migrate(req, oldVersions);
 		await oldSite.$query(req.trx).patchObject({
 			type: site.type,
 			data: site.data
@@ -202,10 +200,10 @@ module.exports = class SiteService {
 		$global: false
 	};
 
-	async migrate(req, oldVersions, newVersions) {
-		const { migrations } = req.site.$pkg;
+	async migrate(req, oldVersions) {
+		const { migrations, versions } = req.site.$pkg;
 		for (const [name, oldVersion] of Object.entries(oldVersions)) {
-			const version = newVersions[name] ?? oldVersion;
+			const version = versions[name] ?? oldVersion;
 			if (version == oldVersion) continue;
 		}
 	}

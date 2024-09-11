@@ -21,18 +21,17 @@ module.exports = class Installer {
 		await fs.rm(nextDir, { recursive: true, force: true });
 		const curPkg = await this.#getPkg(Path.join(siteDir, 'active'));
 		const nextPkg = await this.#getPkg(nextDir);
-		nextPkg.dependencies = site.data.dependencies;
-		if (await this.#checkActualDependencies(curPkg, nextPkg)) {
-			return nextPkg;
+		nextPkg.dependencies = site.data.dependencies ?? {};
+		if (await this.#decide(curPkg, nextPkg)) {
+			await this.#install(site, nextPkg);
 		}
-		await this.#install(site, nextPkg);
-		await Promise.all(Object.keys(nextPkg.dependencies || {}).map(
+		await Promise.all(Object.keys(nextPkg.dependencies).map(
 			mod => this.#config(site, nextPkg, mod)
 		));
 		return nextPkg;
 	}
 
-	async #checkActualDependencies(curPkg, nextPkg) {
+	async #decide(curPkg, nextPkg) {
 		try {
 			assert.deepEqual(curPkg.dependencies, nextPkg.dependencies);
 			for (const [mod, spec] of Object.entries(nextPkg.dependencies)) {
@@ -41,10 +40,10 @@ module.exports = class Installer {
 				);
 				if (semver.satisfies(modPkg.version, spec)) throw new Error();
 			}
-			return true;
+			return false;
 		} catch {
 			// needs install
-			return false;
+			return true;
 		}
 	}
 
@@ -56,12 +55,12 @@ module.exports = class Installer {
 		obj.directories ??= [];
 		obj.elements ??= [];
 		obj.dependencies ??= {};
+		obj.versions ??= {};
 		return obj;
 	}
 
 	async #install(site, pkg) {
 		pkg.name = site.id;
-		site.data.versions = {};
 		await prepareDir(pkg);
 		console.info("install", pkg.name, pkg.dependencies);
 		const baseEnv = {
@@ -129,26 +128,25 @@ module.exports = class Installer {
 				throw err;
 			}
 		});
-		return pkg;
-	}
-
-	async #config(site, pkg, mod) {
-		const { id } = site;
-		const moduleDir = Path.join(pkg.dir, 'node_modules', mod);
-		Log.install("Module directory", mod, moduleDir);
-		if (moduleDir == null) {
-			throw new Error(`${site.id} has a missing module ${mod}`);
-		}
-		const meta = await this.#getPkg(moduleDir);
-		if (meta.postinstall) {
-			const result = await postinstall.process(pkg.postinstall, {
-				cwd: moduleDir,
+		for (const mod of Object.keys(pkg.dependencies)) {
+			const modDir = Path.join(pkg.dir, 'node_modules', mod);
+			const modPkg = await readPkg(Path.join(modDir, 'package.json'));
+			if (!modPkg.postinstall) continue;
+			const result = await postinstall.process(modPkg.postinstall, {
+				cwd: modDir,
 				allow: [
 					'link'
 				]
 			});
 			if (result) Log.install(result);
 		}
+		return pkg;
+	}
+
+	async #config(site, pkg, mod) {
+		const { id } = site;
+		const moduleDir = Path.join(pkg.dir, 'node_modules', mod);
+		const meta = await this.#getPkg(moduleDir);
 		const pbConf = meta.pageboard;
 		if (!pbConf) {
 			throw new HttpError.BadRequest(`site dependency ${mod} must declare at least package.json#pageboard.version`);
@@ -156,7 +154,7 @@ module.exports = class Installer {
 		if (!semver.satisfies(this.app.version, pbConf.version)) {
 			throw new HttpError.BadRequest(`Server ${this.app.version} is not compatible with module ${mod} which has support for server ${pbConf.version}`);
 		}
-		site.data.versions[meta.name] = meta.version;
+		pkg.versions[meta.name] = meta.version;
 		const dstDir = Path.join('/', '@site', mod);
 		let directories = pbConf.directories || [];
 		if (!Array.isArray(directories)) directories = [directories];
@@ -243,7 +241,7 @@ async function writePkg(pkg) {
 	await fs.writeFile(pkg.path, JSON.stringify({
 		"private": true,
 		name: pkg.name,
-		dependencies: pkg.dependencies || {}
+		dependencies: pkg.dependencies
 	}, null, ' '));
 	return pkg;
 }

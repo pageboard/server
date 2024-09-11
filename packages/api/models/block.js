@@ -228,7 +228,7 @@ class Block extends Model {
 
 	static initSite(block, pkg) {
 		const {
-			eltsMap, groups, tag,
+			eltsMap, groups, tag, versions,
 			standalones, textblocks, hashtargets
 		} = pkg;
 		if (!block.id) {
@@ -290,7 +290,8 @@ class Block extends Model {
 				hrefs,
 				tag,
 				dir: pkg.dir,
-				migrations: {}
+				migrations: {},
+				versions
 			};
 
 			get $pkg() {
