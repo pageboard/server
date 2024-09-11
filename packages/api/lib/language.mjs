@@ -1,6 +1,7 @@
 export const language = {
 	title: 'Language',
 	description: 'Global constants',
+	standalone: true,
 	unique: ['lang'],
 	properties: {
 		lang: {
@@ -28,6 +29,7 @@ export const language = {
 
 export const content = {
 	title: 'Content',
+	standalone: true,
 	properties: {
 		name: {
 			title: 'Name',
