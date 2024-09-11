@@ -1,5 +1,3 @@
-const Path = require('node:path');
-
 module.exports = class AiModule {
 	static name = 'ai';
 

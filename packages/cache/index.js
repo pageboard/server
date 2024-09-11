@@ -39,7 +39,7 @@ module.exports = class CacheModule {
 			this.data = JSON.parse(
 				await fs.readFile(this.metafile)
 			);
-		} catch (err) {
+		} catch {
 			console.error("Cannot read", this.metafile);
 		} finally {
 			if (!this.data) this.data = {};

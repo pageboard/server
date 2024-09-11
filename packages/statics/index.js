@@ -150,14 +150,14 @@ module.exports = class StaticsModule {
 			await fs.stat(buildPath);
 			try {
 				await fs.stat(outPath);
-			} catch (err) {
+			} catch {
 				await Promise.all([
 					fs.copyFile(buildPath, outPath),
 					local ? null : fs.copyFile(buildPath + '.map', outPath + '.map').catch(() => { })
 				]);
 			}
 			return outList;
-		} catch (err) {
+		} catch {
 			// pass
 		}
 		const inList = [];
@@ -246,7 +246,7 @@ async function mountDirectory(base, src, dst) {
 	await fs.mkdir(Path.dirname(absDst), { recursive: true });
 	try {
 		await fs.unlink(absDst);
-	} catch (err) {
+	} catch {
 		// pass
 	}
 	return fs.symlink(src, absDst);

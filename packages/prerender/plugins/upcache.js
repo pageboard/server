@@ -7,7 +7,7 @@ module.exports = function upcachePlugin(page, settings, req, res) {
 			if (locks) for (const str of locks.split(',')) lockSet.add(str.trim());
 			const tags = await response.headerValue('X-Upcache-Tag');
 			if (tags) for (const str of tags.split(',')) tagSet.add(str.trim());
-		} catch (ex) {
+		} catch {
 			// pass
 		}
 	});

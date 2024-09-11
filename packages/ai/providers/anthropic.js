@@ -28,7 +28,7 @@ class AiModule {
 		}
 		try {
 			return JSON.parse('{' + content[0].text).response;
-		} catch (err) {
+		} catch {
 			console.error(response);
 			throw new HttpError.InternalServerError("Bad AI answer");
 		}

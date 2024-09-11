@@ -91,7 +91,7 @@ module.exports = class AuthModule {
 		try {
 			const buf = await fs.readFile(keysPath);
 			keys = JSON.parse(buf.toString());
-		} catch (err) {
+		} catch {
 			keys = await generateKeyPair('rsa', {
 				modulusLength: 4096,
 				publicKeyEncoding: {
@@ -202,7 +202,7 @@ module.exports = class AuthModule {
 				}
 				grants[grant.const] = n;
 			});
-		} catch (ex) {
+		} catch {
 			console.warn("no settings.data.grants found");
 		}
 		return grants;

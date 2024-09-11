@@ -145,7 +145,7 @@ module.exports = class LinksService {
 								url: item.data.url
 							}});
 							exists = true;
-						} catch (e) {
+						} catch {
 							exists = false;
 						}
 						if (exists) throw new HttpError.Conflict(`Same url: ${item.data.url}`);

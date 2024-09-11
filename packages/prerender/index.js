@@ -74,7 +74,7 @@ module.exports = class PrerenderModule {
 			}
 			ret.schema = site.$schema(ext);
 			return ret;
-		} catch (ex) {
+		} catch {
 			return {};
 		}
 	}

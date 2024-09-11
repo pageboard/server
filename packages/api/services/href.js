@@ -170,7 +170,7 @@ module.exports = class HrefService {
 	async add(req, data) {
 		try {
 			return await req.run('href.find', data);
-		} catch(err) {
+		} catch {
 			const href = await this.#add(req, data);
 			return { href };
 		}

@@ -33,7 +33,7 @@ class AiModule {
 		const { content } = choices[0].message ?? {};
 		try {
 			return JSON.parse(content).response;
-		} catch (err) {
+		} catch {
 			console.error(response);
 			throw new HttpError.InternalServerError("Bad AI answer");
 		}

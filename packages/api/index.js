@@ -96,7 +96,7 @@ module.exports = class ApiModule {
 		try {
 			this.validation.validate(req, data);
 			return true;
-		} catch (err) {
+		} catch {
 			return false;
 		}
 	}

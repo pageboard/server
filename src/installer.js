@@ -250,7 +250,7 @@ async function readPkg(path) {
 	try {
 		const buf = await fs.readFile(path);
 		return JSON.parse(buf);
-	} catch (err) {
+	} catch {
 		return {};
 	}
 }
