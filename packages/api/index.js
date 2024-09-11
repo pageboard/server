@@ -1,8 +1,6 @@
 const { transaction, fn: fun, val, ref, raw } = require('@kapouer/objection');
 const Path = require('node:path');
 
-const jsonPath = require.lazy('@kapouer/path');
-
 const Packager = require.lazy('./lib/packager');
 const Validation = require('./lib/validation');
 
@@ -222,16 +220,6 @@ module.exports = class ApiModule {
 				} else if (hadRead && !schema.$action) {
 					console.warn(method, "had read transaction without $action");
 				}
-			}
-		}
-	}
-
-	$filter(req, schema, block) {
-		if (schema.upgrade) for (const [src, dst] of Object.entries(schema.upgrade)) {
-			const val = jsonPath.get(block, src);
-			if (val !== undefined) {
-				jsonPath.set(block, dst, val);
-				jsonPath.unSet(block, src);
 			}
 		}
 	}
