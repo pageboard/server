@@ -289,7 +289,8 @@ class Block extends Model {
 				hashtargets: Array.from(hashtargets),
 				hrefs,
 				tag,
-				dir: pkg.dir
+				dir: pkg.dir,
+				migrations: {}
 			};
 
 			get $pkg() {

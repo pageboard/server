@@ -237,6 +237,13 @@ module.exports = class Packager {
 
 		// strip elements
 		for (const el of Object.values(eltsMap)) {
+			if (el.migrations) {
+				for (const [key, list] of Object.entries(el.migrations)) {
+					$pkg.migrations[key] ??= {};
+					$pkg.migrations[key][el.name] = list;
+				}
+				delete el.migrations;
+			}
 			if ($pkg.bundles.has(el.name)) continue;
 			delete el.scripts;
 			delete el.stylesheets;

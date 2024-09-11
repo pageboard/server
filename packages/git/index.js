@@ -1,4 +1,3 @@
-const semver = require.lazy('semver');
 const xHubSignature = require.lazy('x-hub-signature');
 
 module.exports = class GitModule {
@@ -46,7 +45,7 @@ module.exports = class GitModule {
 			}]
 		};
 		try {
-			const changed = await req.run('git.decide', getRefs(payload));
+			const changed = await req.run('git.decide', getRefs(site.data.dependencies, payload));
 			if (!changed) return;
 			await req.run('site.save', site.data);
 			await this.app.cache.install(site);
@@ -73,6 +72,7 @@ module.exports = class GitModule {
 		// site.data.version: commit-ish
 		const { site } = req;
 		const version = site.data.version;
+		/*
 		const prev = parseRefs(site.data.module);
 
 		if (!prev.url || data.url !== prev.url) {
@@ -110,6 +110,7 @@ module.exports = class GitModule {
 				site.data.version = data.commit;
 			}
 		}
+		*/
 		if (version != site.data.version) {
 			return true;
 		} else {
@@ -149,7 +150,7 @@ module.exports = class GitModule {
 	};
 };
 
-function getRefs(pay) {
+function getRefs(dependencies, pay) {
 	if (!pay.ref && !pay.head_commit || pay.deleted) return;
 	const { groups: {
 		tag
@@ -157,15 +158,20 @@ function getRefs(pay) {
 	const { groups: {
 		branch
 	} } = /refs\/heads\/(?<branch>.+)/.exec(pay.base_ref || pay.ref) ?? { groups: {} };
+	// TODO
+	// find a value in the list of dependencies[key].semver that matches a github repository with that full_name
+	// check that the branch matches the semver value, if the semver value has a #branch
+	// semver is expected to be github:org/name#branch
+	// Ignore tags. A hook on a branch means we want deployment, that's all.
 	const obj = {
 		url: pay.repository.full_name,
-		version: tag ? semver.clean(tag) : undefined,
+		version: tag,
 		branch,
 		commit: pay.head_commit.id
 	};
 	return obj;
 }
-
+/*
 function parseRefs(str) {
 	if (!str) return {};
 	const [url, spec] = str.split('#');
@@ -181,3 +187,4 @@ function parseRefs(str) {
 	}
 	return obj;
 }
+*/

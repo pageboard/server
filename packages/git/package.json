@@ -16,7 +16,6 @@
     "url": "https://github.com/pageboard/server/issues"
   },
   "dependencies": {
-    "semver": "7.6.3",
     "x-hub-signature": "^2.1.2"
   },
   "homepage": "https://github.com/pageboard/server#readme"

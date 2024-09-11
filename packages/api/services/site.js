@@ -1,4 +1,5 @@
 const { mergeRecursiveObject } = require('../../../src/utils');
+const semver = require.lazy('semver');
 
 module.exports = class SiteService {
 	static name = 'site';
@@ -178,11 +179,12 @@ module.exports = class SiteService {
 			await req.run('translate.fill', { id: oldSite.id, lang: dst });
 		}
 
-		if (data.version == "HEAD") data.version = null;
+		const oldVersions = mergeRecursiveObject({}, oldSite.data.versions);
 
 		mergeRecursiveObject(oldSite.data, data);
 
 		const site = await this.app.install(oldSite);
+		await this.migrate(req, oldVersions, oldSite.data.versions);
 		await oldSite.$query(req.trx).patchObject({
 			type: site.type,
 			data: site.data
@@ -199,6 +201,14 @@ module.exports = class SiteService {
 		$ref: "/elements#/definitions/site/properties/data",
 		$global: false
 	};
+
+	async migrate(req, oldVersions, newVersions) {
+		const { migrations } = req.site.$pkg;
+		for (const [name, oldVersion] of Object.entries(oldVersions)) {
+			const version = newVersions[name] ?? oldVersion;
+			if (version == oldVersion) continue;
+		}
+	}
 
 	all({ trx, Block }, { text }) {
 		const q = Block.query(trx).where('type', 'site').columns();

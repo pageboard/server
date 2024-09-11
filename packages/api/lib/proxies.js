@@ -1,4 +1,5 @@
 const { join } = require('node:path');
+const { types: { isProxy } } = require('node:util');
 
 class MapProxy {
 	constructor(context) {
@@ -28,6 +29,41 @@ class MapProxy {
 			return false;
 		}
 		return Reflect.set(obj, key, val);
+	}
+}
+
+class ArrayProxy {
+	constructor(context) {
+		this.context = context;
+	}
+	set(arr, key, val) {
+		if (key >= arr.length || key == "length" && val == arr.length) {
+			return Reflect.set(arr, key, val);
+		}
+		console.warn("Cannot set ArrayProxy", arr, this.context, key);
+		return false;
+	}
+	get(arr, key) {
+		if (['push'].includes(key)) return Reflect.get(arr, key);
+		else return false;
+	}
+}
+
+class MapArrayProxy {
+	constructor(context) {
+		this.context = context;
+	}
+	set(obj, key, val) {
+		console.warn("Cannot set MapArrayProxy", this.context, key);
+		return false;
+	}
+	get(obj, key) {
+		let val = Reflect.get(obj, key);
+		if (!isProxy(val)) {
+			val = new Proxy(val ?? [], new ArrayProxy(this.context));
+			Reflect.set(obj, key, val);
+		}
+		return val;
 	}
 }
 
@@ -71,14 +107,18 @@ class EltProxy {
 	}
 	get(elt, key) {
 		let val = Reflect.get(elt, key);
-		if (["scripts", "stylesheets", "polyfills", "fragments"].includes(key)) {
-			if (val == null) {
+		if (val == null) {
+			if (["scripts", "stylesheets", "polyfills", "fragments"].includes(key)) {
 				val = [];
 				Reflect.set(elt, key, val);
-			}
-		} else if (["resources", "properties", "csp", "filters", "intl"].includes(key)) {
-			if (val == null) {
+			} else if (["resources", "properties", "csp", "filters", "intl"].includes(key)) {
 				val = {};
+				Reflect.set(elt, key, val);
+			}
+		}
+		if (key == "migrations") {
+			if (!isProxy(val)) {
+				val = new Proxy(val ?? {}, new MapArrayProxy(this.context));
 				Reflect.set(elt, key, val);
 			}
 		}

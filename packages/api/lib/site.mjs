@@ -18,19 +18,21 @@ export const site = {
 				format: 'hostname'
 			}
 		},
-		module: {
-			title: 'Module name',
-			description: 'npm name, or git url',
-			nullable: true,
-			type: "string",
-			format: "singleline"
+		dependencies: {
+			title: 'Dependencies',
+			type: 'object',
+			additionalProperties: {
+				type: 'string',
+				format: 'singleline'
+			}
 		},
-		version: {
-			title: 'Module version',
-			description: 'Semantic version or git tag or commit',
-			nullable: true,
-			type: "string",
-			format: "singleline" // a "version" format ?
+		versions: {
+			title: 'Versions',
+			type: 'object',
+			additionalProperties: {
+				type: 'string',
+				format: 'singleline'
+			}
 		},
 		server: {
 			title: 'Server version',
