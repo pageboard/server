@@ -47,7 +47,7 @@ module.exports = class Pageboard {
 
 	static defaults = {
 		name: pkgApp.name,
-		version: pkgApp.version.split('.').slice(0, 2).join('.'),
+		version: pkgApp.version,
 		upstream: null,
 		verbose: false,
 		installer: {
