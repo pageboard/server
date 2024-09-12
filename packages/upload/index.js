@@ -1,12 +1,11 @@
-const { promisify } = require('node:util');
 const Path = require('node:path');
 const { promises: fs, createWriteStream } = require('node:fs');
 const { pipeline } = require('node:stream/promises');
-const randomBytes = promisify(require('node:crypto').pseudoRandomBytes);
 const busboy = require.lazy('busboy');
 const mime = require.lazy('mime-types');
 const speaking = require.lazy('speakingurl');
 const { Deferred } = require.lazy('class-deferred');
+const utils = require.lazy('../../src/utils');
 
 module.exports = class UploadModule {
 	static name = 'upload';
@@ -81,8 +80,7 @@ module.exports = class UploadModule {
 				truncate: 128,
 				symbols: false
 			});
-			const ranb = (await randomBytes(6)).toString('base64url')
-				.replaceAll(/[_-]/g, 'x');
+			const ranb = utils.hash(Date.now());
 			const filePath = Path.join(dir, `${basename}-${ranb}${ext}`);
 			try {
 				await pipeline(

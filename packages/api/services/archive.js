@@ -1,7 +1,7 @@
 const Path = require('node:path');
 const { createReadStream, createWriteStream, promises: fs } = require('node:fs');
 const { pipeline } = require('node:stream/promises');
-const { createHash } = require('node:crypto');
+const utils = require.lazy('../../../src/utils');
 const ndjson = require.lazy('ndjson');
 const Upgrader = require.lazy('../upgrades');
 const Archiver = require.lazy('archiver');
@@ -33,25 +33,23 @@ module.exports = class ArchiveService {
 
 		const lastUpdate = Math.max(...items.map(item => item.updated_at));
 		const archivePath = await archiveWrap(req, async archive => {
-			const hash = createHash('sha1');
+			const buf = [];
 			const json = JSON.stringify(data.hrefs ? { hrefs, items } : items);
-			if (!data.version) hash.update(json);
+			if (!data.version) buf.push(json);
 			archive.append(json, {
 				name: 'export.json',
 				date: lastUpdate
 			});
 			const list = Object.entries(hrefs).map(
 				([url, { mime }]) => {
-					if (!data.version) hash.update(url);
+					if (!data.version) buf.push(url);
 					return { url, mime };
 				}
 			);
 
 			counts.hrefs += list.length;
 			await this.#archiveFiles(req, archive, list, counts, data.size);
-			return [data.name, data.version ?? hash.digest('base64url')
-				.replaceAll(/[_-]/g, 'x')
-				.slice(0, 8)].join('-');
+			return [data.name, data.version ?? utils.hash(buf)].join('-');
 		});
 		counts.file = this.app.statics.pathToUrl(req, archivePath);
 		return counts;

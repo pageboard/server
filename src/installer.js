@@ -4,7 +4,7 @@ const exec = promisify(require('node:child_process').exec);
 const postinstall = require.lazy('postinstall');
 const { promises: fs } = require('node:fs');
 const assert = require('node:assert/strict');
-const { exists } = require('./utils');
+const utils = require.lazy('./utils');
 const semver = require('semver');
 
 module.exports = class Installer {
@@ -221,7 +221,7 @@ module.exports = class Installer {
 	}
 
 	async clean(site, pkg) {
-		if (!await exists(pkg.dir)) return; // fail safe
+		if (!await utils.exists(pkg.dir)) return; // fail safe
 		const rootSite = this.app.statics.dir({ site }, '@site');
 		const curDir = Path.join(rootSite, 'cur');
 		await fs.rm(curDir, { recursive: true, force: true });

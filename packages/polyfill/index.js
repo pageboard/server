@@ -2,6 +2,7 @@ const { join } = require('node:path');
 const crypto = require.lazy('node:crypto');
 const polyfills = require.lazy('@kapouer/polyfill-library');
 const toposort = require.lazy('toposort');
+const utils = require.lazy('../../src/utils');
 
 module.exports = class PolyfillModule {
 	static priority = -1;
@@ -115,13 +116,10 @@ module.exports = class PolyfillModule {
 		if (inputs.length == 0) {
 			return;
 		}
-		const hash = crypto.createHash('sha1');
-		hash.update(features.join('!'));
 
 		const [output] = await this.app.statics.bundle(req.site, {
 			inputs,
-			output: 'polyfill-' + hash.digest('base64url')
-				.replaceAll(/[_-]/g, 'x') + '.js',
+			output: 'polyfill-' + utils.hash(features.join('!')) + '.js',
 			local: true,
 			sourceMap: false,
 			force: true

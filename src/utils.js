@@ -2,6 +2,7 @@ const dget = require.lazy('dlv');
 const getSlug = require.lazy('speakingurl');
 const mergeWith = require.lazy('lodash.mergewith');
 const { access } = require('node:fs/promises');
+const { hash } = require('node:crypto');
 
 let sharedMd;
 
@@ -57,6 +58,11 @@ exports.init = async () => {
 
 exports.dget = dget;
 exports.dset = dset;
+
+exports.hash = str => {
+	if (Array.isArray(str)) str = str.join('');
+	return hash('sha256', str, 'base64url').replaceAll(/[_-]/g, 'x').slice(0, 8);
+};
 
 exports.mergeRecursive = (...args) => {
 	return mergeWith(...args, (dst, src) => {
