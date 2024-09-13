@@ -230,6 +230,26 @@ module.exports = class Installer {
 		const curDir = Path.join(parentDir, 'current');
 		await fs.rm(curDir, { force: true });
 		await fs.symlink(pkg.version, curDir);
+
+		try {
+			const paths = await fs.readdir(parentDir);
+			const stats = await Promise.all(paths.map(async item => {
+				const path = Path.join(parentDir, item);
+				const stat = await fs.stat(path);
+				return { stat, path };
+			}));
+			stats.sort((a, b) => {
+				if (a.path == pkg.dir) return -1;
+				if (a.stat.mtimeMs > b.stat.mtimeMs) return -1;
+				if (a.stat.mtimeMs == b.stat.mtimeMs) return 0;
+				if (a.stat.mtimeMs < b.stat.mtimeMs) return 1;
+			});
+			await Promise.all(stats.slice(3).map(obj => {
+				return fs.rm(obj.path, { recursive: true });
+			}));
+		} catch (err) {
+			console.error(err);
+		}
 		return pkg;
 	}
 

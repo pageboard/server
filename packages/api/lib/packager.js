@@ -1,6 +1,6 @@
 const Path = require('node:path');
 const toSource = require.lazy('tosource');
-const { EltProxy, MapProxy } = require('./proxies');
+const { createEltProxy, MapProxy } = require('./proxies');
 
 const fs = require('node:fs/promises');
 const { types: { isProxy } } = require('node:util');
@@ -49,11 +49,13 @@ module.exports = class Packager {
 		const bundleMap = pkg.bundleMap = new Map();
 		const elts = structuredClone(this.app.elements);
 		const names = Object.keys(elts);
+		const context = {};
 		for (const eltObj of elements) {
 			const { path } = eltObj;
 			const buf = await fs.readFile(path);
-			const mount = getMountPath(path, id, directories);
-			loadFromFile(buf, elts, names, { mount, path });
+			context.mount = getMountPath(path, directories);
+			context.path = path;
+			loadFromFile(buf, elts, names, context);
 		}
 		const eltsMap = {};
 		const groups = {};
@@ -447,13 +449,12 @@ function sortElements(elements, prop) {
 	return res;
 }
 
-function getMountPath(eltPath, id, directories) {
+function getMountPath(eltPath, directories) {
 	const mount = directories.find(mount => {
 		return eltPath.startsWith(mount.from);
 	});
 	if (!mount) return;
-	const basePath = id ? mount.to.replace(id + "/", "") : mount.to;
-	const eltPathname = Path.join(basePath, eltPath.substring(mount.from.length));
+	const eltPathname = Path.join(mount.to, eltPath.substring(mount.from.length));
 	return Path.dirname(eltPathname);
 }
 
@@ -470,23 +471,15 @@ function loadFromFile(buf, elts, names, context) {
 	});
 
 	for (const [name, elt] of Object.entries(elts)) {
-		if (isProxy(elt)) continue;
-		elt.name = name;
-		elt.scripts ??= [];
-		elt.stylesheets ??= [];
-		elt.resources ??= {};
-		elt.polyfills ??= [];
-		elt.fragments ??= [];
-		elt.resources ??= {};
-		elt.properties ??= {};
-		elt.csp ??= {};
-		elt.filters ??= {};
 		names.push(name);
-		Object.defineProperty(elts, name, {
-			value: new Proxy(elt, new EltProxy(name, context)),
-			writable: false,
-			enumerable: false,
-			configurable: false
-		});
+		if (!isProxy(elt)) {
+			context.name = name;
+			Object.defineProperty(elts, name, {
+				value: createEltProxy(elt, context),
+				writable: false,
+				enumerable: false,
+				configurable: false
+			});
+		}
 	}
 }

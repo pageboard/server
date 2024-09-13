@@ -95,8 +95,8 @@ class AbsoluteProxy {
 }
 
 class EltProxy {
-	constructor(name, context) {
-		this.name = name;
+	constructor(context) {
+		this.name = context.name;
 		this.context = context;
 	}
 	set(elt, key, val) {
@@ -104,23 +104,7 @@ class EltProxy {
 		return false;
 	}
 	get(elt, key) {
-		let val = Reflect.get(elt, key);
-		if (["scripts", "stylesheets", "resources"].includes(key)) {
-			if (!isProxy(val)) {
-				val = new Proxy(
-					absolutePaths(val, this.context),
-					new AbsoluteProxy(this.context)
-				);
-				Reflect.set(elt, key, val);
-			}
-		}
-		if (key == "migrations") {
-			if (!isProxy(val)) {
-				val = new Proxy(val ?? {}, new MapArrayProxy(this.context));
-				Reflect.set(elt, key, val);
-			}
-		}
-		return val;
+		return Reflect.get(elt, key);
 	}
 }
 
@@ -148,6 +132,31 @@ function absolutePaths(list, context) {
 	else return arr.filter(x => Boolean(x));
 }
 
+function createEltProxy(elt, context) {
+	elt.scripts = new Proxy(
+		absolutePaths(elt.scripts ?? [], context),
+		new AbsoluteProxy(context)
+	);
+	elt.stylesheets = new Proxy(
+		absolutePaths(elt.stylesheets ?? [], context),
+		new AbsoluteProxy(context)
+	);
+	elt.resources = new Proxy(
+		absolutePaths(elt.resources ?? {}, context),
+		new AbsoluteProxy(context)
+	);
+	elt.migrations = new Proxy(
+		elt.migrations ?? {},
+		new MapArrayProxy(context)
+	);
+	elt.polyfills ??= [];
+	elt.fragments ??= [];
+	elt.properties ??= {};
+	elt.csp ??= {};
+	elt.filters ??= {};
+	return new Proxy(elt, new EltProxy(context));
+}
+
 Object.assign(exports, {
-	EltProxy, MapProxy
+	createEltProxy, MapProxy
 });
