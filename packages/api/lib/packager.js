@@ -3,6 +3,7 @@ const toSource = require.lazy('tosource');
 const { EltProxy, MapProxy } = require('./proxies');
 
 const fs = require('node:fs/promises');
+const { types: { isProxy } } = require('node:util');
 const vm = require.lazy('node:vm');
 const translateJSON = require.lazy('./translate');
 
@@ -48,13 +49,11 @@ module.exports = class Packager {
 		const bundleMap = pkg.bundleMap = new Map();
 		const elts = structuredClone(this.app.elements);
 		const names = Object.keys(elts);
-		const context = {};
 		for (const eltObj of elements) {
 			const { path } = eltObj;
 			const buf = await fs.readFile(path);
 			const mount = getMountPath(path, id, directories);
-			Object.assign(context, { mount, path });
-			loadFromFile(buf, elts, names, context);
+			loadFromFile(buf, elts, names, { mount, path });
 		}
 		const eltsMap = {};
 		const groups = {};
@@ -471,6 +470,8 @@ function loadFromFile(buf, elts, names, context) {
 	});
 
 	for (const [name, elt] of Object.entries(elts)) {
+		if (isProxy(elt)) continue;
+		elt.name = name;
 		elt.scripts ??= [];
 		elt.stylesheets ??= [];
 		elt.resources ??= {};
