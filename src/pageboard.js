@@ -306,10 +306,6 @@ module.exports = class Pageboard {
 	async #initDirs(dirs) {
 		for (const [key, dir] of Object.entries(dirs)) {
 			Log.core("init dir", dir);
-			if (key == "tmp") {
-				// clean up pageboard tmp dir
-				await fs.rm(dir, { recursive: true, force: true });
-			}
 			await fs.mkdir(dir, { recursive: true });
 		}
 	}
