@@ -20,7 +20,7 @@ module.exports = class Installer {
 		const curPkg = await this.#getPkg(Path.join(siteDir, 'current'));
 		if (curPkg.version) curPkg.dir = Path.join(siteDir, curPkg.version);
 		curPkg.current = true;
-		const nextPkg = this.#decide(curPkg.versions, site.data.dependencies) ?
+		const nextPkg = await this.#decide(curPkg.versions, site.data.dependencies) ?
 			await this.#install(site) : curPkg;
 		await Promise.all(Object.keys(nextPkg.dependencies).map(
 			mod => this.#config(site, nextPkg, mod)
@@ -28,17 +28,21 @@ module.exports = class Installer {
 		return nextPkg;
 	}
 
-	#decide(versions = {}, dependencies = {}) {
+	async #decide(versions = {}, dependencies = {}) {
 		try {
 			assert.deepEqual(
 				Object.keys(versions),
 				Object.keys(dependencies)
 			);
 			for (const [mod, spec] of Object.entries(dependencies)) {
-				// TODO support spec starting with link:// and absolute path
-			for (const [mod, spec] of Object.entries(nextPkg.dependencies)) {
-				if (!semver.satisfies(curPkg.versions[mod], spec)) throw new Error();
-				if (!semver.satisfies(versions[mod], spec)) throw new Error();
+				if (spec.startsWith('link://')) {
+					const modPkg = await readPkg(
+						Path.join(spec.substring(7), 'package.json')
+					);
+					if (modPkg.version != versions[mod]) throw new Error();
+				} else if (!semver.satisfies(versions[mod], spec)) {
+					throw new Error();
+				}
 			}
 			return false;
 		} catch {
