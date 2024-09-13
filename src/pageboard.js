@@ -383,7 +383,7 @@ module.exports = class Pageboard {
 			// build js, css, and compile schema validators
 			await this.api.makeBundles(site, pkg);
 			await this.auth.install(site);
-			if (this.dev == false) await this.#installer.clean(site, pkg);
+			await this.#installer.clean(site, pkg);
 			site.data.server = this.version;
 			this.domains.release(site);
 			await this.cache.install(site);

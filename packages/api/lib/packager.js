@@ -316,13 +316,12 @@ module.exports = class Packager {
 
 	async #bundleSource(site, { prefix, assign, name, source, dry }) {
 		if (prefix?.startsWith('ext-')) return;
-		const tag = site.data.version ?? site.$pkg.tag;
-		if (tag == null) return;
+		const { version } = site.$pkg;
 		const filename = [prefix, assign, name].filter(Boolean).join('-') + '.js';
-		const sourceUrl = `/@site/${tag}/${filename}`;
+		const sourceUrl = `/@site/${version}/${filename}`;
 		const sourcePath = this.app.statics.urlToPath(
 			{ site },
-			`/@site/${tag}/${filename}`
+			`/@site/${version}/${filename}`
 		);
 		if (source) {
 			if (typeof source == "object") {
@@ -466,31 +465,27 @@ function loadFromFile(buf, elts, names, context) {
 	const sandbox = {
 		exports: new Proxy(elts, new MapProxy(context))
 	};
-	// let's keep compatibility for now
-	sandbox.Pageboard = {
-		elements: sandbox.exports
-	};
 	script.runInNewContext(sandbox, {
 		filename: context.path,
 		timeout: 1000
 	});
 
-	for (const name in elts) {
-		let elt = elts[name];
-		if (!elt) {
-			console.warn("element", name, "is not defined at", context.path);
-			continue;
-		}
+	for (const [name, elt] of Object.entries(elts)) {
+		elt.scripts ??= [];
+		elt.stylesheets ??= [];
+		elt.resources ??= {};
+		elt.polyfills ??= [];
+		elt.fragments ??= [];
+		elt.resources ??= {};
+		elt.properties ??= {};
+		elt.csp ??= {};
+		elt.filters ??= {};
 		names.push(name);
-		elt = new Proxy(elt, new EltProxy(name, context));
 		Object.defineProperty(elts, name, {
-			value: elt,
+			value: new Proxy(elt, new EltProxy(name, context)),
 			writable: false,
 			enumerable: false,
 			configurable: false
 		});
-		elt.scripts = elt.scripts || [];
-		elt.stylesheets = elt.stylesheets || [];
-		elt.resources = elt.resources || {};
 	}
 }

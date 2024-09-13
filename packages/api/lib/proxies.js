@@ -85,8 +85,8 @@ class AbsoluteProxy {
 	get(arr, key) {
 		if (['push', 'unshift'].includes(key)) {
 			const { context } = this;
-			return function () {
-				const args = absolutePaths(Array.from(arguments), context);
+			return function (...list) {
+				const args = absolutePaths(list, context);
 				return Array.prototype[key].apply(arr, args);
 			};
 		}
@@ -100,19 +100,17 @@ class EltProxy {
 		this.context = context;
 	}
 	set(elt, key, val) {
-		if (key == "scripts" || key == "stylesheets" || key == "resources") {
-			val = new Proxy(absolutePaths(val, this.context), new AbsoluteProxy(this.context));
-		}
-		return Reflect.set(elt, key, val);
+		console.warn("Cannot set", key, "of", elt.name);
+		return false;
 	}
 	get(elt, key) {
 		let val = Reflect.get(elt, key);
-		if (val == null) {
-			if (["scripts", "stylesheets", "polyfills", "fragments"].includes(key)) {
-				val = [];
-				Reflect.set(elt, key, val);
-			} else if (["resources", "properties", "csp", "filters", "intl"].includes(key)) {
-				val = {};
+		if (["scripts", "stylesheets", "resources"].includes(key)) {
+			if (!isProxy(val)) {
+				val = new Proxy(
+					absolutePaths(val, this.context),
+					new AbsoluteProxy(this.context)
+				);
 				Reflect.set(elt, key, val);
 			}
 		}
@@ -151,5 +149,5 @@ function absolutePaths(list, context) {
 }
 
 Object.assign(exports, {
-	AbsoluteProxy, EltProxy, MapProxy
+	EltProxy, MapProxy
 });

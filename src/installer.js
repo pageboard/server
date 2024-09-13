@@ -17,13 +17,22 @@ module.exports = class Installer {
 
 	async install(site) {
 		const siteDir = this.app.statics.dir({ site }, '@site');
-		const nextDir = Path.join(siteDir, 'passive');
+		const nextDir = Path.join(siteDir, 'next');
 		await fs.rm(nextDir, { recursive: true, force: true });
-		const curPkg = await this.#getPkg(Path.join(siteDir, 'active'));
-		const nextPkg = await this.#getPkg(nextDir);
+		const curPkg = await this.#getPkg(Path.join(siteDir, 'current'));
+		curPkg.current = true;
+		let nextPkg = await this.#getPkg(nextDir);
 		nextPkg.dependencies = site.data.dependencies ?? {};
-		if (await this.#decide(curPkg, nextPkg)) {
+		if (this.#decide(curPkg, nextPkg)) {
 			await this.#install(site, nextPkg);
+			const versionDir = Path.join(siteDir, nextPkg.version);
+			await fs.mv(nextPkg.dir, versionDir);
+			await fs.symlink("next", versionDir);
+			nextPkg.dir = versionDir;
+		} else {
+			nextPkg = curPkg;
+			const versionDir = Path.join(siteDir, nextPkg.version);
+			nextPkg.dir = versionDir;
 		}
 		await Promise.all(Object.keys(nextPkg.dependencies).map(
 			mod => this.#config(site, nextPkg, mod)
@@ -31,14 +40,14 @@ module.exports = class Installer {
 		return nextPkg;
 	}
 
-	async #decide(curPkg, nextPkg) {
+	#decide(curPkg, nextPkg) {
 		try {
-			assert.deepEqual(curPkg.dependencies, nextPkg.dependencies);
+			assert.deepEqual(
+				Object.keys(curPkg.dependencies),
+				Object.keys(nextPkg.dependencies)
+			);
 			for (const [mod, spec] of Object.entries(nextPkg.dependencies)) {
-				const modPkg = await readPkg(
-					Path.join(curPkg.dir, 'node_modules', mod, 'package.json')
-				);
-				if (semver.satisfies(modPkg.version, spec)) throw new Error();
+				if (!semver.satisfies(curPkg.versions[mod], spec)) throw new Error();
 			}
 			return false;
 		} catch {
@@ -131,6 +140,7 @@ module.exports = class Installer {
 		for (const mod of Object.keys(pkg.dependencies)) {
 			const modDir = Path.join(pkg.dir, 'node_modules', mod);
 			const modPkg = await readPkg(Path.join(modDir, 'package.json'));
+			pkg.versions[mod] = modPkg.version;
 			if (!modPkg.postinstall) continue;
 			const result = await postinstall.process(modPkg.postinstall, {
 				cwd: modDir,
@@ -140,6 +150,8 @@ module.exports = class Installer {
 			});
 			if (result) Log.install(result);
 		}
+		pkg.version = utils.hash(JSON.stringify(pkg.versions));
+		await writePkg(pkg);
 		return pkg;
 	}
 
@@ -155,7 +167,7 @@ module.exports = class Installer {
 			throw new HttpError.BadRequest(`Server ${this.app.version} is not compatible with module ${mod} which has support for server ${pbConf.version}`);
 		}
 		pkg.versions[meta.name] = meta.version;
-		const dstDir = Path.join('/', '@site', mod);
+		const dstDir = Path.join('/', '@site', mod, meta.version);
 		let directories = pbConf.directories || [];
 		if (!Array.isArray(directories)) directories = [directories];
 		Log.install("processing directories from", moduleDir, directories);
@@ -221,11 +233,11 @@ module.exports = class Installer {
 	}
 
 	async clean(site, pkg) {
-		if (!await utils.exists(pkg.dir)) return; // fail safe
+		if (pkg.current || !await utils.exists(pkg.dir)) return; // fail safe
 		const rootSite = this.app.statics.dir({ site }, '@site');
-		const curDir = Path.join(rootSite, 'cur');
+		const curDir = Path.join(rootSite, 'current');
 		await fs.rm(curDir, { recursive: true, force: true });
-		await fs.mv(Path.join(rootSite, pkg.dir), curDir);
+		await fs.symlink(pkg.dir, 'current');
 		return pkg;
 	}
 };
@@ -241,7 +253,9 @@ async function writePkg(pkg) {
 	await fs.writeFile(pkg.path, JSON.stringify({
 		"private": true,
 		name: pkg.name,
-		dependencies: pkg.dependencies
+		dependencies: pkg.dependencies,
+		versions: pkg.versions,
+		version: pkg.version
 	}, null, ' '));
 	return pkg;
 }
@@ -254,3 +268,4 @@ async function readPkg(path) {
 		return {};
 	}
 }
+

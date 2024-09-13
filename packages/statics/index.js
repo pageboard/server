@@ -113,7 +113,7 @@ module.exports = class StaticsModule {
 			staging: ".max",
 			dev: ""
 		}[site.data.env] || (force ? ".max" : "");
-		const { dir } = site.$pkg;
+		const { version, dir } = site.$pkg;
 		if (!suffix || !dir || !site.$url) {
 			return inputs;
 		}
@@ -134,7 +134,6 @@ module.exports = class StaticsModule {
 		const buildPath = Path.join(buildDir, buildFile);
 
 		const outList = [];
-		const version = site.data.version ?? site.$pkg.tag;
 		const outUrl = `/@site/${version}/${buildFile}`;
 		const sitesDir = this.dir({ site }, '@site');
 		const outPath = Path.join(sitesDir, version, buildFile);
@@ -145,7 +144,7 @@ module.exports = class StaticsModule {
 
 		await fs.mkdir(buildDir, { recursive: true });
 
-		if (site.data.version) try {
+		try {
 			// not in branch mode, files are already built, use them
 			await fs.stat(buildPath);
 			try {
