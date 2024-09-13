@@ -201,10 +201,9 @@ module.exports = class StaticsModule {
 		if (!site.$url) return;
 		const siteDir = this.dir({ site }, '@site');
 		await fs.mkdir(siteDir, { recursive: true });
-		const baseDir = Path.join(siteDir, "..");
 		if (directories) for (const mount of directories) {
 			try {
-				await mountDirectory(baseDir, mount.from, mount.to);
+				await mountDirectory(siteDir, mount.from, this.urlToPath({ site }, mount.to));
 			} catch (err) {
 				console.error("Cannot mount", mount.from, mount.to, err);
 			}
@@ -234,19 +233,18 @@ module.exports = class StaticsModule {
 };
 
 async function mountDirectory(base, src, dst) {
-	const absDst = Path.resolve(Path.join(base, "..", dst));
-	if (absDst.startsWith(base) == false) {
+	if (dst.startsWith(base) == false) {
 		console.error("Cannot mount outside runtime", dst);
 		return;
 	}
 
-	Log.statics(`Mount ${src} to ${absDst}`);
+	Log.statics(`Mount ${src} to ${dst}`);
 
-	await fs.mkdir(Path.dirname(absDst), { recursive: true });
+	await fs.mkdir(Path.dirname(dst), { recursive: true });
 	try {
-		await fs.unlink(absDst);
+		await fs.unlink(dst);
 	} catch {
 		// pass
 	}
-	return fs.symlink(src, absDst);
+	await fs.symlink(src, dst);
 }

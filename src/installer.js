@@ -17,37 +17,28 @@ module.exports = class Installer {
 
 	async install(site) {
 		const siteDir = this.app.statics.dir({ site }, '@site');
-		const nextDir = Path.join(siteDir, 'next');
-		await fs.rm(nextDir, { recursive: true, force: true });
 		const curPkg = await this.#getPkg(Path.join(siteDir, 'current'));
+		if (curPkg.version) curPkg.dir = Path.join(siteDir, curPkg.version);
 		curPkg.current = true;
-		let nextPkg = await this.#getPkg(nextDir);
-		nextPkg.dependencies = site.data.dependencies ?? {};
-		if (this.#decide(curPkg, nextPkg)) {
-			await this.#install(site, nextPkg);
-			const versionDir = Path.join(siteDir, nextPkg.version);
-			await fs.mv(nextPkg.dir, versionDir);
-			await fs.symlink("next", versionDir);
-			nextPkg.dir = versionDir;
-		} else {
-			nextPkg = curPkg;
-			const versionDir = Path.join(siteDir, nextPkg.version);
-			nextPkg.dir = versionDir;
-		}
+		const nextPkg = this.#decide(curPkg.versions, site.data.dependencies) ?
+			await this.#install(site) : curPkg;
 		await Promise.all(Object.keys(nextPkg.dependencies).map(
 			mod => this.#config(site, nextPkg, mod)
 		));
 		return nextPkg;
 	}
 
-	#decide(curPkg, nextPkg) {
+	#decide(versions = {}, dependencies = {}) {
 		try {
 			assert.deepEqual(
-				Object.keys(curPkg.dependencies),
-				Object.keys(nextPkg.dependencies)
+				Object.keys(versions),
+				Object.keys(dependencies)
 			);
+			for (const [mod, spec] of Object.entries(dependencies)) {
+				// TODO support spec starting with link:// and absolute path
 			for (const [mod, spec] of Object.entries(nextPkg.dependencies)) {
 				if (!semver.satisfies(curPkg.versions[mod], spec)) throw new Error();
+				if (!semver.satisfies(versions[mod], spec)) throw new Error();
 			}
 			return false;
 		} catch {
@@ -68,10 +59,15 @@ module.exports = class Installer {
 		return obj;
 	}
 
-	async #install(site, pkg) {
+	async #install(site) {
+		const siteDir = this.app.statics.dir({ site }, '@site');
+		const { dependencies = {} } = site.data;
+		const version = utils.hash(JSON.stringify(dependencies));
+		const pkg = await this.#getPkg(Path.join(siteDir, version));
+		pkg.dependencies = dependencies;
 		pkg.name = site.id;
 		await prepareDir(pkg);
-		console.info("install", pkg.name, pkg.dependencies);
+		Log.install(pkg);
 		const baseEnv = {
 			npm_config_userconfig: ''
 		};
@@ -152,6 +148,11 @@ module.exports = class Installer {
 		}
 		pkg.version = utils.hash(JSON.stringify(pkg.versions));
 		await writePkg(pkg);
+
+		const versionDir = Path.join(siteDir, pkg.version);
+		await fs.rm(versionDir, { recursive: true, force: true });
+		await fs.mv(pkg.dir, versionDir);
+		pkg.dir = versionDir;
 		return pkg;
 	}
 
@@ -167,7 +168,8 @@ module.exports = class Installer {
 			throw new HttpError.BadRequest(`Server ${this.app.version} is not compatible with module ${mod} which has support for server ${pbConf.version}`);
 		}
 		pkg.versions[meta.name] = meta.version;
-		const dstDir = Path.join('/', '@site', mod, meta.version);
+		const dstDir = Path.join('/', '@site', pkg.version, mod);
+		// FIXME dstDir /@site/pkg.version/mod
 		let directories = pbConf.directories || [];
 		if (!Array.isArray(directories)) directories = [directories];
 		Log.install("processing directories from", moduleDir, directories);
@@ -218,6 +220,15 @@ module.exports = class Installer {
 		}));
 	}
 
+	async clean(site, pkg) {
+		if (pkg.current || !await utils.exists(pkg.dir)) return; // fail safe
+		const parentDir = Path.dirname(pkg.dir);
+		const curDir = Path.join(parentDir, 'current');
+		await fs.rm(curDir, { force: true });
+		await fs.symlink(pkg.version, curDir);
+		return pkg;
+	}
+
 	async #listDir(id, dirPath) {
 		try {
 			const stat = await fs.stat(dirPath);
@@ -230,15 +241,6 @@ module.exports = class Installer {
 			console.warn("In site", id, err);
 			return [];
 		}
-	}
-
-	async clean(site, pkg) {
-		if (pkg.current || !await utils.exists(pkg.dir)) return; // fail safe
-		const rootSite = this.app.statics.dir({ site }, '@site');
-		const curDir = Path.join(rootSite, 'current');
-		await fs.rm(curDir, { recursive: true, force: true });
-		await fs.symlink(pkg.dir, 'current');
-		return pkg;
 	}
 };
 
