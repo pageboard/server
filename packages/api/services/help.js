@@ -1,4 +1,4 @@
-const jsonDoc = require.lazy('../lib/json-doc');
+const jsonDoc = require('../lib/json-doc');
 
 module.exports = class HelpService {
 	static name = 'help';

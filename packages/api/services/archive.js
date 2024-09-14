@@ -1,10 +1,10 @@
 const Path = require('node:path');
 const { createReadStream, createWriteStream, promises: fs } = require('node:fs');
 const { pipeline } = require('node:stream/promises');
-const utils = require.lazy('../../../src/utils');
-const ndjson = require.lazy('ndjson');
-const Upgrader = require.lazy('../upgrades');
-const Archiver = require.lazy('archiver');
+const utils = require('../../../src/utils');
+const ndjson = require('ndjson');
+const Upgrader = require('../upgrades');
+const Archiver = require('archiver');
 
 module.exports = class ArchiveService {
 	static name = 'archive';

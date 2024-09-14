@@ -1,11 +1,11 @@
 const Path = require('node:path');
-const toSource = require.lazy('tosource');
+const toSource = require('tosource');
 const { createEltProxy, MapProxy } = require('./proxies');
 
 const fs = require('node:fs/promises');
 const { types: { isProxy } } = require('node:util');
-const vm = require.lazy('node:vm');
-const translateJSON = require.lazy('./translate');
+const vm = require('node:vm');
+const translateJSON = require('./translate');
 
 /*
 An element has these properties:

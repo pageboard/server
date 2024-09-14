@@ -1,5 +1,5 @@
 const { mergeRecursiveObject } = require('../../../src/utils');
-const semver = require.lazy('semver');
+const semver = require('semver');
 
 module.exports = class SiteService {
 	static name = 'site';

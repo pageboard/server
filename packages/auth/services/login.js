@@ -1,5 +1,5 @@
-const otp = require.lazy('otplib');
-const qrcode = require.lazy('qrcode');
+const otp = require('otplib');
+const qrcode = require('qrcode');
 
 module.exports = class LoginModule {
 	static name = 'login';

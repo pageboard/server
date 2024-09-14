@@ -1,7 +1,7 @@
-const NodeMailer = require.lazy('nodemailer');
-const AddressParser = require.lazy('addressparser');
+const NodeMailer = require('nodemailer');
+const AddressParser = require('addressparser');
 const Transports = {
-	postmark: require.lazy('nodemailer-postmark-transport')
+	postmark: require('nodemailer-postmark-transport')
 };
 const Mailers = {};
 

@@ -1,11 +1,11 @@
 const Path = require('node:path');
 const { promises: fs, createWriteStream } = require('node:fs');
 const { pipeline } = require('node:stream/promises');
-const busboy = require.lazy('busboy');
-const mime = require.lazy('mime-types');
-const speaking = require.lazy('speakingurl');
-const { Deferred } = require.lazy('class-deferred');
-const utils = require.lazy('../../src/utils');
+const busboy = require('busboy');
+const mime = require('mime-types');
+const speaking = require('speakingurl');
+const { Deferred } = require('class-deferred');
+const utils = require('../../src/utils');
 
 module.exports = class UploadModule {
 	static name = 'upload';

@@ -1,32 +1,28 @@
 require('./polyfills');
-const importLazy = require('import-lazy');
-Object.getPrototypeOf(require).lazy = function(str) {
-	return importLazy(this)(str);
-};
-
-const util = require('node:util');
-const Path = require('node:path');
-const express = require.lazy('express');
-const bodyParser = require.lazy('body-parser');
-const morgan = require.lazy('morgan');
-const pad = require.lazy('pad');
-const http = require.lazy('node:http');
-const { promises: fs, readFileSync, createWriteStream } = require('node:fs');
-const { once } = require.lazy('node:events');
-const xdg = require('xdg-basedir');
-const toml = require('toml');
-
-util.inspect.defaultOptions.depth = 10;
-
-const cli = require.lazy('./cli');
-const Domains = require.lazy('./domains');
-const { mergeRecursive, init: initUtils, unflatten } = require('./utils');
-const Installer = require('./installer');
 
 // exceptional but so natural
 global.HttpError = require('http-errors');
 global.Text = require('outdent');
 global.Log = require('./log')('pageboard');
+
+const util = require('node:util');
+const Path = require('node:path');
+const express = require('express');
+const bodyParser = require('body-parser');
+const morgan = require('morgan');
+const pad = require('pad');
+const http = require('node:http');
+const { promises: fs, readFileSync, createWriteStream } = require('node:fs');
+const events = require('node:events');
+const xdg = require('xdg-basedir');
+const toml = require('toml');
+
+util.inspect.defaultOptions.depth = 10;
+
+const cli = require('./cli');
+const Domains = require('./domains');
+const { mergeRecursive, init: initUtils, unflatten } = require('./utils');
+const Installer = require('./installer');
 
 const pkgApp = JSON.parse(
 	readFileSync(Path.join(__dirname, '..', 'package.json'))
@@ -399,7 +395,7 @@ module.exports = class Pageboard {
 		const server = http.createServer(this.#server);
 		server.listen(this.opts.server.port);
 		this.#server.stop = () => server[Symbol.asyncDispose]();
-		await once(server, 'listening');
+		await events.once(server, 'listening');
 		console.info(`port:\t${this.opts.server.port}`);
 	}
 

@@ -1,7 +1,7 @@
-const { promises: dns, setDefaultResultOrder } = require.lazy('node:dns');
-const { performance } = require.lazy('node:perf_hooks');
-const { Deferred } = require.lazy('class-deferred');
-const Queue = require.lazy('./express-queue');
+const { promises: dns, setDefaultResultOrder } = require('node:dns');
+const { performance } = require('node:perf_hooks');
+const { Deferred } = require('class-deferred');
+const Queue = require('./express-queue');
 const OnHeaders = require('on-headers');
 
 // const localhost4 = "127.0.0.1";

@@ -1,10 +1,10 @@
 const Path = require('node:path');
 const { promisify } = require('node:util');
 const exec = promisify(require('node:child_process').exec);
-const postinstall = require.lazy('postinstall');
+const postinstall = require('postinstall');
 const { promises: fs } = require('node:fs');
 const assert = require('node:assert/strict');
-const utils = require.lazy('./utils');
+const utils = require('./utils');
 const semver = require('semver');
 
 module.exports = class Installer {

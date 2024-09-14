@@ -1,4 +1,4 @@
-const xHubSignature = require.lazy('x-hub-signature');
+const xHubSignature = require('x-hub-signature');
 
 module.exports = class GitModule {
 	static name = 'git';

@@ -1,8 +1,8 @@
 const { join } = require('node:path');
-const crypto = require.lazy('node:crypto');
-const polyfills = require.lazy('@kapouer/polyfill-library');
-const toposort = require.lazy('toposort');
-const utils = require.lazy('../../src/utils');
+const crypto = require('node:crypto');
+const polyfills = require('@kapouer/polyfill-library');
+const toposort = require('toposort');
+const utils = require('../../src/utils');
 
 module.exports = class PolyfillModule {
 	static priority = -1;

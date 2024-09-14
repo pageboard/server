@@ -1,7 +1,7 @@
 const { transaction, fn: fun, val, ref, raw } = require('@kapouer/objection');
 const Path = require('node:path');
 
-const Packager = require.lazy('./lib/packager');
+const Packager = require('./lib/packager');
 const Validation = require('./lib/validation');
 
 const Href = require('./models/href');

@@ -5,10 +5,10 @@ const {
 } = require('node:fs');
 const { pipeline } = require('node:stream/promises');
 const Path = require('node:path');
-const { glob } = require.lazy('glob');
-const bwipjs = require.lazy('bwip-js');
+const { glob } = require('glob');
+const bwipjs = require('bwip-js');
 
-const DatauriParser = require.lazy('datauri/parser');
+const DatauriParser = require('datauri/parser');
 const allowedParameters = {
 	rs: true,
 	ex: true,

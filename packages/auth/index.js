@@ -1,4 +1,4 @@
-const Upcache = require.lazy('upcache');
+const Upcache = require('upcache');
 const Path = require('node:path');
 const { promises: fs } = require('node:fs');
 const { promisify } = require('node:util');

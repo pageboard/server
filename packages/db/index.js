@@ -1,9 +1,9 @@
 const Path = require('node:path');
 const { promisify } = require('node:util');
 const exec = promisify(require('node:child_process').execFile);
-const schedule = require.lazy("node-schedule");
-const knex = require.lazy('knex');
-const pg = require.lazy('pg');
+const schedule = require("node-schedule");
+const knex = require('knex');
+const pg = require('pg');
 
 const tenants = new Map();
 
