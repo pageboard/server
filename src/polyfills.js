@@ -16,7 +16,7 @@ if (!RegExp.escape) {
 	};
 }
 
-const fs = require('fs/promises');
+const fs = require('node:fs/promises');
 
 fs.mv ??= async function (oldPath, newPath) {
 	try {
