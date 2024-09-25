@@ -122,7 +122,7 @@ module.exports = class Domains {
 				return this.#resolvableHost(site.$url.hostname, host);
 			});
 			host.queue.push(() => {
-				return app.install(site);
+				return app.install.domain(req, site);
 			});
 		}
 		const isPost = req.method == "POST";

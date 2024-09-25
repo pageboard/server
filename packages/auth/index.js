@@ -119,7 +119,7 @@ module.exports = class AuthModule {
 		return keys;
 	}
 
-	install(site) {
+	install(req, site) {
 		site.$pkg.grants = this.#grantsLevels(site);
 	}
 

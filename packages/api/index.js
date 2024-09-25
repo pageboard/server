@@ -1,7 +1,5 @@
 const { transaction, fn: fun, val, ref, raw } = require('@kapouer/objection');
 const Path = require('node:path');
-
-const Packager = require('./lib/packager');
 const Validation = require('./lib/validation');
 
 const Href = require('./models/href');
@@ -14,11 +12,10 @@ module.exports = class ApiModule {
 	static name = 'api';
 	static priority = -1;
 	static plugins = [
-		'help', 'user', 'site', 'archive', 'settings', 'page', 'links',
+		'help', 'user', 'site', 'install', 'archive', 'settings', 'page', 'links',
 		'block', 'href', 'reservation', 'translate', 'redirect', 'apis'
 	].map(name => Path.join(__dirname, 'services', name));
 
-	#packager;
 	#validation;
 	#responseFilter = new ResponseFilter();
 
@@ -79,17 +76,6 @@ module.exports = class ApiModule {
 		app.get("/@api", req => ({
 			location: "/.well-known/api"
 		}));
-	}
-
-	async install(block, pkg) {
-		if (!this.#packager) this.#packager = new Packager(this.app, Block);
-		const site = await this.#packager.run(block, pkg);
-		return site;
-	}
-
-	async makeBundles(site, pkg) {
-		await this.#packager.makeSchemas(site, pkg);
-		return this.#packager.makeBundles(site, pkg);
 	}
 
 	check(req, data) {

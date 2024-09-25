@@ -1,19 +1,8 @@
 module.exports = class Upgrader {
-	constructor({ site, from, to, idMap }) {
+	constructor({ site, idMap }) {
 		this.idMap = Object.isEmpty(idMap) ? null : idMap;
 		this.DomainBlock = site?.$modelClass;
 		this.reverseMap = {};
-		console.info("trying import from", from, "to", to);
-		if (from && to) {
-			try {
-				this.module = require(`./from-${from}-to-${to}`);
-				console.warn("found import", from, "to", to);
-			} catch (ex) {
-				if (ex.code != "MODULE_NOT_FOUND") {
-					throw ex;
-				}
-			}
-		}
 	}
 	beforeEach(block) {
 		const id = this.idMap?.[block.id];
@@ -33,7 +22,6 @@ module.exports = class Upgrader {
 				if (mid != null) arr[i] = mid;
 			});
 		}
-		block = this.upgrade(block, parent);
 		const schema = this.DomainBlock.schema(block.type);
 		if (schema == null) {
 			console.warn("Unknown type", block.type, block.id);
@@ -51,19 +39,6 @@ module.exports = class Upgrader {
 			);
 		}
 		this.afterEach(block);
-		return block;
-	}
-	upgrade(block, parent) {
-		const mod = this.module;
-		if (!mod) return block;
-		block.content ??= {};
-		block.data ??= {};
-		if (mod.any) {
-			block = mod.any.call(this, block) ?? block;
-		}
-		if (mod[block.type]) {
-			block = mod[block.type].call(this, block, parent) ?? block;
-		}
 		return block;
 	}
 	afterEach(block) {

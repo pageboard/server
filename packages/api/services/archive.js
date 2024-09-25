@@ -297,14 +297,9 @@ module.exports = class ArchiveService {
 		const list = [];
 		const beforeEachStandalone = obj => {
 			if (obj.type == "site" || list.length == 0) {
-				const toVersion = site.data.server;
-				const fromVersion = obj.type == "site" && obj.data?.server || toVersion;
-
 				upgrader = new Upgrader({
 					site,
-					idMap,
-					from: fromVersion,
-					to: toVersion
+					idMap
 				});
 			} else if (!obj.id) {
 				return obj;

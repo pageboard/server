@@ -59,7 +59,7 @@ module.exports = class CacheModule {
 		}, 5000);
 	}
 
-	install(site) {
+	install(req, site) {
 		if (site?.$url?.protocol == "http:") {
 			// didn't go through a proxy
 			return;

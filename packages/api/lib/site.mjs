@@ -26,6 +26,14 @@ export const site = {
 				format: 'singleline'
 			}
 		},
+		versions: {
+			title: 'Versions',
+			type: 'object',
+			additionalProperties: {
+				type: 'string',
+				format: 'version'
+			}
+		},
 		server: {
 			title: 'Server version',
 			nullable: true,

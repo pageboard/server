@@ -68,9 +68,6 @@ class MapArrayProxy {
 }
 
 class AbsoluteProxy {
-	static create(context) {
-		return new this(context);
-	}
 	constructor(context) {
 		this.context = context;
 	}
@@ -95,16 +92,56 @@ class AbsoluteProxy {
 }
 
 class EltProxy {
-	constructor(context) {
+	constructor(elt, context) {
 		this.name = context.name;
 		this.context = context;
+		elt.scripts = absolutePaths(elt.scripts, context);
+		elt.stylesheets = absolutePaths(elt.stylesheets, context);
+		elt.resources = absolutePaths(elt.resources, context);
 	}
 	set(elt, key, val) {
 		console.warn("Cannot set", key, "of", elt.name);
 		return false;
 	}
 	get(elt, key) {
-		return Reflect.get(elt, key);
+		// the first time get is called is not the "right" time here
+		let val = Reflect.get(elt, key);
+		if (["scripts", "stylesheets"].includes(key)) {
+			if (!isProxy(val)) {
+				val = new Proxy(
+					val ?? [],
+					new AbsoluteProxy(this.context)
+				);
+				Reflect.set(elt, key, val);
+			}
+		} else if (key == "resources") {
+			if (!isProxy(val)) {
+				val = new Proxy(
+					val ?? {},
+					new AbsoluteProxy(this.context)
+				);
+				Reflect.set(elt, key, val);
+			}
+		} else if (key == "migrations") {
+			if (!isProxy(val)) {
+				val = new Proxy(
+					val ?? {},
+					new MapArrayProxy(this.context)
+				);
+				Reflect.set(elt, key, val);
+			}
+		} else if (["polyfills", "fragments"].includes(key)) {
+			if (!val) {
+				val = [];
+				Reflect.set(elt, key, val);
+			}
+		} else if (["properties", "csp", "filters"].includes(key)) {
+			if (!val) {
+				val = {};
+				Reflect.set(elt, key, val);
+			}
+		}
+		return val;
 	}
 }
 
@@ -133,28 +170,7 @@ function absolutePaths(list, context) {
 }
 
 function createEltProxy(elt, context) {
-	elt.scripts = new Proxy(
-		absolutePaths(elt.scripts ?? [], context),
-		new AbsoluteProxy(context)
-	);
-	elt.stylesheets = new Proxy(
-		absolutePaths(elt.stylesheets ?? [], context),
-		new AbsoluteProxy(context)
-	);
-	elt.resources = new Proxy(
-		absolutePaths(elt.resources ?? {}, context),
-		new AbsoluteProxy(context)
-	);
-	elt.migrations = new Proxy(
-		elt.migrations ?? {},
-		new MapArrayProxy(context)
-	);
-	elt.polyfills ??= [];
-	elt.fragments ??= [];
-	elt.properties ??= {};
-	elt.csp ??= {};
-	elt.filters ??= {};
-	return new Proxy(elt, new EltProxy(context));
+	return new Proxy(elt, new EltProxy(elt, context));
 }
 
 Object.assign(exports, {

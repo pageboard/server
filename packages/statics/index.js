@@ -197,7 +197,7 @@ module.exports = class StaticsModule {
 		return outList;
 	}
 
-	async install(site, { directories } = {}) {
+	async install({ site }, { directories } = {}) {
 		if (!site.$url) return;
 		const siteDir = this.dir({ site }, '@site');
 		await fs.mkdir(siteDir, { recursive: true });

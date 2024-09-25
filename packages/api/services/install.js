@@ -1,18 +1,27 @@
 const Path = require('node:path');
-const toSource = require('tosource');
-const { createEltProxy, MapProxy } = require('./proxies');
-
-const fs = require('node:fs/promises');
+const { promisify } = require('node:util');
+const exec = promisify(require('node:child_process').exec);
 const { types: { isProxy } } = require('node:util');
 const vm = require('node:vm');
-const translateJSON = require('./translate');
+const { promises: fs } = require('node:fs');
+const assert = require('node:assert/strict');
+
+const semver = require('semver');
+const toSource = require('tosource');
+const postinstall = require('postinstall');
+
+const Block = require('../models/block');
+const utils = require('../../../src/utils');
+const { createEltProxy, MapProxy } = require('../lib/proxies');
+const translateJSON = require('../lib/translate');
 
 /*
-An element has these properties:
-
+Description of element properties used by installer
+---------------------------------------------------
 - name: the type of the block
 - group: elements are grouped by content identifiers. An element can contain a group of elements (in the contents specifiers). A bundle contain all elements of all groups that are contained in the root element.
-- bundle: if true, indicates that an element is the root of a bundle - in which case that bundle carries its name. If a string, indicates in which bundle an element must be included, this is needed when an element is not part of any content.
+- bundle: if true, indicates that an element is the root of a bundle - in which case that bundle carries its name. If a string, indicates in which bundle an element must be included, this is needed when an element is not in any group or content
+Parsed elements have their bundle property filled to the resolved bundle.
 - standalone: if true, indicates that all instances of an element are independent in the site. They can have multiple parents, or none (except the site itself). These elements are usually fetched by queries. Those instances won't be garbage-collected.
 - standalone block: this is different, it tells that a specific instance of an element can be shared amongst multiple parents. These blocks are usually embedded in the content of a standalone element (e.g. a page). Those blocks can be garbage-collected, if they happen to have no parents for a while.
 
@@ -25,17 +34,379 @@ and can be rendered at that url. In consequence they are eligible to being part
 of the site map. Pages are usually also bundles, and the sitemap bundles the elements in the page group too.
 */
 
-module.exports = class Packager {
-	constructor(app, Block) {
+module.exports = class InstallService {
+	static name = 'install';
+	static $global = true;
+
+	constructor(app, opts) {
 		this.app = app;
-		this.Block = Block;
+		this.opts = opts;
 	}
-	async run(site, pkg = {}) {
+
+	async site(req) {
+		const siteDir = this.app.statics.dir(req, '@site');
+		const curPkg = await this.#getPkg(Path.join(siteDir, 'current'));
+		if (curPkg.version) curPkg.dir = Path.join(siteDir, curPkg.version);
+		curPkg.current = true;
+		const nextPkg = await this.#decide(req, curPkg.dependencies)
+			? await this.#install(req) : curPkg;
+		await Promise.all(Object.keys(nextPkg.dependencies).map(
+			mod => this.#config(req, nextPkg, mod)
+		));
+		return nextPkg;
+	}
+
+	async domain(req, site) {
+		this.app.domains.hold(site);
+		try {
+			req.site = site;
+			const pkg = await this.site(req);
+			site = await this.pack(req, pkg);
+			await this.#migrate(req, site);
+			await req.call('auth.install', site);
+			await this.#clean(pkg);
+
+			this.app.domains.release(site);
+			await req.call('cache.install', site);
+			return site;
+		} catch (err) {
+			if (site.$url) this.app.domains.error(site, err);
+			throw err;
+		}
+	}
+	static domain = {
+		title: 'domain',
+		$private: true
+	};
+
+	async #decide(req, versions = {}) {
+		// TODO return true
+		// when site versions don't fulfill site dependencies -> upgrade then update site versions
+		// or when pkg dependencies don't *exactly* match site versions
+		const { dependencies: deps } = req.site;
+		try {
+			assert.deepEqual(
+				Object.keys(deps),
+				Object.keys(versions)
+			);
+			for (const [mod, spec] of Object.entries(deps)) {
+				if (spec.startsWith('link://')) {
+					const modPkg = await readPkg(
+						Path.join(spec.substring(7), 'package.json')
+					);
+					if (modPkg.version != versions[mod]) throw new Error();
+				} else if (URL.canParse(spec)) {
+					const modPkg = await readPkg(
+						Path.join(spec.substring(7), 'package.json')
+					);
+					console.warn(spec, modPkg);
+				} else if (!semver.satisfies(versions[mod], spec)) {
+					throw new Error();
+				}
+			}
+			return false;
+		} catch {
+			// needs install
+			return true;
+		}
+	}
+
+	async #getPkg(pkgDir) {
+		const pkgPath = Path.join(pkgDir, 'package.json');
+		const obj = await readPkg(pkgPath) ?? {};
+		obj.dir = pkgDir;
+		obj.path = pkgPath;
+		obj.directories ??= [];
+		obj.elements ??= [];
+		obj.dependencies ??= {};
+		return obj;
+	}
+
+	async #install(req) {
+		const { data } = req.site;
+		const siteDir = this.app.statics.dir(req, '@site');
+		const { dependencies = {} } = data;
+		const version = utils.hash(JSON.stringify(dependencies));
+
+		const pkg = await this.#getPkg(Path.join(siteDir, version));
+		pkg.dependencies = {};
+		for (const [mod, ver] of Object.entries(dependencies)) {
+			pkg.dependencies[mod] = ver.startsWith('link://')
+				? 'link://' + Path.resolve(this.app.cwd, ver.substring('link://'.length))
+				: ver;
+		}
+		pkg.name = req.site.id;
+		await prepareDir(pkg);
+		Log.install(pkg);
+		const baseEnv = {
+			npm_config_userconfig: ''
+		};
+		Object.entries(process.env).forEach(([key, val]) => {
+			if (
+				['HOME', 'PATH', 'LANG', 'SHELL'].includes(key) ||
+				key.startsWith('XDG_') || key.startsWith('LC_')
+			) {
+				baseEnv[key] = val;
+			}
+		});
+		if (process.env.SSH_AUTH_SOCK) {
+			// some local setup require to pass this to be able to use ssh keys
+			// for git checkouts on private repositories
+			baseEnv.SSH_AUTH_SOCK = process.env.SSH_AUTH_SOCK;
+		}
+		const { bin, timeout } = this.opts;
+		let args;
+		if (bin == "yarn" || bin == 'yarnpkg') {
+			args = [
+				'install',
+				'--ignore-scripts',
+				'--non-interactive',
+				'--ignore-optional',
+				'--no-progress'
+			];
+		} else if (bin == 'npm') {
+			args = [
+				'install',
+				'--ignore-scripts',
+				'--omit=optional',
+				'--omit=dev',
+				'--no-progress',
+				'--no-audit'
+			];
+		} else if (bin == "pnpm") {
+			args = [
+				'install',
+				'--ignore-scripts',
+				'--no-optional',
+				'--prod',
+				// '--reporter=silent', // https://github.com/pnpm/pnpm/issues/2738
+				'--reporter=append-only'
+			];
+		} else {
+			throw new Error("Unknown installer.bin option, expected pnpm, yarn, npm", bin);
+		}
+		const command = `${bin} ${args.join(' ')}`;
+
+		await exec(command, {
+			cwd: pkg.dir,
+			env: baseEnv,
+			shell: false,
+			timeout
+		}).catch(err => {
+			// FIXME after failure, won't process new requests / see domain too
+			if (err.signal == "SIGTERM") err.message = "Timeout installing " + req.site.id;
+			console.error(command);
+			console.error("in", pkg.dir);
+			if (err.stderr || err.stdout) {
+				throw new Error(err.stderr || err.stdout);
+			} else {
+				throw err;
+			}
+		});
+		for (const mod of Object.keys(pkg.dependencies)) {
+			const modDir = Path.join(pkg.dir, 'node_modules', mod);
+			const modPkg = await readPkg(Path.join(modDir, 'package.json'));
+			pkg.dependencies[mod] = modPkg.version;
+			if (!modPkg.postinstall) continue;
+			const result = await postinstall.process(modPkg.postinstall, {
+				cwd: modDir,
+				allow: [
+					'link'
+				]
+			});
+			if (result) Log.install(result);
+		}
+		pkg.version = utils.hash(JSON.stringify(pkg.dependencies));
+		await writePkg(pkg);
+
+		const versionDir = Path.join(siteDir, pkg.version);
+		await fs.rm(versionDir, { recursive: true, force: true });
+		await fs.mv(pkg.dir, versionDir);
+		pkg.dir = versionDir;
+		data.versions = pkg.dependencies;
+		data.server = this.app.version;
+		return pkg;
+	}
+
+	async #config(site, pkg, mod) {
+		const { id } = site;
+		const moduleDir = Path.join(pkg.dir, 'node_modules', mod);
+		const meta = await this.#getPkg(moduleDir);
+		const pbConf = meta.pageboard;
+		if (!pbConf) {
+			throw new HttpError.BadRequest(`site dependency ${mod} must declare at least package.json#pageboard.version`);
+		}
+		if (!semver.satisfies(this.app.version, pbConf.version)) {
+			throw new HttpError.BadRequest(`Server ${this.app.version} is not compatible with module ${mod} which has support for server ${pbConf.version}`);
+		}
+		const dstDir = Path.join('/', '@site', pkg.version, mod);
+		let directories = pbConf.directories || [];
+		if (!Array.isArray(directories)) directories = [directories];
+		Log.install("processing directories from", moduleDir, directories);
+		directories.forEach(mount => {
+			if (typeof mount == "string") mount = {
+				from: mount,
+				to: mount
+			};
+			const from = Path.resolve(moduleDir, mount.from);
+			const to = Path.resolve(dstDir, mount.to);
+			if (from.startsWith(moduleDir) == false) {
+				console.warn(
+					`Warning: ${id} dependency ${mod} bad mount from: ${from}`
+				);
+			} else if (to.startsWith(dstDir) == false) {
+				console.warn(
+					`Warning: ${id} dependency ${mod} bad mount to: ${to}`
+				);
+			} else {
+				pkg.directories.push({
+					from: from,
+					to: to,
+					priority: pbConf.priority || 0
+				});
+			}
+		});
+
+		let elements = pbConf.elements || [];
+		if (!Array.isArray(elements)) elements = [elements];
+		Log.install("processing elements from", moduleDir, elements);
+		await Promise.all(elements.map(async (path) => {
+			const absPath = Path.resolve(moduleDir, path);
+			const list = await this.#listDir(id, absPath);
+			list.sort((a, b) => {
+				a = Path.basename(a, Path.extname(a));
+				b = Path.basename(b, Path.extname(b));
+				if (a == b) return 0;
+				else if (a > b) return 1;
+				else if (a < b) return -1;
+			}).map(path => Path.join(absPath, path)).forEach(path => {
+				if (path.endsWith('.js')) {
+					pkg.elements.push({
+						path,
+						priority: pbConf.priority || 0
+					});
+				}
+			});
+		}));
+	}
+
+	async #clean(pkg) {
+		if (pkg.current || !await utils.exists(pkg.dir)) return; // fail safe
+		const parentDir = Path.dirname(pkg.dir);
+		const curDir = Path.join(parentDir, 'current');
+		await fs.rm(curDir, { force: true });
+		await fs.symlink(pkg.version, curDir);
+
+		try {
+			const paths = await fs.readdir(parentDir);
+			const stats = await Promise.all(paths.map(async item => {
+				const path = Path.join(parentDir, item);
+				const stat = await fs.stat(path);
+				return { stat, path };
+			}));
+			stats.sort((a, b) => {
+				if (a.path == pkg.dir) return -1;
+				if (a.stat.mtimeMs > b.stat.mtimeMs) return -1;
+				if (a.stat.mtimeMs == b.stat.mtimeMs) return 0;
+				if (a.stat.mtimeMs < b.stat.mtimeMs) return 1;
+			});
+			await Promise.all(stats.slice(3).map(obj => {
+				return fs.rm(obj.path, { recursive: true });
+			}));
+		} catch (err) {
+			console.error(err);
+		}
+		return pkg;
+	}
+
+	async #listDir(id, dirPath) {
+		try {
+			const stat = await fs.stat(dirPath);
+			if (stat.isDirectory()) {
+				return await fs.readdir(dirPath);
+			} else {
+				return [dirPath];
+			}
+		} catch (err) {
+			console.warn("In site", id, err);
+			return [];
+		}
+	}
+
+	async #migrate(req, site) {
+		const { migrations } = site.$pkg;
+		const { versions } = req.site.data;
+		// FIXME dependencies might be with link://path
+		// what we need here is the installed
+		// comparison between current pkg.dependencies and the ones that just got installed
+		const oldVersion = semver.minVersion(req.site.data.server);
+		for (const [mod, ver] of Object.entries(site.data.versions)) {
+			const old = versions ? versions[mod] : oldVersion;
+			if (!old || old == ver) continue;
+			const migs = semver.sort(Object.keys(migrations).filter(
+				mig => {
+					mig = semver.coerce(mig);
+					return semver.lt(old, mig) && semver.gte(mig, ver);
+				}
+			));
+			console.log(migs);
+			for (const mig of migs) {
+				for (const [type, list] of migrations[mig]) {
+					for (const unit of list) {
+						await this.#migrateUnit(req, type, unit);
+					}
+				}
+			}
+		}
+	}
+
+	async #migrateUnit({ site, trx, fun, ref }, type, unit) {
+		const q = site.$relatedQuery('children', trx)
+			.where('block.type', type);
+		const [op, path, ...params] = unit;
+		const Migrations = {
+			replace(q, col, from, to) {
+				q.patch({
+					[col]: fun(
+						'replace',
+						ref(col).castText(),
+						from,
+						to
+					).castJson()
+				});
+				q.whereNotNull(col);
+			},
+			cast(q, col, to) {
+				const refTo = {
+					float: fun('regexp_replace', ref(col).castText(), '([0-9.]*).*', '\\1').castTo('jsonb')
+				}[to];
+				if (!to) {
+					throw new HttpError.BadRequest(`Unknown type to cast to: ${to}`);
+				}
+				q.update({
+					[col]: refTo
+				});
+				q.whereNotNull(col);
+			},
+			patch(q, col, from, to) {
+				q.update({
+					[col]: to
+				});
+				q.where(col, from);
+			}
+		};
+		const unitFn = Migrations[op];
+		if (!unitFn) {
+			throw new HttpError.BadRequest(`Unknown migration operation: ${op} for type ${type}`);
+		}
+		unitFn(q, `data:${path}`, ...params);
+		return q;
+	}
+
+	async pack(req, pkg = {}) {
+		const { site } = req;
 		const { elements = [], directories = [] } = pkg;
-		const { Block } = this;
-		if (!site) console.warn("no site in packager.run");
-		const id = site ? site.id : null;
-		Log.imports("installing", id, elements, directories);
+		Log.imports("installing", site.id, elements, directories);
 		const subSort = function (a, b) {
 			if (a.path && b.path) {
 				return Path.basename(a.path).localeCompare(Path.basename(b.path));
@@ -76,6 +447,7 @@ module.exports = class Packager {
 							polyfills.add(p.replace('[$lang]', lang));
 						}
 					} else {
+						// FIXME
 						polyfills.add(p);
 					}
 				}
@@ -115,6 +487,12 @@ module.exports = class Packager {
 				rootList.add(el.bundle);
 			}
 			if (el.intl) {
+				// TODO schemas can have translatable strings,
+				// but they need to be stored in some block's content fields,
+				// instead of hard-coded in an immutable schema bundle.
+				// Another type of content should be built to hold schema strings
+				// schema: { data: /* the schema */}
+				// content: { jspath to data fields: "translatable content" }
 				const lang = site.data.languages?.[0];
 				if (lang) {
 					const i8dict = el.intl[lang];
@@ -136,16 +514,22 @@ module.exports = class Packager {
 			eltsMap, groups, aliases, bundles,
 			standalones, textblocks, hashtargets, polyfills
 		});
-		return Block.initSite(site, pkg);
+		// mount paths
+		await req.call('statics.install', pkg);
+		// build js, css, and compile schema validators
+		const ret = Block.initSite(site, pkg);
+		await this.#makeSchemas(ret, pkg);
+		await this.#makeBundles(ret, pkg);
+		return ret;
 	}
 
-	async makeSchemas(site, pkg) {
+	async #makeSchemas(site, pkg) {
 		const mclass = site.$modelClass;
 		const validator = mclass.getValidator();
 		await validator.prepare(mclass, pkg);
 	}
 
-	async makeBundles(site, pkg) {
+	async #makeBundles(site, pkg) {
 		const { $pkg } = site;
 		$pkg.aliases = pkg.aliases;
 		const { eltsMap } = pkg;
@@ -401,6 +785,33 @@ module.exports = class Packager {
 		return list;
 	}
 };
+
+async function prepareDir(pkg) {
+	await fs.mkdir(pkg.dir, {
+		recursive: true
+	});
+	return writePkg(pkg);
+}
+
+async function writePkg(pkg) {
+	await fs.writeFile(pkg.path, JSON.stringify({
+		"private": true,
+		name: pkg.name,
+		dependencies: pkg.dependencies,
+		version: pkg.version
+	}, null, ' '));
+	return pkg;
+}
+
+async function readPkg(path) {
+	try {
+		const buf = await fs.readFile(path);
+		return JSON.parse(buf);
+	} catch {
+		return {};
+	}
+}
+
 
 function sortPriority(list, subSort) {
 	list.sort((a, b) => {

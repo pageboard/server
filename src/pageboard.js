@@ -22,7 +22,6 @@ util.inspect.defaultOptions.depth = 10;
 const cli = require('./cli');
 const Domains = require('./domains');
 const { mergeRecursive, init: initUtils, unflatten } = require('./utils');
-const Installer = require('./installer');
 
 const pkgApp = JSON.parse(
 	readFileSync(Path.join(__dirname, '..', 'package.json'))
@@ -30,7 +29,6 @@ const pkgApp = JSON.parse(
 
 module.exports = class Pageboard {
 	#server;
-	#installer;
 	#plugins;
 	elements = {};
 	services = {};
@@ -112,7 +110,7 @@ module.exports = class Pageboard {
 		this.opts = opts;
 	}
 
-	async run(command, data, { site, grant } = {}) {
+	async run(command, data, { site: id, grant } = {}) {
 		const req = Object.setPrototypeOf({
 			headers: {},
 			params: {}
@@ -132,26 +130,26 @@ module.exports = class Pageboard {
 		req.user ??= { grants: [] };
 		req.locks ??= [];
 		if (grant) req.user.grants.push(grant);
-		if (site) {
-			let siteInst = this.domains.siteById[site];
-			if (!siteInst) {
-				siteInst = this.domains.siteById[site] = await this.install(
-					await this.api.run(req, 'site.get', {
-						id: site
-					})
+		if (id) {
+			let site = this.domains.siteById[id];
+			if (!site) {
+				site = this.domains.siteById[id] = await req.call(
+					'install.domain',
+					await req.run('site.get', { id })
 				);
-				if (siteInst.data.domains?.length > 0) {
-					siteInst.$url = new URL(`https://${siteInst.data.domains[0]}`);
+				if (site.data.domains?.length > 0) {
+					site.$url = new URL(`https://${site.data.domains[0]}`);
 				} else {
-					siteInst.$url = new URL(`https://${site}.${req.opts.domain}:${req.opts.port}`);
+					site.$url = new URL(`https://${id}.${req.opts.domain}:${req.opts.port}`);
 				}
 			}
-			req.site = siteInst;
+			req.site = site;
 		} else {
-			await this.api.install({ id: "*", data: {} });
+			req.site = { id: "*", data: {} };
+			req.site = await req.call('install.pack');
 		}
 		try {
-			return this.api.run(req, command, data);
+			return req.run(command, data);
 		} finally {
 			req.res.writeHead(); // triggers finitions
 		}
@@ -183,7 +181,6 @@ module.exports = class Pageboard {
 		const { opts } = this;
 
 		const server = this.#server = this.#createServer();
-		this.#installer = new Installer(this, opts.installer);
 
 		await initUtils();
 
@@ -365,30 +362,6 @@ module.exports = class Pageboard {
 		}
 
 		res.json(obj);
-	}
-
-	async install(block) {
-		this.domains.hold(block);
-		try {
-			// get configured pkg with paths to elements definitions
-			const pkg = await this.#installer.install(block, this);
-			// parse and normalize all elements and build site schema
-			const site = await this.api.install(block, pkg);
-			// mount paths
-			await this.statics.install(site, pkg);
-			// build js, css, and compile schema validators
-			await this.api.makeBundles(site, pkg);
-			await this.auth.install(site);
-			await this.#installer.clean(site, pkg);
-			site.data.server = this.version;
-			this.domains.release(site);
-			await this.cache.install(site);
-			return site;
-		} catch (err) {
-			if (block.url) this.domains.error(block, err);
-			if (this.dev) console.error(err);
-			throw err;
-		}
 	}
 
 	async #start() {
