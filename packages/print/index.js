@@ -20,24 +20,59 @@ module.exports = class PrintModule {
 		this.Agent = (await import('./src/agent.mjs')).BearerAgent;
 	}
 
-	async elements() {
+	async elements(elements) {
+		const properties = {};
+		elements.site.properties.printers = {
+			title: 'Printers',
+			properties
+		};
 		const list = [];
-		if (this.opts.printer) list.push({
-			const: 'printer',
-			title: 'Printer'
-		});
-		if (this.opts.offline) list.push({
-			const: 'offline',
-			title: 'Offline'
-		});
-		if (this.opts.online) list.push({
-			const: 'online',
-			title: 'Online'
-		});
-		if (this.opts.remote) list.push({
-			const: 'remote',
-			title: 'Remote'
-		});
+		if (this.opts.offline) {
+			list.push({
+				const: 'offline',
+				title: 'Offline'
+			});
+			properties.offline = {
+				title: 'Offline',
+				nullable: true,
+				type: 'string',
+				format: 'name'
+			};
+		}
+		if (this.opts.online) {
+			list.push({
+				const: 'online',
+				title: 'Online'
+			});
+			properties.online = {
+				title: 'Online',
+				nullable: true,
+				type: 'boolean',
+				default: false
+			};
+		}
+		if (this.opts.remote) {
+			list.push({
+				const: 'remote',
+				title: 'Remote'
+			});
+			properties.remote = {
+				title: 'Remote',
+				nullable: true,
+				properties: {
+					login: {
+						title: 'login',
+						type: 'string',
+						format: 'singleline'
+					},
+					password: {
+						title: 'password',
+						type: 'string',
+						format: 'singleline'
+					}
+				}
+			};
+		}
 		const { print_job } = await import('./src/print_job.mjs');
 		if (list.length > 0) print_job.properties.printer.anyOf = list;
 		else console.info("print: disabled");
@@ -201,11 +236,11 @@ module.exports = class PrintModule {
 	}
 
 	async #offlineJob(req, block) {
+		const { offline } = req.site.data.printers ?? {};
+		const { basedir } = this.opts.offline ?? {};
+		if (!offline || !basedir) throw new HttpError.BadRequest("No offline printer");
 		const { url, lang, device } = block.data;
-		const storePath = this.opts.offline?.[req.site.data.env];
-		if (!storePath) {
-			throw new HttpError.BadRequest("No offline job option");
-		}
+		const storePath = Path.join(basedir, offline);
 		const pdfUrl = req.call('page.format', {
 			url, lang, ext: 'pdf'
 		});
@@ -229,8 +264,11 @@ module.exports = class PrintModule {
 	async couriers(req, { iso_code }) {
 		const { remote: conf } = this.opts;
 		if (!conf) throw new HttpError.BadRequest("No remote printer");
-		const agent = await this.#getAuthorizedAgent(conf);
-
+		const agent = await this.#getAuthorizedAgent({
+			url: conf.url,
+			email: req.site.data.printers?.remote?.login,
+			password: req.site.data.printers?.remote?.password
+		});
 		return agent.fetch(`/data/deliveries-by-courier/${iso_code}`);
 	}
 	static couriers = {
@@ -261,7 +299,11 @@ module.exports = class PrintModule {
 	async #remoteJob(req, block) {
 		const { remote: conf } = this.opts;
 		if (!conf) throw new HttpError.BadRequest("No remote printer");
-		const agent = await this.#getAuthorizedAgent(conf);
+		const agent = await this.#getAuthorizedAgent({
+			url: conf.url,
+			email: req.site.data.printers?.remote?.login,
+			password: req.site.data.printers?.remote?.password
+		});
 
 		const { options, delivery } = block.data;
 		const obj = { agent };
@@ -298,10 +340,7 @@ module.exports = class PrintModule {
 	}
 
 	async #remoteCall(req, block, { agent, pdf, coverPdf, courier }) {
-		const orderEndpoint = this.opts.remote[req.site.data.env];
-		if (!orderEndpoint) {
-			throw new HttpError.BadRequest("No remote order end point");
-		}
+		const orderEndpoint = req.site.data.env == "production" ? "/order/create" : "/order/sandbox-create";
 		const { device, options } = block.data;
 		block.data.order = {};
 		const pdfUrl = req.call('page.format', {

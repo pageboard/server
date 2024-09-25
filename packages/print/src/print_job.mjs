@@ -32,8 +32,8 @@ export const print_job = {
 		},
 		printer: {
 			title: 'Printer',
-			description: 'Preconfigured printer type',
-			type: 'string'
+			type: 'string',
+			format: 'name'
 		},
 		device: {
 			title: 'Device',
