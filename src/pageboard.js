@@ -420,7 +420,7 @@ module.exports = class Pageboard {
 
 		if (!type) for (const plugin of this.#plugins) {
 			if (typeof plugin.elements == "function") Object.assign(
-				this.elements, await plugin.elements()
+				this.elements, await plugin.elements(this.elements)
 			);
 		}
 
