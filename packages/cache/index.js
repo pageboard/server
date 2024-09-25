@@ -68,7 +68,7 @@ module.exports = class CacheModule {
 			console.info("No url to invalidate the cache", site?.id);
 			return;
 		}
-		setTimeout(async () => {
+		(async () => {
 			const url = new URL(this.opts.wkp, site.$url);
 			const controller = new AbortController();
 			const toId = setTimeout(() => controller.abort(), 10000);
@@ -86,7 +86,7 @@ module.exports = class CacheModule {
 					console.error("cache:", err, url.href);
 				}
 			}
-		});
+		})();
 	}
 
 	mw(req) {
