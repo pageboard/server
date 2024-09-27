@@ -72,7 +72,7 @@ class AbsoluteProxy {
 		this.context = context;
 	}
 	set(arr, key, val) {
-		if (typeof key == "number" && val != null) {
+		if (val != null) {
 			val = absolutePaths(val, this.context);
 			if (val.length == 1) val = val[0];
 			else throw new Error(`Cannot set ${this.context}.${key} with ${val}`);
