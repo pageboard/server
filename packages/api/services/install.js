@@ -87,6 +87,7 @@ module.exports = class InstallService {
 	}
 	static domain = {
 		title: 'domain',
+		$action: 'write',
 		$private: true
 	};
 
@@ -94,11 +95,11 @@ module.exports = class InstallService {
 		// TODO return true
 		// when site versions don't fulfill site dependencies -> upgrade then update site versions
 		// or when pkg dependencies don't *exactly* match site versions
-		const { dependencies: deps } = req.site;
+		const { dependencies: deps } = req.site.data ?? {};
 		try {
 			assert.deepEqual(
-				Object.keys(deps),
-				Object.keys(versions)
+				Object.keys(deps).sort(),
+				Object.keys(versions).sort()
 			);
 			for (const [mod, spec] of Object.entries(deps)) {
 				if (spec.startsWith('link://')) {
