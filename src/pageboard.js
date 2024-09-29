@@ -133,7 +133,7 @@ module.exports = class Pageboard {
 		if (id) {
 			let site = this.domains.siteById[id];
 			if (!site) {
-				site = this.domains.siteById[id] = await req.call(
+				site = this.domains.siteById[id] = await req.run(
 					'install.domain',
 					await req.run('site.get', { id })
 				);
