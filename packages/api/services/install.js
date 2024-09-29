@@ -57,20 +57,31 @@ module.exports = class InstallService {
 	}
 
 	async domain(req, site) {
-		this.app.domains.hold(site);
+		const mustWait = site.$url && (site.data.env != "production" || !site.$pkg);
+		if (mustWait) this.app.domains.hold(site);
 		try {
 			req.site = site;
 			const pkg = await this.site(req);
 			site = await this.pack(req, pkg);
-			await this.#migrate(req, site);
 			await req.call('auth.install', site);
+			if (!pkg.current) {
+				await this.#migrate(req, site);
+				await site.$query(req.trx).patchObject({
+					type: site.type,
+					data: {
+						versions: site.data.versions,
+						server: site.data.server
+					}
+				});
+				pkg.current = true;
+			}
 			await this.#clean(pkg);
-
 			this.app.domains.release(site);
 			await req.call('cache.install', site);
 			return site;
 		} catch (err) {
-			if (site.$url) this.app.domains.error(site, err);
+			console.error(err);
+			if (mustWait) this.app.domains.error(site, err);
 			throw err;
 		}
 	}

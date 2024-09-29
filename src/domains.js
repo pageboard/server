@@ -1,7 +1,6 @@
 const { promises: dns, setDefaultResultOrder } = require('node:dns');
 const { performance } = require('node:perf_hooks');
 const { Deferred } = require('class-deferred');
-const Queue = require('./express-queue');
 const OnHeaders = require('on-headers');
 
 // const localhost4 = "127.0.0.1";
@@ -19,18 +18,31 @@ const [
 
 class Host {
 	tenants = {};
-	queue;
-	state;
+	#held = true;
+	#hold = new Deferred();
+	state = INIT;
 
 	constructor(id) {
 		this.id = id;
-		this.reset();
 	}
 	reset() {
 		this.state = INIT;
-		this.queue = new Queue(() => {
-			this.state = READY;
-		});
+		this.release();
+	}
+	async wait() {
+		await this.#hold;
+	}
+	hold() {
+		if (!this.#held) {
+			this.#hold = new Deferred();
+			this.#held = true;
+		}
+	}
+	release() {
+		if (this.#held) {
+			this.#held = false;
+			this.#hold.resolve();
+		}
 	}
 }
 
@@ -118,12 +130,15 @@ module.exports = class Domains {
 
 		if (host.state == INIT) {
 			host.state = BUSY;
-			host.queue.push(() => {
-				return this.#resolvableHost(site.$url.hostname, host);
-			});
-			host.queue.push(() => {
-				return app.install.domain(req, site);
-			});
+			try {
+				host.hold();
+				await this.#resolvableHost(site.$url.hostname, host);
+				await req.run('install.domain', site);
+				host.state = READY;
+				host.release();
+			} catch (err) {
+				this.error(site, err);
+			}
 		}
 		const isPost = req.method == "POST";
 		if (path == wk.status && !isPost) {
@@ -135,11 +150,10 @@ module.exports = class Domains {
 				};
 			}
 		} else {
-			await host.queue.idle();
+			await host.wait();
 			if (host.state == PARKED) {
 				throw new HttpError.ServiceUnavailable("Site is parked");
 			}
-
 			await this.#initSite(host, req, res);
 
 			const version = site.data.server || app.version;
@@ -244,7 +258,7 @@ module.exports = class Domains {
 					value: domains[0]
 				});
 				const { host } = this.#initHost(req);
-				await host.queue.idle();
+				await host.wait();
 				req.tag('data-:site');
 				res.redirect(308, site.$url.href + req.url);
 			}
@@ -354,13 +368,7 @@ module.exports = class Domains {
 	}
 
 	hold(site) {
-		if (!site.$url || site.data.env == "production" && site.$pkg) {
-			// installed site in production
-			return;
-		}
-		const host = this.hostById[site.id];
-		if (!host) return;
-		host.queue.hold();
+		this.hostById[site.id]?.hold();
 	}
 
 	release(site) {
@@ -372,8 +380,8 @@ module.exports = class Domains {
 		site.$url ??= old?.$url;
 		this.#idByDomainUpdate(site, old);
 		this.siteById[site.id] = site;
-
-		host.queue.release();
+		host.errors = [];
+		host.release();
 	}
 
 	#idByDomainUpdate(site, old) {
@@ -399,11 +407,8 @@ module.exports = class Domains {
 		}
 		if (!host.errors) host.errors = [];
 		host.errors.push(errorObject(err));
-		if (site.data.env == "production" && site.$pkg) {
-			// do nothing
-		} else {
-			host.state = PARKED;
-		}
+		host.state = PARKED;
+		host.release();
 	}
 };
 
