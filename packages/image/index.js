@@ -263,11 +263,13 @@ module.exports = class ImageModule {
 
 	async thumbnail(req, { url, height = 64 }) {
 		const size = req.call('image.guess', { height });
-		const path = await req.call('image.get', { url, size });
-		if (!path) throw new HttpError.NotFound();
+		const input = /^https?:\/\//.test(url)
+			? url
+			: await req.call('image.get', { url, size });
+		if (!input) throw new HttpError.NotFound();
 		const format = "webp";
 		const ret = await req.run('image.resize', {
-			input: path,
+			input,
 			height,
 			enlarge: true,
 			background: 'white',
@@ -286,7 +288,7 @@ module.exports = class ImageModule {
 			url: {
 				title: 'File path',
 				type: 'string',
-				format: 'pathname'
+				format: 'uri-reference'
 			}
 		}
 	};
