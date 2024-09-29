@@ -17,7 +17,7 @@ module.exports = class InspectorModule {
 	}
 
 	async request(req, urlObj) {
-		return this.Inspector.get(req, urlObj);
+		return this.Inspector.get(urlObj);
 	}
 
 	async get(req, { url }) {
