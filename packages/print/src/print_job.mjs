@@ -77,7 +77,7 @@ export const print_job = {
 			nullable :true
 		},
 		order: {
-			title: 'Order response',
+			title: 'Order',
 			$filter: 'hide',
 			type: 'object',
 			nullable: true,
@@ -94,9 +94,16 @@ export const print_job = {
 				},
 				status: {
 					title: 'Status',
-					type: 'string',
-					format: 'singleline',
-					nullable: true
+					anayOf: [{
+						title: 'Pending',
+						type: 'null'
+					}, {
+						title: 'Accepted',
+						const: 'accepted'
+					}, {
+						title: 'Rejected',
+						const: 'rejected'
+					}]
 				}
 			}
 		},
