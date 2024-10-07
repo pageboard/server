@@ -17,7 +17,7 @@ module.exports = class ApiModule {
 	static priority = -1;
 	static plugins = [
 		'help', 'user', 'site', 'archive', 'settings', 'page', 'links',
-		'block', 'href', 'reservation', 'translate', 'redirect', 'apis'
+		'block', 'href', 'reservation', 'translate', 'redirect', 'apis', 'proxy'
 	].map(name => Path.join(__dirname, 'services', name));
 
 	#packager;
@@ -81,6 +81,10 @@ module.exports = class ApiModule {
 		app.get("/@api", req => ({
 			location: "/.well-known/api"
 		}));
+		// TODO eventually all api will be dynamic
+		// and called through query.get/post
+		// several blocking points:
+		// - upload files support
 	}
 
 	async install(...args) {
