@@ -342,7 +342,7 @@ module.exports = class Pageboard {
 		if (req.user.grants.length) {
 			res.set('X-Pageboard-Grants', req.user.grants.join(','));
 		}
-		if (obj.status) {
+		if (obj.status && typeof obj.status != "string") {
 			const code = Number.parseInt(obj.status);
 			if (code < 200 || code >= 600 || Number.isNaN(code)) {
 				console.error("Unknown error code", obj.status);
