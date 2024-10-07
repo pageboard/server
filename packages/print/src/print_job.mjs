@@ -94,7 +94,7 @@ export const print_job = {
 				},
 				status: {
 					title: 'Status',
-					anayOf: [{
+					anyOf: [{
 						title: 'Pending',
 						type: 'null'
 					}, {
