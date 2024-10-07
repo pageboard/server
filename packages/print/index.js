@@ -147,6 +147,9 @@ module.exports = class PrintModule {
 
 	async again(req, data) {
 		const block = await req.run('block.get', data);
+		block.data.order = {
+			status: 'accepted'
+		};
 		const job = {
 			remote: this.#remoteJob,
 			offline: this.#offlineJob,
@@ -175,7 +178,7 @@ module.exports = class PrintModule {
 			// w/a remote#customer_reference limited to 15 chars
 			id: await req.Block.genId(7),
 			type: 'print_job',
-			data: { ...data, response: {} }
+			data: { ...data, response: {}, order: { status: 'accepted' } }
 		});
 		const job = {
 			remote: this.#remoteJob,
@@ -183,7 +186,6 @@ module.exports = class PrintModule {
 			printer: this.#printerJob,
 			online: this.#onlineJob
 		}[block.data.printer];
-
 		await req.try(block, (req, block) => job.call(this, req, block));
 		return {
 			item: block
@@ -344,7 +346,6 @@ module.exports = class PrintModule {
 	async #remoteCall(req, block, { agent, pdf, coverPdf, courier }) {
 		const orderEndpoint = req.site.data.env == "production" ? "/order/create" : "/order/sandbox-create";
 		const { device, options } = block.data;
-		block.data.order = {};
 		const pdfUrl = req.call('page.format', {
 			url: block.data.url,
 			lang: block.data.lang,
@@ -459,10 +460,8 @@ module.exports = class PrintModule {
 				console.info("Order response", ret);
 				throw new HttpError.BadRequest(ret.msg);
 			}
-			block.data.order = {
-				id: ret.order_id,
-				price: ret.total_price
-			};
+			block.data.order.id = ret.order_id;
+			block.data.order.price = ret.total_price;
 		} finally {
 			for (const file of clean) await fs.unlink(file);
 		}
