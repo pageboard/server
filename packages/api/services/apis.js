@@ -236,8 +236,10 @@ module.exports = class ApiService {
 		if (data.hrefs) {
 			formatted.items = result;
 			formatted.hrefs = response.hrefs;
-		} else {
+		} else if (!Array.isArray(result)) {
 			Object.assign(formatted, result);
+		} else {
+			return result;
 		}
 		return formatted;
 	}
