@@ -335,15 +335,19 @@ module.exports = class Pageboard {
 		if (req.user.grants.length) {
 			res.set('X-Pageboard-Grants', req.user.grants.join(','));
 		}
-		if (obj.status && typeof obj.status != "string") {
-			const code = Number.parseInt(obj.status);
+		if (obj.$statusText) {
+			res.statusMessage = obj.$statusText;
+			delete obj.$statusText;
+		}
+		if (obj.$status) {
+			const code = Number.parseInt(obj.$status);
 			if (code < 200 || code >= 600 || Number.isNaN(code)) {
-				console.error("Unknown error code", obj.status);
+				console.error("Unknown error code", obj.$status);
 				res.status(500);
 			} else {
 				res.status(code);
 			}
-			delete obj.status;
+			delete obj.$status;
 		}
 		if (obj.location) {
 			res.redirect(obj.location);
