@@ -159,25 +159,25 @@ module.exports = class PageService {
 			req.call('cache.map', mapUrl.pathname + mapUrl.search);
 		}
 		const obj = {
-			status: 200
+			$status: 200
 		};
 		let page = await this.#QueryPage(req, data);
 		if (!page) {
-			obj.status = 404;
+			obj.$status = 404;
 		} else if (req.locked(page.lock)) {
-			obj.status = 401;
+			obj.$status = 401;
 		}
 		const wkp = /^\/\.well-known\/(\d{3})$/.exec(data.url);
-		if (obj.status != 200) {
+		if (obj.$status != 200) {
 			page = await this.#QueryPage(req, {
-				url: `/.well-known/${obj.status}`,
+				url: `/.well-known/${obj.$status}`,
 				lang: data.lang
 			});
 			if (!page) return Object.assign(obj, {
 				item: { type: 'page' }
 			});
 		} else if (wkp) {
-			obj.status = parseInt(wkp[1]);
+			obj.$status = parseInt(wkp[1]);
 		}
 		const hrefs = await req.run('href.collect', {
 			ids: [page.id],

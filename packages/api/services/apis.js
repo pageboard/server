@@ -221,6 +221,8 @@ module.exports = class ApiService {
 
 		const response = method ? await run(method, params) : params;
 
+		const { $status, $statusText } = response;
+
 		const result = Object.isEmpty(action.response)
 			? response
 			: mergeExpressions(
@@ -228,12 +230,16 @@ module.exports = class ApiService {
 				unflatten(action.response),
 				scope
 			);
-
-		if (data.hrefs) return {
-			items: result,
-			hrefs: response.hrefs
+		const formatted = {
+			$status, $statusText
 		};
-		else return result;
+		if (data.hrefs) {
+			formatted.items = result;
+			formatted.hrefs = response.hrefs;
+		} else {
+			Object.assign(formatted, result);
+		}
+		return formatted;
 	}
 	static get = {
 		title: 'Get',
