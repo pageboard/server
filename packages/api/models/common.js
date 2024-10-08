@@ -302,6 +302,8 @@ function whereCondObject(q, refk, cond) {
 		}
 	} else if (op == "not") {
 		q.whereNot(refk.castText(), cval);
+	} else if (op == "is") {
+		q.where(fun('jsonb_typeof', fun('coalesce', refk, val(null).castJson())), cval);
 	} else if (op == "end") {
 		q.where(refk.castText(), "ilike", '%' + cval);
 	} else if (op == "start") {
