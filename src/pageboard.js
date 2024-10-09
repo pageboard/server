@@ -505,7 +505,7 @@ module.exports = class Pageboard {
 		const code = getCode(err);
 		if (this.dev) console.error(err);
 		const obj = {
-			status: err.statusCode || err.status || err.code || 400,
+			status: code,
 			item: {
 				type: 'error',
 				data: Object.assign({
