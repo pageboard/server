@@ -193,7 +193,7 @@ module.exports = class Domains {
 		};
 
 		req.try = async (block, job) => {
-			const { response } = block.data;
+			const response = block.data.response ??= {};
 			const start = performance.now();
 			response.status = null;
 			response.text = null;
