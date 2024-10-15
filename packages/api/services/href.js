@@ -232,7 +232,6 @@ module.exports = class HrefService {
 		title: 'Add',
 		$action: 'write',
 		$tags: ['data-:site'],
-		$lock: 'user',
 		required: ['url'],
 		properties: {
 			url: {
