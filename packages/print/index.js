@@ -1,15 +1,13 @@
 const fs = require('node:fs/promises');
 const Path = require('node:path');
 const cups = require('node-cups');
+const TTLMap = require('./ttl-map');
 
 module.exports = class PrintModule {
 	static name = 'print';
 	static priority = 100;
-	#bearer = {
-		token: null,
-		lastUpdate: 0,
-		maxAge: 60 * 60 * 24 * 1000 // refresh token every day
-	};
+
+	#bearers = new TTLMap(60 * 60 * 24 * 1000); // bearers expire after a day
 
 	constructor(app, opts) {
 		this.app = app;
@@ -94,7 +92,9 @@ module.exports = class PrintModule {
 		if (printer == "offline" || printer == "online") {
 			// nothing
 		} else if (printer == "remote") {
-			const agent = await this.#getAuthorizedAgent(conf);
+			const agent = await this.#getAuthorizedAgent(req, {
+				url: conf.url
+			});
 
 			const remap = list => list.map(item => {
 				const obj = {
@@ -266,10 +266,8 @@ module.exports = class PrintModule {
 	async couriers(req, { iso_code }) {
 		const { remote: conf } = this.opts;
 		if (!conf) throw new HttpError.BadRequest("No remote printer");
-		const agent = await this.#getAuthorizedAgent({
-			url: conf.url,
-			email: req.site.data.printers?.remote?.login,
-			password: req.site.data.printers?.remote?.password
+		const agent = await this.#getAuthorizedAgent(req, {
+			url: conf.url
 		});
 		return agent.fetch(`/data/deliveries-by-courier/${iso_code}`);
 	}
@@ -285,26 +283,30 @@ module.exports = class PrintModule {
 		}
 	};
 
-	async #getAuthorizedAgent(conf) {
-		const agent = new this.Agent(this.opts, conf.url);
-		if (Date.now() - this.#bearer.lastUpdate > this.#bearer.maxAge) {
-			this.#bearer.token = (await agent.fetch("/login", "post", {
-				email: conf.email,
-				password: conf.password
+	async #getAuthorizedAgent({ site }, data) {
+		const email = site.data.printers?.remote?.login;
+		const password = site.data.printers?.remote?.password;
+		const conf = {
+			url: data.url,
+			email,
+			password
+		};
+		const agent = new this.Agent(this.opts, data.url);
+		agent.bearer = this.#bearers.get(conf);
+		if (!agent.bearer) {
+			agent.bearer = (await agent.fetch("/login", "post", {
+				email, password
 			})).token;
-			this.#bearer.lastUpdate = Date.now();
+			this.#bearers.set(conf, agent.bearer);
 		}
-		agent.bearer = this.#bearer.token;
 		return agent;
 	}
 
 	async #remoteJob(req, block) {
 		const { remote: conf } = this.opts;
 		if (!conf) throw new HttpError.BadRequest("No remote printer");
-		const agent = await this.#getAuthorizedAgent({
-			url: conf.url,
-			email: req.site.data.printers?.remote?.login,
-			password: req.site.data.printers?.remote?.password
+		const agent = await this.#getAuthorizedAgent(req, {
+			url: conf.url
 		});
 
 		const { options, delivery } = block.data;
