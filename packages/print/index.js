@@ -1,7 +1,7 @@
 const fs = require('node:fs/promises');
 const Path = require('node:path');
 const cups = require('node-cups');
-const TTLMap = require('./ttl-map');
+const TTLMap = require('./src/ttl-map');
 
 module.exports = class PrintModule {
 	static name = 'print';
