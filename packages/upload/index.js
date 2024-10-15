@@ -121,8 +121,7 @@ module.exports = class UploadModule {
 
 	static parse = {
 		title: 'Parse multipart/form-data',
-		$private: true,
-		// $lock: ['user']
+		$private: true
 	};
 
 	files(req, { files, size, types }) {
@@ -159,7 +158,6 @@ module.exports = class UploadModule {
 	static files = {
 		title: 'Files',
 		$action: 'write',
-		$lock: ['user'],
 		properties: {
 			files: {
 				title: 'Files',
