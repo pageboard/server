@@ -1,4 +1,4 @@
-let Inspector;
+const Inspector = require.lazy('url-inspector');
 const URL = require('url');
 
 exports = module.exports = function(opt) {
@@ -8,8 +8,7 @@ exports = module.exports = function(opt) {
 	};
 };
 
-exports.get = async function({url, local}) {
-	Inspector ||= (await import('url-inspector')).default;
+exports.get = function({url, local}) {
 	const inspector = new Inspector(Object.assign({}, All.opt.inspector, {
 		nofavicon: local,
 		file: local
