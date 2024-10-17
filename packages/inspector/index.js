@@ -1,4 +1,4 @@
-const inspector = require.lazy('url-inspector');
+let inspector;
 
 module.exports = class InspectorModule {
 	static name = 'inspector';
@@ -8,8 +8,13 @@ module.exports = class InspectorModule {
 		this.opts = opts;
 	}
 
+	async getInspector() {
+		inspector ??= (await import('url-inspector')).default;
+		return inspector;
+	}
+
 	async request(urlObj) {
-		return inspector.get(urlObj);
+		return (await this.getInspector()).get(urlObj);
 	}
 
 	async get({ url, local }) {
@@ -19,6 +24,7 @@ module.exports = class InspectorModule {
 			file: local
 		};
 		try {
+			const inspector = await this.getInspector();
 			const result = this.#filterResult(await inspector(url, opts));
 			return this.#preview(result);
 		} catch (err) {
