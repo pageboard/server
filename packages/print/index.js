@@ -158,7 +158,7 @@ module.exports = class PrintModule {
 		}[block.data.printer];
 
 		await req.try(block, (req, block) => job.call(this, req, block));
-		return { item: block };
+		return block;
 	}
 	static again = {
 		title: 'Reprint',
