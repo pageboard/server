@@ -4,13 +4,27 @@ module.exports = class LinksService {
 	static name = 'links';
 
 	constructor(app, opts) {
+		this.app = app;
 		this.opts = opts;
 	}
 
-	apiRoutes(app) {
-		app.get('/robots.txt', 'links.robot');
+	siteRoutes(router) {
+		router.get('/favicon.ico',
+			this.app.cache.tag('data-:site').for({
+				maxAge: '1 day' // this redirection is subject to change
+			}),
+			({ site }, res) => {
+				if (!site || !site.data.favicon) {
+					res.sendStatus(204);
+				} else {
+					res.redirect(site.data.favicon + "?format=ico");
+				}
+			}
+		);
 
-		app.get('/.well-known/traffic-advice', ({ res }) => {
+		router.read('/robots.txt', 'links.robot');
+
+		router.get('/.well-known/traffic-advice', (req, res) => {
 			res.type('application/trafficadvice+json');
 			res.json([{
 				"user_agent": "prefetch-proxy",
@@ -18,17 +32,18 @@ module.exports = class LinksService {
 			}]);
 		});
 
-		app.get('/sitemap.txt', async req => {
+		router.get('/sitemap.txt', async (req, res) => {
 			const obj = await req.run('page.list', {
 				robot: true,
 				type: ['page']
 			});
-			return obj.items.map(page => {
+			res.type("text/plain");
+			res.send(obj.items.map(page => {
 				return new URL(page.data.url, req.site.$url).href;
-			}).join('\n');
+			}).join('\n'));
 		});
 
-		app.get('/sitemap.xml', async req => {
+		router.get('/sitemap.xml', async (req, res) => {
 			const { items } = await req.run('page.list', {
 				robot: true,
 				type: ['page']
@@ -52,10 +67,10 @@ module.exports = class LinksService {
 				</url>`;
 			};
 
-			return `<?xml version="1.0" encoding="UTF-8"?>
+			res.send(`<?xml version="1.0" encoding="UTF-8"?>
 				<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9" xmlns:xhtml="http://www.w3.org/1999/xhtml">
 					${items.map(item => xmlItem(item)).join('\n')}
-				</urlset>`.replace(/\t+/g, '');
+				</urlset>`.replace(/\t+/g, ''));
 		});
 
 		const { security } = this.opts;
@@ -70,10 +85,13 @@ module.exports = class LinksService {
 		}
 		const securityResponse = Object.entries({
 			Contact: security,
-			Expires: new Date(new Date().getFullYear() + 1)
+			Expires: new Date((new Date().getFullYear() + 1).toString()).toISOString()
 		}).map(([key, str]) => `${key}: ${str}`).join('\n');
 
-		app.get('/.well-known/security.txt', req => securityResponse);
+		router.get('/.well-known/security.txt', (req, res) => {
+			res.type("text/plain");
+			res.send(securityResponse);
+		});
 	}
 
 	async robot(req, data) {

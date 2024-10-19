@@ -37,7 +37,8 @@ module.exports = function (page, settings, req, res) {
 			res.append("Cache-Control", "must-revalidate");
 		}
 		res.type(obj.mime);
-		res.send(obj.body);
+		if (typeof obj.body == "string") res.send(obj.body);
+		else res.json(obj.body);
 	});
 };
 

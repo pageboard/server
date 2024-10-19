@@ -8,16 +8,16 @@ module.exports = class BlockService {
 		this.app = app;
 	}
 
-	apiRoutes(app) {
-		app.get("/@api/block/get", 'block.get');
-		app.get("/@api/block/search", 'block.search');
-		app.post('/@api/block/write', 'block.write');
-		app.post('/@api/block/del', 'block.del');
+	apiRoutes(router) {
+		router.read("/block/get", 'block.get');
+		router.read("/block/search", 'block.search');
+		router.write('/block/write', 'block.write');
+		router.write('/block/del', 'block.del');
 	}
 
 	get(req, data) {
 		const { lang } = req.call('translate.lang', data);
-		const q = req.site.$relatedQuery('children', req.trx)
+		const q = req.site.$relatedQuery('children', req.sql.trx)
 			.columns({
 				lang,
 				content: null
@@ -85,7 +85,7 @@ module.exports = class BlockService {
 	};
 
 	async search(req, data) {
-		const { site, trx, ref, raw, fun, Block, Href } = req;
+		const { site, sql: { raw, ref, fun, trx, Block, Href } } = req;
 		const language = req.call('translate.lang', data);
 		let { parents } = data;
 		if (parents) {
@@ -686,7 +686,7 @@ module.exports = class BlockService {
 		data.offset = 0;
 		const obj = await this.search(req, data);
 		const ret = { hrefs: obj.hrefs, lang: obj.lang };
-		if (obj.items.length == 0) ret.$status = 404;
+		if (obj.items.length == 0) req.$status = 404;
 		else ret.item = obj.items[0];
 		return ret;
 	}
@@ -702,7 +702,7 @@ module.exports = class BlockService {
 		}
 	};
 
-	async clone({ site, run, trx, Block }, data) {
+	async clone({ site, sql: { run, trx, Block } }, data) {
 		const src = await run('block.get', {
 			id: data.id,
 			children: true,
@@ -759,7 +759,7 @@ module.exports = class BlockService {
 	};
 
 	async add(req, data) {
-		const { site, Block, trx } = req;
+		const { site, sql: { trx, Block } } = req;
 		const obj = {
 			type: data.type
 		};
@@ -837,7 +837,7 @@ module.exports = class BlockService {
 				obj.lock = data.lock;
 			}
 		}
-		await block.$query(req.trx).patchObject(obj);
+		await block.$query(req.sql.trx).patchObject(obj);
 
 		return {
 			item: block
@@ -863,7 +863,7 @@ module.exports = class BlockService {
 		}
 	};
 
-	async del({ site, trx, fun, ref }, data) {
+	async del({ site, sql: { trx, fun, ref } }, data) {
 		const types = data.type ? [data.type] : site.$pkg.standalones;
 		const q = site.$relatedQuery('children', trx);
 		if (!data.id?.length && !data.parent?.id) {
@@ -989,7 +989,7 @@ module.exports = class BlockService {
 		}
 	};
 
-	async fill({ site, run, trx }, { id, type = [], name, items = [] }) {
+	async fill({ site, run, sql: { trx } }, { id, type = [], name, items = [] }) {
 		const block = await run('block.get', { id });
 
 		const contentIds = {};

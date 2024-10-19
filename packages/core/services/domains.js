@@ -46,7 +46,10 @@ class Host {
 	}
 }
 
-module.exports = class Domains {
+module.exports = class DomainsService {
+	static priority = -Infinity;
+	static name = "domains";
+
 	#wait = new Deferred();
 	#ips = {};
 	#suffixes = [];
@@ -57,33 +60,51 @@ module.exports = class Domains {
 
 	constructor(app, opts) {
 		this.app = app;
-		this.wk = {
-			cache: opts.cache.wkp,
-			git: opts.git.wkp,
-			status: "/.well-known/status",
-			proxy: "/.well-known/pageboard"
-		};
-		if (app.version != opts.upstream) {
+
+		if (app.version != app.opts.upstream) {
 			this.#wait.resolve();
 		}
 	}
 
-	routes(app, server) {
-		server.use(req => {
-			this.extendRequest(req, app);
-		});
-		server.use(this.wk.proxy, async req => {
-			const domains = await this.#allDomains(req);
-			this.#wait.resolve();
-			return domains;
-		});
-		server.use(async (req, res) => {
-			await this.#wait;
-			if (!this.#allDomainsCalled) {
-				await this.#allDomains(req);
+	init() {
+		this.wk = {
+			cache: this.app.opts.cache.wkp,
+			git: this.app.opts.git.wkp,
+			status: "/.well-known/status",
+			proxy: "/.well-known/pageboard"
+		};
+	}
+
+	siteRoutes(router) {
+		router.use((req, res, next) => {
+			try {
+				this.extendRequest(req, res, this.app);
+				next();
+			} catch (err) {
+				next(err);
 			}
-			await this.#initRecord(req.headers['x-forwarded-by']);
-			return this.#initRequest(req, res);
+		});
+		router.get(this.wk.proxy, async (req, res, next) => {
+			try {
+				const domains = await this.#allDomains(req);
+				this.#wait.resolve();
+				res.json(domains);
+			} catch (err) {
+				next(err);
+			}
+		});
+		router.use(async (req, res, next) => {
+			try {
+				await this.#wait;
+				if (!this.#allDomainsCalled) {
+					await this.#allDomains(req);
+				}
+				await this.#initRecord(req.headers['x-forwarded-by']);
+				await this.#initRequest(req, res);
+				next();
+			} catch (err) {
+				next(err);
+			}
 		});
 	}
 
@@ -166,10 +187,10 @@ module.exports = class Domains {
 		}
 	}
 
-	extendRequest(req, app) {
+	extendRequest(req, res, app) {
 		req.opts = app.opts;
-		const { res } = req;
-		if (!res.locals) res.locals = {};
+		req.res = res;
+		res.locals ??= {};
 		res.accelerate = path => {
 			res.set('X-Accel-Redirect', "/@internal" + path);
 			res.end();
@@ -465,11 +486,11 @@ function castArray(prop) {
 }
 
 async function postTryProcess(req) {
-	const { postTries: list } = req;
+	const { sql, postTries: list } = req;
 	if (!list.length) return;
 	req.postTries = [];
 	while (list.length) {
-		req.trx = await req.genTrx();
+		sql.trx = await sql.genTrx();
 		try {
 			await req.try(...list.shift());
 		} catch (ex) {
@@ -477,8 +498,8 @@ async function postTryProcess(req) {
 			// stop there
 			list.splice(0, list.length);
 		} finally {
-			if (!req.trx.isCompleted()) {
-				await req.trx.commit();
+			if (!sql.trx.isCompleted()) {
+				await sql.trx.commit();
 			}
 		}
 	}

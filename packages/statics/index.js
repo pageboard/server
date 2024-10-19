@@ -12,25 +12,26 @@ module.exports = class StaticsModule {
 			...opts,
 			bundlerCache: Path.join(app.dirs.cache, "bundler"),
 			mounts: {
-				'@file': {
+				share: {
 					dir: app.dirs.data,
 					owned: false,
-					age: '1 year'
+					handled: true // handled by image
 				},
-				'@cache': {
+				image: {
 					dir: app.dirs.cache,
-					owned: true,
-					maxAge: '1 day'
+					owned: false
 				},
-				'@site': {
+				cache: {
+					dir: app.dirs.cache,
+					owned: true
+				},
+				site: {
 					dir: app.dirs.data,
-					owned: true,
-					maxAge: '1 year'
+					owned: true
 				},
-				'@tmp': {
+				tmp: {
 					dir: app.dirs.tmp,
-					owned: false,
-					maxAge: '1 hour'
+					owned: false
 				}
 			}
 		};
@@ -42,46 +43,32 @@ module.exports = class StaticsModule {
 		}
 	}
 
-	fileRoutes(app, server) {
-		for (const [mount, { dir, owned, maxAge }] of Object.entries(this.opts.mounts)) {
-			server.get(`/${mount}/*`,
-				app.cache.tag('app-:site').for({
-					immutable: true,
-					maxAge
-				}),
-				(req, res, next) => {
-					const path = [dir, mount];
-					if (owned) path.push(req.site.id);
-					path.push(req.path.substring(mount.length + 2));
-					res.accelerate(path.join('/'));
+	fileRoutes(router) {
+		router.get("/*", this.app.cache.tag('app-:site').for({
+			immutable: true,
+			maxAge: '1 year'
+		}));
+		for (const [mount, { handled }] of Object.entries(this.opts.mounts)) {
+			if (handled) continue;
+			router.get(
+				`/${mount}/*`,
+				(req, res) => {
+					res.accelerate(this.urlToPath(req, req.baseUrl + req.path));
 				}
 			);
 		}
-
-		server.get('/favicon.ico',
-			app.cache.tag('data-:site').for({
-				maxAge: '1 day' // this redirection is subject to change
-			}),
-			({ site }, res, next) => {
-				if (!site || !site.data.favicon) {
-					res.sendStatus(204);
-				} else {
-					res.redirect(site.data.favicon + "?format=ico");
-				}
-			}
-		);
 	}
 
 	urlToPath(req, url) {
-		for (const [mount, { dir, owned }] of Object.entries(this.opts.mounts)) {
-			if (url.startsWith(`/${mount}/`)) {
-				if (owned) {
-					const list = url.split('/');
-					list.splice(2, 0, req.site.id);
-					url = list.join('/');
-				}
-				return Path.join(dir, url);
-			}
+		const prefix = `/@file/`;
+		if (url.startsWith(prefix)) {
+			const list = url.substring(prefix.length).split('/');
+			const { dir, owned } = this.opts.mounts[list[0]] ?? {};
+			if (!dir) throw new HttpError.BadRequest("No mount path for this url");
+			if (owned) list.splice(1, 0, req.site.id);
+			return Path.join(dir, ...list);
+		} else {
+			throw new HttpError.BadRequest("Cannot serve outside /@file");
 		}
 	}
 
@@ -92,9 +79,9 @@ module.exports = class StaticsModule {
 				if (owned) {
 					const list = sub.split('/');
 					list.splice(2, 1);
-					return list.join('/');
+					return '/@file' + list.join('/');
 				} else {
-					return sub;
+					return '/@file' + sub;
 				}
 			}
 		}
@@ -134,9 +121,9 @@ module.exports = class StaticsModule {
 		const buildPath = Path.join(buildDir, buildFile);
 
 		const outList = [];
-		const outUrl = `/@site/${version}/${buildFile}`;
-		const sitesDir = this.dir({ site }, '@site');
+		const sitesDir = this.dir({ site }, 'site');
 		const outPath = Path.join(sitesDir, version, buildFile);
+		const outUrl = this.pathToUrl({ site }, outPath);
 		if (local) outList.push(outPath);
 		else outList.push(outUrl);
 
@@ -164,11 +151,11 @@ module.exports = class StaticsModule {
 			if (force) {
 				inList.push(url);
 			} else if (local) {
-				if (url.startsWith('/@site/')) inList.push(url);
+				if (url.startsWith('/@file/site/')) inList.push(url);
 				else console.error("file not in project", url);
 			} else if (/^https?:\/\//.test(url)) {
 				inList.push(url);
-			} else if (url.startsWith('/@site/')) {
+			} else if (url.startsWith('/@file/site/')) {
 				inList.push(Path.join(sitesDir, url.substring(6)));
 			} else {
 				console.error("file not in project", url);
@@ -199,7 +186,7 @@ module.exports = class StaticsModule {
 
 	async install({ site }, { directories } = {}) {
 		if (!site.$url) return;
-		const siteDir = this.dir({ site }, '@site');
+		const siteDir = this.dir({ site }, 'site');
 		await fs.mkdir(siteDir, { recursive: true });
 		if (directories) for (const mount of directories) {
 			try {
@@ -213,9 +200,9 @@ module.exports = class StaticsModule {
 	async migrate(req) {
 		await req.run('href.change', {
 			from: '/.uploads',
-			to: '/@file'
+			to: '/@file/share'
 		});
-		const dest = this.dir(req, '@file');
+		const dest = this.dir(req, 'share');
 
 		await fs.cp(
 			Path.join(this.app.dirs.data, 'uploads', req.site.id),
@@ -224,7 +211,7 @@ module.exports = class StaticsModule {
 		);
 	}
 	static migrate = {
-		title: 'Migrate from /.uploads to /@file',
+		title: 'Migrate from /.uploads to /@file/share',
 		$private: true,
 		$global: false,
 		$action: 'write',

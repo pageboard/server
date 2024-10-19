@@ -92,7 +92,8 @@ module.exports = class ImageModule {
 	mw(req, res, next) {
 		const extname = Path.extname(req.path);
 		if (!extname || /png|jpe?g|gif|webp|tiff|svg/.test(extname.substring(1)) == false) {
-			return next('route');
+			res.accelerate(this.app.statics.urlToPath(req, req.path));
+			return;
 		}
 		const wrongParams = [];
 		Object.keys(req.query).some(key => {
@@ -107,15 +108,10 @@ module.exports = class ImageModule {
 		}
 	}
 
-	fileRoutes(app, server) {
-		server.get(
-			/^\/@file\//,
+	fileRoutes(router) {
+		router.get(
+			"/share/*",
 			this.mw,
-			// files are loaded directly and need some headers
-			app.cache.for({
-				immutable: true,
-				maxAge: '1 year'
-			}),
 			this.sharpie(this.opts)
 		);
 	}
@@ -294,7 +290,7 @@ module.exports = class ImageModule {
 	};
 
 	async add(req, { mime, path }) {
-		if (!req.Href.isImage(mime)) {
+		if (!req.sql.Href.isImage(mime)) {
 			return { path };
 		}
 		const format = mime.split('/').pop();
@@ -348,7 +344,8 @@ module.exports = class ImageModule {
 		srcPath = Path.format(srcParts);
 		if (!size) return srcPath;
 
-		const destPath = Path.join(this.app.dirs.cache, url.replace(/^\/@file/, '/images'));
+		const destPath = this.app.statics.urlToPath(req, url.replace(/^\/@file\/share/, "/@file/image/"));
+
 		const parts = Path.parse(destPath);
 		parts.name = parts.name.replace(ImageModule.regSizes, '');
 		const { width, height } = ImageModule.sizes[size];
@@ -414,7 +411,7 @@ module.exports = class ImageModule {
 			obj.offset += limit;
 			for (const href of obj.hrefs) {
 				let urlPath = href.url;
-				if (!urlPath.startsWith('/@file/') || !req.Href.isImage(href.mime)) {
+				if (!urlPath.startsWith('/@file/') || !req.sql.Href.isImage(href.mime)) {
 					continue;
 				}
 				let filePath = this.app.statics.urlToPath(req, urlPath);

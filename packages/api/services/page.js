@@ -3,8 +3,12 @@ const jsonPath = require('@kapouer/path');
 module.exports = class PageService {
 	static name = 'page';
 
-	apiRoutes(app) {
-		app.get('/@api/page/find', async req => {
+	constructor(app, opts) {
+		this.opts = app.opts;
+	}
+
+	apiRoutes(router) {
+		router.read('/page/find', async req => {
 			const { site, query } = req;
 			const { url, lang, ext } = req.call('page.parse', query);
 			if (!url) throw new HttpError.NotFound("Malformed URL");
@@ -32,10 +36,10 @@ module.exports = class PageService {
 					url, lang, type: ext
 				}));
 			}
-			obj.commons = app.opts.commons;
+			obj.commons = this.opts;
 			return obj;
 		});
-		app.get('/@api/page/search', async req => {
+		router.read('/page/search', async req => {
 			const { query, site } = req;
 			const isWebmaster = !req.locked(['webmaster']);
 			if (isWebmaster) {
@@ -54,10 +58,10 @@ module.exports = class PageService {
 			return obj;
 		});
 
-		app.post('/@api/page/write', 'page.write');
+		router.write('/page/write', 'page.write');
 	}
 
-	#QueryPage({ site, trx, ref, val, fun }, { url, lang, type }) {
+	#QueryPage({ site, sql: { trx, ref, val, fun } }, { url, lang, type }) {
 		return site.$relatedQuery('children', trx)
 			.columns({ lang })
 			.first()
@@ -146,7 +150,7 @@ module.exports = class PageService {
 	};
 
 	async get(req, data) {
-		const { site, Href } = req;
+		const { site, sql: { Href } } = req;
 		const { lang } = req.call('translate.lang', data);
 		if (lang != data.lang) {
 			data.lang = lang;
@@ -158,26 +162,25 @@ module.exports = class PageService {
 			}).pathname);
 			req.call('cache.map', mapUrl.pathname + mapUrl.search);
 		}
-		const obj = {
-			$status: 200
-		};
+		req.$status = 200;
+		const obj = {};
 		let page = await this.#QueryPage(req, data);
 		if (!page) {
-			obj.$status = 404;
+			req.$status = 404;
 		} else if (req.locked(page.lock)) {
-			obj.$status = 401;
+			req.$status = 401;
 		}
 		const wkp = /^\/\.well-known\/(\d{3})$/.exec(data.url);
-		if (obj.$status != 200) {
+		if (req.$status != 200) {
 			page = await this.#QueryPage(req, {
-				url: `/.well-known/${obj.$status}`,
+				url: `/.well-known/${req.$status}`,
 				lang: data.lang
 			});
 			if (!page) return Object.assign(obj, {
 				item: { type: 'page' }
 			});
 		} else if (wkp) {
-			obj.$status = parseInt(wkp[1]);
+			req.$status = parseInt(wkp[1]);
 		}
 		const hrefs = await req.run('href.collect', {
 			ids: [page.id],
@@ -369,7 +372,7 @@ module.exports = class PageService {
 	};
 
 	async list(req, data) {
-		const { site, trx, fun, ref } = req;
+		const { site, sql: { trx, fun, ref } } = req;
 		const { lang } = req.call('translate.lang', data);
 		const q = site.$relatedQuery('children', trx)
 			.columns({ lang, content: ['title'] })
@@ -476,7 +479,7 @@ function shortLink({ data, content }) {
 	return obj;
 }
 
-function getParents({ site, trx }, url, lang) {
+function getParents({ site, sql: { trx } }, url, lang) {
 	const urlParts = url.split('/');
 	const urlParents = ['/'];
 	for (let i = 1; i < urlParts.length - 1; i++) {
@@ -503,7 +506,7 @@ function stripHostname(site, block) {
 	}
 }
 
-function applyUnrelate({ site, trx }, obj) {
+function applyUnrelate({ site, sql: { trx } }, obj) {
 	return Promise.all(Object.keys(obj).map(parentId => {
 		return site.$relatedQuery('children', trx).where('block.id', parentId)
 			.first().throwIfNotFound().then(parent => {
@@ -514,7 +517,7 @@ function applyUnrelate({ site, trx }, obj) {
 	}));
 }
 
-function applyRemove({ site, trx, ref, fun }, list, recursive) {
+function applyRemove({ site, sql: { trx, ref, fun } }, list, recursive) {
 	if (!list.length) return;
 	const q = site.$relatedQuery('children', trx).whereIn('block.id', list);
 	if (!recursive) {
@@ -525,7 +528,7 @@ function applyRemove({ site, trx, ref, fun }, list, recursive) {
 	return q;
 }
 
-async function applyAdd({ site, trx, Block }, list) {
+async function applyAdd({ site, sql: { trx } }, list) {
 	if (!list.length) return [];
 	const rows = await site.$relatedQuery('children', trx)
 		.insert(list).returning('id', 'updated_at', '_id');
@@ -539,7 +542,7 @@ async function applyAdd({ site, trx, Block }, list) {
 
 async function applyUpdate(req, list) {
 	const updates = [];
-	const { site, trx } = req;
+	const { site, sql: { trx, raw } } = req;
 
 	for await (const block of list) {
 		if (!block.updated_at) {
@@ -549,8 +552,8 @@ async function applyUpdate(req, list) {
 			.where('block.id', block.id)
 			.where('block.type', block.type)
 			.where(
-				req.raw("date_trunc('milliseconds', block.updated_at)"),
-				req.raw("date_trunc('milliseconds', ?::timestamptz)", [block.updated_at]),
+				raw("date_trunc('milliseconds', block.updated_at)"),
+				raw("date_trunc('milliseconds', ?::timestamptz)", [block.updated_at]),
 			)
 			.patch(block)
 			.returning('id', 'updated_at')
@@ -566,7 +569,7 @@ async function applyUpdate(req, list) {
 	return updates;
 }
 
-async function applyRelate({ site, trx }, obj) {
+async function applyRelate({ site, sql: { trx } }, obj) {
 	return Promise.all(Object.keys(obj).map(async parentId => {
 		const parent = await site.$relatedQuery('children', trx)
 			.where('block.id', parentId)

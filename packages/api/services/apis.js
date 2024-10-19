@@ -4,22 +4,22 @@ module.exports = class ApiService {
 	static name = 'apis';
 	static priority = 1000;
 
-	apiRoutes(app) {
+	apiRoutes(router) {
 		// these routes are setup after all others
 		// eventually all routes will be declared as actions ?
-		app.get(["/@api/:name", "/@api/query/:name"], req => {
+		router.read(["/:name", "/query/:name"], req => {
 			return req.run('apis.get', {
 				name: req.params.name,
 				query: unflatten(req.query)
 			});
 		});
-		app.post(["/@api/:name", "/@api/form/:name"], async req => {
+		router.write(["/:name", "/form/:name"], async (req, body) => {
 			await req.run('upload.parse', {});
 
 			return req.run('apis.post', {
 				name: req.params.name,
 				query: unflatten(req.query),
-				body: unflatten(req.body)
+				body: unflatten(body)
 			});
 		});
 	}
@@ -54,7 +54,7 @@ module.exports = class ApiService {
 	}
 
 	async post(req, data) {
-		const { site, run, user, locked, trx, ref } = req;
+		const { site, run, user, locked, sql: { ref, trx } } = req;
 		const form = await site.$relatedQuery('children', trx)
 			.where('block.type', 'api_form')
 			.where(q => {
@@ -172,7 +172,7 @@ module.exports = class ApiService {
 	};
 
 	async get(req, data) {
-		const { site, run, user, locked, trx, ref } = req;
+		const { site, run, user, locked, sql: { trx, ref } } = req;
 		const form = await site.$relatedQuery('children', trx)
 			.whereIn('block.type', ['fetch', 'mail_fetch'])
 			.where(q => {
@@ -221,8 +221,6 @@ module.exports = class ApiService {
 
 		const response = method ? await run(method, params) : params;
 
-		const { $status, $statusText } = response;
-
 		const result = Object.isEmpty(action.response)
 			? response
 			: mergeExpressions(
@@ -230,18 +228,10 @@ module.exports = class ApiService {
 				unflatten(action.response),
 				scope
 			);
-		const formatted = {
-			$status, $statusText
-		};
-		if (data.hrefs) {
-			formatted.items = result;
-			formatted.hrefs = response.hrefs;
-		} else if (!Array.isArray(result)) {
-			Object.assign(formatted, result);
-		} else {
-			return result;
+		if (data.hrefs && result && typeof result == "object" && !Array.isArray(result)) {
+			result.hrefs = data.hrefs;
 		}
-		return formatted;
+		return result;
 	}
 	static get = {
 		title: 'Get',

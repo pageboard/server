@@ -33,9 +33,9 @@ module.exports = class DatabaseModule {
 		);
 		// 1016 (array of int8) is less useful
 	}
-	apiRoutes(app) {
-		if (app.version == app.upstream) {
-			this.#scheduleTenantCopy(app);
+	apiRoutes(router) {
+		if (this.app.version == this.app.upstream) {
+			this.#scheduleTenantCopy();
 		}
 	}
 	tenant(tenant) {
@@ -64,7 +64,7 @@ module.exports = class DatabaseModule {
 		return "No migrations";
 	}
 
-	#scheduleTenantCopy(app) {
+	#scheduleTenantCopy() {
 		const tenants = { ...this.opts.url };
 		delete tenants.current;
 		const slots = Object.keys(tenants);
@@ -75,7 +75,7 @@ module.exports = class DatabaseModule {
 		console.info("Scheduling tenant db copies:", slots.join(', '));
 		schedule.scheduleJob('0 0 * * *', (date) => {
 			const tenant = slots[(date.getDay() - 1) % slots.length];
-			return app.run('database.copy', { tenant });
+			return this.app.run('database.copy', { tenant });
 		});
 	}
 

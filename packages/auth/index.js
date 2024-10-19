@@ -34,8 +34,8 @@ module.exports = class AuthModule {
 		return import('./src/elements.mjs');
 	}
 
-	async apiRoutes(app) {
-		app.use((req, res, next) => {
+	async apiRoutes(router) {
+		router.use((req, res, next) => {
 			req.locks = [];
 			req.finish(() => {
 				// TODO with the app.get/post refactoring,
@@ -140,7 +140,7 @@ module.exports = class AuthModule {
 			if (this.locked(req, list)) {
 				const status = req.user.grants.length == 0 ? 401 : 403;
 				res.status(status);
-				res.send({ locks: req.locks });
+				res.json({ locks: req.locks });
 			} else {
 				next();
 			}

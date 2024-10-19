@@ -20,8 +20,8 @@ module.exports = class TranslateService {
 		this.app.languages.default = list[0];
 	}
 
-	apiRoutes(app) {
-		app.get("/@api/translate/languages", 'translate.languages');
+	apiRoutes(router) {
+		router.read("/translate/languages", 'translate.languages');
 	}
 
 	default(req) {
@@ -78,7 +78,7 @@ module.exports = class TranslateService {
 		$action: 'read'
 	};
 
-	async available({ Block, trx }, { lang }) {
+	async available({ sql: { Block, trx } }, { lang }) {
 		if (!lang) {
 			const shared = await Block.query(trx).where('type', 'site').where('id', 'shared').first();
 			lang = shared?.data.languages?.[0];
@@ -149,7 +149,7 @@ module.exports = class TranslateService {
 		}
 	};
 
-	async initialize({ site, trx, ref, raw, Block }) {
+	async initialize({ site, sql: { trx, ref, raw, Block } }) {
 		const lang = site.data.languages?.[0];
 		if (!lang) throw new HttpError.BadRequest("Missing site.data.languages");
 		const blocks = await Block.relatedQuery('children', trx).for(site)
@@ -168,7 +168,7 @@ module.exports = class TranslateService {
 		$action: 'write'
 	};
 
-	async list({ site, trx, ref, fun, raw }, { self, id, lang, limit, offset, valid }) {
+	async list({ site, sql: { trx, ref, fun, raw } }, { self, id, lang, limit, offset, valid }) {
 		const sourceLang = site.data.languages?.[0];
 		if (!sourceLang) throw new HttpError.BadRequest("Missing site.data.languages");
 
@@ -260,7 +260,7 @@ module.exports = class TranslateService {
 	};
 
 	async #batchFill(req, data) {
-		const { site, trx, ref, val, fun } = req;
+		const { site, sql: { trx, ref, val, fun } } = req;
 		const q = site.$relatedQuery('children', trx)
 			.distinct(
 				ref('target._id').as('target_id'),

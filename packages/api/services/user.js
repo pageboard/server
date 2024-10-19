@@ -2,7 +2,7 @@ module.exports = class UserService {
 	static name = 'user';
 	static $global = true;
 
-	#QueryUser({ trx, Block }, data) {
+	#QueryUser({ sql: { trx, Block } }, data) {
 		if (!data.id && !data.email) {
 			throw new HttpError.BadRequest("Missing id or email");
 		}
@@ -51,7 +51,7 @@ module.exports = class UserService {
 		} catch (err) {
 			if (err.status != 404) throw err;
 		}
-		const user = await req.Block.query(req.trx).insert({
+		const user = await req.Block.query(req.sql.trx).insert({
 			data: { email: data.email },
 			type: 'user'
 		}).returning('*');
@@ -74,9 +74,9 @@ module.exports = class UserService {
 	};
 
 
-	async save({ trx, Block }, { id, data }) {
-		const user = await this.#QueryUser({ trx, Block }, { id });
-		await user.$query(trx).patchObject({ data });
+	async save({ sql }, { id, data }) {
+		const user = await this.#QueryUser({ sql }, { id });
+		await user.$query(sql.trx).patchObject({ data });
 		return user;
 	}
 	static save = {

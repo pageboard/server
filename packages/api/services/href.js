@@ -9,19 +9,19 @@ module.exports = class HrefService {
 		this.app = app;
 	}
 
-	apiRoutes(app) {
-		app.get("/@api/href/search", 'href.search');
-		app.get("/@api/href/find", 'href.find');
-		app.post("/@api/href/add", 'href.add');
+	apiRoutes(router) {
+		router.read("/href/search", 'href.search');
+		router.read("/href/find", 'href.find');
+		router.write("/href/add", 'href.add');
 	}
 
-	get({ Href, site, trx }, data) {
+	get({ site, sql: { trx, Href } }, data) {
 		return Href.query(trx).select('href._id')
 			.whereSite(site.id)
 			.where('href.url', data.url).first();
 	}
 
-	async find({ Href, site, trx }, data) {
+	async find({ site, sql: { trx, Href } }, data) {
 		const href = await Href.query(trx).columns()
 			.whereSite(site.id)
 			.where('href.url', data.url).first().throwIfNotFound();
@@ -41,7 +41,7 @@ module.exports = class HrefService {
 	};
 
 	async search(req, data) {
-		const { Href, site, trx } = req;
+		const { site, sql: { ref, trx, Href } } = req;
 		const q = Href.query(trx).columns().whereSite(site.id);
 		const { type, maxSize, maxWidth, maxHeight } = data;
 		let { offset, limit } = data;
@@ -50,13 +50,13 @@ module.exports = class HrefService {
 			q.whereIn('href.type', type);
 		}
 		if (maxSize) {
-			q.where(req.ref('href.meta:size'), '<=', maxSize);
+			q.where(ref('href.meta:size'), '<=', maxSize);
 		}
 		if (maxWidth) {
-			q.where(req.ref('href.meta:width'), '<=', maxWidth);
+			q.where(ref('href.meta:width'), '<=', maxWidth);
 		}
 		if (maxHeight) {
-			q.where(req.ref('href.meta:height'), '<=', maxHeight);
+			q.where(ref('href.meta:height'), '<=', maxHeight);
 		}
 		if (offset < 0) {
 			limit += offset;
@@ -99,13 +99,13 @@ module.exports = class HrefService {
 			}
 		} else if (data.text) {
 			if (/^\w+$/.test(data.text)) {
-				q.from(req.raw("to_tsquery('unaccent', ?) AS query, ??", [data.text + ':*', 'href']));
+				q.from(req.sql.raw("to_tsquery('unaccent', ?) AS query, ??", [data.text + ':*', 'href']));
 			} else {
-				q.from(req.raw("websearch_to_tsquery('unaccent', href_tsv_url(?)) AS query, ??", [data.text, 'href']));
+				q.from(req.sql.raw("websearch_to_tsquery('unaccent', href_tsv_url(?)) AS query, ??", [data.text, 'href']));
 			}
 			q.whereRaw('query @@ href.tsv');
 			q.orderByRaw('ts_rank(href.tsv, query) DESC');
-			q.orderBy(req.ref('href.url'));
+			q.orderBy(ref('href.url'));
 			q.orderBy('updated_at', 'desc');
 		} else {
 			q.orderBy('updated_at', 'desc');
@@ -177,7 +177,7 @@ module.exports = class HrefService {
 	}
 
 	async #add(req, data) {
-		const { site, trx, Href } = req;
+		const { site, sql: { trx, Href } } = req;
 		let local = false;
 		const siteUrl = site.$url ?? new URL(`https://${site.id}.localhost.localdomain`);
 		const fullUrl = new URL(data.url, siteUrl);
@@ -247,7 +247,7 @@ module.exports = class HrefService {
 	};
 
 	async update(req, data) {
-		const { Href, site, trx } = req;
+		const { site, sql: { trx, Href } } = req;
 		const { url } = data;
 		const copy = { ...data };
 		delete copy.url;
@@ -320,7 +320,7 @@ module.exports = class HrefService {
 	};
 
 	async referrers(req, { ids = [], url, limit, offset }) {
-		const { site, trx, ref } = req;
+		const { site, sql: { ref, trx } } = req;
 		const { hrefs, standalones, pages } = site.$pkg;
 		const qList = q => {
 			const urlQueries = [];
@@ -329,10 +329,10 @@ module.exports = class HrefService {
 					const bq = site.$modelClass.query(trx).from('block')
 						.select('block.id')
 						.where('block.type', type)
-						.whereNotNull(req.ref(`block.data:${desc.path}`));
+						.whereNotNull(ref(`block.data:${desc.path}`));
 					if (desc.array) {
 						bq.where(
-							req.raw("jsonb_typeof(??)", [req.ref(`block.data:${desc.path}`)]),
+							req.sql.raw("jsonb_typeof(??)", [ref(`block.data:${desc.path}`)]),
 							'array'
 						);
 					}
@@ -462,7 +462,7 @@ module.exports = class HrefService {
 	};
 
 	async collect(req, data) {
-		const { site, trx } = req;
+		const { site, sql: { ref, trx } } = req;
 		const { hrefs } = site.$pkg;
 		const qList = q => {
 			const urlQueries = [];
@@ -477,17 +477,17 @@ module.exports = class HrefService {
 				for (const desc of list) {
 					const bq = site.$modelClass.query(trx).from('blocks')
 						.where('blocks.type', type)
-						.whereNotNull(req.ref(`blocks.data:${desc.path}`));
+						.whereNotNull(ref(`blocks.data:${desc.path}`));
 					if (desc.array) {
-						bq.select(req.raw("jsonb_array_elements_text(??) AS url", [
-							req.ref(`blocks.data:${desc.path}`)
+						bq.select(req.sql.raw("jsonb_array_elements_text(??) AS url", [
+							ref(`blocks.data:${desc.path}`)
 						]));
 						bq.where(
-							req.raw("jsonb_typeof(??)", [req.ref(`blocks.data:${desc.path}`)]),
+							req.sql.raw("jsonb_typeof(??)", [ref(`blocks.data:${desc.path}`)]),
 							'array'
 						);
 					} else {
-						bq.select(req.ref(`blocks.data:${desc.path}`).castText().as('url'));
+						bq.select(ref(`blocks.data:${desc.path}`).castText().as('url'));
 					}
 					urlQueries.push(bq);
 				}
@@ -515,7 +515,7 @@ module.exports = class HrefService {
 			if (data.preview) {
 				meta = `jsonb_set(${meta}, '{preview}', to_jsonb(href.preview))`;
 			}
-			q.select(req.raw(`json_object_agg(
+			q.select(req.sql.raw(`json_object_agg(
 				href.url,
 				${meta}
 				ORDER BY href.url
@@ -570,7 +570,7 @@ module.exports = class HrefService {
 		}
 	};
 
-	#collectBlockUrls({ site, trx }, data, level) {
+	#collectBlockUrls({ site, sql: { trx } }, data, level) {
 		const { hrefs } = site.$pkg;
 		const types = Object.keys(hrefs);
 		const table = ['root', 'root:block', 'root:shared:block'][level];
@@ -609,7 +609,7 @@ module.exports = class HrefService {
 	}
 
 	async reinspect(req, data) {
-		const { site, trx } = req;
+		const { site, sql: { trx, ref, val } } = req;
 		const { hrefs, pages } = site.$pkg;
 		const fhrefs = {};
 		for (const [type, list] of Object.entries(hrefs)) {
@@ -633,13 +633,13 @@ module.exports = class HrefService {
 					this.on(function () {
 						for (const [type, list] of Object.entries(fhrefs)) {
 							this.orOn(function () {
-								this.on('block.type', req.val(type));
+								this.on('block.type', val(type));
 								this.on(function () {
 									for (const desc of list) {
 										if (desc.array) {
-											this.orOn(req.ref(`data:${desc.path}`).from('block'), '@>', req.ref('href.url').castJson());
+											this.orOn(ref(`data:${desc.path}`).from('block'), '@>', ref('href.url').castJson());
 										} else {
-											this.orOn('href.url', req.ref(`data:${desc.path}`).from('block').castText());
+											this.orOn('href.url', ref(`data:${desc.path}`).from('block').castText());
 										}
 									}
 								});
@@ -710,7 +710,7 @@ module.exports = class HrefService {
 
 	async gc(req, data) {
 		const collected = await req.run('href.collect', { content: true, asMap: true });
-		const items = await req.Href.query(req.trx).columns().whereSite(req.site.id);
+		const items = await req.sql.Href.query(req.sql.trx).columns().whereSite(req.site.id);
 		const list = [];
 		for (const item of items) {
 			if (!(item.url in collected)) {

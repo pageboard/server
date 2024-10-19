@@ -423,9 +423,10 @@ module.exports = class Validation {
 		return ajv;
 	}
 
-	validate(req, data) {
-		const validator = req.site ?
-			req.site.$modelClass.getValidator().ajv
+	validate({ site }, data) {
+		if (site?.id == "*") return data; //bootstrap
+		const validator = site ?
+			site.$modelClass.getValidator().ajv
 			: this.#servicesValidator;
 		validator.validate('/services', data);
 		const { errors } = validator;

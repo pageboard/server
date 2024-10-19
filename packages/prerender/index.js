@@ -22,7 +22,7 @@ module.exports = class PrerenderModule {
 		return req.get(dom.header) != null;
 	}
 
-	viewRoutes(app, server) {
+	viewRoutes(router) {
 		this.dom = dom;
 
 		Object.assign(dom.defaults, {
@@ -49,10 +49,10 @@ module.exports = class PrerenderModule {
 		});
 		dom.defaults.cookies.add("bearer");
 
-		server.get(
-			'*',
+		router.get(
+			'/*',
 			async (req, res, next) => this.check(req, res, next),
-			app.cache.tag('app-:site'),
+			this.app.cache.tag('app-:site'),
 			(req, res) => this.source(req, res)
 		);
 	}
@@ -91,7 +91,7 @@ module.exports = class PrerenderModule {
 
 		if (pathname == null || schema == null) {
 			if (req.accepts(['image/*', 'json', 'html']) != 'html') {
-				next(new HttpError.NotAcceptable());
+				next(new HttpError.NotAcceptable(req.path));
 			} else {
 				req.call('cache.map', "/.well-known/statics/410.html");
 				res.set('X-Accel-Redirect', "/.well-known/statics/410.html");
@@ -228,7 +228,7 @@ module.exports = class PrerenderModule {
 	}
 
 	async save(req, { url }) {
-		const { site } = req;
+		const { site, sql: { Block } } = req;
 		if (!site.$url) {
 			throw new HttpError.BadRequest("Rendering needs a site url");
 		}
@@ -244,8 +244,8 @@ module.exports = class PrerenderModule {
 		if (res.statusCode != 200) {
 			throw new HttpError[res.statusCode]();
 		}
-		const dirName = req.call('statics.dir', '@tmp');
-		const fileName = await req.Block.genId(9);
+		const dirName = req.call('statics.dir', 'tmp');
+		const fileName = await Block.genId(9);
 		const filePath = Path.join(dirName, fileName + '.' + ext);
 
 		if (res.body) {

@@ -12,11 +12,11 @@ module.exports = class SiteService {
 		return import("../lib/site.mjs");
 	}
 
-	apiRoutes(app, server) {
-		app.post("/@api/site/save", 'site.save');
+	apiRoutes(router) {
+		router.write("/site/save", 'site.save');
 	}
 
-	#QuerySite({ trx, Block }, data) {
+	#QuerySite({ sql: { trx, Block } }, data) {
 		return Block.query(trx).alias('site').first()
 			.columns()
 			.where('site.type', 'site')
@@ -67,7 +67,7 @@ module.exports = class SiteService {
 		}]
 	};
 
-	async search({ trx, Block }, data) {
+	async search({ sql: { trx, Block } }, data) {
 		const q = Block.query(trx).alias('site')
 			.columns().where('site.type', 'site')
 			.joinRelated('children', { alias: 'settings' })
@@ -129,8 +129,8 @@ module.exports = class SiteService {
 		}
 	};
 
-	async add({ trx, Block }, data) {
-		const site = await this.#QuerySite({ trx, Block }, { id: data.id });
+	async add({ sql }, data) {
+		const site = await this.#QuerySite({ sql }, { id: data.id });
 		if (site) throw new HttpError.Conflict("Site id already exists");
 		data = {
 			...data,
@@ -138,7 +138,7 @@ module.exports = class SiteService {
 			standalone: true,
 			content: {}
 		};
-		const item = await Block.query(trx).insert(data);
+		const item = await sql.Block.query(sql.trx).insert(data);
 		return { item };
 	}
 	static add = {
@@ -179,7 +179,7 @@ module.exports = class SiteService {
 		}
 		mergeRecursiveObject(oldSite.data, data);
 		const site = await req.call('install.site', oldSite);
-		await oldSite.$query(req.trx).patchObject({
+		await oldSite.$query(req.sql.trx).patchObject({
 			type: site.type,
 			data: site.data
 		});
@@ -196,7 +196,7 @@ module.exports = class SiteService {
 		$global: false
 	};
 
-	all({ trx, Block }, { text }) {
+	all({ sql: { trx, Block } }, { text }) {
 		const q = Block.query(trx).where('type', 'site').columns();
 		if (text !== undefined) {
 			q.from(Block.raw("websearch_to_tsquery('unaccent', ?) AS query, block", [text]));
@@ -240,8 +240,8 @@ module.exports = class SiteService {
 	async empty(req, data) {
 		const site = await this.#QuerySite(req, data).throwIfNotFound();
 		const ret = {};
-		ret.blocks = await site.$relatedQuery('children', req.trx).delete();
-		ret.hrefs = await site.$relatedQuery('hrefs', req.trx).delete();
+		ret.blocks = await site.$relatedQuery('children', req.sql.trx).delete();
+		ret.hrefs = await site.$relatedQuery('hrefs', req.sql.trx).delete();
 		return ret;
 	}
 	static empty = {
@@ -258,7 +258,7 @@ module.exports = class SiteService {
 		}
 	};
 
-	async gc({ trx, raw, site, ref, fun }, { age }) {
+	async gc({ site, sql: { trx, raw, ref, fun } }, { age }) {
 		const { count } = await site.$query(trx).select(
 			fun('block_delete_orphans', ref('block._id'), age)
 				.as('count')

@@ -1,5 +1,4 @@
 const { join } = require('node:path');
-const crypto = require('node:crypto');
 const polyfills = require('@kapouer/polyfill-library');
 const toposort = require('toposort');
 const utils = require('../../src/utils');
@@ -81,22 +80,14 @@ module.exports = class PolyfillModule {
 		};
 	}
 
-	async fileRoutes(app, server) {
-		server.get(
-			'/@api/polyfill/bundle',
-			app.cache.for({
-				maxAge: '1 year',
-				immutable: true
-			}),
-			async (req, res, next) => {
-				try {
-					const features = req.query.features?.split('!') ?? [];
-					const output = await req.run('polyfill.bundle', { features });
-					if (!output) return res.sendStatus(204);
-					res.accelerate(output);
-				} catch (err) {
-					next(err);
-				}
+	async fileRoutes(router) {
+		router.get(
+			'/polyfill.js',
+			async (req, res) => {
+				const features = req.query.features?.split('!') ?? [];
+				const output = await req.run('polyfill.bundle', { features });
+				if (!output) return res.sendStatus(204);
+				res.accelerate(output);
 			}
 		);
 	}

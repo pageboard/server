@@ -23,8 +23,8 @@ module.exports = class AiModule {
 		return this.#depictor;
 	}
 
-	apiRoutes(app) {
-		app.get("/@api/ai/depict", 'ai.depict');
+	apiRoutes(router) {
+		router.read("/ai/depict", 'ai.depict');
 	}
 
 	async translate(req, { strings, lang }) {
