@@ -145,8 +145,30 @@ module.exports = class PrintModule {
 		}
 	};
 
-	async again(req, data) {
-		const block = await req.run('block.get', data);
+	async preview(req, data) {
+		const block = await req.run('block.get', { id: data.id, type: 'print_job' });
+		block.data.device = "screen";
+		await this.#onlineJob(req, block);
+		return block;
+	}
+	static preview = {
+		title: 'Preview',
+		$action: 'write',
+		required: ['id'],
+		properties: {
+			id: {
+				title: 'id',
+				type: 'string',
+				format: 'id'
+			}
+		}
+	};
+
+	async send(req, data) {
+		const block = await req.run('block.get', {
+			type: 'print_job',
+			id: data.id
+		});
 		block.data.order = {
 			status: 'accepted'
 		};
@@ -160,8 +182,8 @@ module.exports = class PrintModule {
 		await req.try(block, (req, block) => job.call(this, req, block));
 		return { item: block };
 	}
-	static again = {
-		title: 'Reprint',
+	static send = {
+		title: 'Send',
 		$action: 'write',
 		required: ['id'],
 		properties: {
@@ -171,31 +193,6 @@ module.exports = class PrintModule {
 				format: 'id'
 			}
 		}
-	};
-
-	async run(req, data) {
-		const { item: block } = await req.run('block.add', {
-			// w/a remote#customer_reference limited to 15 chars
-			id: await req.Block.genId(7),
-			type: 'print_job',
-			data: { ...data, response: {}, order: { status: 'accepted' } }
-		});
-		const job = {
-			remote: this.#remoteJob,
-			offline: this.#offlineJob,
-			printer: this.#printerJob,
-			online: this.#onlineJob
-		}[block.data.printer];
-		await req.try(block, (req, block) => job.call(this, req, block));
-		return {
-			item: block
-		};
-	}
-
-	static run = {
-		title: 'Print',
-		$action: 'write',
-		$ref: "/elements#/definitions/print_job/properties/data"
 	};
 
 	async #onlineJob(req, block) {
