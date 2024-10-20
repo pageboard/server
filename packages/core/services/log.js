@@ -37,7 +37,7 @@ module.exports = class LogService {
 			return pad(res.locals.site && res.locals.site.substring(0, 8) || "-", 8);
 		});
 
-		this.#log = morgan(this.opts, {
+		this.#log = morgan(this.opts.format, {
 			skip: function (req, res) {
 				return false;
 			}

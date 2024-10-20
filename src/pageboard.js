@@ -67,7 +67,9 @@ module.exports = class Pageboard {
 			"@pageboard/upload",
 			"@pageboard/statics"
 		],
-		log: ':method :status :time :size :site :url',
+		log: {
+			format: ':method :status :time :size :site :url',
+		},
 		server: {
 			port: 3000
 		},
