@@ -88,19 +88,19 @@ module.exports = function (group, router) {
 			if (req.user.grants.length) {
 				res.set('X-Pageboard-Grants', req.user.grants.join(','));
 			}
-			if (req.$statusText) {
-				res.statusMessage = req.$statusText;
-				delete req.$statusText;
+			if (obj.$statusText) {
+				res.statusMessage = obj.$statusText;
+				delete obj.$statusText;
 			}
-			if (req.$status) {
-				const code = Number.parseInt(req.$status);
+			if (obj.$status) {
+				const code = Number.parseInt(obj.$status);
 				if (code < 200 || code >= 600 || Number.isNaN(code)) {
-					console.error("Unknown error code", req.$status);
+					console.error("Unknown error code", obj.$status);
 					res.status(500);
 				} else {
 					res.status(code);
 				}
-				delete req.$status;
+				delete obj.$status;
 			}
 			if (obj.location) {
 				res.redirect(obj.location);

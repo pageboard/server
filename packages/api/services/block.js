@@ -686,7 +686,7 @@ module.exports = class BlockService {
 		data.offset = 0;
 		const obj = await this.search(req, data);
 		const ret = { hrefs: obj.hrefs, lang: obj.lang };
-		if (obj.items.length == 0) req.$status = 404;
+		if (obj.items.length == 0) ret.$status = 404;
 		else ret.item = obj.items[0];
 		return ret;
 	}

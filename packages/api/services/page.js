@@ -162,25 +162,26 @@ module.exports = class PageService {
 			}).pathname);
 			req.call('cache.map', mapUrl.pathname + mapUrl.search);
 		}
-		req.$status = 200;
-		const obj = {};
+		const obj = {
+			$status: 200
+		};
 		let page = await this.#QueryPage(req, data);
 		if (!page) {
-			req.$status = 404;
+			obj.$status = 404;
 		} else if (req.locked(page.lock)) {
-			req.$status = 401;
+			obj.$status = 401;
 		}
 		const wkp = /^\/\.well-known\/(\d{3})$/.exec(data.url);
-		if (req.$status != 200) {
+		if (obj.$status != 200) {
 			page = await this.#QueryPage(req, {
-				url: `/.well-known/${req.$status}`,
+				url: `/.well-known/${obj.$status}`,
 				lang: data.lang
 			});
 			if (!page) return Object.assign(obj, {
 				item: { type: 'page' }
 			});
 		} else if (wkp) {
-			req.$status = parseInt(wkp[1]);
+			obj.$status = parseInt(wkp[1]);
 		}
 		const hrefs = await req.run('href.collect', {
 			ids: [page.id],

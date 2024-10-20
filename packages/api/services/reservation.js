@@ -38,8 +38,8 @@ module.exports = class ReservationService {
 			parent: { parents }
 		});
 		if (obj.item) {
-			req.$status = 409;
-			req.$statusText = "User already has a reservation for this date";
+			obj.$status = 409;
+			obj.$statusText = "User already has a reservation for this date";
 			return obj;
 		}
 		if (reservation.attendees) {
