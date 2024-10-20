@@ -20,9 +20,7 @@ module.exports = function render(page, settings, req, res) {
 			return result;
 		}, req.site.data.env == "dev");
 		if (status && status != 200) {
-			const err = new Error(statusText);
-			err.statusCode = status < 400 ? 400 : status;
-			throw err;
+			throw new HttpError[status](statusText);
 		}
 	});
 };
