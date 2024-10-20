@@ -161,14 +161,17 @@ module.exports = class Pageboard {
 	#loadPlugin(path, sub) {
 		try {
 			const Mod = require(path);
+			const pkg = path.startsWith('/') ? {} : require(Path.join(path, 'package.json'));
 			if (!this.opts[Mod.name]) this.opts[Mod.name] = {};
 			const opts = this.opts[Mod.name];
+			if (opts.version) throw new Error(`${Mod.name}.version is a reserved option`);
+			if (pkg.version) opts.version = pkg.version;
 			const plugin = new Mod(this, opts);
 			if (Mod.name && !sub) this[Mod.name] = plugin;
 			this.#plugins.push(plugin);
 			if (Mod.plugins) this.#loadPlugins(Mod, true);
 		} catch (err) {
-			console.error("Error loading plugin", path);
+			console.error("Error loading plugin", path, sub);
 			throw err;
 		}
 	}
