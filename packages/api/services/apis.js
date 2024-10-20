@@ -24,35 +24,6 @@ module.exports = class ApiService {
 		});
 	}
 
-	async elements() {
-		return {
-			log: {
-				title: 'Log',
-				standalone: true,
-				additionalProperties: true,
-				type: 'object',
-				properties: {},
-				parents: {
-					type: 'array',
-					items: {
-						type: 'object',
-						properties: {
-							type: {
-								title: 'Form',
-								const: 'api_form'
-							},
-							id: {
-								title: 'id',
-								type: 'string',
-								format: 'id'
-							}
-						}
-					}
-				}
-			}
-		};
-	}
-
 	async post(req, data) {
 		const { site, run, user, locked, sql: { ref, trx } } = req;
 		const form = await site.$relatedQuery('children', trx)
@@ -66,17 +37,11 @@ module.exports = class ApiService {
 			throw new HttpError.Unauthorized("Check user permissions");
 		}
 
-		const { action = {}, logging } = form.data ?? {};
+		const { action = {} } = form.data ?? {};
 
 		const { method } = action;
 
 		const reqBody = data.body ?? {};
-
-		if (logging) await req.run('block.add', {
-			type: 'log',
-			data: data.body,
-			parents: [{ id: form.id, type: form.type }]
-		});
 
 		const fields = action.parameters ?? {};
 		for (const key of Object.keys(fields)) {
