@@ -198,13 +198,13 @@ module.exports = class PolyfillModule {
 	}
 
 	async source(list) {
-		let source = '{';
+		let source = `{\nversion: "${this.opts.version}"`;
 		const features = await this.getFeatures(list, true);
 		await Promise.all(features.map(async name => {
 			const polyfill = await this.getPolyfill(name);
-			source += `"${name}": (${polyfill.detectSource.trim()}),`;
+			source += `,\n"${name}": (${polyfill.detectSource.trim()})`;
 		}));
-		source += '}';
+		source += '\n}';
 		return source;
 	}
 };
