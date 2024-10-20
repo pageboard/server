@@ -178,7 +178,7 @@ module.exports = class SiteService {
 			await req.run('translate.fill', { id: oldSite.id, lang: dst });
 		}
 		mergeRecursiveObject(oldSite.data, data);
-		const site = await req.call('install.site', oldSite);
+		const site = await req.call('install.domain', oldSite);
 		await oldSite.$query(req.sql.trx).patchObject({
 			type: site.type,
 			data: site.data
