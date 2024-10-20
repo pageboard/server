@@ -26,8 +26,9 @@ const site = {
 	type: 'site',
 	data: {
 		env: 'dev',
-		module: 'pageboard/client#master',
-		version: null,
+		dependencies: {
+			'@pageboard/site': 'link://./tests/fixtures/client/packages/site'
+		},
 		languages: ['fr', 'en']
 	},
 	standalone: true,

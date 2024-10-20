@@ -25,9 +25,9 @@ suite('site', function () {
 		} catch (err) {
 			// pass
 		}
-		const add = await app.run('site.add', site);
-		assert.ok(add.updated_at);
-		assert.deepEqual({ ...add.toJSON(), ...nullers }, { ...site, ...nullers });
+		const { item } = await app.run('site.add', site);
+		assert.ok(item.updated_at);
+		assert.deepEqual({ ...item.toJSON(), ...nullers }, { ...site, ...nullers });
 	});
 
 	test('site does exist', async function () {
@@ -42,21 +42,19 @@ suite('site', function () {
 	});
 
 	test('save site', async function () {
-		site.data.version = 'HEAD';
 		try {
 			await app.run('site.add', site);
 		} catch (err) {
 			// pass
 		}
 		const save = await app.run('site.save', {
-			languages: ['en'], version: null
+			languages: ['en']
 		}, { site: site.id });
 		assert.equal(save.data.version, null);
-		assert.ok(save.data.server);
+		assert.equal(save.data.server, app.version);
 		delete save.data.server;
 		assert.equal(typeof save.updated_at, "string");
 		site.data.languages = ['en'];
-		site.data.version = null;
 		assert.deepEqual({ ...save.toJSON(), ...nullers }, { ...site, ...nullers });
 	});
 
