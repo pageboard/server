@@ -67,7 +67,7 @@ module.exports = class ImageModule {
 					fit: rs.fit
 				});
 				const path = await req.call('image.get', {
-					url: req.path,
+					url: req.baseUrl + req.path,
 					size
 				});
 				if (!path) throw new HttpError.NotFound();
