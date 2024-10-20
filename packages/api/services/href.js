@@ -409,7 +409,7 @@ module.exports = class HrefService {
 
 
 	async change({
-		site, trx, ref, fun, raw, Block, Href
+		site, sql: { trx, ref, fun, raw, Block, Href }
 	}, { from, to }) {
 		if (from == to) return; // hum
 		for (const [type, list] of Object.entries(site.$pkg.hrefs)) {
@@ -422,8 +422,8 @@ module.exports = class HrefService {
 				await site.$relatedQuery('children', trx)
 					.where('block.type', type)
 					.where(q => {
-						// use fn.starts_with
 						q.where(fun('starts_with', field, `${from}/`));
+						q.whereNot(fun('starts_with', field, `${to}/`));
 						q.orWhere(field, from);
 					})
 					.patch({
