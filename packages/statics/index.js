@@ -202,16 +202,23 @@ module.exports = class StaticsModule {
 			from: '/.uploads',
 			to: '/@file/share'
 		});
+		await req.run('href.change', {
+			from: '/@file',
+			to: '/@file/share'
+		});
 		const dest = this.dir(req, 'share');
-
-		await fs.cp(
-			Path.join(this.app.dirs.data, 'uploads', req.site.id),
-			dest,
-			{ errorOnExist: true, recursive: true }
-		);
+		try {
+			await fs.cp(
+				Path.join(this.app.dirs.data, 'uploads', req.site.id),
+				dest,
+				{ errorOnExist: true, recursive: true }
+			);
+		} catch (err) {
+			if (err.code != 'ERR_FS_CP_DIR_TO_NON_DIR') throw err;
+		}
 	}
 	static migrate = {
-		title: 'Migrate from /.uploads to /@file/share',
+		title: 'Migrate from /.uploads to /@file',
 		$private: true,
 		$global: false,
 		$action: 'write',
