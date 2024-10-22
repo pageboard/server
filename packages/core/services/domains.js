@@ -245,11 +245,6 @@ module.exports = class DomainsService {
 		req.finish = fn => {
 			req.finitions.push(fn);
 		};
-		req.postTries = [];
-		req.postTry = (block, job) => {
-			if (req.postTries.length == 0) req.finish(postTryProcess);
-			req.postTries.push([block, job]);
-		};
 	}
 
 	async #initSite(host, req, res) {
@@ -480,24 +475,4 @@ function castArray(prop) {
 	if (typeof prop == "string") return [prop];
 	if (Array.isArray(prop)) return prop;
 	else throw new Error("Cannot castArray " + typeof prop);
-}
-
-async function postTryProcess(req) {
-	const { sql, postTries: list } = req;
-	if (!list.length) return;
-	req.postTries = [];
-	while (list.length) {
-		sql.trx = await sql.genTrx();
-		try {
-			await req.try(...list.shift());
-		} catch (ex) {
-			console.error(ex);
-			// stop there
-			list.splice(0, list.length);
-		} finally {
-			if (!sql.trx.isCompleted()) {
-				await sql.trx.commit();
-			}
-		}
-	}
 }

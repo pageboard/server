@@ -337,7 +337,10 @@ module.exports = class MailModule {
 			type: 'mail_job',
 			data: { ...data, response: {} }
 		});
-		req.postTry(block, (req, block) => this.#sendJob(req, block));
+		req.finish(async () => req.try(
+			block,
+			(req, block) => this.#sendJob(req, block)
+		));
 		return { item: block };
 	}
 	static send = {
