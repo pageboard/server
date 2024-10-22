@@ -4,9 +4,9 @@ module.exports = class ApiService {
 	static name = 'apis';
 	static priority = 1000;
 
+	#writers = new Map();
+
 	apiRoutes(router) {
-		// these routes are setup after all others
-		// eventually all routes will be declared as actions ?
 		router.read(["/:name", "/query/:name"], req => {
 			return req.run('apis.get', {
 				name: req.params.name,
@@ -18,9 +18,48 @@ module.exports = class ApiService {
 
 			return req.run('apis.post', {
 				name: req.params.name,
-				query: unflatten(req.query),
 				body: unflatten(body)
 			});
+		});
+		router.get("/stream/:name", async (req, res, next) => {
+			const data = req.params;
+			try {
+				const form = await req.run(
+					({ site, sql: { ref, trx } }) => site.$relatedQuery('children', trx)
+						.whereIn('block.type', ['fetch', 'mail_fetch'])
+						.where(q => {
+							q.where('block.id', data.name);
+							q.orWhere(ref('block.data:name').castText(), data.name);
+						})
+						.first().throwIfNotFound()
+				);
+
+				const { reactions = [] } = form.data ?? {};
+
+				if (!reactions.length) {
+					throw new HttpError.BadRequest("No reactions");
+				}
+				const wMap = this.#writers;
+				for (const writer of reactions) {
+					const readers = (
+						wMap.has(writer) ? wMap : wMap.set(writer, new Set())
+					).get(writer);
+					readers.add(res);
+				}
+				req.on('close', () => {
+					for (const writer of reactions) {
+						const readers = wMap.get(writer);
+						readers?.delete(res);
+					}
+				});
+				res.writeHead(200, {
+					'Content-Type': 'text/event-stream',
+					'Connection': 'keep-alive',
+					'Cache-Control': 'no-cache'
+				});
+			} catch (err) {
+				next(err);
+			}
 		});
 	}
 
@@ -85,30 +124,14 @@ module.exports = class ApiService {
 			);
 
 		scope.$response = result;
-		const redirection = mergeExpressions({}, form.data.redirection, scope);
-
-		if (redirection.name) {
-			const api = await site.$relatedQuery('children', trx)
-				.select('type')
-				.whereIn('block.type', ['api_form', 'fetch'])
-				.where(ref('block.data:name').castText(), redirection.name)
-				.first().throwIfNotFound();
-
-			if (api.type == 'api_form') {
-				return run('apis.post', {
-					name: redirection.name,
-					query: redirection.parameters,
-					body: result
-				});
-			} else {
-				return run('apis.get', {
-					name: redirection.name,
-					query: redirection.parameters
-				});
+		const redirection = mergeExpressions(params, form.data.redirection, scope);
+		const writers = this.#writers.get(data.name);
+		if (writers?.size) req.finish(() => {
+			for (const reader of writers) {
+				reader.write(`data: ${JSON.stringify({})}\n\n`);
 			}
-		} else {
-			return result;
-		}
+		});
+		return this.#redirect(req, redirection, result);
 		// if (schema.templates) {
 		// 	block.expr = mergeExpressions(block.expr ?? {}, schema.templates, block);
 		// 	if (Object.isEmpty(block.expr)) block.expr = null;
@@ -220,5 +243,30 @@ module.exports = class ApiService {
 			}
 		}
 	};
+
+	async #redirect({ site, run, sql: { ref, trx } }, redirection, result) {
+		if (redirection.name) {
+			const api = await site.$relatedQuery('children', trx)
+				.select('type')
+				.whereIn('block.type', ['api_form', 'fetch'])
+				.where(ref('block.data:name').castText(), redirection.name)
+				.first().throwIfNotFound();
+
+			if (api.type == 'api_form') {
+				return run('apis.post', {
+					name: redirection.name,
+					query: redirection.parameters,
+					body: result
+				});
+			} else {
+				return run('apis.get', {
+					name: redirection.name,
+					query: redirection.parameters
+				});
+			}
+		} else {
+			return result;
+		}
+	}
 };
 
