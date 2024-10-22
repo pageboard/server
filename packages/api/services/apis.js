@@ -125,12 +125,14 @@ module.exports = class ApiService {
 
 		scope.$response = result;
 		const redirection = mergeExpressions(params, form.data.redirection, scope);
-		const writers = this.#writers.get(data.name);
-		if (writers?.size) req.finish(() => {
-			for (const reader of writers) {
-				reader.write(`data: ${JSON.stringify({})}\n\n`);
-			}
-		});
+		if (data.name) {
+			const writers = this.#writers.get(data.name);
+			if (writers?.size) req.finish(() => {
+				for (const reader of writers) {
+					reader.write(`data: ${JSON.stringify({})}\n\n`);
+				}
+			});
+		}
 		return this.#redirect(req, redirection, result);
 		// if (schema.templates) {
 		// 	block.expr = mergeExpressions(block.expr ?? {}, schema.templates, block);
