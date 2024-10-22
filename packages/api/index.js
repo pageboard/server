@@ -117,43 +117,45 @@ module.exports = class ApiModule {
 
 	async run(req = {}, method, parameters = {}) {
 		const { app } = this;
-		const [schema, service] = this.getService(method);
-		Log.api("run %s:\n%O", method, parameters);
+		const [schema, service] = typeof method == "string"
+			? this.getService(method) : [null, method];
 		const data = {
 			method,
 			parameters: mergeRecursive({}, parameters)
 		};
-		if (!schema.$global && !req.site) {
-			throw new HttpError.BadRequest(method + ' expects site to be defined');
-		}
-		if (schema.$cache != null && req.res) {
-			if (schema.$cache === false) {
-				app.cache.disable(req, req.res, () => { });
-			} else if (typeof schema.$cache == "string") {
-				app.cache.for(schema.$cache)(req, req.res, () => { });
+		if (schema) {
+			Log.api("run %s:\n%O", method, parameters);
+			if (!schema.$global && !req.site) {
+				throw new HttpError.BadRequest(method + ' expects site to be defined');
 			}
-		}
-		if (req.res) {
-			const { $tags = ['data-:site'] } = schema;
-			app.cache.tag(...$tags)(req, req.res, () => { });
-		}
-		if (schema.$lock != null && schema.$lock !== true) {
-			if (req.locked?.(schema.$lock)) {
-				if (req.user?.grants?.length == 0) {
-					throw new HttpError.Unauthorized(schema.$lock);
-				} else {
-					throw new HttpError.Forbidden(schema.$lock);
+			if (schema.$cache != null && req.res) {
+				if (schema.$cache === false) {
+					app.cache.disable(req, req.res, () => { });
+				} else if (typeof schema.$cache == "string") {
+					app.cache.for(schema.$cache)(req, req.res, () => { });
 				}
 			}
+			if (req.res) {
+				const { $tags = ['data-:site'] } = schema;
+				app.cache.tag(...$tags)(req, req.res, () => { });
+			}
+			if (schema.$lock != null && schema.$lock !== true) {
+				if (req.locked?.(schema.$lock)) {
+					if (req.user?.grants?.length == 0) {
+						throw new HttpError.Unauthorized(schema.$lock);
+					} else {
+						throw new HttpError.Forbidden(schema.$lock);
+					}
+				}
+			}
+
+			this.validate(req, data);
 		}
 
-		this.validate(req, data);
-
-		const { sql = { ref, val, raw, fun, Block, Href } } = req;
-		req.sql ??= sql;
+		const sql = req.sql ??= { ref, val, raw, fun, Block, Href };
 
 		// start a transaction on set trx object on site
-		let hadTrx = false;
+
 		sql.genTrx ??= (async function (req) {
 			const { locals = {} } = req.res || {};
 			return transaction.start(app.database.tenant(locals.tenant));
@@ -164,10 +166,8 @@ module.exports = class ApiModule {
 		}
 		let hadRead = false;
 		let hadWrite = false;
-
-		if (sql.trx) {
-			hadTrx = true;
-		} else if (schema.$action) {
+		const hadTrx = Boolean(sql.trx);
+		if (!hadTrx && schema?.$action) {
 			sql.trx = await sql.genTrx();
 			sql.trx.req = req; // needed by objection hooks
 			sql.trx.on('query', data => {
@@ -188,7 +188,7 @@ module.exports = class ApiModule {
 			if (!hadTrx && sql.trx && !sql.trx.isCompleted()) {
 				await sql.trx.commit();
 			}
-			if (!schema.$private) {
+			if (schema && !schema.$private) {
 				return this.#responseFilter.run(req, obj);
 			} else {
 				return obj;
@@ -203,13 +203,15 @@ module.exports = class ApiModule {
 		} finally {
 			if (sql.trx) {
 				if (hadTrx) {
-					// regenerate completed trx
-					if (sql.trx.isCompleted()) sql.trx = await sql.genTrx();
+					if (sql.trx.isCompleted()) {
+						// clean
+						sql.trx = null;
+					}
 				} else if (hadWrite) {
-					if (schema.$action != "write") {
+					if (schema && schema.$action != "write") {
 						console.warn(method, "had write transaction with $action", schema.$action);
 					}
-				} else if (hadRead && !schema.$action) {
+				} else if (hadRead && schema && !schema.$action) {
 					console.warn(method, "had read transaction without $action");
 				}
 			}
