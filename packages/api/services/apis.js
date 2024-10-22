@@ -77,19 +77,13 @@ module.exports = class ApiService {
 		}
 
 		const { action = {} } = form.data ?? {};
-
-		const { method } = action;
-
-		const reqBody = data.body ?? {};
-
-		const fields = action.parameters ?? {};
-		for (const key of Object.keys(fields)) {
-			if (fields[key] === null) delete fields[key];
-		}
-
-		const { query = {} } = data;
+		const { method, parameters = {} } = action;
+		const { query = {}, body = {} } = data;
 		const scope = {};
 
+		for (const key of Object.keys(parameters)) {
+			if (parameters[key] === null) delete parameters[key];
+		}
 		for (const [key, val] of Object.entries(query)) {
 			if (["$lang", "$pathname"].includes(key)) {
 				scope[key] = val;
@@ -98,24 +92,25 @@ module.exports = class ApiService {
 		}
 		// overwrite to avoid injection
 		Object.assign(scope, {
-			$request: reqBody ?? {},
-			$origin: site.$url.origin,
+			$request: body,
 			$query: query,
+			$origin: site.$url.origin,
 			$site: site.id,
 			$languages: site.data.languages,
 			$user: user
 		});
 
-		const params = Object.isEmpty(action.request)
-			? mergeRecursive(reqBody, fields)
-			: mergeExpressions(fields,
-				mergeRecursive({}, fields, unflatten(action.request)),
+		const input = scope.$in = Object.isEmpty(action.request)
+			? mergeRecursive(body, parameters)
+			: mergeExpressions(
+				parameters,
+				mergeRecursive({}, parameters, unflatten(action.request)),
 				scope
 			);
 
-		const response = method ? await run(method, params) : params;
+		const response = method ? await run(method, input) : input;
 
-		const result = Object.isEmpty(action.response)
+		scope.$out = Object.isEmpty(action.response)
 			? response
 			: mergeExpressions(
 				response,
@@ -123,8 +118,6 @@ module.exports = class ApiService {
 				scope
 			);
 
-		scope.$response = result;
-		const redirection = mergeExpressions(params, form.data.redirection, scope);
 		if (data.name) {
 			const writers = this.#writers.get(data.name);
 			if (writers?.size) req.finish(() => {
@@ -133,7 +126,7 @@ module.exports = class ApiService {
 				}
 			});
 		}
-		return this.#redirect(req, redirection, result);
+		return this.#redirect(req, form.data.redirection, response, scope);
 		// if (schema.templates) {
 		// 	block.expr = mergeExpressions(block.expr ?? {}, schema.templates, block);
 		// 	if (Object.isEmpty(block.expr)) block.expr = null;
@@ -175,18 +168,13 @@ module.exports = class ApiService {
 		}
 
 		const { action = {} } = form.data ?? {};
-
-		const { method } = action;
-
-		const fields = action.parameters ?? {};
-		for (const key of Object.keys(fields)) {
-			if (fields[key] === null) delete fields[key];
-		}
-
+		const { method, parameters = {} } = action;
 		const { query = {} } = data;
-
 		const scope = {};
 
+		for (const key of Object.keys(parameters)) {
+			if (parameters[key] === null) delete parameters[key];
+		}
 		for (const [key, val] of Object.entries(query)) {
 			if (["$lang", "$pathname"].includes(key)) {
 				scope[key] = val;
@@ -195,33 +183,34 @@ module.exports = class ApiService {
 		}
 		// overwrite to avoid injection
 		Object.assign(scope, {
-			$origin: site.$url.origin,
 			$query: query,
+			$origin: site.$url.origin,
 			$site: site.id,
 			$languages: site.data.languages,
 			$user: user
 		});
 
-		const params = Object.isEmpty(action.request)
-			? mergeRecursive(query, fields)
-			: mergeExpressions(fields,
-				mergeRecursive({}, fields, unflatten(action.request)),
+		const input = scope.$in = Object.isEmpty(action.request)
+			? mergeRecursive(query, parameters)
+			: mergeExpressions(
+				parameters,
+				mergeRecursive({}, parameters, unflatten(action.request)),
 				scope
 			);
 
-		const response = method ? await run(method, params) : params;
+		const response = method ? await run(method, input) : input;
 
-		const result = Object.isEmpty(action.response)
+		const out = Object.isEmpty(action.response)
 			? response
 			: mergeExpressions(
 				response,
 				unflatten(action.response),
 				scope
 			);
-		if (data.hrefs && result && typeof result == "object" && !Array.isArray(result)) {
-			result.hrefs = data.hrefs;
+		if (data.hrefs && out && typeof out == "object" && !Array.isArray(out)) {
+			out.hrefs = data.hrefs;
 		}
-		return result;
+		return out;
 	}
 	static get = {
 		title: 'Get',
@@ -246,19 +235,21 @@ module.exports = class ApiService {
 		}
 	};
 
-	async #redirect({ site, run, sql: { ref, trx } }, redirection, result) {
+	async #redirect({ site, run, sql: { ref, trx } }, redirection, response, scope) {
+		redirection = mergeExpressions(response, redirection, scope);
 		if (redirection.name) {
 			const api = await site.$relatedQuery('children', trx)
 				.select('type')
 				.whereIn('block.type', ['api_form', 'fetch'])
 				.where(ref('block.data:name').castText(), redirection.name)
-				.first().throwIfNotFound();
+				.first();
+			if (!api) throw new HttpError.NotFound("Redirection not found: " + redirection.name);
 
 			if (api.type == 'api_form') {
 				return run('apis.post', {
 					name: redirection.name,
 					query: redirection.parameters,
-					body: result
+					body: scope.$out
 				});
 			} else {
 				return run('apis.get', {
@@ -267,7 +258,7 @@ module.exports = class ApiService {
 				});
 			}
 		} else {
-			return result;
+			return scope.$out;
 		}
 	}
 };
