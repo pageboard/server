@@ -120,7 +120,7 @@ module.exports = class ApiModule {
 		const [schema, service] = typeof method == "string"
 			? this.getService(method) : [null, method];
 		const data = {
-			method,
+			method: typeof method == "string" ? method : undefined,
 			parameters: mergeRecursive({}, parameters)
 		};
 		if (schema) {
@@ -154,8 +154,6 @@ module.exports = class ApiModule {
 
 		const sql = req.sql ??= { ref, val, raw, fun, Block, Href };
 
-		// start a transaction on set trx object on site
-
 		sql.genTrx ??= (async function (req) {
 			const { locals = {} } = req.res || {};
 			return transaction.start(app.database.tenant(locals.tenant));
@@ -164,10 +162,11 @@ module.exports = class ApiModule {
 		if (sql.trx?.isCompleted()) {
 			sql.trx = null;
 		}
+		const hadTrx = Boolean(sql.trx);
+
 		let hadRead = false;
 		let hadWrite = false;
-		const hadTrx = Boolean(sql.trx);
-		if (!hadTrx && schema?.$action) {
+		if (!hadTrx && (!schema || schema?.$action)) {
 			sql.trx = await sql.genTrx();
 			sql.trx.req = req; // needed by objection hooks
 			sql.trx.on('query', data => {
@@ -201,13 +200,11 @@ module.exports = class ApiModule {
 			if (!err.method) err.method = method;
 			throw err;
 		} finally {
-			if (sql.trx) {
-				if (hadTrx) {
-					if (sql.trx.isCompleted()) {
-						// clean
-						sql.trx = null;
-					}
-				} else if (hadWrite) {
+			if (sql.trx && !hadTrx) {
+				if (sql.trx.isCompleted()) {
+					sql.trx = null;
+				}
+				if (hadWrite) {
 					if (schema && schema.$action != "write") {
 						console.warn(method, "had write transaction with $action", schema.$action);
 					}
