@@ -1,7 +1,7 @@
 const { promises: dns, setDefaultResultOrder } = require('node:dns');
 const { performance } = require('node:perf_hooks');
 const { Deferred } = require('class-deferred');
-const OnHeaders = require('on-headers');
+
 
 // const localhost4 = "127.0.0.1";
 // const localhost6 = "::1";
@@ -241,9 +241,6 @@ module.exports = class DomainsService {
 				}
 			}
 		};
-		OnHeaders(req.res, () => {
-			while (req.finitions.length) req.finitions.shift()(req);
-		});
 		req.finitions = [];
 		req.finish = fn => {
 			req.finitions.push(fn);

@@ -50,7 +50,18 @@ module.exports = function (group, router) {
 		},
 
 		reply(req, obj) {
-			const { res } = req;
+			const { res, finitions } = req;
+
+			setTimeout(async () => {
+				while (finitions.length) {
+					const finition = finitions.shift();
+					try {
+						await finition(req);
+					} catch (err) {
+						console.error(err);
+					}
+				}
+			});
 			if (obj == null) {
 				res.sendStatus(204);
 				return;

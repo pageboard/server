@@ -3,6 +3,7 @@ const Path = require('node:path');
 const { promises: fs } = require('node:fs');
 const { promisify } = require('node:util');
 const generateKeyPair = promisify(require('node:crypto').generateKeyPair);
+const OnHeaders = require('on-headers');
 
 module.exports = class AuthModule {
 	static name = 'auth';
@@ -37,9 +38,7 @@ module.exports = class AuthModule {
 	async apiRoutes(router) {
 		router.use((req, res, next) => {
 			req.locks = [];
-			req.finish(() => {
-				// TODO with the app.get/post refactoring,
-				// this must simply be done in api.send
+			OnHeaders(res, () => {
 				if (req.locks?.length) {
 					this.sort(req);
 					this.#lock.headers(res, req.locks);
