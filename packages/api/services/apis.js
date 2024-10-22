@@ -21,6 +21,7 @@ module.exports = class ApiService {
 				body: unflatten(body)
 			});
 		});
+
 		router.get("/stream/:name", async (req, res, next) => {
 			const data = req.params;
 			try {
@@ -64,14 +65,12 @@ module.exports = class ApiService {
 	}
 
 	async post(req, data) {
-		const { site, run, user, locked, sql: { ref, trx } } = req;
-		const form = await site.$relatedQuery('children', trx)
-			.where('block.type', 'api_form')
-			.where(q => {
-				q.where('block.id', data.name);
-				q.orWhere(ref('block.data:name').castText(), data.name);
-			})
-			.first().throwIfNotFound();
+		const { site, user, locked } = req;
+		const form = await req.run('apis.find', {
+			name: data.name,
+			types: ['api_form']
+		});
+
 		if (locked(form.lock)) {
 			throw new HttpError.Unauthorized("Check user permissions");
 		}
@@ -108,7 +107,7 @@ module.exports = class ApiService {
 				scope
 			);
 
-		const response = method ? await run(method, input) : input;
+		const response = method ? await req.run(method, input) : input;
 
 		scope.$out = Object.isEmpty(action.response)
 			? response
@@ -155,14 +154,11 @@ module.exports = class ApiService {
 	};
 
 	async get(req, data) {
-		const { site, run, user, locked, sql: { trx, ref } } = req;
-		const form = await site.$relatedQuery('children', trx)
-			.whereIn('block.type', ['fetch', 'mail_fetch'])
-			.where(q => {
-				q.where('block.id', data.name);
-				q.orWhere(ref('block.data:name').castText(), data.name);
-			})
-			.first().throwIfNotFound();
+		const { site, user, locked } = req;
+		const form = await req.run('apis.find', {
+			name: data.name,
+			types: ['fetch', 'mail_fetch']
+		});
 		if (locked(form.lock)) {
 			throw new HttpError.Unauthorized("Check user permissions");
 		}
@@ -198,7 +194,7 @@ module.exports = class ApiService {
 				scope
 			);
 
-		const response = method ? await run(method, input) : input;
+		const response = method ? await req.run(method, input) : input;
 
 		const out = Object.isEmpty(action.response)
 			? response
@@ -235,24 +231,21 @@ module.exports = class ApiService {
 		}
 	};
 
-	async #redirect({ site, run, sql: { ref, trx } }, redirection, response, scope) {
+	async #redirect(req, redirection, response, scope) {
 		redirection = mergeExpressions(response, redirection, scope);
 		if (redirection.name) {
-			const api = await site.$relatedQuery('children', trx)
-				.select('type')
-				.whereIn('block.type', ['api_form', 'fetch'])
-				.where(ref('block.data:name').castText(), redirection.name)
-				.first();
-			if (!api) throw new HttpError.NotFound("Redirection not found: " + redirection.name);
-
+			const api = await req.run('apis.find', {
+				name: redirection.name,
+				types: ['api_form', 'fetch']
+			});
 			if (api.type == 'api_form') {
-				return run('apis.post', {
+				return req.run('apis.post', {
 					name: redirection.name,
 					query: redirection.parameters,
 					body: scope.$out
 				});
 			} else {
-				return run('apis.get', {
+				return req.run('apis.get', {
 					name: redirection.name,
 					query: redirection.parameters
 				});
@@ -261,5 +254,21 @@ module.exports = class ApiService {
 			return scope.$out;
 		}
 	}
+
+	find({ site, sql: { ref, trx } }, { name, types }) {
+		return site.$relatedQuery('children', trx)
+			.whereIn('block.type', types)
+			.where(q => {
+				q.where('block.id', name);
+				q.orWhere(ref('block.data:name').castText(), name);
+			})
+			.first().throwIfNotFound({
+				message: `No ${types.join(', ')} matching id or data.name: ${name}`
+			});
+	}
+	static find = {
+		$private: true,
+		$action: 'read'
+	};
 };
 
