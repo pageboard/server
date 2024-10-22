@@ -4,57 +4,67 @@ module.exports = class ApiService {
 	static name = 'apis';
 	static priority = 1000;
 
-	apiRoutes(app) {
-		// these routes are setup after all others
-		// eventually all routes will be declared as actions ?
-		app.get(["/@api/:name", "/@api/query/:name"], req => {
+	#writers = new Map();
+
+	apiRoutes(router) {
+		router.read(["/:name", "/query/:name"], req => {
 			return req.run('apis.get', {
 				name: req.params.name,
 				query: unflatten(req.query)
 			});
 		});
-		app.post(["/@api/:name", "/@api/form/:name"], async req => {
+		router.write(["/:name", "/form/:name"], async (req, body) => {
 			await req.run('upload.parse', {});
 
 			return req.run('apis.post', {
 				name: req.params.name,
-				query: unflatten(req.query),
-				body: unflatten(req.body)
+				body: unflatten(body)
 			});
+		});
+		router.get("/stream/:name", async (req, res, next) => {
+			const data = req.params;
+			try {
+				const form = await req.run(
+					({ site, sql: { ref, trx } }) => site.$relatedQuery('children', trx)
+						.whereIn('block.type', ['fetch', 'mail_fetch'])
+						.where(q => {
+							q.where('block.id', data.name);
+							q.orWhere(ref('block.data:name').castText(), data.name);
+						})
+						.first().throwIfNotFound()
+				);
+
+				const { reactions = [] } = form.data ?? {};
+
+				if (!reactions.length) {
+					throw new HttpError.BadRequest("No reactions");
+				}
+				const wMap = this.#writers;
+				for (const writer of reactions) {
+					const readers = (
+						wMap.has(writer) ? wMap : wMap.set(writer, new Set())
+					).get(writer);
+					readers.add(res);
+				}
+				req.on('close', () => {
+					for (const writer of reactions) {
+						const readers = wMap.get(writer);
+						readers?.delete(res);
+					}
+				});
+				res.writeHead(200, {
+					'Content-Type': 'text/event-stream',
+					'Connection': 'keep-alive',
+					'Cache-Control': 'no-cache'
+				});
+			} catch (err) {
+				next(err);
+			}
 		});
 	}
 
-	async elements() {
-		return {
-			log: {
-				title: 'Log',
-				standalone: true,
-				additionalProperties: true,
-				type: 'object',
-				properties: {},
-				parents: {
-					type: 'array',
-					items: {
-						type: 'object',
-						properties: {
-							type: {
-								title: 'Form',
-								const: 'api_form'
-							},
-							id: {
-								title: 'id',
-								type: 'string',
-								format: 'id'
-							}
-						}
-					}
-				}
-			}
-		};
-	}
-
 	async post(req, data) {
-		const { site, run, user, locked, trx, ref } = req;
+		const { site, run, user, locked, sql: { ref, trx } } = req;
 		const form = await site.$relatedQuery('children', trx)
 			.where('block.type', 'api_form')
 			.where(q => {
@@ -66,17 +76,11 @@ module.exports = class ApiService {
 			throw new HttpError.Unauthorized("Check user permissions");
 		}
 
-		const { action = {}, logging } = form.data ?? {};
+		const { action = {} } = form.data ?? {};
 
 		const { method } = action;
 
 		const reqBody = data.body ?? {};
-
-		if (logging) await req.run('block.add', {
-			type: 'log',
-			data: data.body,
-			parents: [{ id: form.id, type: form.type }]
-		});
 
 		const fields = action.parameters ?? {};
 		for (const key of Object.keys(fields)) {
@@ -120,30 +124,14 @@ module.exports = class ApiService {
 			);
 
 		scope.$response = result;
-		const redirection = mergeExpressions({}, form.data.redirection, scope);
-
-		if (redirection.name) {
-			const api = await site.$relatedQuery('children', trx)
-				.select('type')
-				.whereIn('block.type', ['api_form', 'fetch'])
-				.where(ref('block.data:name').castText(), redirection.name)
-				.first().throwIfNotFound();
-
-			if (api.type == 'api_form') {
-				return run('apis.post', {
-					name: redirection.name,
-					query: redirection.parameters,
-					body: result
-				});
-			} else {
-				return run('apis.get', {
-					name: redirection.name,
-					query: redirection.parameters
-				});
+		const redirection = mergeExpressions(params, form.data.redirection, scope);
+		const writers = this.#writers.get(data.name);
+		if (writers?.size) req.finish(() => {
+			for (const reader of writers) {
+				reader.write(`data: ${JSON.stringify({})}\n\n`);
 			}
-		} else {
-			return result;
-		}
+		});
+		return this.#redirect(req, redirection, result);
 		// if (schema.templates) {
 		// 	block.expr = mergeExpressions(block.expr ?? {}, schema.templates, block);
 		// 	if (Object.isEmpty(block.expr)) block.expr = null;
@@ -172,7 +160,7 @@ module.exports = class ApiService {
 	};
 
 	async get(req, data) {
-		const { site, run, user, locked, trx, ref } = req;
+		const { site, run, user, locked, sql: { trx, ref } } = req;
 		const form = await site.$relatedQuery('children', trx)
 			.whereIn('block.type', ['fetch', 'mail_fetch'])
 			.where(q => {
@@ -221,8 +209,6 @@ module.exports = class ApiService {
 
 		const response = method ? await run(method, params) : params;
 
-		const { $status, $statusText } = response;
-
 		const result = Object.isEmpty(action.response)
 			? response
 			: mergeExpressions(
@@ -230,18 +216,10 @@ module.exports = class ApiService {
 				unflatten(action.response),
 				scope
 			);
-		const formatted = {
-			$status, $statusText
-		};
-		if (data.hrefs) {
-			formatted.items = result;
-			formatted.hrefs = response.hrefs;
-		} else if (!Array.isArray(result)) {
-			Object.assign(formatted, result);
-		} else {
-			return result;
+		if (data.hrefs && result && typeof result == "object" && !Array.isArray(result)) {
+			result.hrefs = data.hrefs;
 		}
-		return formatted;
+		return result;
 	}
 	static get = {
 		title: 'Get',
@@ -265,5 +243,30 @@ module.exports = class ApiService {
 			}
 		}
 	};
+
+	async #redirect({ site, run, sql: { ref, trx } }, redirection, result) {
+		if (redirection.name) {
+			const api = await site.$relatedQuery('children', trx)
+				.select('type')
+				.whereIn('block.type', ['api_form', 'fetch'])
+				.where(ref('block.data:name').castText(), redirection.name)
+				.first().throwIfNotFound();
+
+			if (api.type == 'api_form') {
+				return run('apis.post', {
+					name: redirection.name,
+					query: redirection.parameters,
+					body: result
+				});
+			} else {
+				return run('apis.get', {
+					name: redirection.name,
+					query: redirection.parameters
+				});
+			}
+		} else {
+			return result;
+		}
+	}
 };
 

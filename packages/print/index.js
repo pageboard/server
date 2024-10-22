@@ -201,11 +201,12 @@ module.exports = class PrintModule {
 			url, lang, ext: 'pdf'
 		});
 		pdfUrl.searchParams.set('pdf', device);
-		req.postTry(block, async () => {
-			await this.#publicPdf(
+		req.finish(async () => req.try(
+			block,
+			(req, block) => this.#publicPdf(
 				req, pdfUrl, `${block.id}.pdf`
-			);
-		});
+			)
+		));
 	}
 
 	async #printerJob(req, block) {
@@ -219,21 +220,23 @@ module.exports = class PrintModule {
 		if (!list.find(name => name == this.opts.local)) {
 			throw new HttpError.NotFound("Printer not found");
 		}
-
-		req.postTry(block, async () => {
-			const { path } = await req.run('prerender.save', {
-				url: pdfUrl.pathname + pdfUrl.search
-			});
-			try {
-				const ret = await cups.printFile(path, {
-					printer: this.opts.local,
-					printerOptions: options
+		req.finish(async () => req.try(
+			block,
+			async (req, block) => {
+				const { path } = await req.run('prerender.save', {
+					url: pdfUrl.pathname + pdfUrl.search
 				});
-				if (ret.stdout) console.info(ret.stdout);
-			} finally {
-				await fs.unlink(path);
+				try {
+					const ret = await cups.printFile(path, {
+						printer: this.opts.local,
+						printerOptions: options
+					});
+					if (ret.stdout) console.info(ret.stdout);
+				} finally {
+					await fs.unlink(path);
+				}
 			}
-		});
+		));
 	}
 
 	async #offlineJob(req, block) {
@@ -246,7 +249,7 @@ module.exports = class PrintModule {
 			url, lang, ext: 'pdf'
 		});
 		pdfUrl.searchParams.set('pdf', device);
-		req.postTry(block, async () => {
+		req.finish(async () => req.try(block, async (req, block) => {
 			const { path } = await req.run('prerender.save', {
 				url: pdfUrl.pathname + pdfUrl.search
 			});
@@ -259,7 +262,7 @@ module.exports = class PrintModule {
 			} finally {
 				await fs.unlink(path);
 			}
-		});
+		}));
 	}
 
 	async couriers(req, { iso_code }) {
@@ -337,8 +340,10 @@ module.exports = class PrintModule {
 			if (!coverPdf) throw new HttpError.NotFound('Cover PDF not found');
 			obj.coverPdf = coverPdf;
 		}
-
-		req.postTry(block, (req, block) => this.#remoteCall(req, block, obj));
+		req.finish(async () => req.try(
+			block,
+			(req, block) => this.#remoteCall(req, block, obj)
+		));
 		return block;
 	}
 

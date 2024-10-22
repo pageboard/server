@@ -18,6 +18,7 @@
   "homepage": "https://github.com/pageboard/server#readme",
   "dependencies": {
     "busboy": "^1.6.0",
+    "class-deferred": "^1.0.1",
     "mime-types": "^2.1.35",
     "speakingurl": "^14.0.1"
   }

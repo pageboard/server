@@ -7,21 +7,16 @@ global.Log = require('./log')('pageboard');
 
 const util = require('node:util');
 const Path = require('node:path');
-const express = require('express');
-const bodyParser = require('body-parser');
-const morgan = require('morgan');
-const pad = require('pad');
-const http = require('node:http');
 const { promises: fs, readFileSync, createWriteStream } = require('node:fs');
-const events = require('node:events');
 const xdg = require('xdg-basedir');
 const toml = require('toml');
+const express = require('express');
+const ServiceRouter = require('./service-router');
 
 util.inspect.defaultOptions.depth = 10;
 
 const cli = require('./cli');
-const Domains = require('./domains');
-const { mergeRecursive, init: initUtils, unflatten } = require('./utils');
+const { mergeRecursive, init: initUtils } = require('./utils');
 
 const pkgApp = JSON.parse(
 	readFileSync(Path.join(__dirname, '..', 'package.json'))
@@ -60,6 +55,7 @@ module.exports = class Pageboard {
 			"@pageboard/api",
 			"@pageboard/auth",
 			"@pageboard/cache",
+			"@pageboard/core",
 			"@pageboard/db",
 			"@pageboard/git",
 			"@pageboard/image",
@@ -71,8 +67,10 @@ module.exports = class Pageboard {
 			"@pageboard/upload",
 			"@pageboard/statics"
 		],
+		log: {
+			format: ':method :status :time :size :site :url',
+		},
 		server: {
-			log: ':method :status :time :size :site :url',
 			port: 3000
 		},
 		commons: {},
@@ -113,18 +111,20 @@ module.exports = class Pageboard {
 	async run(command, data, { site: id, grant } = {}) {
 		const req = Object.setPrototypeOf({
 			headers: {},
-			params: {}
+			params: {},
+			_method: 'get'
 		}, express.request);
-		req.res = Object.setPrototypeOf({
+		const res = Object.setPrototypeOf({
 			headersSent: true,
+			headers: {},
 			locals: {},
 			writeHead() {}
 		}, express.response);
-		req.res.getHeader = req.res.setHeader = () => { };
-		req.res.attachment = filename => {
+		res.getHeader = res.setHeader = () => { };
+		res.attachment = filename => {
 			return createWriteStream(filename);
 		};
-		this.domains.extendRequest(req, this);
+		this.domains.extendRequest(req, res, this);
 
 		req.res.locals.tenant = this.opts.database.tenant;
 		req.user ??= { grants: [] };
@@ -146,10 +146,13 @@ module.exports = class Pageboard {
 			req.site = site;
 		} else {
 			req.site = { id: "*", data: {} };
-			req.site = await req.call('install.pack');
+			req.site = await req.run('install.pack');
 		}
 		try {
 			return req.run(command, data);
+		} catch (err) {
+			console.error(command, err);
+			throw err;
 		} finally {
 			req.res.writeHead(); // triggers finitions
 		}
@@ -158,14 +161,17 @@ module.exports = class Pageboard {
 	#loadPlugin(path, sub) {
 		try {
 			const Mod = require(path);
+			const pkg = path.startsWith('/') ? {} : require(Path.join(path, 'package.json'));
 			if (!this.opts[Mod.name]) this.opts[Mod.name] = {};
 			const opts = this.opts[Mod.name];
+			if (opts.version) throw new Error(`${Mod.name}.version is a reserved option`);
+			if (pkg.version) opts.version = pkg.version;
 			const plugin = new Mod(this, opts);
 			if (Mod.name && !sub) this[Mod.name] = plugin;
 			this.#plugins.push(plugin);
 			if (Mod.plugins) this.#loadPlugins(Mod, true);
 		} catch (err) {
-			console.error("Error loading plugin", path);
+			console.error("Error loading plugin", path, sub);
 			throw err;
 		}
 	}
@@ -178,8 +184,6 @@ module.exports = class Pageboard {
 	}
 
 	async init() {
-		const { opts } = this;
-
 		const server = this.#server = this.#createServer();
 
 		await initUtils();
@@ -192,192 +196,122 @@ module.exports = class Pageboard {
 			return a.constructor.priority || 0 - b.constructor.priority || 0;
 		});
 
-		this.domains = new Domains(this, opts);
-		this.domains.routes(this, server);
-		server.use((err, req, res, next) =>
-			this.#domainsError(err, req, res, next)
-		);
-
+		for (const plugin of this.#plugins) {
+			if (typeof plugin.elements == "function") Object.assign(
+				this.elements, await plugin.elements(this.elements)
+			);
+		}
 		this.#initServices();
-		await this.#initPlugins();
+		for (const plugin of this.#plugins) {
+			if (plugin.init) await plugin.init();
+		}
 
 		if (this.opts.cli) return;
 
 		process.title = "pageboard@" + this.version;
 
-		await this.#initLog();
+		const siteRouter = await this.#initPlugins("site");
+		siteRouter.use((err, req, res, next) => {
+			const code = getCode(err);
+			if ((this.dev || code >= 500) && code != 503) {
+				console.error(err);
+			}
+			res.sendStatus(code);
+		});
+		server.use("/", siteRouter);
 
-		// call plugins#file
-		await this.#initPlugins('file');
-		server.use((err, req, res, next) =>
-			this.#filesError(err, req, res, next)
-		);
-		server.use((req, res, next) => this.log(req, res, next));
-
-		// call plugins#service
-		const tenantsLen = Object.keys(this.opts.database.url).length - 1;
-		server.get('/@api/*',
-			this.cache.tag('app-:site'),
-			this.cache.tag('db-:tenant').for(`${tenantsLen}day`)
-		);
-		await this.#initPlugins('api');
-		server.use(req => {
-			if (req.url.startsWith('/@api/')) {
-				throw new HttpError.NotFound("Unknown api url");
+		const fileRouter = await this.#initPlugins("file");
+		fileRouter.get("/*", (req, res, next) => {
+			next(new HttpError.NotFound(req.path));
+		});
+		fileRouter.use((err, req, res, next) => {
+			const code = getCode(err);
+			if ((this.dev || code >= 500) && code != 404) {
+				console.error(err);
+			}
+			if (code >= 400) {
+				this.log.manual(req);
+				res.status(code);
+				res.send("");
+			} else {
+				res.sendStatus(code);
 			}
 		});
-		server.use((err, req, res, next) =>
-			this.#servicesError(err, req, res, next)
-		);
+		server.use((req, res, next) => {
+			const pref = '/.uploads/';
+			if (req.url.startsWith(pref)) {
+				req.url = "/@file/share/" + req.url.slice(pref.length);
+			}
+			next();
+		});
+		server.use('/@file', fileRouter);
 
-		// call plugins#view
-		await this.#initPlugins('view');
+		const apiRouter = await this.#initPlugins("api");
+		apiRouter.use((req, res, next) => {
+			next(new HttpError.NotFound("Unknown api url: " + req.url));
+		});
+		apiRouter.use((err, req, res, next) => {
+			const code = getCode(err);
+			if (this.dev) console.error(err);
+			const obj = {
+				item: {
+					type: 'error',
+					data: Object.assign({
+						method: err.method,
+						message: err.message
+					}, err.data),
+					content: (err.method ? `${err.method}: ` : '') + (err.content ?? err.toString())
+				}
+			};
+			if (!res.headersSent) res.status(code).json(obj);
+		});
+		server.use('/@api', apiRouter);
 
-		server.use((err, req, res, next) =>
-			this.#viewsError(err, req, res, next)
-		);
+		const viewRouter = await this.#initPlugins("view");
+		viewRouter.use((err, req, res, next) => {
+			const code = getCode(err);
+			if ((this.dev || code >= 500) && code != 404) {
+				console.error(err);
+			}
+			if (!res.headersSent) {
+				res.status(code);
+			}
+			res.end(err.toString());
+		});
+		server.use('/', viewRouter);
 		await this.#start();
 	}
 
 	#createServer() {
-		const server = require('./express-async')(express)();
+		const server = express();
 		server.set("env", this.dev ? 'development' : 'production');
 		if (this.dev) server.set('json spaces', 2);
 		server.disable('x-powered-by');
 		server.enable('trust proxy');
-		server.use((req, res) => {
-			const headers = {
+		server.enable('catch async errors');
+		server.use((req, res, next) => {
+			res.set({
 				'Referrer-Policy': 'strict-origin-when-cross-origin',
 				'X-XSS-Protection': '1;mode=block',
 				'X-Frame-Options': 'sameorigin',
 				'X-Content-Type-Options': 'nosniff'
-			};
-			res.set(headers);
+			});
+			next();
 		});
 		return server;
 	}
 
-	use(handler) {
-		this.#server.use(handler);
-	}
-
-	get(route, handler) {
-		this.#server.get(
-			route,
-			async req => {
-				if (typeof handler == "string") {
-					const apiStr = handler;
-					handler = req => req.run(apiStr, unflatten(req.query));
-				}
-				const data = await handler(req);
-				this.send(req, data);
-			}
-		);
-	}
-
-	post(route, handler) {
-		this.#server.post(
-			route,
-			bodyParser.json({
-				limit: '1000kb',
-				verify(req, res, buf) {
-					req.buffer = buf;
-				}
-			}),
-			bodyParser.urlencoded({ extended: false, limit: '100kb' }),
-			async req => {
-				if (typeof handler == "string") {
-					const apiStr = handler;
-					handler = req => req.run(apiStr, unflatten(req.body));
-				}
-				const data = await handler(req);
-				this.send(req, data);
-			}
-		);
-	}
-
-	send(req, obj) {
-		const { res } = req;
-		if (obj == null) {
-			res.sendStatus(204);
-			return;
-		}
-		if (typeof obj == "string" || Buffer.isBuffer(obj)) {
-			if (!res.get('Content-Type')) res.type('text/plain');
-			res.send(obj);
-			return;
-		}
-		if (typeof obj != "object") {
-			// eslint-disable-next-line no-console
-			console.trace("app.send expects an object, got", obj);
-			obj = {};
-		}
-		if (obj.cookies) {
-			const cookieParams = {
-				httpOnly: true,
-				sameSite: true,
-				secure: req.site.$url.protocol == "https:",
-				path: '/'
-			};
-			for (const [key, cookie] of Object.entries(obj.cookies)) {
-				const val = cookie.value;
-				const maxAge = cookie.maxAge;
-
-				if (val == null || maxAge == 0) {
-					res.clearCookie(key, cookieParams);
-				} else res.cookie(key, val, {
-					...cookieParams,
-					maxAge: maxAge
-				});
-			}
-			delete obj.cookies;
-		}
-		if (req.user.grants.length) {
-			res.set('X-Pageboard-Grants', req.user.grants.join(','));
-		}
-		if (obj.$statusText) {
-			res.statusMessage = obj.$statusText;
-			delete obj.$statusText;
-		}
-		if (obj.$status) {
-			const code = Number.parseInt(obj.$status);
-			if (code < 200 || code >= 600 || Number.isNaN(code)) {
-				console.error("Unknown error code", obj.$status);
-				res.status(500);
-			} else {
-				res.status(code);
-			}
-			delete obj.$status;
-		}
-		if (obj.location) {
-			res.redirect(obj.location);
-		}
-		if (obj.item && !obj.item.type) {
-			// 401 Unauthorized: missing or bad authentication
-			// 403 Forbidden: authenticated but not authorized
-			res.status(req.user.id ? 403 : 401);
-		}
-		if (req.granted) {
-			res.set('X-Pageboard-Granted', 1);
-		}
-
-		if (req.types.size > 0) {
-			res.set('X-Pageboard-Elements', Array.from(req.types).join(','));
-		}
-
-		res.json(obj);
-	}
-
 	async #start() {
-		const server = http.createServer(this.#server);
-		server.listen(this.opts.server.port);
-		this.#server.stop = () => server[Symbol.asyncDispose]();
-		await events.once(server, 'listening');
+		const server = this.#server;
+
+		await new Promise(resolve => {
+			server.listen(this.opts.server.port, resolve);
+		});
 		console.info(`port:\t${this.opts.server.port}`);
 	}
 
 	async stop() {
-		await this.#server.stop();
+		await this.#server.shutdown();
 	}
 
 	async #initDirs(dirs) {
@@ -387,20 +321,14 @@ module.exports = class Pageboard {
 		}
 	}
 
-	async #initPlugins(type) {
-		const server = this.#server;
-		const init = type ? `${type}Routes` : 'init';
-
-		if (!type) for (const plugin of this.#plugins) {
-			if (typeof plugin.elements == "function") Object.assign(
-				this.elements, await plugin.elements(this.elements)
-			);
-		}
-
+	async #initPlugins(group) {
+		const router = new express.Router();
+		ServiceRouter(group, router);
+		const meth = group + `Routes`;
 		for (const plugin of this.#plugins) {
-			if (!plugin[init]) continue;
-			await plugin[init](this, server);
+			await plugin[meth]?.(router);
 		}
+		return router;
 	}
 
 	async #initServices() {
@@ -460,88 +388,6 @@ module.exports = class Pageboard {
 				if (!services[name]) services[name] = service;
 			}
 		}
-	}
-
-	async #initLog() {
-		const { default: prettyBytes } = await import('pretty-bytes');
-		morgan.token('method', (req, res) => {
-			return pad((req.call('prerender.prerendering') ? '*' : '') + req.method, 4);
-		});
-		morgan.token('status', (req, res) => {
-			return pad(3, res.statusCode);
-		});
-		morgan.token('time', (req, res) => {
-			const ms = morgan['response-time'](req, res, 0);
-			if (ms) return pad(4, ms) + 'ms';
-			else return pad(6, '');
-		});
-		morgan.token('type', (req, res) => {
-			return pad(4, (res.get('Content-Type') || '-').split(';').shift().split('/').pop());
-		});
-		morgan.token('size', (req, res) => {
-			const len = parseInt(res.get('Content-Length'));
-			return pad(6, (len && prettyBytes(len) || '0 B').replaceAll(' ', ''));
-		});
-		morgan.token('site', (req, res) => {
-			return pad(res.locals.site && res.locals.site.substring(0, 8) || "-", 8);
-		});
-
-		this.log = morgan(this.opts.server.log, {
-			skip: function (req, res) {
-				return false;
-			}
-		});
-	}
-
-	#domainsError(err, req, res, next) {
-		const code = getCode(err);
-		if ((this.dev || code >= 500) && code != 503) {
-			console.error(err);
-		}
-		res.sendStatus(code);
-	}
-
-	#servicesError(err, req, res, next) {
-		const code = getCode(err);
-		if (this.dev) console.error(err);
-		const obj = {
-			status: code,
-			item: {
-				type: 'error',
-				data: Object.assign({
-					method: err.method,
-					message: err.message
-				}, err.data),
-				content: (err.method ? `${err.method}: ` : '') + (err.content ?? err.toString())
-			}
-		};
-		if (!res.headersSent) res.status(code).send(obj);
-	}
-
-	#filesError(err, req, res, next) {
-		const code = getCode(err);
-		if ((this.dev || code >= 500) && code != 404) {
-			console.error(err);
-		}
-		if (code >= 400) {
-			this.log(req, res, () => {
-				res.status(code);
-				res.send("");
-			});
-		} else {
-			res.sendStatus(code);
-		}
-	}
-
-	#viewsError(err, req, res, next) {
-		const code = getCode(err);
-		if ((this.dev || code >= 500) && code != 404) {
-			console.error(err);
-		}
-		if (!res.headersSent) {
-			res.status(code);
-		}
-		res.end(err.toString());
 	}
 };
 

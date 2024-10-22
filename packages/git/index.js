@@ -11,26 +11,31 @@ module.exports = class GitModule {
 		}
 	}
 
-	apiRoutes(app, server) {
-		app.post(this.opts.wkp, req => {
-			const { site } = req;
-			const event = req.get('X-Github-Event');
-			if (event == "ping") {
-				return {};
-			}
-			if (event != "push") {
-				throw new HttpError.BadRequest("Unsupported event");
-			}
-			const secret = site.data['github-webhook-secret'];
-			if (secret) {
-				const xHub = new xHubSignature('sha256', secret);
-				if (!xHub.verify(req.get('X-Hub-Signature-256'), req.buffer)) {
-					throw new HttpError.BadRequest("Bad signature");
+	siteRoutes(router) {
+		router.post(this.opts.wkp, async (req, res, next) => {
+			try {
+				const body = await res.json();
+				const { site } = req;
+				const event = req.get('X-Github-Event');
+				if (event == "ping") {
+					return res.json({});
 				}
+				if (event != "push") {
+					throw new HttpError.BadRequest("Unsupported event");
+				}
+				const secret = site.data['github-webhook-secret'];
+				if (secret) {
+					const xHub = new xHubSignature('sha256', secret);
+					if (!xHub.verify(req.get('X-Hub-Signature-256'), req.buffer)) {
+						throw new HttpError.BadRequest("Bad signature");
+					}
+				}
+				this.github(req, body).catch(err => {
+					console.error(err);
+				});
+			} catch (err) {
+				next(err);
 			}
-			this.github(req, req.body).catch(err => {
-				console.error(err);
-			});
 		});
 	}
 

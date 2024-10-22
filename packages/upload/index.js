@@ -25,12 +25,12 @@ module.exports = class UploadModule {
 			...opts.limits
 		};
 	}
-	async apiRoutes(app, server) {
-		app.post('/@api/upload/add', async req => {
+	async apiRoutes(router) {
+		router.write('/upload/add', async req => {
 			const hrefs = await this.parse(req);
 			return { hrefs };
 		});
-		app.post('/@api/upload/:id', async req => {
+		router.write('/upload/:id', async req => {
 			// everything here is deprecated
 			const limits = { ...this.opts.limits };
 			const input = await req.run('block.get', { id: req.params.id });

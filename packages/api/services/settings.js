@@ -1,14 +1,14 @@
 module.exports = class SettingsService {
 	static name = 'settings';
 
-	apiRoutes(app) {
-		app.get("/@api/settings/get", async req => {
+	apiRoutes(router) {
+		router.read("/settings/get", async req => {
 			return req.run('settings.get', {
 				id: req.user.id
 			});
 		});
 
-		app.post('/@api/settings/save', 'settings.save');
+		router.write('/settings/save', 'settings.save');
 	}
 	async get(req, { id }) {
 		return req.run('block.find', {
@@ -208,11 +208,11 @@ module.exports = class SettingsService {
 		if (res.$status != 404) throw new HttpError[res.$status]();
 		const user = await req.run('user.add', { email });
 		const block = {
-			id: await req.Block.genId(),
+			id: await req.sql.Block.genId(),
 			type: 'settings',
 			parents: [user]
 		};
-		const { site, trx } = req;
+		const { site, sql: { trx } } = req;
 		block.lock = [`id-${block.id}`];
 		const settings = await site.$relatedQuery('children', trx)
 			.insertGraph(block, {
@@ -252,7 +252,7 @@ module.exports = class SettingsService {
 		// const { item } = await req.run('settings.get', { id });
 
 
-		return req.site.$relatedQuery('children', req.trx)
+		return req.site.$relatedQuery('children', req.sql.trx)
 			.where('type', 'settings')
 			.where('id', id).patchObject({
 				type: 'settings',

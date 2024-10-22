@@ -72,7 +72,7 @@ module.exports = class ReservationService {
 			parents: parents,
 			lock: [`id-${req.user.id}`, 'scheduler']
 		});
-		await eventDate.$query(req.trx).patchObject({
+		await eventDate.$query(req.sql.trx).patchObject({
 			type: eventDate.type,
 			data: { reservations: total }
 		});
@@ -211,7 +211,7 @@ module.exports = class ReservationService {
 
 		Object.assign(resa.data, reservation);
 
-		await eventDate.$query(req.trx).patchObject({
+		await eventDate.$query(req.sql.trx).patchObject({
 			type: eventDate.type,
 			data: { reservations: total }
 		});
@@ -236,7 +236,7 @@ module.exports = class ReservationService {
 	};
 
 	async del(req, { reservation: id }) {
-		const { user, trx } = req;
+		const { user, sql: { trx } } = req;
 		const { item: eventDate } = await req.run('block.find', {
 			child: {
 				id,
@@ -328,7 +328,7 @@ module.exports = class ReservationService {
 		}
 	};
 
-	async search({ site, trx, ref, raw }, data) {
+	async search({ site, sql: { trx, ref, raw } }, data) {
 		// given an event_date, retrieve reservations, user settings and email
 		const eventDate = await site.$relatedQuery('children', trx)
 			.where('block.type', 'event_date')

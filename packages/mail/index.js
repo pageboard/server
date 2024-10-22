@@ -11,7 +11,9 @@ module.exports = class MailModule {
 		this.app = app;
 		this.opts = opts;
 
+
 		Object.entries(opts).forEach(([purpose, conf]) => {
+			if (typeof conf != "object") return;
 			if (!Transports[conf.transport]) {
 				console.warn("mail transport not supported", purpose, conf.transport);
 				return;
@@ -28,8 +30,6 @@ module.exports = class MailModule {
 				console.warn("mail auth be set", purpose);
 				return;
 			}
-		});
-		Object.entries(this.opts).forEach(([purpose, conf]) => {
 			Log.mail(purpose, conf);
 			try {
 				Mailers[purpose] = {
@@ -337,7 +337,10 @@ module.exports = class MailModule {
 			type: 'mail_job',
 			data: { ...data, response: {} }
 		});
-		req.postTry(block, (req, block) => this.#sendJob(req, block));
+		req.finish(async () => req.try(
+			block,
+			(req, block) => this.#sendJob(req, block)
+		));
 		return { item: block };
 	}
 	static send = {

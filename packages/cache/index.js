@@ -2,7 +2,7 @@ const Upcache = require('upcache');
 const { promises: fs } = require('node:fs');
 const Path = require('node:path');
 const Stringify = require('fast-json-stable-stringify');
-const crypto = require('node:crypto');
+const { hash } = require('node:crypto');
 
 module.exports = class CacheModule {
 	static name = 'cache';
@@ -26,15 +26,8 @@ module.exports = class CacheModule {
 	disable(...args) {
 		return Upcache.tag.disable(...args);
 	}
-	init(app, server) {
-		console.info("cache:", this.opts.enable ? 'enabled' : 'disabled');
-		if (!this.opts.enable) {
-			server.get('*', this.disable());
-		}
-		// all routes must have a app tag
-		server.get('*', Upcache.tag('app'));
-	}
-	async apiRoutes(app, server) {
+
+	async siteRoutes(router) {
 		try {
 			this.data = JSON.parse(
 				await fs.readFile(this.metafile)
@@ -44,7 +37,13 @@ module.exports = class CacheModule {
 		} finally {
 			if (!this.data) this.data = {};
 		}
-		app.post(this.opts.wkp, req => this.mw(req));
+		console.info("cache:", this.opts.enable ? 'enabled' : 'disabled');
+		if (!this.opts.enable) {
+			router.get('/*', this.disable());
+		}
+		// all routes must have a app tag
+		router.get('/*', Upcache.tag('app'));
+		router.post(this.opts.wkp, (req, res, next) => this.mw(req, res, next));
 	}
 
 	#save() {
@@ -89,29 +88,31 @@ module.exports = class CacheModule {
 		})();
 	}
 
-	mw(req) {
-		const tags = [];
-		let doSave = false;
-		let dobj = this.data;
-		if (!dobj) dobj = this.data = {};
+	mw(req, res, next) {
+		try {
+			const tags = [];
+			let doSave = false;
+			let dobj = this.data;
+			if (!dobj) dobj = this.data = {};
 
-		if (!this.hash) {
-			const hash = crypto.createHash('sha256');
-			hash.update(Stringify(this.app.opts));
-			this.hash = hash.digest('hex');
+			this.hash ??= hash('sha256', Stringify(this.app.opts), 'base64url');
+
+			if (dobj.hash === undefined) {
+				doSave = true;
+				dobj.hash = this.hash;
+			} else if (dobj.hash != this.hash) {
+				doSave = true;
+				dobj.hash = this.hash;
+				tags.push('app');
+				console.info("cache changes app tag");
+			}
+			tags.push('app-:site');
+			this.tag(...tags)(req, res);
+			if (doSave) this.#save();
+			res.sendStatus(204);
+		} catch (err) {
+			next(err);
 		}
-		if (dobj.hash === undefined) {
-			doSave = true;
-			dobj.hash = this.hash;
-		} else if (dobj.hash != this.hash) {
-			doSave = true;
-			dobj.hash = this.hash;
-			tags.push('app');
-			console.info("cache changes app tag");
-		}
-		tags.push('app-:site');
-		this.tag(...tags)(req, req.res);
-		if (doSave) this.#save();
 	}
 };
 

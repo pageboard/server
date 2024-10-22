@@ -12,7 +12,7 @@ module.exports = class ApiModule {
 	static name = 'api';
 	static priority = -1;
 	static plugins = [
-		'help', 'user', 'site', 'install', 'archive', 'settings', 'page', 'links',
+		'help', 'user', 'site', 'archive', 'settings', 'page', 'links',
 		'block', 'href', 'reservation', 'translate', 'redirect', 'apis', 'proxy'
 	].map(name => Path.join(__dirname, 'services', name));
 
@@ -68,14 +68,13 @@ module.exports = class ApiModule {
 		return this.#validation;
 	}
 
-	apiRoutes(app) {
+	apiRoutes(router) {
+		const tenantsLen = Object.keys(this.app.opts.database.url).length - 1;
+		router.get("/*",
+			this.app.cache.tag('app-:site'),
+			this.app.cache.tag('db-:tenant').for(`${tenantsLen}day`)
+		);
 		// api depends on site files, that tag is invalidated in cache install
-		app.get("/.well-known/api.json", req => ({
-			location: req.site.$pkg.bundles.get('services').scripts[0]
-		}));
-		app.get("/@api", req => ({
-			location: "/.well-known/api"
-		}));
 		// TODO eventually all api will be dynamic
 		// and called through query.get/post
 		// several blocking points:
@@ -118,57 +117,59 @@ module.exports = class ApiModule {
 
 	async run(req = {}, method, parameters = {}) {
 		const { app } = this;
-		const [schema, service] = this.getService(method);
-		Log.api("run %s:\n%O", method, parameters);
+		const [schema, service] = typeof method == "string"
+			? this.getService(method) : [null, method];
 		const data = {
-			method,
+			method: typeof method == "string" ? method : undefined,
 			parameters: mergeRecursive({}, parameters)
 		};
-		if (!schema.$global && !req.site) {
-			throw new HttpError.BadRequest(method + ' expects site to be defined');
-		}
-		if (schema.$cache != null && req.res) {
-			if (schema.$cache === false) {
-				app.cache.disable(req, req.res, () => { });
-			} else if (typeof schema.$cache == "string") {
-				app.cache.for(schema.$cache)(req, req.res, () => { });
+		if (schema) {
+			Log.api("run %s:\n%O", method, parameters);
+			if (!schema.$global && !req.site) {
+				throw new HttpError.BadRequest(method + ' expects site to be defined');
 			}
-		}
-		if (req.res) {
-			const { $tags = ['data-:site'] } = schema;
-			app.cache.tag(...$tags)(req, req.res, () => { });
-		}
-		if (schema.$lock != null && schema.$lock !== true) {
-			if (req.locked?.(schema.$lock)) {
-				if (req.user?.grants?.length == 0) {
-					throw new HttpError.Unauthorized(schema.$lock);
-				} else {
-					throw new HttpError.Forbidden(schema.$lock);
+			if (schema.$cache != null && req.res) {
+				if (schema.$cache === false) {
+					app.cache.disable(req, req.res, () => { });
+				} else if (typeof schema.$cache == "string") {
+					app.cache.for(schema.$cache)(req, req.res, () => { });
 				}
 			}
+			if (req.res) {
+				const { $tags = ['data-:site'] } = schema;
+				app.cache.tag(...$tags)(req, req.res, () => { });
+			}
+			if (schema.$lock != null && schema.$lock !== true) {
+				if (req.locked?.(schema.$lock)) {
+					if (req.user?.grants?.length == 0) {
+						throw new HttpError.Unauthorized(schema.$lock);
+					} else {
+						throw new HttpError.Forbidden(schema.$lock);
+					}
+				}
+			}
+
+			this.validate(req, data);
 		}
 
-		this.validate(req, data);
+		const sql = req.sql ??= { ref, val, raw, fun, Block, Href };
 
-		// start a transaction on set trx object on site
-		let hadTrx = false;
-		req.genTrx ??= (async function (req) {
+		sql.genTrx ??= (async function (req) {
 			const { locals = {} } = req.res || {};
 			return transaction.start(app.database.tenant(locals.tenant));
 		}).bind(this, req);
 
-		if (req.trx?.isCompleted()) {
-			req.trx = null;
+		if (sql.trx?.isCompleted()) {
+			sql.trx = null;
 		}
+		const hadTrx = Boolean(sql.trx);
+
 		let hadRead = false;
 		let hadWrite = false;
-
-		if (req.trx) {
-			hadTrx = true;
-		} else if (schema.$action) {
-			req.trx = await req.genTrx();
-			req.trx.req = req; // needed by objection hooks
-			req.trx.on('query', data => {
+		if (!hadTrx && (!schema || schema?.$action)) {
+			sql.trx = await sql.genTrx();
+			sql.trx.req = req; // needed by objection hooks
+			sql.trx.on('query', data => {
 				if (!data.method) {
 					if (!data.sql || /^(COMMIT|ROLLBACK);?$/.test(data.sql) == false) {
 						console.warn("unknown", data);
@@ -180,35 +181,34 @@ module.exports = class ApiModule {
 				}
 			});
 		}
-		Object.assign(req, { Block, Href, ref, val, raw, fun });
 
 		try {
 			const obj = await service(req, data.parameters);
-			if (!hadTrx && req.trx && !req.trx.isCompleted()) {
-				await req.trx.commit();
+			if (!hadTrx && sql.trx && !sql.trx.isCompleted()) {
+				await sql.trx.commit();
 			}
-			if (!schema.$private) {
+			if (schema && !schema.$private) {
 				return this.#responseFilter.run(req, obj);
 			} else {
 				return obj;
 			}
 		} catch(err) {
 			Log.api("error %s:\n%O", method, err);
-			if (!hadTrx && req.trx && !req.trx.isCompleted()) {
-				await req.trx.rollback();
+			if (!hadTrx && sql.trx && !sql.trx.isCompleted()) {
+				await sql.trx.rollback();
 			}
 			if (!err.method) err.method = method;
 			throw err;
 		} finally {
-			if (req.trx) {
-				if (hadTrx) {
-					// regenerate completed trx
-					if (req.trx.isCompleted()) req.trx = await req.genTrx();
-				} else if (hadWrite) {
-					if (schema.$action != "write") {
+			if (sql.trx && !hadTrx) {
+				if (sql.trx.isCompleted()) {
+					sql.trx = null;
+				}
+				if (hadWrite) {
+					if (schema && schema.$action != "write") {
 						console.warn(method, "had write transaction with $action", schema.$action);
 					}
-				} else if (hadRead && !schema.$action) {
+				} else if (hadRead && schema && !schema.$action) {
 					console.warn(method, "had read transaction without $action");
 				}
 			}

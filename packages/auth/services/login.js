@@ -11,13 +11,13 @@ module.exports = class LoginModule {
 			step: 30
 		};
 	}
-	apiRoutes(app, server) {
-		app.post("/@api/login/send", 'login.send');
-		app.post("/@api/login/verify", 'login.verify');
-		app.post("/@api/login/clear", 'login.clear');
+	apiRoutes(router) {
+		router.write("/login/send", 'login.send');
+		router.write("/login/verify", 'login.verify');
+		router.write("/login/clear", 'login.clear');
 	}
 
-	async priv({ trx }, user) {
+	async priv({ sql: { trx } }, user) {
 		try {
 			return await user.$relatedQuery('children', trx).alias('privs')
 				.where('privs.type', 'priv')
@@ -114,7 +114,7 @@ module.exports = class LoginModule {
 		}
 	};
 	async #verifyToken(req, { email, token, tokenMaxAge }) {
-		const { trx } = req;
+		const { sql: { trx } } = req;
 		const user = await req.run('user.get', { email });
 		const priv = await this.priv(req, user);
 		const tries = (priv.data.otp.tries || 0) + 1;

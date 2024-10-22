@@ -13,9 +13,9 @@ module.exports = class ArchiveService {
 		this.app = app;
 	}
 
-	apiRoutes(app, server) {
-		app.get('/@api/archive/export', 'archive.export');
-		app.post('/@api/archive/import', 'archive.import');
+	apiRoutes(router) {
+		router.read('/archive/export', 'archive.export');
+		router.write('/archive/import', 'archive.import');
 	}
 
 	async bundle(req, data) {
@@ -90,7 +90,7 @@ module.exports = class ArchiveService {
 	};
 
 	async export(req, data) {
-		const { site, trx, ref, fun } = req;
+		const { site, sql: { ref, fun, trx } } = req;
 		const lang = site.data.languages?.length == 0 ? site.data.lang : null;
 		const urls = data.urls;
 		const ids = (data.ids ?? []).slice();
@@ -274,7 +274,7 @@ module.exports = class ArchiveService {
 
 	async import(req, { file, reset, idMap, types = [] }) {
 		// TODO import zip file with export.ndjson
-		const { trx, Block } = req;
+		const { sql: { trx, Block } } = req;
 		let { site } = req;
 		const counts = {
 			users: 0,
@@ -472,7 +472,7 @@ module.exports = class ArchiveService {
 		for (const { url, mime } of hrefs) {
 			if (url.startsWith('/@file/')) {
 				let filePath;
-				if (req.Href.isImage(mime)) {
+				if (req.sql.Href.isImage(mime)) {
 					filePath = await req.run('image.get', {
 						url, size
 					});

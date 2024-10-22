@@ -10,10 +10,9 @@ const semver = require('semver');
 const toSource = require('tosource');
 const postinstall = require('postinstall');
 
-const Block = require('../models/block');
 const utils = require('../../../src/utils');
-const { createEltProxy, MapProxy } = require('../lib/proxies');
-const translateJSON = require('../lib/translate');
+const { createEltProxy, MapProxy } = require('../src/proxies');
+const translateJSON = require('../src/translate');
 
 /*
 Description of element properties used by installer
@@ -44,7 +43,7 @@ module.exports = class InstallService {
 	}
 
 	async site(req) {
-		const siteDir = this.app.statics.dir(req, '@site');
+		const siteDir = this.app.statics.dir(req, 'site');
 		const curPkg = await this.#getPkg(Path.join(siteDir, 'current'));
 		if (curPkg.version) curPkg.dir = Path.join(siteDir, curPkg.version);
 		curPkg.current = true;
@@ -66,7 +65,7 @@ module.exports = class InstallService {
 			await req.call('auth.install', site);
 			if (!pkg.current) {
 				await this.#migrate(req, site);
-				await site.$query(req.trx).patchObject({
+				await site.$query(req.sql.trx).patchObject({
 					type: site.type,
 					data: {
 						versions: site.data.versions,
@@ -136,7 +135,7 @@ module.exports = class InstallService {
 
 	async #install(req) {
 		const { data } = req.site;
-		const siteDir = this.app.statics.dir(req, '@site');
+		const siteDir = this.app.statics.dir(req, 'site');
 		const { dependencies = {} } = data;
 		const version = utils.hash(JSON.stringify(dependencies));
 
@@ -251,7 +250,7 @@ module.exports = class InstallService {
 		if (!semver.satisfies(this.app.version, pbConf.version)) {
 			throw new HttpError.BadRequest(`Server ${this.app.version} is not compatible with module ${mod} which has support for server ${pbConf.version}`);
 		}
-		const dstDir = Path.join('/', '@site', pkg.version, mod);
+		const destUrl = Path.join('/', '@file', 'site', pkg.version, mod);
 		let directories = pbConf.directories || [];
 		if (!Array.isArray(directories)) directories = [directories];
 		Log.install("processing directories from", moduleDir, directories);
@@ -261,12 +260,12 @@ module.exports = class InstallService {
 				to: mount
 			};
 			const from = Path.resolve(moduleDir, mount.from);
-			const to = Path.resolve(dstDir, mount.to);
+			const to = Path.resolve(destUrl, mount.to);
 			if (from.startsWith(moduleDir) == false) {
 				console.warn(
 					`Warning: ${id} dependency ${mod} bad mount from: ${from}`
 				);
-			} else if (to.startsWith(dstDir) == false) {
+			} else if (to.startsWith(destUrl) == false) {
 				console.warn(
 					`Warning: ${id} dependency ${mod} bad mount to: ${to}`
 				);
@@ -361,7 +360,7 @@ module.exports = class InstallService {
 					return semver.lt(old, mig) && semver.gte(mig, ver);
 				}
 			));
-			console.log(migs);
+			console.warn(migs);
 			for (const mig of migs) {
 				for (const [type, list] of migrations[mig]) {
 					for (const unit of list) {
@@ -372,7 +371,7 @@ module.exports = class InstallService {
 		}
 	}
 
-	async #migrateUnit({ site, trx, fun, ref }, type, unit) {
+	async #migrateUnit({ site, sql: { trx, fun, ref } }, type, unit) {
 		const q = site.$relatedQuery('children', trx)
 			.where('block.type', type);
 		const [op, path, ...params] = unit;
@@ -465,7 +464,7 @@ module.exports = class InstallService {
 				}
 				delete el.polyfills;
 			}
-			el.contents = Block.normalizeContentSpec(el.contents);
+			el.contents = req.sql.Block.normalizeContentSpec(el.contents);
 			if (!el.contents) delete el.contents;
 			if (el.alias) {
 				aliases[name] = el.alias;
@@ -529,11 +528,16 @@ module.exports = class InstallService {
 		// mount paths
 		await req.call('statics.install', pkg);
 		// build js, css, and compile schema validators
-		const ret = Block.initSite(site, pkg);
+		const ret = req.sql.Block.initSite(site, pkg);
 		await this.#makeSchemas(ret, pkg);
 		await this.#makeBundles(ret, pkg);
 		return ret;
 	}
+	static pack = {
+		title: 'pack',
+		$action: 'write',
+		$private: true
+	};
 
 	async #makeSchemas(site, pkg) {
 		const mclass = site.$modelClass;
@@ -712,13 +716,13 @@ module.exports = class InstallService {
 	}
 
 	async #bundleSource(site, { prefix, assign, name, source, dry }) {
-		if (prefix?.startsWith('ext-')) return;
+		if (site.id == "*" || prefix?.startsWith('ext-')) return;
 		const { version } = site.$pkg;
 		const filename = [prefix, assign, name].filter(Boolean).join('-') + '.js';
-		const sourceUrl = `/@site/${version}/${filename}`;
+		const sourceUrl = `/@file/site/${version}/${filename}`;
 		const sourcePath = this.app.statics.urlToPath(
 			{ site },
-			`/@site/${version}/${filename}`
+			sourceUrl
 		);
 		if (source) {
 			if (typeof source == "object") {

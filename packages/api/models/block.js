@@ -307,7 +307,7 @@ class Block extends Model {
 				const el = this.$schema();
 				const { unique } = el?.properties?.data ?? {};
 				if (!unique || !this.type) return;
-				const { req: { trx, site } } = context.transaction;
+				const { req: { sql: { trx }, site } } = context.transaction;
 				const q = site.$relatedQuery('children', trx)
 					.where('block.type', this.type);
 				const id = opt.old?.id ?? this.id;

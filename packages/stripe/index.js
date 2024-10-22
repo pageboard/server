@@ -26,10 +26,10 @@ module.exports = class StripeModule {
 		return {};
 	}
 
-	apiRoutes(app, server) {
-		app.get("/@api/stripe/config", 'stripe.config');
-		app.get("/@api/stripe/intent", 'stripe.intent');
-		app.post("/@api/stripe/hook", 'stripe.hook');
+	apiRoutes(router) {
+		router.read("/stripe/config", 'stripe.config');
+		router.read("/stripe/intent", 'stripe.intent');
+		router.write("/stripe/hook", 'stripe.hook');
 	}
 
 	async config(req) {
