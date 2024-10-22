@@ -18,6 +18,7 @@ module.exports = class ApiService {
 
 			return req.run('apis.post', {
 				name: req.params.name,
+				query: unflatten(req.query),
 				body: unflatten(body)
 			});
 		});
