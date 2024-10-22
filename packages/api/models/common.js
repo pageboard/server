@@ -52,7 +52,7 @@ class PatchObjectOperation extends UpdateOperation {
 	onBuildKnex(knexBuilder, builder) {
 		// this works only if $formatDatabaseJson does not stringify objects
 		const json = this.model.$toDatabaseJson(builder);
-		const jsonPaths = asPaths(json, {}, "", [
+		const jsonPaths = asPaths(json, [
 			this.model.$schema()
 		]);
 		const convertedJson = convertFieldExpressionsToRaw(
@@ -215,7 +215,7 @@ exports.QueryBuilder = class CommonQueryBuilder extends QueryBuilder {
 			return sch;
 		});
 		const table = alias || this.tableRefFor(mClass);
-		const refs = asPaths(obj, {}, table, schemas);
+		const refs = asPaths(obj, schemas, table);
 
 		for (const [k, cond] of Object.entries(refs)) {
 			// FIXME
@@ -394,7 +394,8 @@ function whereCond(q, key, value) {
 
 const dateTimes = ["date-time", "date"];
 
-function asPaths(obj, ret, pre, schemas = []) {
+function asPaths(obj, schemas = [], pre = "") {
+	const ret = {};
 	const flats = flatten(obj, { array: true, nulls: true });
 	for (const [str, val] of Object.entries(flats)) {
 		const [key, op] = str.split(/[:#]/);
