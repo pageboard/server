@@ -237,6 +237,13 @@ module.exports = class Pageboard {
 				res.sendStatus(code);
 			}
 		});
+		server.use((req, res, next) => {
+			const pref = '/.uploads/';
+			if (req.url.startsWith(pref)) {
+				req.url = "/@file/share/" + req.url.slice(pref.length);
+			}
+			next();
+		});
 		server.use('/@file', fileRouter);
 
 		const apiRouter = await this.#initPlugins("api");
