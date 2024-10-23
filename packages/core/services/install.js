@@ -231,9 +231,11 @@ module.exports = class InstallService {
 		await writePkg(pkg);
 
 		const versionDir = Path.join(siteDir, pkg.version);
-		await fs.rm(versionDir, { recursive: true, force: true });
-		await fs.mv(pkg.dir, versionDir);
-		pkg.dir = versionDir;
+		if (pkg.dir != versionDir) {
+			await fs.rm(versionDir, { recursive: true, force: true });
+			await fs.mv(pkg.dir, versionDir);
+			pkg.dir = versionDir;
+		}
 		data.versions = pkg.dependencies;
 		data.server = this.app.version;
 		return pkg;
