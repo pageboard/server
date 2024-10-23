@@ -19,8 +19,9 @@ module.exports = function render(page, settings, req, res) {
 			}
 			return result;
 		}, req.site.data.env == "dev");
-		if (status && status != 200) {
-			throw new HttpError[status](statusText);
+		if (status > 200) {
+			res.status(status);
+			res.statusMessage = statusText;
 		}
 	});
 };
