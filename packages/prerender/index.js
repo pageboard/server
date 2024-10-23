@@ -1,7 +1,7 @@
 const { pipeline: waitPipeline } = require('node:stream/promises');
 const { writeFile } = require('node:fs/promises');
 const Path = require('node:path');
-const { createWriteStream } = require('node:fs');
+const { createWriteStream, promises: fs } = require('node:fs');
 const dom = require('express-dom');
 const pdf = require('express-dom-pdf');
 
@@ -245,8 +245,12 @@ module.exports = class PrerenderModule {
 			throw new HttpError[res.statusCode]();
 		}
 		if (!path) {
-			path = req.call('statics.file', 'cache', await Block.genId(9) + '.' + ext);
+			path = req.call('statics.file', {
+				mount: 'cache',
+				name: await Block.genId(9) + '.' + ext
+			}).path;
 		}
+		await fs.mkdir(Path.parse(path).dir, { recursive: true });
 
 		if (res.body) {
 			await writeFile(path, res.body);

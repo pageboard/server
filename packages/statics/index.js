@@ -59,12 +59,6 @@ module.exports = class StaticsModule {
 		}
 	}
 
-	file(req, mount, filename) {
-		const path = Path.join(this.dir(req, mount), filename);
-		const url = this.pathToUrl(req, path);
-		return { path, url };
-	}
-
 	urlToPath(req, url) {
 		const prefix = `/@file/`;
 		if (url.startsWith(prefix)) {
@@ -74,7 +68,7 @@ module.exports = class StaticsModule {
 			if (owned) list.splice(1, 0, req.site.id);
 			return Path.join(dir, ...list);
 		} else {
-			throw new HttpError.BadRequest("Cannot serve outside /@file");
+			throw new HttpError.BadRequest("Cannot convert url: " + url);
 		}
 	}
 
@@ -91,6 +85,12 @@ module.exports = class StaticsModule {
 				}
 			}
 		}
+	}
+
+	file(req, { mount, name }) {
+		const path = Path.join(this.dir(req, mount), name);
+		const url = this.pathToUrl(req, path);
+		return { path, url };
 	}
 
 	dir(req, mount) {

@@ -201,7 +201,10 @@ module.exports = class PrintModule {
 			url, lang, ext: 'pdf'
 		});
 		pdfUrl.searchParams.set('pdf', device);
-		const pdfRun = req.call('statics.file', 'cache', `${block.id}.pdf`);
+		const pdfRun = req.call('statics.file', {
+			mount: 'cache',
+			name: `${block.id}.pdf`
+		});
 		block.data.response.files = [pdfRun.url];
 		req.finish(async () => req.try(
 			block,
@@ -251,7 +254,10 @@ module.exports = class PrintModule {
 			url, lang, ext: 'pdf'
 		});
 		pdfUrl.searchParams.set('pdf', device);
-		const pdfRun = req.call('statics.file', 'cache', `${block.id}.pdf`);
+		const pdfRun = req.call('statics.file', {
+			mount: 'cache',
+			name: `${block.id}.pdf`
+		});
 		block.data.response.files = [pdfRun.url];
 		req.finish(async () => req.try(block, async (req, block) => {
 			const { path } = await req.run('prerender.save', {
@@ -334,7 +340,10 @@ module.exports = class PrintModule {
 		});
 		if (!pdf) throw new HttpError.NotFound('Content PDF not found');
 		obj.pdf = pdf;
-		obj.file = req.call('statics.file', 'cache', `${block.id}-content.pdf`);
+		obj.file = req.call('statics.file', {
+			mount: 'cache',
+			name: `${block.id}-content.pdf`
+		});
 		block.data.response.files = [obj.file.url];
 		if (options.cover.url) {
 			const { item: coverPdf } = await req.run('block.find', {
@@ -346,7 +355,10 @@ module.exports = class PrintModule {
 			});
 			if (!coverPdf) throw new HttpError.NotFound('Cover PDF not found');
 			obj.coverPdf = coverPdf;
-			obj.coverFile = req.call('statics.file', 'cache', `${block.id}-cover.pdf`);
+			obj.coverFile = req.call('statics.file', {
+				mount: 'cache',
+				name: `${block.id}-cover.pdf`
+			});
 			block.data.response.files.push(obj.coverFile.url);
 		}
 		req.finish(async () => req.try(
@@ -481,11 +493,9 @@ module.exports = class PrintModule {
 
 	async #publicPdf(req, url, file) {
 		const res = await req.run('prerender.save', {
-			url: url.pathname + url.search
+			url: url.pathname + url.search,
+			path: file
 		});
-		await fs.mkdir(Path.parse(file).dir, { recursive: true });
-		await fs.mv(res.path, file);
-
 		return res.headers['x-page-count'];
 	}
 };
