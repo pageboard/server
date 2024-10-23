@@ -59,6 +59,12 @@ module.exports = class StaticsModule {
 		}
 	}
 
+	file(req, mount, filename) {
+		const path = Path.join(this.dir(req, mount), filename);
+		const url = this.pathToUrl(req, path);
+		return { path, url };
+	}
+
 	urlToPath(req, url) {
 		const prefix = `/@file/`;
 		if (url.startsWith(prefix)) {
