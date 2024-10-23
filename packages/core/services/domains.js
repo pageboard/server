@@ -100,8 +100,12 @@ module.exports = class DomainsService {
 					await this.#allDomains(req);
 				}
 				await this.#initRecord(req.headers['x-forwarded-by']);
-				await this.#initRequest(req, res);
-				next();
+				const obj = await this.#initRequest(req, res);
+				if (obj) {
+					res.json(obj);
+				} else {
+					next();
+				}
 			} catch (err) {
 				next(err);
 			}
