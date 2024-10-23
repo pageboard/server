@@ -227,7 +227,7 @@ module.exports = class PrerenderModule {
 			</html>`);
 	}
 
-	async save(req, { url }) {
+	async save(req, { url, path }) {
 		const { site, sql: { Block } } = req;
 		if (!site.$url) {
 			throw new HttpError.BadRequest("Rendering needs a site url");
@@ -244,17 +244,17 @@ module.exports = class PrerenderModule {
 		if (res.statusCode != 200) {
 			throw new HttpError[res.statusCode]();
 		}
-		const dirName = req.call('statics.dir', 'tmp');
-		const fileName = await Block.genId(9);
-		const filePath = Path.join(dirName, fileName + '.' + ext);
+		if (!path) {
+			path = req.call('statics.file', 'cache', await Block.genId(9) + '.' + ext);
+		}
 
 		if (res.body) {
-			await writeFile(filePath, res.body);
+			await writeFile(path, res.body);
 		} else {
-			await waitPipeline(res, createWriteStream(filePath));
+			await waitPipeline(res, createWriteStream(path));
 		}
 		return {
-			path: filePath,
+			path: path,
 			headers: res.headers
 		};
 	}
@@ -268,6 +268,11 @@ module.exports = class PrerenderModule {
 				title: 'Relative URL',
 				type: 'string',
 				format: 'uri-reference'
+			},
+			path: {
+				title: 'File path',
+				type: 'string',
+				format: 'singleline'
 			}
 		}
 	};

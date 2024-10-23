@@ -179,8 +179,8 @@ module.exports = class PrintModule {
 			online: this.#onlineJob
 		}[block.data.printer];
 
-		const ret = await req.try(block, (req, block) => job.call(this, req, block));
-		return { ...ret, item: block };
+		await req.try(block, (req, block) => job.call(this, req, block));
+		return { item: block };
 	}
 	static send = {
 		title: 'Send',
@@ -202,13 +202,13 @@ module.exports = class PrintModule {
 		});
 		pdfUrl.searchParams.set('pdf', device);
 		const pdfRun = req.call('statics.file', 'cache', `${block.id}.pdf`);
+		block.data.response.files = [pdfRun.url];
 		req.finish(async () => req.try(
 			block,
 			(req, block) => this.#publicPdf(
 				req, pdfUrl, pdfRun.path
 			)
 		));
-		return { url: pdfRun.url };
 	}
 
 	async #printerJob(req, block) {
@@ -251,9 +251,12 @@ module.exports = class PrintModule {
 			url, lang, ext: 'pdf'
 		});
 		pdfUrl.searchParams.set('pdf', device);
+		const pdfRun = req.call('statics.file', 'cache', `${block.id}.pdf`);
+		block.data.response.files = [pdfRun.url];
 		req.finish(async () => req.try(block, async (req, block) => {
 			const { path } = await req.run('prerender.save', {
-				url: pdfUrl.pathname + pdfUrl.search
+				url: pdfUrl.pathname + pdfUrl.search,
+				path: pdfRun.path
 			});
 			const dest = Path.join(storePath, block.id + '.pdf');
 			try {
@@ -331,6 +334,8 @@ module.exports = class PrintModule {
 		});
 		if (!pdf) throw new HttpError.NotFound('Content PDF not found');
 		obj.pdf = pdf;
+		obj.file = req.call('statics.file', 'cache', `${block.id}-content.pdf`);
+		block.data.response.files = [obj.file.url];
 		if (options.cover.url) {
 			const { item: coverPdf } = await req.run('block.find', {
 				type: 'pdf',
@@ -341,6 +346,8 @@ module.exports = class PrintModule {
 			});
 			if (!coverPdf) throw new HttpError.NotFound('Cover PDF not found');
 			obj.coverPdf = coverPdf;
+			obj.coverFile = req.call('statics.file', 'cache', `${block.id}-cover.pdf`);
+			block.data.response.files.push(obj.coverFile.url);
 		}
 		req.finish(async () => req.try(
 			block,
@@ -349,7 +356,7 @@ module.exports = class PrintModule {
 		return block;
 	}
 
-	async #remoteCall(req, block, { agent, pdf, coverPdf, courier }) {
+	async #remoteCall(req, block, { agent, pdf, coverPdf, courier, file, coverFile }) {
 		const orderEndpoint = req.site.data.env == "production" ? "/order/create" : "/order/sandbox-create";
 		const { device, options } = block.data;
 		const pdfUrl = req.call('page.format', {
@@ -401,21 +408,20 @@ module.exports = class PrintModule {
 			order.delivery.phone = order.delivery.phone.replaceAll(/[()-\s]+/g, '');
 		}
 		const clean = [];
-		const pdfRun = req.call('statics.file', 'cache', `${block.id}-content.pdf`);
-		pdfRun.count = await this.#publicPdf(
-			req, printProduct.pdf, pdfRun.path
+		file.count = await this.#publicPdf(
+			req, printProduct.pdf, file.path
 		);
-		clean.push(pdfRun.path);
-		printProduct.pdf = pdfRun.url;
+		clean.push(file.path);
+		printProduct.pdf = file.url;
 
 		const { paper } = pdf.data;
 
 		if (printProduct.cover_pdf) {
 			// spine api
-			if (pdfRun.count) {
+			if (file.count) {
 				const ret = await agent.fetch('/calculate-spine', "post", {
 					data: {
-						pages_count: pdfRun.count,
+						pages_count: file.count,
 						sides: 2,
 						content_paper_id: options.content.paper,
 						cover_paper_id: options.cover.paper
@@ -432,12 +438,11 @@ module.exports = class PrintModule {
 			}
 			// TODO ensure coverPaper matches paper
 			// const { paper: coverPaper } = coverPdf.data;
-			const coverRun = req.call('statics.file', 'cache', `${block.id}-cover.pdf`);
-			coverRun.count = await this.#publicPdf(
-				req, printProduct.cover_pdf, coverRun.path
+			coverFile.count = await this.#publicPdf(
+				req, printProduct.cover_pdf, coverFile.path
 			);
-			clean.push(coverRun.path);
-			printProduct.cover_pdf = coverRun.url;
+			clean.push(coverFile.path);
+			printProduct.cover_pdf = coverFile.url;
 			printProduct.runlists.push({
 				tag: "cover",
 				sides: options.cover.sides,

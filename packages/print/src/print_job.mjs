@@ -69,6 +69,14 @@ export const print_job = {
 					title: 'Time',
 					type: 'number',
 					nullable: true
+				},
+				files: {
+					title: 'Files',
+					type: 'array',
+					items: {
+						type: 'string',
+						format: 'pathname'
+					}
 				}
 			}
 		},
