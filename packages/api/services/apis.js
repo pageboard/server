@@ -22,19 +22,16 @@ module.exports = class ApiService {
 				body: unflatten(body)
 			});
 		});
+	}
 
-		router.get("/stream/:name", async (req, res, next) => {
+	siteRoutes(router) {
+		router.get("/@stream/:name", async (req, res, next) => {
 			const data = req.params;
 			try {
-				const form = await req.run(
-					({ site, sql: { ref, trx } }) => site.$relatedQuery('children', trx)
-						.whereIn('block.type', ['fetch', 'mail_fetch'])
-						.where(q => {
-							q.where('block.id', data.name);
-							q.orWhere(ref('block.data:name').castText(), data.name);
-						})
-						.first().throwIfNotFound()
-				);
+				const form = await req.run('apis.find', {
+					name: data.name,
+					types: ['fetch']
+				});
 
 				const { reactions = [] } = form.data ?? {};
 
