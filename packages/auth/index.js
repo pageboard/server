@@ -35,7 +35,15 @@ module.exports = class AuthModule {
 		return import('./src/elements.mjs');
 	}
 
+	async viewRoutes(router) {
+		this.#initRouter(router);
+	}
+
 	async apiRoutes(router) {
+		this.#initRouter(router);
+	}
+
+	#initRouter(router) {
 		router.use((req, res, next) => {
 			req.locks = [];
 			OnHeaders(res, () => {
