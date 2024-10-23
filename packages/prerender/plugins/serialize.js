@@ -2,7 +2,7 @@ module.exports = function (page, settings, req, res) {
 	settings.track = async function() {
 		const { Page } = window;
 		if (!Page) {
-			const err = new Error("blank site");
+			const err = new Error("Not renderable");
 			err.statusCode = 501;
 			throw err;
 		}
