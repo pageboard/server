@@ -179,8 +179,8 @@ module.exports = class PrintModule {
 			online: this.#onlineJob
 		}[block.data.printer];
 
-		await req.try(block, (req, block) => job.call(this, req, block));
-		return { item: block };
+		const ret = await req.try(block, (req, block) => job.call(this, req, block));
+		return { ...ret, item: block };
 	}
 	static send = {
 		title: 'Send',
@@ -201,12 +201,14 @@ module.exports = class PrintModule {
 			url, lang, ext: 'pdf'
 		});
 		pdfUrl.searchParams.set('pdf', device);
+		const pdfRun = req.call('statics.file', 'cache', `${block.id}.pdf`);
 		req.finish(async () => req.try(
 			block,
 			(req, block) => this.#publicPdf(
-				req, pdfUrl, `${block.id}.pdf`
+				req, pdfUrl, pdfRun.path
 			)
 		));
+		return { url: pdfRun.url };
 	}
 
 	async #printerJob(req, block) {
@@ -399,12 +401,12 @@ module.exports = class PrintModule {
 			order.delivery.phone = order.delivery.phone.replaceAll(/[()-\s]+/g, '');
 		}
 		const clean = [];
-
-		const pdfRun = await this.#publicPdf(
-			req, printProduct.pdf, `${block.id}-content.pdf`
+		const pdfRun = req.call('statics.file', 'cache', `${block.id}-content.pdf`);
+		pdfRun.count = await this.#publicPdf(
+			req, printProduct.pdf, pdfRun.path
 		);
 		clean.push(pdfRun.path);
-		printProduct.pdf = pdfRun.href;
+		printProduct.pdf = pdfRun.url;
 
 		const { paper } = pdf.data;
 
@@ -430,11 +432,12 @@ module.exports = class PrintModule {
 			}
 			// TODO ensure coverPaper matches paper
 			// const { paper: coverPaper } = coverPdf.data;
-			const coverRun = await this.#publicPdf(
-				req, printProduct.cover_pdf, `${block.id}-cover.pdf`
+			const coverRun = req.call('statics.file', 'cache', `${block.id}-cover.pdf`);
+			coverRun.count = await this.#publicPdf(
+				req, printProduct.cover_pdf, coverRun.path
 			);
 			clean.push(coverRun.path);
-			printProduct.cover_pdf = coverRun.href;
+			printProduct.cover_pdf = coverRun.url;
 			printProduct.runlists.push({
 				tag: "cover",
 				sides: options.cover.sides,
@@ -471,18 +474,14 @@ module.exports = class PrintModule {
 		}
 	}
 
-	async #publicPdf(req, url, name) {
-		const { site } = req;
+	async #publicPdf(req, url, file) {
 		const res = await req.run('prerender.save', {
 			url: url.pathname + url.search
 		});
-		const destUrl = new URL("/@cache/" + name, site.$url);
-		const destPath = this.app.statics.urlToPath(req, destUrl.pathname);
-		await fs.mkdir(Path.parse(destPath).dir, { recursive: true });
-		await fs.mv(res.path, destPath);
+		await fs.mkdir(Path.parse(file).dir, { recursive: true });
+		await fs.mv(res.path, file);
 
-		const count = res.headers['x-page-count'];
-		return { href: destUrl.href, path: destPath, count };
+		return res.headers['x-page-count'];
 	}
 };
 
