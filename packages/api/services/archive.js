@@ -532,7 +532,7 @@ async function archiveWrap(req, fn) {
 		}
 	});
 
-	const pubDir = req.call('statics.dir', '@cache');
+	const pubDir = req.call('statics.dir', 'cache');
 	await fs.mkdir(pubDir, { recursive: true });
 	const filename = await fn(archive);
 	const filePath = Path.join(pubDir, `${filename}.zip`);
