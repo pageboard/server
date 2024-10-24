@@ -154,7 +154,7 @@ module.exports = class BlockService {
 			q.joinRelated('children', { alias: 'child' });
 			q.whereObject(data.child, data.child.type, 'child');
 		} else if (data.text) {
-			if (data.text.endsWith('*')) q.with('search', Block.query(trx)
+			if (/^\w+\*$/.test(data.text)) q.with('search', Block.query(trx)
 				.select(ref('to_tsquery').as('query'))
 				.from(raw(`to_tsquery('unaccent', :text)`, {
 					text: data.text.replace(/\*$/, ':*')
