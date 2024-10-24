@@ -13,7 +13,7 @@ module.exports = class LogService {
 		this.opts = opts;
 	}
 
-	async apiRoutes(router) {
+	async siteRoutes(router) {
 		const { default: prettyBytes } = await import('pretty-bytes');
 		morgan.token('method', (req, res) => {
 			return pad((req.call('prerender.prerendering') ? '*' : '') + req.method, 4);
@@ -39,7 +39,7 @@ module.exports = class LogService {
 
 		this.#log = morgan(this.opts.format, {
 			skip: function (req, res) {
-				return false;
+				return req.baseUrl == "/@file" && res.statusCode == 200 || req.url.startsWith('/.well-known/');
 			}
 		});
 		router.use(this.#log);
