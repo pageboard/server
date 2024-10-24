@@ -2,6 +2,7 @@ export const site = {
 	title: 'Site',
 	bundle: true,
 	standalone: true,
+	$lock: {}, // needed for other elements that add properties
 	properties: {
 		title: {
 			title: 'Site title',
@@ -109,5 +110,3 @@ export const site = {
 		}
 	}
 };
-
-
