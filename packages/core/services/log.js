@@ -39,7 +39,7 @@ module.exports = class LogService {
 
 		this.#log = morgan(this.opts.format, {
 			skip: function (req, res) {
-				return req.baseUrl == "/@file" && res.statusCode == 200 || req.url.startsWith('/.well-known/');
+				return req.baseUrl == "/@file" && res.statusCode == 200 || req.url.startsWith('/.well-known/') || req.url.startsWith('/@stream/');
 			}
 		});
 		router.use(this.#log);
