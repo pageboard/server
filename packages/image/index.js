@@ -92,19 +92,22 @@ module.exports = class ImageModule {
 	mw(req, res, next) {
 		const extname = Path.extname(req.path);
 		if (!extname || /png|jpe?g|gif|webp|tiff|svg/.test(extname.substring(1)) == false) {
-			res.accelerate(this.app.statics.urlToPath(req, req.path));
-			return;
-		}
-		const wrongParams = [];
-		Object.keys(req.query).some(key => {
-			if (!allowedParameters[key]) wrongParams.push(key);
-		});
-		if (wrongParams.length) {
-			Log.image("wrong image params", req.url, wrongParams);
-			res.sendStatus(400);
+			// try catch
+			const path = req.call('statics.path', req.path);
+			if (!path) next(new HttpError.BadRequest("Unknown path"));
+			else res.accelerate(path);
 		} else {
-			Log.image(req.url);
-			next();
+			const wrongParams = [];
+			Object.keys(req.query).some(key => {
+				if (!allowedParameters[key]) wrongParams.push(key);
+			});
+			if (wrongParams.length) {
+				Log.image("wrong image params", req.url, wrongParams);
+				res.sendStatus(400);
+			} else {
+				Log.image(req.url);
+				next();
+			}
 		}
 	}
 
@@ -335,7 +338,7 @@ module.exports = class ImageModule {
 	}
 
 	async get(req, { url, size }) {
-		let srcPath = this.app.statics.urlToPath(req, url);
+		let srcPath = req.call('statics.path', url);
 		if (!srcPath) return;
 		const srcParts = Path.parse(srcPath);
 		srcParts.base = null;
@@ -344,7 +347,7 @@ module.exports = class ImageModule {
 		srcPath = Path.format(srcParts);
 		if (!size) return srcPath;
 
-		const destPath = this.app.statics.urlToPath(req, url.replace(/^\/@file\/share/, "/@file/image/"));
+		const destPath = req.call('statics.path', url.replace(/^\/@file\/share/, "/@file/image/"));
 
 		const parts = Path.parse(destPath);
 		parts.name = parts.name.replace(ImageModule.regSizes, '');
@@ -414,7 +417,7 @@ module.exports = class ImageModule {
 				if (!urlPath.startsWith('/@file/') || !req.sql.Href.isImage(href.mime)) {
 					continue;
 				}
-				let filePath = this.app.statics.urlToPath(req, urlPath);
+				let filePath = req.call('statics.path', urlPath);
 				const parts = Path.parse(filePath);
 				parts.base = null;
 				const patterns = [
@@ -460,7 +463,7 @@ module.exports = class ImageModule {
 				parts.ext = '.webp';
 				filePath = Path.format(parts);
 				await fs.rename(orig, filePath);
-				urlPath = this.app.statics.pathToUrl(req, filePath);
+				urlPath = req.call('statics.url', filePath);
 				for (const item of list) {
 					await fs.unlink(item);
 				}

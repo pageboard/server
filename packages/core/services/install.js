@@ -722,7 +722,7 @@ module.exports = class InstallService {
 		const { version } = site.$pkg;
 		const filename = [prefix, assign, name].filter(Boolean).join('-') + '.js';
 		const sourceUrl = `/@file/site/${version}/${filename}`;
-		const sourcePath = this.app.statics.urlToPath(
+		const sourcePath = this.app.statics.path(
 			{ site },
 			sourceUrl
 		);

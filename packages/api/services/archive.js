@@ -51,7 +51,7 @@ module.exports = class ArchiveService {
 			await this.#archiveFiles(req, archive, list, counts, data.size);
 			return [data.name, data.version ?? utils.hash(buf)].join('-');
 		});
-		counts.file = this.app.statics.pathToUrl(req, archivePath);
+		counts.file = req.call('statics.url', archivePath);
 		return counts;
 	}
 	static bundle = {
@@ -234,7 +234,7 @@ module.exports = class ArchiveService {
 
 			return [site.id, fileStamp()].join('-');
 		});
-		counts.file = this.app.statics.pathToUrl(req, archivePath);
+		counts.file = req.call('statics.url', archivePath);
 		return counts;
 	}
 	static export = {
@@ -477,7 +477,7 @@ module.exports = class ArchiveService {
 						url, size
 					});
 				} else {
-					filePath = this.app.statics.urlToPath(req, url);
+					filePath = req.call('statics.path', url);
 				}
 				if (!filePath) {
 					counts.skips.push(url);

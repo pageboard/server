@@ -52,27 +52,28 @@ module.exports = class StaticsModule {
 			if (handled) continue;
 			router.get(
 				`/${mount}/*`,
-				(req, res) => {
-					res.accelerate(this.urlToPath(req, req.baseUrl + req.path));
+				(req, res, next) => {
+					const path = this.path(req, req.baseUrl + req.path);
+					if (!path) return next(new HttpError.BadRequest("Unknown path"));
+					res.accelerate(path);
 				}
 			);
 		}
 	}
 
-	urlToPath(req, url) {
+	path(req, url) {
 		const prefix = `/@file/`;
 		if (url.startsWith(prefix)) {
 			const list = url.substring(prefix.length).split('/');
 			const { dir, owned } = this.opts.mounts[list[0]] ?? {};
-			if (!dir) throw new HttpError.BadRequest("No mount path for this url");
-			if (owned) list.splice(1, 0, req.site.id);
-			return Path.join(dir, ...list);
-		} else {
-			throw new HttpError.BadRequest("Cannot convert url: " + url);
+			if (dir) {
+				if (owned) list.splice(1, 0, req.site.id);
+				return Path.join(dir, ...list);
+			}
 		}
 	}
 
-	pathToUrl(req, path) {
+	url(req, path) {
 		for (const [mount, { dir, owned }] of Object.entries(this.opts.mounts)) {
 			if (path.startsWith(Path.join(dir, mount))) {
 				const sub = path.substring(dir.length);
@@ -89,7 +90,7 @@ module.exports = class StaticsModule {
 
 	file(req, { mount, name }) {
 		const path = Path.join(this.dir(req, mount), name);
-		const url = this.pathToUrl(req, path);
+		const url = this.url(req, path);
 		return { path, url };
 	}
 
@@ -129,7 +130,7 @@ module.exports = class StaticsModule {
 		const outList = [];
 		const sitesDir = this.dir({ site }, 'site');
 		const outPath = Path.join(sitesDir, version, buildFile);
-		const outUrl = this.pathToUrl({ site }, outPath);
+		const outUrl = this.url({ site }, outPath);
 		if (local) outList.push(outPath);
 		else outList.push(outUrl);
 
@@ -196,7 +197,7 @@ module.exports = class StaticsModule {
 		await fs.mkdir(siteDir, { recursive: true });
 		if (directories) for (const mount of directories) {
 			try {
-				await mountDirectory(siteDir, mount.from, this.urlToPath({ site }, mount.to));
+				await mountDirectory(siteDir, mount.from, this.path({ site }, mount.to));
 			} catch (err) {
 				console.error("Cannot mount", mount.from, mount.to, err);
 			}
