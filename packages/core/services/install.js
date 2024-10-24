@@ -165,45 +165,39 @@ module.exports = class InstallService {
 			// for git checkouts on private repositories
 			baseEnv.SSH_AUTH_SOCK = process.env.SSH_AUTH_SOCK;
 		}
-		const { bin, timeout } = this.opts;
-		let args;
-		if (bin == "yarn" || bin == 'yarnpkg') {
-			args = [
-				'install',
-				'--ignore-scripts',
-				'--non-interactive',
-				'--ignore-optional',
-				'--no-progress'
-			];
-		} else if (bin == 'npm') {
-			args = [
-				'install',
-				'--ignore-scripts',
-				'--omit=optional',
-				'--omit=dev',
-				'--no-progress',
-				'--no-audit'
-			];
-		} else if (bin == "pnpm") {
-			args = [
-				'install',
-				'--ignore-scripts',
-				'--no-optional',
-				'--prod',
-				// '--reporter=silent', // https://github.com/pnpm/pnpm/issues/2738
-				'--reporter=append-only'
-			];
-		} else {
-			throw new Error("Unknown installer.bin option, expected pnpm, yarn, npm", bin);
-		}
-		const command = `${bin} ${args.join(' ')}`;
+		const { timeout } = this.opts;
+		const args = [
+			'install',
+			'--ignore-scripts',
+			'--no-optional',
+			'--prod',
+			// '--reporter=silent', // https://github.com/pnpm/pnpm/issues/2738
+			'--reporter=append-only'
+		];
 
-		await exec(command, {
-			cwd: pkg.dir,
-			env: baseEnv,
-			shell: false,
-			timeout
-		}).catch(err => {
+		const command = `pnpm ${args.join(' ')}`;
+
+		try {
+			await exec(command, {
+				cwd: pkg.dir,
+				env: baseEnv,
+				shell: false,
+				timeout
+			});
+			for (const mod of Object.keys(pkg.dependencies)) {
+				const modDir = Path.join(pkg.dir, 'node_modules', mod);
+				const modPkg = await readPkg(Path.join(modDir, 'package.json'));
+				pkg.dependencies[mod] = modPkg.version;
+			}
+			await exec('pnpm --filter "@pageboard/*" postinstall', {
+				cwd: pkg.dir,
+				env: baseEnv,
+				shell: false,
+				timeout
+			});
+			pkg.version = utils.hash(JSON.stringify(pkg.dependencies));
+			await writePkg(pkg);
+		} catch (err) {
 			// FIXME after failure, won't process new requests / see domain too
 			if (err.signal == "SIGTERM") err.message = "Timeout installing " + req.site.id;
 			console.error(command);
@@ -213,22 +207,7 @@ module.exports = class InstallService {
 			} else {
 				throw err;
 			}
-		});
-		for (const mod of Object.keys(pkg.dependencies)) {
-			const modDir = Path.join(pkg.dir, 'node_modules', mod);
-			const modPkg = await readPkg(Path.join(modDir, 'package.json'));
-			pkg.dependencies[mod] = modPkg.version;
-			if (!modPkg.postinstall) continue;
-			const result = await postinstall.process(modPkg.postinstall, {
-				cwd: modDir,
-				allow: [
-					'link'
-				]
-			});
-			if (result) Log.install(result);
 		}
-		pkg.version = utils.hash(JSON.stringify(pkg.dependencies));
-		await writePkg(pkg);
 
 		const versionDir = Path.join(siteDir, pkg.version);
 		if (pkg.dir != versionDir) {
