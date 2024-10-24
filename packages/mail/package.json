@@ -18,7 +18,7 @@
   "homepage": "https://github.com/pageboard/server#readme",
   "dependencies": {
     "addressparser": "^1.0.1",
-    "nodemailer": "^6.9.14",
+    "nodemailer": "^6.9.15",
     "nodemailer-postmark-transport": "^6.0.0"
   }
 }
