@@ -4,11 +4,9 @@ const exec = promisify(require('node:child_process').exec);
 const { types: { isProxy } } = require('node:util');
 const vm = require('node:vm');
 const { promises: fs } = require('node:fs');
-const assert = require('node:assert/strict');
 
 const semver = require('semver');
 const toSource = require('tosource');
-const postinstall = require('postinstall');
 
 const utils = require('../../../src/utils');
 const { createEltProxy, MapProxy } = require('../src/proxies');
@@ -47,8 +45,7 @@ module.exports = class InstallService {
 		const curPkg = await this.#getPkg(Path.join(siteDir, 'current'));
 		if (curPkg.version) curPkg.dir = Path.join(siteDir, curPkg.version);
 		curPkg.current = true;
-		const nextPkg = await this.#decide(req, curPkg.dependencies)
-			? await this.#install(req) : curPkg;
+		const nextPkg = await this.#install(req);
 		await Promise.all(Object.keys(nextPkg.dependencies).map(
 			mod => this.#config(req, nextPkg, mod)
 		));
@@ -72,7 +69,6 @@ module.exports = class InstallService {
 						server: site.data.server
 					}
 				});
-				pkg.current = true;
 			}
 			await this.#clean(pkg);
 			this.app.domains.release(site);
@@ -89,38 +85,6 @@ module.exports = class InstallService {
 		$action: 'write',
 		$private: true
 	};
-
-	async #decide(req, versions = {}) {
-		// TODO return true
-		// when site versions don't fulfill site dependencies -> upgrade then update site versions
-		// or when pkg dependencies don't *exactly* match site versions
-		const { dependencies: deps } = req.site.data ?? {};
-		try {
-			assert.deepEqual(
-				Object.keys(deps).sort(),
-				Object.keys(versions).sort()
-			);
-			for (const [mod, spec] of Object.entries(deps)) {
-				if (spec.startsWith('link://')) {
-					const modPkg = await readPkg(
-						Path.join(spec.substring(7), 'package.json')
-					);
-					if (modPkg.version != versions[mod]) throw new Error();
-				} else if (URL.canParse(spec)) {
-					const modPkg = await readPkg(
-						Path.join(spec.substring(7), 'package.json')
-					);
-					console.warn(spec, modPkg);
-				} else if (!semver.satisfies(versions[mod], spec)) {
-					throw new Error();
-				}
-			}
-			return false;
-		} catch {
-			// needs install
-			return true;
-		}
-	}
 
 	async #getPkg(pkgDir) {
 		const pkgPath = Path.join(pkgDir, 'package.json');
@@ -184,18 +148,20 @@ module.exports = class InstallService {
 				shell: false,
 				timeout
 			});
-			for (const mod of Object.keys(pkg.dependencies)) {
-				const modDir = Path.join(pkg.dir, 'node_modules', mod);
-				const modPkg = await readPkg(Path.join(modDir, 'package.json'));
-				pkg.dependencies[mod] = modPkg.version;
-			}
 			await exec('pnpm --filter "@pageboard/*" postinstall', {
 				cwd: pkg.dir,
 				env: baseEnv,
 				shell: false,
 				timeout
 			});
-			pkg.version = utils.hash(JSON.stringify(pkg.dependencies));
+			for (const mod of Object.keys(pkg.dependencies)) {
+				const modDir = Path.join(pkg.dir, 'node_modules', mod);
+				const modPkg = await readPkg(Path.join(modDir, 'package.json'));
+				pkg.dependencies[mod] = modPkg.version;
+			}
+			pkg.version = utils.hash(
+				await fs.readFile(Path.join(pkg.dir, "pnpm-lock.yaml"))
+			);
 			await writePkg(pkg);
 		} catch (err) {
 			// FIXME after failure, won't process new requests / see domain too
