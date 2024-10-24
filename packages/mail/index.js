@@ -3,54 +3,73 @@ const AddressParser = require('addressparser');
 const Transports = {
 	postmark: require('nodemailer-postmark-transport')
 };
-const Mailers = {};
+
+class Mailer {
+	constructor(opts) {
+		Object.assign(this, opts);
+		if (typeof this.sender == "string") {
+			this.sender = AddressParser(this.sender).at(0);
+		}
+	}
+	send(opts) {
+		return NodeMailer.createTransport(Transports[this.transport]({
+			auth: this.auth
+		})).sendMail(opts);
+	}
+}
 
 module.exports = class MailModule {
 	static name = 'mail';
+
 	constructor(app, opts) {
 		this.app = app;
 		this.opts = opts;
-
-
-		Object.entries(opts).forEach(([purpose, conf]) => {
-			if (typeof conf != "object") return;
-			if (!Transports[conf.transport]) {
-				console.warn("mail transport not supported", purpose, conf.transport);
-				return;
-			}
-			if (!conf.domain) {
-				console.warn("mail domain must be set", purpose);
-				return;
-			}
-			if (!conf.sender) {
-				console.warn("mail sender must be set", purpose);
-				return;
-			}
-			if (!conf.auth) {
-				console.warn("mail auth be set", purpose);
-				return;
-			}
-			Log.mail(purpose, conf);
-			try {
-				Mailers[purpose] = {
-					...conf,
-					transport: NodeMailer.createTransport(Transports[conf.transport]({
-						auth: conf.auth
-					})),
-					sender: AddressParser(conf.sender)[0]
-				};
-			} catch (ex) {
-				console.error(ex);
-			}
-		});
 	}
 
-	async elements() {
+	async elements(els) {
+		els.site.$lock['data.mail'] = 'webmaster';
+		els.site.properties.mail = {
+			title: 'Mail',
+			properties: {
+				domain: {
+					title: 'Domain',
+					type: 'string',
+					format: 'singleline',
+					nullable: true
+				},
+				sender: {
+					title: 'Sender',
+					type: 'string',
+					format: 'email',
+					nullable: true
+				},
+				auth: {
+					title: 'Authentification',
+					type: 'object',
+					properties: {
+						apiKey: {
+							title: 'API Key',
+							type: 'string',
+							format: 'singleline',
+							nullable: true
+						}
+					}
+				}
+			},
+			nullable: true
+		};
 		return import('./lib/mail_job.mjs');
 	}
 
+	#mailer({ site }, purpose) {
+		if (!this.opts[purpose]) {
+			throw new HttpError.BadRequest("Unknown mailer:" + purpose);
+		}
+		return new Mailer({ ...this.opts[purpose], ...site.data.mail });
+	}
+
 	async receive(req, data) {
-		const mailer = Mailers.bulk;
+		const mailer = this.#mailer(req, 'conversations');
 		if (!checkMail(mailer.auth, data.timestamp, data.token, data.signature)) {
 			return false;
 		}
@@ -106,8 +125,7 @@ module.exports = class MailModule {
 		data = { ...data };
 		delete data.purpose;
 
-		const mailer = Mailers[purpose];
-		if (!mailer) throw new Error("Unknown mailer purpose " + purpose);
+		const mailer = this.#mailer(req, purpose);
 
 		if (purpose == "transactional" && data.to.length > 5) {
 			throw new Error("Transactional mail allowed for at most five recipients");
@@ -133,7 +151,7 @@ module.exports = class MailModule {
 		});
 		Log.mail("mail.to", data);
 		try {
-			const sentStatus = await mailer.transport.sendMail(data);
+			const sentStatus = await mailer.send(data);
 			return {
 				accepted: sentStatus.accepted.length > 0,
 				rejected: sentStatus.rejected.length > 0
@@ -247,23 +265,28 @@ module.exports = class MailModule {
 	async #sendJob(req, block) {
 		const { site } = req;
 		const { data } = block;
-		const mailer = Mailers[data.purpose];
-
+		const mailer = this.#mailer(req, data.purpose);
+		const domain = site.data.mail?.domain ?? mailer.domain;
 		const mailOpts = {
-			purpose: data.purpose
+			purpose: data.purpose,
+			from: {}
 		};
 
 		if (data.from) {
-			let fromId;
+			let item;
 			if (data.from.indexOf('@') > 0) {
-				fromId = (await req.run('settings.find', { email: data.from })).item.id;
+				item = (await req.run('settings.find', { email: data.from })).item;
 			} else {
-				fromId = (await req.run('settings.get', { id: data.from })).item.id;
+				item = (await req.run('settings.get', { id: data.from })).item;
 			}
-			mailOpts.from = {
-				title: site.data.title,
-				address: `${site.id}.${fromId}@${mailer.domain}`
-			};
+			if (item.parent?.data?.name) {
+				mailOpts.from.title = item.parent.data.name;
+			}
+			if (item.parent.data.email?.split('@').pop() == domain) {
+				mailOpts.from.address = item.parent.data.email;
+			} else {
+				mailOpts.from.address = `${site.id}.${item.id}@${domain}`;
+			}
 		}
 		if (data.replyTo) {
 			if (data.replyTo.indexOf('@') > 0) {
@@ -320,9 +343,6 @@ module.exports = class MailModule {
 	async send(req, data) {
 		if (!data.from && !data.replyTo) {
 			throw new HttpError.NotFound("Missing parameters: from or replyTo");
-		}
-		if (!Mailers[data.purpose]) {
-			throw new Error("Unknown mailer purpose " + data.purpose);
 		}
 		const { item: emailPage } = await req.run('block.find', {
 			type: 'mail',

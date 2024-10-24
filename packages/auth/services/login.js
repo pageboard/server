@@ -1,3 +1,4 @@
+// TODO move to https://github.com/hectorm/otpauth
 const otp = require('otplib');
 const qrcode = require('qrcode');
 
@@ -47,6 +48,9 @@ module.exports = class LoginModule {
 	}
 
 	async send(req, data) {
+		// TODO most of this should be replaced
+		// in particular the email since now it is cheap to generate them
+		// the connection logic should also match usual one
 		const { site } = req;
 		if (!site.$url) {
 			throw new HttpError.BadRequest("login.send requires a hostname. Use login.link");
@@ -60,9 +64,6 @@ module.exports = class LoginModule {
 		}
 		const mail = {
 			purpose: 'transactional',
-			from: {
-				name: site.data.title
-			},
 			to: [{
 				address: data.email
 			}]
