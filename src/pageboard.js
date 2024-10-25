@@ -241,6 +241,8 @@ module.exports = class Pageboard {
 			const pref = '/.uploads/';
 			if (req.url.startsWith(pref)) {
 				req.url = "/@file/share/" + req.url.slice(pref.length);
+			} else if (/\/^@file\/\d{4}-\d{2}\//.test(req.url)) {
+				req.url = "/@file/share/" + req.url.slice("/@file/".length);
 			}
 			next();
 		});
