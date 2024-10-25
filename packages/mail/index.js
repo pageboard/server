@@ -65,7 +65,11 @@ module.exports = class MailModule {
 		if (!this.opts[purpose]) {
 			throw new HttpError.BadRequest("Unknown mailer:" + purpose);
 		}
-		return new Mailer({ ...this.opts[purpose], ...site.data.mail });
+		const opts = { ...this.opts[purpose] };
+		for (const [k, v] of Object.entries(site.data.mail)) {
+			if (v != null) opts[k] = v;
+		}
+		return new Mailer(opts);
 	}
 
 	async receive(req, data) {
