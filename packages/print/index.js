@@ -150,7 +150,7 @@ module.exports = class PrintModule {
 		const block = await req.run('block.get', { id: data.id, type: 'print_job' });
 		block.data.device = "screen";
 		await this.#onlineJob(req, block);
-		return block;
+		return { item: block };
 	}
 	static preview = {
 		title: 'Preview',
