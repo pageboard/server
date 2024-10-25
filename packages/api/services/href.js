@@ -422,8 +422,10 @@ module.exports = class HrefService {
 				await site.$relatedQuery('children', trx)
 					.where('block.type', type)
 					.where(q => {
-						q.where(fun('starts_with', field, `${from}/`));
-						q.whereNot(fun('starts_with', field, `${to}/`));
+						q.where(q => {
+							q.where(fun('starts_with', field, `${from}/`));
+							q.whereNot(fun('starts_with', field, `${to}/`));
+						});
 						q.orWhere(field, from);
 					})
 					.patch({
