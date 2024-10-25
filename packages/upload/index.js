@@ -73,7 +73,7 @@ module.exports = class UploadModule {
 				return;
 			}
 			const subDir = (new Date()).toISOString().split('T').shift().substring(0, 7);
-			const dir = Path.join(req.call('statics.dir', '@file'), subDir);
+			const dir = Path.join(req.call('statics.dir', 'file'), subDir);
 			await fs.mkdir(dir, { recursive: true });
 
 			const basename = speaking(pathObj.name, {
