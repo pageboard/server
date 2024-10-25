@@ -168,6 +168,7 @@ module.exports = class Validation {
 		this.standalones.$id = '/standalones';
 		this.reads = keepDefinitions(this.actions, '$action', 'read');
 		this.reads.$id = '/reads';
+		this.reads.nullable = true;
 		this.writes = keepDefinitions(this.actions, '$action', 'write');
 		this.writes.$id = '/writes';
 
