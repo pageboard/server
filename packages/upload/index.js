@@ -80,7 +80,7 @@ module.exports = class UploadModule {
 				truncate: 128,
 				symbols: false
 			});
-			const ranb = utils.hash(Date.now());
+			const ranb = utils.hash(Date.now().toString());
 			const filePath = Path.join(dir, `${basename}-${ranb}${ext}`);
 			try {
 				await pipeline(
