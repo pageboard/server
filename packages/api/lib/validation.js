@@ -18,7 +18,7 @@ function fixSchema(schema) {
 				schema.type = 'object';
 			}
 			if (schema.type == "object") {
-				if (schema.additionalProperties == null) {
+				if (schema.additionalProperties == null && !schema.oneOf && !schema.anyOf) {
 					schema.additionalProperties = !schema.properties;
 				}
 			} else if (schema.type == "string") {
