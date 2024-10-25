@@ -163,7 +163,7 @@ module.exports = class StaticsModule {
 			} else if (/^https?:\/\//.test(url)) {
 				inList.push(url);
 			} else if (url.startsWith('/@file/site/')) {
-				inList.push(Path.join(sitesDir, url.substring(6)));
+				inList.push(this.app.statics.path({ site }, url));
 			} else {
 				console.error("file not in project", url);
 			}
