@@ -221,7 +221,7 @@ module.exports = class StaticsModule {
 				{ errorOnExist: true, recursive: true }
 			);
 		} catch (err) {
-			if (err.code != 'ERR_FS_CP_DIR_TO_NON_DIR') throw err;
+			if (!['ENOENT', 'ERR_FS_CP_DIR_TO_NON_DIR'].includes(err.code)) throw err;
 		}
 	}
 	static migrate = {
