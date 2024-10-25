@@ -231,11 +231,8 @@ module.exports = class Pageboard {
 			}
 			if (code >= 400) {
 				this.log.manual(req);
-				res.status(code);
-				res.send("");
-			} else {
-				res.sendStatus(code);
 			}
+			res.sendStatus(code);
 		});
 		server.use((req, res, next) => {
 			const pref = '/.uploads/';
