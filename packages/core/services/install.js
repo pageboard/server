@@ -416,7 +416,7 @@ module.exports = class InstallService {
 				hashtargets.add(name);
 			}
 			if (!el.expressions && (!el.inline || !el.inplace) && el.contents && el.contents.some(item => {
-				return ['inline*', 'text*', 'mail_inline*'].includes(item.nodes);
+				return item.nodes == null && item.id || ['inline*', 'text*', 'mail_inline*'].includes(item.nodes);
 			})) {
 				textblocks.add(name);
 			}
