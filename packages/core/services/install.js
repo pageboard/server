@@ -132,7 +132,6 @@ module.exports = class InstallService {
 		const { timeout } = this.opts;
 		const args = [
 			'install',
-			'--ignore-scripts',
 			'--no-optional',
 			'--prod',
 			// '--reporter=silent', // https://github.com/pnpm/pnpm/issues/2738
@@ -143,12 +142,6 @@ module.exports = class InstallService {
 
 		try {
 			await exec(command, {
-				cwd: pkg.dir,
-				env: baseEnv,
-				shell: false,
-				timeout
-			});
-			await exec('pnpm --filter "@pageboard/*" postinstall', {
 				cwd: pkg.dir,
 				env: baseEnv,
 				shell: false,
