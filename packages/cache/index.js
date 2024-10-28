@@ -58,21 +58,13 @@ module.exports = class CacheModule {
 		}, 5000);
 	}
 
-	install(req, site) {
-		if (site?.$url?.protocol == "http:") {
-			// didn't go through a proxy
-			return;
-		}
-		if (!site?.$url) {
-			console.info("No url to invalidate the cache", site?.id);
-			return;
-		}
+	install(req, url) {
 		(async () => {
-			const url = new URL(this.opts.wkp, site.$url);
+			const obj = new URL(this.opts.wkp, url);
 			const controller = new AbortController();
 			const toId = setTimeout(() => controller.abort(), 10000);
 			try {
-				await fetch(url, {
+				await fetch(obj, {
 					method: 'post',
 					rejectUnauthorized: false,
 					signal: controller.signal
@@ -80,9 +72,9 @@ module.exports = class CacheModule {
 				clearTimeout(toId);
 			} catch (err) {
 				if (err.name == 'AbortError') {
-					console.warn("cache: post timeout", url.href);
+					console.warn("cache: post timeout", obj.href);
 				} else {
-					console.error("cache:", err, url.href);
+					console.error("cache:", err, obj.href);
 				}
 			}
 		})();

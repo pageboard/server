@@ -8,9 +8,10 @@ const { promises: fs } = require('node:fs');
 const semver = require('semver');
 const toSource = require('tosource');
 
-const utils = require('../../../src/utils');
 const { createEltProxy, MapProxy } = require('../src/proxies');
 const translateJSON = require('../src/translate');
+
+const Package = require('../src/package');
 
 /*
 Description of element properties used by installer
@@ -32,7 +33,7 @@ of the site map. Pages are usually also bundles, and the sitemap bundles the ele
 */
 
 module.exports = class InstallService {
-	static name = 'install';
+	static name = 'core';
 	static $global = true;
 
 	constructor(app, opts) {
@@ -40,39 +41,33 @@ module.exports = class InstallService {
 		this.opts = opts;
 	}
 
-	async site(req) {
-		const siteDir = this.app.statics.dir(req, 'site');
-		const curPkg = await this.#getPkg(Path.join(siteDir, 'current'));
-		if (curPkg.version) curPkg.dir = Path.join(siteDir, curPkg.version);
-		curPkg.current = true;
-		const nextPkg = await this.#install(req);
-		await Promise.all(Object.keys(nextPkg.dependencies).map(
-			mod => this.#config(req, nextPkg, mod)
-		));
-		return nextPkg;
-	}
-
-	async domain(req, site) {
+	async load(req, site) {
 		const mustWait = site.$url && (site.data.env != "production" || !site.$pkg);
 		if (mustWait) this.app.domains.hold(site);
 		try {
-			req.site = site;
-			const pkg = await this.site(req);
-			site = await this.pack(req, pkg);
-			await req.call('auth.install', site);
-			if (!pkg.current) {
-				await this.#migrate(req, site);
+			const pkg = await this.#install(req, site);
+			const anew = !site.$pkg;
+			if (anew) {
+				await this.#prepare(req, site, pkg);
+				await req.call('statics.install', { site, pkg });
+				site = req.sql.Block.initSite(site, pkg);
+				await this.#makeSchemas(site);
+				await req.call('auth.install', { site });
+			}
+			if (!pkg.installed || anew) await this.#makeBundles(site, pkg);
+			if (!pkg.installed) {
+				if (req.site) await this.#migrate(req, site);
 				await site.$query(req.sql.trx).patchObject({
 					type: site.type,
 					data: {
+						server: site.data.server,
 						versions: site.data.versions,
-						server: site.data.server
+						hash: site.data.hash
 					}
 				});
 			}
-			await this.#clean(pkg);
 			this.app.domains.release(site);
-			await req.call('cache.install', site);
+			await req.call('cache.install', site.$url);
 			return site;
 		} catch (err) {
 			console.error(err);
@@ -80,38 +75,59 @@ module.exports = class InstallService {
 			throw err;
 		}
 	}
-	static domain = {
-		title: 'domain',
+	static load = {
+		title: 'Load',
 		$action: 'write',
 		$private: true
 	};
 
-	async #getPkg(pkgDir) {
-		const pkgPath = Path.join(pkgDir, 'package.json');
-		const obj = await readPkg(pkgPath) ?? {};
-		obj.dir = pkgDir;
-		obj.path = pkgPath;
-		obj.directories ??= [];
-		obj.elements ??= [];
-		obj.dependencies ??= {};
-		return obj;
+	async bootstrap(req) {
+		let site = { id: "*", data: {} };
+		const pkg = new Package("");
+		await this.#prepare(req, site, pkg);
+		site = req.sql.Block.initSite(site, pkg);
+		await this.#makeSchemas(site);
+		await req.call('auth.install', { site });
+		return site;
 	}
+	static bootstrap = {
+		title: 'Bootstrap',
+		$action: 'write',
+		$private: true
+	};
 
-	async #install(req) {
-		const { data } = req.site;
-		const siteDir = this.app.statics.dir(req, 'site');
-		const { dependencies = {} } = data;
-		const version = utils.hash(JSON.stringify(dependencies));
-
-		const pkg = await this.#getPkg(Path.join(siteDir, version));
-		pkg.dependencies = {};
-		for (const [mod, ver] of Object.entries(dependencies)) {
-			pkg.dependencies[mod] = ver.startsWith('link://')
-				? 'link://' + Path.resolve(this.app.cwd, ver.substring('link://'.length))
-				: ver;
+	async #install(req, site) {
+		const siteDir = this.app.statics.dir({ site }, 'site');
+		if (site.id == "*") return new Package(siteDir);
+		const aDir = Path.join(siteDir, 'a');
+		const bDir = Path.join(siteDir, 'b');
+		let [active, passive] = [bDir, aDir];
+		try {
+			const curLink = Path.join(siteDir, site.data.hash ?? 'none');
+			const link = await fs.readlink(curLink);
+			if (link == "a") {
+				active = aDir;
+				passive = bDir;
+			}
+		} catch {
+			// pass
 		}
-		pkg.name = req.site.id;
-		await prepareDir(pkg);
+		try {
+			await fs.rm(passive, { recursive: true, force: true });
+			await fs.cp(active, passive, {
+				recursive: true,
+				verbatimSymlinks: true,
+				preserveTimestamps: true
+			});
+		} catch {
+			// pass
+		}
+
+		const pkg = new Package(passive);
+		pkg.fromSite(this.app.cwd, site);
+		await pkg.write();
+		const curHash = await pkg.hash();
+
 		Log.install(pkg);
 		const baseEnv = {
 			npm_config_userconfig: ''
@@ -139,7 +155,6 @@ module.exports = class InstallService {
 		];
 
 		const command = `pnpm ${args.join(' ')}`;
-
 		try {
 			await exec(command, {
 				cwd: pkg.dir,
@@ -147,18 +162,11 @@ module.exports = class InstallService {
 				shell: false,
 				timeout
 			});
-			for (const mod of Object.keys(pkg.dependencies)) {
-				const modDir = Path.join(pkg.dir, 'node_modules', mod);
-				const modPkg = await readPkg(Path.join(modDir, 'package.json'));
-				pkg.dependencies[mod] = modPkg.version;
-			}
-			pkg.version = utils.hash(
-				await fs.readFile(Path.join(pkg.dir, "pnpm-lock.yaml"))
-			);
-			await writePkg(pkg);
 		} catch (err) {
 			// FIXME after failure, won't process new requests / see domain too
-			if (err.signal == "SIGTERM") err.message = "Timeout installing " + req.site.id;
+			if (err.signal == "SIGTERM") {
+				err.message = "Timeout installing " + site.id;
+			}
 			console.error(command);
 			console.error("in", pkg.dir);
 			if (err.stderr || err.stdout) {
@@ -167,105 +175,16 @@ module.exports = class InstallService {
 				throw err;
 			}
 		}
-
-		const versionDir = Path.join(siteDir, pkg.version);
-		if (pkg.dir != versionDir) {
-			await fs.rm(versionDir, { recursive: true, force: true });
-			await fs.mv(pkg.dir, versionDir);
-			pkg.dir = versionDir;
-		}
-		data.versions = pkg.dependencies;
-		data.server = this.app.version;
-		return pkg;
-	}
-
-	async #config(site, pkg, mod) {
-		const { id } = site;
-		const moduleDir = Path.join(pkg.dir, 'node_modules', mod);
-		const meta = await this.#getPkg(moduleDir);
-		const pbConf = meta.pageboard;
-		if (!pbConf) {
-			throw new HttpError.BadRequest(`site dependency ${mod} must declare at least package.json#pageboard.version`);
-		}
-		if (!semver.satisfies(this.app.version, pbConf.version)) {
-			throw new HttpError.BadRequest(`Server ${this.app.version} is not compatible with module ${mod} which has support for server ${pbConf.version}`);
-		}
-		const destUrl = Path.join('/', '@file', 'site', pkg.version, mod);
-		let directories = pbConf.directories || [];
-		if (!Array.isArray(directories)) directories = [directories];
-		Log.install("processing directories from", moduleDir, directories);
-		directories.forEach(mount => {
-			if (typeof mount == "string") mount = {
-				from: mount,
-				to: mount
-			};
-			const from = Path.resolve(moduleDir, mount.from);
-			const to = Path.resolve(destUrl, mount.to);
-			if (from.startsWith(moduleDir) == false) {
-				console.warn(
-					`Warning: ${id} dependency ${mod} bad mount from: ${from}`
-				);
-			} else if (to.startsWith(destUrl) == false) {
-				console.warn(
-					`Warning: ${id} dependency ${mod} bad mount to: ${to}`
-				);
-			} else {
-				pkg.directories.push({
-					from: from,
-					to: to,
-					priority: pbConf.priority || 0
-				});
-			}
-		});
-
-		let elements = pbConf.elements || [];
-		if (!Array.isArray(elements)) elements = [elements];
-		Log.install("processing elements from", moduleDir, elements);
-		await Promise.all(elements.map(async (path) => {
-			const absPath = Path.resolve(moduleDir, path);
-			const list = await this.#listDir(id, absPath);
-			list.sort((a, b) => {
-				a = Path.basename(a, Path.extname(a));
-				b = Path.basename(b, Path.extname(b));
-				if (a == b) return 0;
-				else if (a > b) return 1;
-				else if (a < b) return -1;
-			}).map(path => Path.join(absPath, path)).forEach(path => {
-				if (path.endsWith('.js')) {
-					pkg.elements.push({
-						path,
-						priority: pbConf.priority || 0
-					});
-				}
-			});
-		}));
-	}
-
-	async #clean(pkg) {
-		if (pkg.current || !await utils.exists(pkg.dir)) return; // fail safe
-		const parentDir = Path.dirname(pkg.dir);
-		const curDir = Path.join(parentDir, 'current');
-		await fs.rm(curDir, { force: true });
-		await fs.symlink(pkg.version, curDir);
-
-		try {
-			const paths = await fs.readdir(parentDir);
-			const stats = await Promise.all(paths.map(async item => {
-				const path = Path.join(parentDir, item);
-				const stat = await fs.stat(path);
-				return { stat, path };
-			}));
-			stats.sort((a, b) => {
-				if (a.path == pkg.dir) return -1;
-				if (a.stat.mtimeMs > b.stat.mtimeMs) return -1;
-				if (a.stat.mtimeMs == b.stat.mtimeMs) return 0;
-				if (a.stat.mtimeMs < b.stat.mtimeMs) return 1;
-			});
-			await Promise.all(stats.slice(3).map(obj => {
-				return fs.rm(obj.path, { recursive: true });
-			}));
-		} catch (err) {
-			console.error(err);
+		const nextHash = await pkg.hash();
+		if (nextHash != curHash) {
+			site.data.versions = await pkg.getVersions();
+			site.data.server = this.app.version;
+			site.data.hash = nextHash;
+			const nextLink = Path.join(siteDir, nextHash);
+			await fs.rm(nextLink, { force: true });
+			await fs.symlink(Path.basename(pkg.dir), nextLink);
+		} else {
+			pkg.installed = true;
 		}
 		return pkg;
 	}
@@ -354,10 +273,72 @@ module.exports = class InstallService {
 		return q;
 	}
 
-	async pack(req, pkg = {}) {
-		const { site } = req;
+	async #config(site, pkg, mod) {
+		const { id } = site;
+		const modPkg = new Package(Path.join(pkg.dir, 'node_modules', mod));
+		const meta = await modPkg.read();
+		const pbConf = meta.pageboard;
+		if (!pbConf) {
+			throw new HttpError.BadRequest(`site dependency ${mod} must declare at least package.json#pageboard.version`);
+		}
+		if (!semver.satisfies(this.app.version, pbConf.version)) {
+			throw new HttpError.BadRequest(`Server ${this.app.version} is not compatible with module ${mod} which has support for server ${pbConf.version}`);
+		}
+		const destUrl = Path.join('/', '@file', 'site', site.data.hash, mod);
+		let directories = pbConf.directories || [];
+		if (!Array.isArray(directories)) directories = [directories];
+		directories.forEach(mount => {
+			if (typeof mount == "string") mount = {
+				from: mount,
+				to: mount
+			};
+			const from = Path.resolve(modPkg.dir, mount.from);
+			const to = Path.resolve(destUrl, mount.to);
+			if (from.startsWith(modPkg.dir) == false) {
+				console.warn(
+					`Warning: ${id} dependency ${mod} bad mount from: ${from}`
+				);
+			} else if (to.startsWith(destUrl) == false) {
+				console.warn(
+					`Warning: ${id} dependency ${mod} bad mount to: ${to}`
+				);
+			} else {
+				pkg.directories.push({
+					from: from,
+					to: to,
+					priority: pbConf.priority || 0
+				});
+			}
+		});
+
+		let elements = pbConf.elements || [];
+		if (!Array.isArray(elements)) elements = [elements];
+		Log.install("processing elements from", modPkg.dir, elements);
+		await Promise.all(elements.map(async (path) => {
+			const absPath = Path.resolve(modPkg.dir, path);
+			const list = await this.#listDir(id, absPath);
+			list.sort((a, b) => {
+				a = Path.basename(a, Path.extname(a));
+				b = Path.basename(b, Path.extname(b));
+				if (a == b) return 0;
+				else if (a > b) return 1;
+				else if (a < b) return -1;
+			}).map(path => Path.join(absPath, path)).forEach(path => {
+				if (path.endsWith('.js')) {
+					pkg.elements.push({
+						path,
+						priority: pbConf.priority || 0
+					});
+				}
+			});
+		}));
+	}
+
+	async #prepare(req, site, pkg) {
+		await Promise.all(Object.keys(pkg.dependencies).map(
+			mod => this.#config(site, pkg, mod)
+		));
 		const { elements = [], directories = [] } = pkg;
-		Log.imports("installing", site.id, elements, directories);
 		const subSort = function (a, b) {
 			if (a.path && b.path) {
 				return Path.basename(a.path).localeCompare(Path.basename(b.path));
@@ -465,24 +446,13 @@ module.exports = class InstallService {
 			eltsMap, groups, aliases, bundles,
 			standalones, textblocks, hashtargets, polyfills
 		});
-		// mount paths
-		await req.call('statics.install', pkg);
-		// build js, css, and compile schema validators
-		const ret = req.sql.Block.initSite(site, pkg);
-		await this.#makeSchemas(ret, pkg);
-		await this.#makeBundles(ret, pkg);
-		return ret;
+		return pkg;
 	}
-	static pack = {
-		title: 'pack',
-		$action: 'write',
-		$private: true
-	};
 
-	async #makeSchemas(site, pkg) {
+	async #makeSchemas(site) {
 		const mclass = site.$modelClass;
 		const validator = mclass.getValidator();
-		await validator.prepare(mclass, pkg);
+		await validator.prepare(mclass);
 	}
 
 	async #makeBundles(site, pkg) {
@@ -497,16 +467,19 @@ module.exports = class InstallService {
 				await this.#bundleSource(site, {
 					assign: 'schemas',
 					name: 'services',
-					source: actions
+					source: actions,
+					dry: true
 				}),
 				await this.#bundleSource(site, {
 					assign: 'schemas',
 					name: 'reads',
-					source: reads
+					source: reads,
+					dry: true
 				}), await this.#bundleSource(site, {
 					assign: 'schemas',
 					name: 'writes',
-					source: writes
+					source: writes,
+					dry: true
 				})
 			]
 		});
@@ -593,29 +566,48 @@ module.exports = class InstallService {
 		}
 
 		// create those files
-		await this.#bundleSource(site, {
-			name: 'polyfills',
-			source: await this.app.polyfill.source(Array.from(pkg.polyfills))
-		});
-		await this.#bundleSource(site, {
-			assign: 'schemas',
-			name: 'elements',
-			source: {
-				$id: '/elements',
-				definitions: pkg.eltsMap,
-				discriminator: {
-					propertyName: 'type'
-				},
-				oneOf: Object.keys(pkg.eltsMap).map(key => {
-					return { $ref: '#/definitions/' + key };
-				})
-			}
-		});
+		if (!pkg.installed) await Promise.all([
+			this.#bundleSource(site, {
+				assign: 'schemas',
+				name: 'services',
+				source: actions
+			}),
+			this.#bundleSource(site, {
+				assign: 'schemas',
+				name: 'reads',
+				source: reads
+			}),
+			this.#bundleSource(site, {
+				assign: 'schemas',
+				name: 'writes',
+				source: writes
+			}),
+			this.#bundleSource(site, {
+				name: 'polyfills',
+				source: await this.app.polyfill.source(Array.from(pkg.polyfills))
+			}),
+			this.#bundleSource(site, {
+				assign: 'schemas',
+				name: 'elements',
+				source: {
+					$id: '/elements',
+					definitions: pkg.eltsMap,
+					discriminator: {
+						propertyName: 'type'
+					},
+					oneOf: Object.keys(pkg.eltsMap).map(key => {
+						return { $ref: '#/definitions/' + key };
+					})
+				}
+			})
+		]);
 
 		// create bundles
+		const list = [];
 		for (const [name, bundleEl] of $pkg.bundles) {
 			if (!bundleEl.orig) continue;
-			await Promise.all([
+			delete bundleEl.orig;
+			if (!pkg.installed) list.push(
 				this.app.statics.bundle(site, {
 					inputs: bundleEl.orig?.scripts ?? [],
 					output: `${name}.js`
@@ -624,9 +616,9 @@ module.exports = class InstallService {
 					inputs: bundleEl.orig?.stylesheets ?? [],
 					output: `${name}.css`
 				})
-			]);
-			delete bundleEl.orig;
+			);
 		}
+		await Promise.all(list);
 
 		// clear up some space
 		delete pkg.polyfills;
@@ -657,9 +649,8 @@ module.exports = class InstallService {
 
 	async #bundleSource(site, { prefix, assign, name, source, dry }) {
 		if (site.id == "*" || prefix?.startsWith('ext-')) return;
-		const { version } = site.$pkg;
 		const filename = [prefix, assign, name].filter(Boolean).join('-') + '.js';
-		const sourceUrl = `/@file/site/${version}/${filename}`;
+		const sourceUrl = `/@file/site/${site.data.hash}/${filename}`;
 		const sourcePath = this.app.statics.path(
 			{ site },
 			sourceUrl
@@ -741,32 +732,6 @@ module.exports = class InstallService {
 		return list;
 	}
 };
-
-async function prepareDir(pkg) {
-	await fs.mkdir(pkg.dir, {
-		recursive: true
-	});
-	return writePkg(pkg);
-}
-
-async function writePkg(pkg) {
-	await fs.writeFile(pkg.path, JSON.stringify({
-		"private": true,
-		name: pkg.name,
-		dependencies: pkg.dependencies,
-		version: pkg.version
-	}, null, ' '));
-	return pkg;
-}
-
-async function readPkg(path) {
-	try {
-		const buf = await fs.readFile(path);
-		return JSON.parse(buf);
-	} catch {
-		return {};
-	}
-}
 
 
 function sortPriority(list, subSort) {

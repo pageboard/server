@@ -35,6 +35,11 @@ export const site = {
 				format: 'version'
 			}
 		},
+		hash: {
+			title: 'Hash',
+			type: 'string',
+			format: 'name'
+		},
 		server: {
 			title: 'Server version',
 			nullable: true,

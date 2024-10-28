@@ -290,9 +290,7 @@ class Block extends Model {
 				hrefs,
 				tag,
 				dir: pkg.dir,
-				migrations: {},
-				versions: pkg.versions,
-				version: pkg.version
+				migrations: {}
 			};
 
 			get $pkg() {

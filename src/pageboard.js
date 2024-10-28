@@ -134,7 +134,7 @@ module.exports = class Pageboard {
 			let site = this.domains.siteById[id];
 			if (!site) {
 				site = this.domains.siteById[id] = await req.run(
-					'install.domain',
+					'core.load',
 					await req.run('site.get', { id })
 				);
 				if (site.data.domains?.length > 0) {
@@ -145,8 +145,7 @@ module.exports = class Pageboard {
 			}
 			req.site = site;
 		} else {
-			req.site = { id: "*", data: {} };
-			req.site = await req.run('install.pack');
+			req.site = await req.run('core.bootstrap');
 		}
 		try {
 			return req.run(command, data);

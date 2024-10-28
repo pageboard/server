@@ -1,7 +1,6 @@
 const Path = require('node:path');
 
 module.exports = class CoreModule {
-	static name = 'core';
 	static priority = Infinity;
 	static plugins = [
 		'domains', 'install', 'log'

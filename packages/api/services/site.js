@@ -161,6 +161,7 @@ module.exports = class SiteService {
 	async save(req, data) {
 		const oldSite = req.site;
 		const { data: initial } = oldSite;
+		delete data.hash; // avoids failure
 		if (data.languages?.length === 0 && !data.lang) {
 			data.languages.push(this.app.languages.default);
 		}
@@ -178,7 +179,7 @@ module.exports = class SiteService {
 			await req.run('translate.fill', { id: oldSite.id, lang: dst });
 		}
 		mergeRecursiveObject(oldSite.data, data);
-		const site = await req.call('install.domain', oldSite);
+		const site = await req.call('core.load', oldSite);
 		await oldSite.$query(req.sql.trx).patchObject({
 			type: site.type,
 			data: site.data
