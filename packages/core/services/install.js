@@ -64,7 +64,7 @@ module.exports = class InstallService {
 				});
 			}
 			this.app.domains.release(site);
-			await req.call('cache.install', site.$url);
+			if (site.$url) req.call('cache.install', site.$url);
 			return site;
 		} catch (err) {
 			console.error(err);
