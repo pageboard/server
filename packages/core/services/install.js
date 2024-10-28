@@ -46,16 +46,13 @@ module.exports = class InstallService {
 		if (mustWait) this.app.domains.hold(site);
 		try {
 			const pkg = await this.#install(req, site);
-			const anew = !site.$pkg;
-			if (anew) {
-				await this.#prepare(req, site, pkg);
-				await req.call('statics.install', { site, pkg });
-				site = req.sql.Block.initSite(site, pkg);
-				await this.#makeSchemas(site);
-				await req.call('auth.install', { site });
-			}
-			if (!pkg.installed || anew) await this.#makeBundles(site, pkg);
-			if (!pkg.installed) {
+			await this.#prepare(req, site, pkg);
+			await req.call('statics.install', { site, pkg });
+			site = req.sql.Block.initSite(site, pkg);
+			await this.#makeSchemas(site);
+			await req.call('auth.install', { site });
+			await this.#makeBundles(site, pkg);
+			if (pkg.upgraded) {
 				if (req.site) await this.#migrate(req, site);
 				await site.$query(req.sql.trx).patchObject({
 					type: site.type,
@@ -177,14 +174,13 @@ module.exports = class InstallService {
 		}
 		const nextHash = await pkg.hash();
 		if (nextHash != curHash) {
+			pkg.upgraded = true;
 			site.data.versions = await pkg.getVersions();
 			site.data.server = this.app.version;
 			site.data.hash = nextHash;
 			const nextLink = Path.join(siteDir, nextHash);
 			await fs.rm(nextLink, { force: true });
 			await fs.symlink(Path.basename(pkg.dir), nextLink);
-		} else {
-			pkg.installed = true;
 		}
 		return pkg;
 	}
@@ -459,31 +455,6 @@ module.exports = class InstallService {
 		const { $pkg } = site;
 		$pkg.aliases = pkg.aliases;
 		const { eltsMap } = pkg;
-
-		const { actions, reads, writes } = this.app.api.validation;
-
-		$pkg.bundles.set('services', {
-			scripts: [
-				await this.#bundleSource(site, {
-					assign: 'schemas',
-					name: 'services',
-					source: actions,
-					dry: true
-				}),
-				await this.#bundleSource(site, {
-					assign: 'schemas',
-					name: 'reads',
-					source: reads,
-					dry: true
-				}), await this.#bundleSource(site, {
-					assign: 'schemas',
-					name: 'writes',
-					source: writes,
-					dry: true
-				})
-			]
-		});
-
 		const bundles = Object.entries(pkg.bundles).sort(([na], [nb]) => {
 			// bundle page group before others
 			const a = eltsMap[na];
@@ -493,16 +464,46 @@ module.exports = class InstallService {
 			else return 0;
 		});
 
-		// incorporate polyfills/elements into core scripts
-		if (eltsMap.core) eltsMap.core.scripts.unshift(
-			await this.#bundleSource(site, {
-				name: 'polyfills', dry: true
-			}),
-			await this.#bundleSource(site, {
+		const { actions, reads, writes } = this.app.api.validation;
+
+		const [servicesPath, readsPath, writesPath] = await Promise.all([
+			this.#bundleSource(site, {
 				assign: 'schemas',
-				name: 'elements', dry: true
+				name: 'services',
+				source: actions,
+				dry: true
+			}),
+			this.#bundleSource(site, {
+				assign: 'schemas',
+				name: 'reads',
+				source: reads,
+				dry: true
+			}),
+			this.#bundleSource(site, {
+				assign: 'schemas',
+				name: 'writes',
+				source: writes,
+				dry: true
 			})
-		);
+		]);
+
+		$pkg.bundles.set('services', {
+			scripts: [servicesPath, readsPath, writesPath]
+		});
+
+		// incorporate polyfills/elements into core scripts
+		const [polyfillsPath, elementsPath] = eltsMap.core ? await Promise.all([
+			this.#bundleSource(site, {
+				name: 'polyfills',
+				dry: true
+			}),
+			this.#bundleSource(site, {
+				assign: 'schemas',
+				name: 'elements',
+				dry: true
+			})
+		]) : [];
+		eltsMap.core?.scripts.unshift(polyfillsPath, elementsPath);
 
 		// prepare bundles output paths
 		for (const [name, list] of bundles) {
@@ -566,7 +567,7 @@ module.exports = class InstallService {
 		}
 
 		// create those files
-		if (!pkg.installed) await Promise.all([
+		await Promise.all([
 			this.#bundleSource(site, {
 				assign: 'schemas',
 				name: 'services',
@@ -606,8 +607,7 @@ module.exports = class InstallService {
 		const list = [];
 		for (const [name, bundleEl] of $pkg.bundles) {
 			if (!bundleEl.orig) continue;
-			delete bundleEl.orig;
-			if (!pkg.installed) list.push(
+			list.push(
 				this.app.statics.bundle(site, {
 					inputs: bundleEl.orig?.scripts ?? [],
 					output: `${name}.js`
@@ -617,6 +617,7 @@ module.exports = class InstallService {
 					output: `${name}.css`
 				})
 			);
+			delete bundleEl.orig;
 		}
 		await Promise.all(list);
 

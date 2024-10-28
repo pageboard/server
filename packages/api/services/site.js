@@ -1,3 +1,4 @@
+const { deepEqual } = require('node:assert/strict');
 const { mergeRecursiveObject } = require('../../../src/utils');
 
 module.exports = class SiteService {
@@ -159,8 +160,8 @@ module.exports = class SiteService {
 	};
 
 	async save(req, data) {
-		const oldSite = req.site;
-		const { data: initial } = oldSite;
+		const { site, sql } = req;
+		const { data: initial } = site;
 		delete data.hash; // avoids failure
 		if (data.languages?.length === 0 && !data.lang) {
 			data.languages.push(this.app.languages.default);
@@ -176,15 +177,19 @@ module.exports = class SiteService {
 		const dst = data.languages?.[0] ?? data.lang ?? initial.languages?.[0];
 
 		if (src && src != dst) {
-			await req.run('translate.fill', { id: oldSite.id, lang: dst });
+			await req.run('translate.fill', { id: site.id, lang: dst });
 		}
-		mergeRecursiveObject(oldSite.data, data);
-		const site = await req.call('core.load', oldSite);
-		await oldSite.$query(req.sql.trx).patchObject({
+		const sameDeps = Object.isEmpty(data.dependencies) ? true : isEqual(initial.dependencies, data.dependencies);
+		const sameEnv = data.env == initial.env;
+
+		mergeRecursiveObject(site.data, data);
+
+		const nsite = sameDeps && sameEnv ? site : await req.call('core.load', site);
+		await site.$query(sql.trx).patchObject({
 			type: site.type,
 			data: site.data
 		});
-		req.site = site;
+		req.site = nsite;
 		if (languagesChanged || toMulti || toMono) {
 			await req.run('translate.initialize');
 		}
@@ -281,9 +286,13 @@ module.exports = class SiteService {
 			}
 		}
 	};
-
-	async install(req, data) {
-
-	}
 };
 
+function isEqual(a, b) {
+	try {
+		deepEqual(a, b);
+		return true;
+	} catch {
+		return false;
+	}
+}
