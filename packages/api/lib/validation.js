@@ -14,7 +14,7 @@ function fixSchema(schema) {
 	}
 	Traverse(schema, {
 		cb(schema) {
-			if (schema.properties && schema.type == null) {
+			if ((schema.properties || typeof schema.additionalProperties == "object") && schema.type == null) {
 				schema.type = 'object';
 			}
 			if (schema.type == "object") {
