@@ -22,7 +22,7 @@
   },
   "homepage": "https://github.com/pageboard/server#readme",
   "dependencies": {
-    "express-dom": "^8.13.0",
+		"express-dom": "8.12.x",
     "express-dom-pdf": "8.12.x"
   }
 }
