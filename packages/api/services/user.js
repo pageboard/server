@@ -46,12 +46,13 @@ module.exports = class UserService {
 	};
 
 	async add(req, data) {
+		const { sql: { trx, Block } } = req;
 		try {
 			return await this.#QueryUser(req, data);
 		} catch (err) {
 			if (err.status != 404) throw err;
 		}
-		const user = await req.Block.query(req.sql.trx).insert({
+		const user = await Block.query(trx).insert({
 			data: { email: data.email },
 			type: 'user'
 		}).returning('*');
