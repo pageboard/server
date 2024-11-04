@@ -148,8 +148,7 @@ module.exports = class PrintModule {
 
 	async preview(req, data) {
 		const block = await req.run('block.get', { id: data.id, type: 'print_job' });
-		block.data.device = "screen";
-		await this.#onlineJob(req, block);
+		await this.#onlineJob(req, block, "screen");
 		return { item: block };
 	}
 	static preview = {
@@ -196,12 +195,12 @@ module.exports = class PrintModule {
 		}
 	};
 
-	async #onlineJob(req, block) {
+	async #onlineJob(req, block, overrideDevice) {
 		const { url, lang, device } = block.data;
 		const pdfUrl = req.call('page.format', {
 			url, lang, ext: 'pdf'
 		});
-		pdfUrl.searchParams.set('pdf', device);
+		pdfUrl.searchParams.set('pdf', overrideDevice ?? device);
 		const pdfRun = req.call('statics.file', {
 			mount: 'cache',
 			name: `${block.id}.pdf`
