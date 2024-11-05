@@ -33,7 +33,7 @@ module.exports = class ArchiveService {
 
 		const lastUpdate = Math.max(...items.map(item => {
 			if (data.legacy) {
-				if (item.data.url) {
+				if (item.data?.url) {
 					item.data.url = item.data.url.replace(/^\/@file\/share\//, '/@file/');
 				} else if (item.url) {
 					item.url = item.url.replace(/^\/@file\/share\//, '/@file/');
