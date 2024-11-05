@@ -37,7 +37,7 @@ module.exports = class ArchiveService {
 		const archivePath = await archiveWrap(req, async archive => {
 			const buf = [];
 			let json = JSON.stringify(data.hrefs ? { hrefs, items } : items);
-			if (data.legacy) json = json.replaceAll(/\/@file\/share\/g/, '/@file/');
+			if (data.legacy) json = json.replaceAll(/\/@file\/share\//g, '/@file/');
 			if (!data.version) buf.push(json);
 			archive.append(json, {
 				name: 'export.json',
