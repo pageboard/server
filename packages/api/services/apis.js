@@ -201,8 +201,8 @@ module.exports = class ApiService {
 				unflatten(action.response),
 				scope
 			);
-		if (data.hrefs && out && typeof out == "object" && !Array.isArray(out)) {
-			out.hrefs = data.hrefs;
+		if (data.hrefs && out && typeof out == "object" && !Array.isArray(out) && response.hrefs) {
+			out.hrefs = response.hrefs;
 		}
 		return out;
 	}
