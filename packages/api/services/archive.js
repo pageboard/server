@@ -31,7 +31,16 @@ module.exports = class ArchiveService {
 			skips: []
 		};
 
-		const lastUpdate = Math.max(...items.map(item => item.updated_at));
+		const lastUpdate = Math.max(...items.map(item => {
+			if (data.legacy) {
+				if (item.data.url) {
+					item.data.url = item.data.url.replace(/^\/@file\/share\//, '/@file/');
+				} else if (item.url) {
+					item.url = item.url.replace(/^\/@file\/share\//, '/@file/');
+				}
+			}
+			return item.updated_at;
+		}));
 		const archivePath = await archiveWrap(req, async archive => {
 			const buf = [];
 			const json = JSON.stringify(data.hrefs ? { hrefs, items } : items);
@@ -48,7 +57,7 @@ module.exports = class ArchiveService {
 			);
 
 			counts.hrefs += list.length;
-			await this.#archiveFiles(req, archive, list, counts, data.size);
+			await this.#archiveFiles(req, archive, list, counts, data);
 			return [data.name, data.version ?? utils.hash(buf)].join('-');
 		});
 		counts.file = req.call('statics.url', archivePath);
@@ -83,6 +92,12 @@ module.exports = class ArchiveService {
 			},
 			hrefs: {
 				title: 'Metadata of hrefs',
+				type: 'boolean',
+				default: false
+			},
+			legacy: {
+				title: 'Legacy file path',
+				description: '@file/share is replaced by @file',
 				type: 'boolean',
 				default: false
 			}
@@ -227,7 +242,7 @@ module.exports = class ArchiveService {
 					jstream.write(href);
 				}
 				if (data.files) {
-					await this.#archiveFiles(req, archive, list, counts, null);
+					await this.#archiveFiles(req, archive, list, counts, { size: null });
 				}
 			}
 			jstream.end();
@@ -468,7 +483,7 @@ module.exports = class ArchiveService {
 		}
 	};
 
-	async #archiveFiles(req, archive, hrefs, counts, size) {
+	async #archiveFiles(req, archive, hrefs, counts, { size, legacy }) {
 		for (const { url, mime } of hrefs) {
 			if (url.startsWith('/@file/')) {
 				let filePath;
@@ -482,9 +497,10 @@ module.exports = class ArchiveService {
 				if (!filePath) {
 					counts.skips.push(url);
 				} else {
-					archive.file(filePath, {
-						name: url.substring(1)
-					});
+					const name = legacy
+						? url.replace(/^\/@file\/share\//, '@file/')
+						: url.substring(1);
+					archive.file(filePath, { name });
 					counts.files++;
 				}
 			}
