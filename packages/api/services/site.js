@@ -183,17 +183,22 @@ module.exports = class SiteService {
 		const sameEnv = data.env == initial.env;
 
 		mergeRecursiveObject(site.data, data);
-
-		const nsite = sameDeps && sameEnv ? site : await req.call('core.load', site);
-		await site.$query(sql.trx).patchObject({
-			type: site.type,
-			data: site.data
+		let nsite;
+		if (sameDeps && sameEnv) {
+			nsite = site;
+			this.app.domains.release(nsite);
+		} else {
+			nsite = await req.call('core.load', site);
+		}
+		await nsite.$query(sql.trx).patchObject({
+			type: nsite.type,
+			data: nsite.data
 		});
 		req.site = nsite;
 		if (languagesChanged || toMulti || toMono) {
 			await req.run('translate.initialize');
 		}
-		return site;
+		return nsite;
 	}
 	static save = {
 		title: 'Save',
