@@ -32,18 +32,12 @@ module.exports = class ArchiveService {
 		};
 
 		const lastUpdate = Math.max(...items.map(item => {
-			if (data.legacy) {
-				if (item.data?.url) {
-					item.data.url = item.data.url.replace(/^\/@file\/share\//, '/@file/');
-				} else if (item.url) {
-					item.url = item.url.replace(/^\/@file\/share\//, '/@file/');
-				}
-			}
 			return item.updated_at;
 		}));
 		const archivePath = await archiveWrap(req, async archive => {
 			const buf = [];
-			const json = JSON.stringify(data.hrefs ? { hrefs, items } : items);
+			let json = JSON.stringify(data.hrefs ? { hrefs, items } : items);
+			if (data.legacy) json = json.replaceAll(/\/@file\/share\/g/, '/@file/');
 			if (!data.version) buf.push(json);
 			archive.append(json, {
 				name: 'export.json',
