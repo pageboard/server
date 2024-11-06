@@ -45,7 +45,11 @@ module.exports = class ApiService {
 					).get(writer);
 					readers.add(res);
 				}
+				const pingInterval = setInterval(() => {
+					res.write(`data: {"type":"ping"}\n\n`);
+				}, 25000);
 				req.on('close', () => {
+					clearInterval(pingInterval);
 					for (const writer of reactions) {
 						const readers = wMap.get(writer);
 						readers?.delete(res);
@@ -54,7 +58,8 @@ module.exports = class ApiService {
 				res.writeHead(200, {
 					'Content-Type': 'text/event-stream',
 					'Connection': 'keep-alive',
-					'Cache-Control': 'no-cache'
+					'Cache-Control': 'no-cache',
+					'X-Accel-Buffering': 'no'
 				});
 			} catch (err) {
 				next(err);
@@ -119,7 +124,7 @@ module.exports = class ApiService {
 			const writers = this.#writers.get(data.name);
 			if (writers?.size) req.finish(() => {
 				for (const reader of writers) {
-					reader.write(`data: ${JSON.stringify({})}\n\n`);
+					reader.write(`data: {"type":"write"}\n\n`);
 				}
 			});
 		}
