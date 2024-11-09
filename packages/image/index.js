@@ -163,11 +163,10 @@ module.exports = class ImageModule {
 		}
 		if (output) {
 			try {
-				await pipeline(
-					inputStream,
-					transform.withMetadata(),
-					createWriteStream(output)
-				);
+				await Promise.all([
+					pipeline(inputStream, transform.withMetadata()),
+					transform.toFile(output)
+				]);
 			} catch (ex) {
 				try {
 					await fs.unlink(output);
@@ -375,7 +374,8 @@ module.exports = class ImageModule {
 					}
 				});
 			} catch(err) {
-				console.error(err.message);
+				console.error("image.resize failure", srcPath, destSized);
+				console.error(err);
 				return;
 			}
 		}
