@@ -194,13 +194,13 @@ module.exports = class LoginModule {
 				title: 'Max Age',
 				description: 'max age of cookie in seconds',
 				type: 'integer',
-				default: 60 * 60 * 24 * 30
+				default: 60 * 60 * 24 * 7
 			},
 			tokenMaxAge: {
 				title: 'Token Max Age',
 				description: 'in steps of 30 seconds',
 				type: 'integer',
-				default: 20
+				default: 10
 			}
 		}
 	};
