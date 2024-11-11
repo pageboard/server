@@ -36,8 +36,7 @@ module.exports = class ArchiveService {
 		}));
 		const archivePath = await archiveWrap(req, async archive => {
 			const buf = [];
-			let json = JSON.stringify(data.hrefs ? { hrefs, items } : items);
-			if (data.legacy) json = json.replaceAll(/\/@file\/share\//g, '/@file/');
+			const json = JSON.stringify(data.hrefs ? { hrefs, items } : items);
 			if (!data.version) buf.push(json);
 			archive.append(json, {
 				name: 'export.json',
@@ -86,12 +85,6 @@ module.exports = class ArchiveService {
 			},
 			hrefs: {
 				title: 'Metadata of hrefs',
-				type: 'boolean',
-				default: false
-			},
-			legacy: {
-				title: 'Legacy file path',
-				description: '@file/share is replaced by @file',
 				type: 'boolean',
 				default: false
 			}
@@ -477,7 +470,7 @@ module.exports = class ArchiveService {
 		}
 	};
 
-	async #archiveFiles(req, archive, hrefs, counts, { size, legacy }) {
+	async #archiveFiles(req, archive, hrefs, counts, { size }) {
 		for (const { url, mime } of hrefs) {
 			if (url.startsWith('/@file/')) {
 				let filePath;
@@ -491,9 +484,7 @@ module.exports = class ArchiveService {
 				if (!filePath) {
 					counts.skips.push(url);
 				} else {
-					const name = legacy
-						? url.replace(/^\/@file\/share\//, '@file/')
-						: url.substring(1);
+					const name = url.substring(1);
 					archive.file(filePath, { name });
 					counts.files++;
 				}
