@@ -111,11 +111,12 @@ module.exports = class InstallService {
 		}
 		try {
 			await fs.rm(passive, { recursive: true, force: true });
-			await fs.cp(active, passive, {
-				recursive: true,
-				verbatimSymlinks: true,
-				preserveTimestamps: true
-			});
+		} catch {
+			// pass
+		}
+		try {
+			await fs.mkdir(passive);
+			await fs.cp(Path.join(active, "pnpm-lock.yaml"), Path.join(passive, "pnpm-lock.yaml"));
 		} catch {
 			// pass
 		}
@@ -375,7 +376,6 @@ module.exports = class InstallService {
 							polyfills.add(p.replace('[$lang]', lang));
 						}
 					} else {
-						// FIXME
 						polyfills.add(p);
 					}
 				}
