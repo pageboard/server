@@ -17,7 +17,7 @@ module.exports = class PageService {
 			delete query.nested;
 
 			if (isWebmaster || forWebmaster) {
-				// override browser accepted-language
+				// override browser accept-language
 				req.call('translate.lang', {
 					lang: lang ?? site.data.languages?.[0] ?? site.data.lang
 				});
