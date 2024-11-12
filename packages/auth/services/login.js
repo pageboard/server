@@ -59,7 +59,7 @@ module.exports = class LoginModule {
 		const { item: settings } = await req.run('settings.have', {
 			email: data.email
 		});
-		if (data.settings) {
+		if (!Object.isEmpty(data.settings)) {
 			await req.run('settings.save', { id: settings.id, data: data.settings });
 		}
 		const mail = {
