@@ -1,7 +1,6 @@
 module.exports = class TranslateService {
 	static name = 'translate';
 
-	// TODO use deepl-node
 
 	constructor(app, opts) {
 		this.app = app;
