@@ -228,9 +228,6 @@ module.exports = class Pageboard {
 			if ((this.dev || code >= 500) && code != 404) {
 				console.error(err);
 			}
-			if (code >= 400) {
-				this.log.manual(req);
-			}
 			res.sendStatus(code);
 		});
 		server.use((req, res, next) => {
