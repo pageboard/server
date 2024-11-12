@@ -9,19 +9,19 @@ module.exports = function render(page, settings, req, res) {
 				const all = await Promise.all(state.scope.reveals ?? []);
 				const errors = all.filter(e => e?.message);
 				if (errors.length) {
+					const msg = `Errors rendering ${errors.length} files`;
 					if (isDev) {
-						console.warn("ignoring", errors.length, "reveal errors");
+						console.warn(msg, "(ignored)");
 					} else {
 						result.status = 400;
-						result.statusText = "reveal errors:\n" + errors.join('\n');
+						result.statusText = msg;
 					}
 				}
 			}
 			return result;
 		}, req.site.data.env == "dev");
 		if (status > 200) {
-			res.status(status);
-			res.statusMessage = statusText;
+			throw new HttpError[status](statusText);
 		}
 	});
 };
