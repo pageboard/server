@@ -1,7 +1,6 @@
 const {
 	promises: fs,
-	createReadStream,
-	createWriteStream
+	createReadStream
 } = require('node:fs');
 const { pipeline } = require('node:stream/promises');
 const Path = require('node:path');
