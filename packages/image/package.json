@@ -1,6 +1,6 @@
 {
   "name": "@pageboard/image",
-  "version": "0.16.0",
+  "version": "0.16.1",
   "description": "",
   "main": "index.js",
   "scripts": {
@@ -20,6 +20,6 @@
     "bwip-js": "^4.5.1",
     "datauri": "^4.1.0",
     "glob": "^11.0.0",
-    "sharpie": "^5.3.2"
+    "sharpie": "^5.4.0"
   }
 }
