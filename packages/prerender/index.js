@@ -170,6 +170,7 @@ module.exports = class PrerenderModule {
 				plugins.add('hidden');
 				plugins.add('polyfill');
 				plugins.add('serialize');
+				settings.equivs = ["X-Upcache-Lock"];
 				if (res.req && (site.data.env == "dev" || !req.locked(['webmaster']))) {
 					// manual response does not have req
 					settings.enabled = false;
