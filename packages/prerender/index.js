@@ -33,7 +33,6 @@ module.exports = class PrerenderModule {
 			'console',
 			'cookies',
 			'form',
-			'upcache',
 			'equivs',
 			'languages'
 		]);
@@ -44,7 +43,6 @@ module.exports = class PrerenderModule {
 			nopreload: require('./plugins/nopreload'),
 			inlinestyle: require('./plugins/inlinestyle'),
 			form: require('./plugins/form'),
-			upcache: require('./plugins/upcache'),
 			render: require('./plugins/render')
 		});
 		dom.defaults.cookies.add("bearer");
@@ -135,7 +133,7 @@ module.exports = class PrerenderModule {
 		pdf.presets.prepress.pageCount = true;
 		if (!this.#pdfMw) this.#pdfMw = dom(pdf({
 			timeout: 120000,
-			plugins: ['upcache', 'render']
+			plugins: ['render']
 		})).route(({ visible, online, location, settings, policies }, req) => {
 			if (visible) {
 				// render < equivs < pdf to ensure status is changed after render
