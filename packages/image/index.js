@@ -372,9 +372,11 @@ module.exports = class ImageModule {
 						quality: 95
 					}
 				});
-			} catch(err) {
-				console.error("image.resize failure", srcPath, destSized);
-				console.error(err);
+			} catch (err) {
+				if (err.code != 'ENOENT') {
+					console.error("image.resize failure", srcPath);
+					console.error(err);
+				}
 				return;
 			}
 		}
