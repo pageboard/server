@@ -311,6 +311,7 @@ class Block extends Model {
 				const id = opt.old?.id ?? this.id;
 				if (id != null) q.whereNot('block.id', id);
 				let hasCheck = false;
+				const list = [];
 				for (const field of unique) {
 					const key = `data.${field}`;
 					const val = dget(opt.old || this, key);
@@ -319,8 +320,10 @@ class Block extends Model {
 						const parent = dget(el.properties, key.split('.').join('.properties.'));
 						if (parent?.nullable) continue;
 						throw new HttpError.BadRequest(
-							`Element ${el.name} requires unique ${key} but value is null`
+							`${el.name} requires unique non-null field: ${key}`
 						);
+					} else {
+						list.push(`${field}=${val}`);
 					}
 					hasCheck = true;
 					q.whereJsonText('data:' + field, val);
@@ -328,7 +331,7 @@ class Block extends Model {
 				if (!hasCheck) return;
 				const count = await q.resultSize();
 				if (count > 0) {
-					throw new HttpError.BadRequest(`Element requires unique fields ${unique} but there are already ${count} rows`);
+					throw new HttpError.BadRequest(`${el.name} requires unique fields:\n${list.join('\n')}`);
 				}
 			}
 			async $beforeInsert(context) {
