@@ -7,7 +7,7 @@ module.exports = function render(page, settings, req, res) {
 			const result = { status, statusText };
 			if (status == 200) {
 				const all = await Promise.all(state.scope.reveals ?? []);
-				const errors = all.filter(e => e?.message);
+				const errors = all.filter(e => e?.name);
 				if (errors.length) {
 					const msg = `Errors rendering ${errors.length} files`;
 					if (isDev) {
