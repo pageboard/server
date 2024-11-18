@@ -383,10 +383,7 @@ module.exports = class ImageModule {
 					}
 				});
 			} catch (err) {
-				if (err.code != 'ENOENT') {
-					console.error("image.resize failure", srcPath);
-					console.error(err);
-				}
+				if (err.code != 'ENOENT') console.error(err);
 				d.finish();
 				d.resolve();
 				return;
