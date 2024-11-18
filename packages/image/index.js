@@ -1,6 +1,5 @@
 const {
-	promises: fs,
-	createReadStream
+	promises: fs
 } = require('node:fs');
 const { pipeline } = require('node:stream/promises');
 const Path = require('node:path');
@@ -55,6 +54,8 @@ module.exports = class ImageModule {
 	};
 
 	static regSizes = new RegExp(`-(${Object.keys(this.sizes).join('|')})$`);
+
+	resizeRequests = new Map();
 
 	constructor(app, opts) {
 		this.app = app;
@@ -154,18 +155,21 @@ module.exports = class ImageModule {
 				background
 			});
 		}
-		let inputStream;
+		if (output) {
+			transform.withMetadata();
+		}
+		const ops = [];
 		if (/^https?:\/\//.test(input)) {
-			inputStream = (await this.app.inspector.request(req, new URL(input))).res;
+			const inputStream = (await this.app.inspector.request(req, new URL(input))).res;
+			ops.push(pipeline(inputStream, transform));
 		} else {
-			inputStream = createReadStream(input.startsWith('file://') ? input.substring(7) : input);
+			delete transform.options.input.buffer;
+			transform.options.input.file = input.startsWith('file://') ? input.substring(7) : input;
 		}
 		if (output) {
 			try {
-				await Promise.all([
-					pipeline(inputStream, transform.withMetadata()),
-					transform.toFile(output)
-				]);
+				ops.push(transform.toFile(output));
+				await Promise.all(ops);
 			} catch (ex) {
 				try {
 					await fs.unlink(output);
@@ -175,10 +179,9 @@ module.exports = class ImageModule {
 				throw ex;
 			}
 		} else {
-			ret.buffer = (await Promise.all([
-				pipeline(inputStream, transform),
-				transform.toBuffer()
-			])).pop();
+			ops.unshift(transform.toBuffer());
+			const [buf] = await Promise.all(ops);
+			ret.buffer = buf;
 		}
 		return ret;
 	}
@@ -354,10 +357,17 @@ module.exports = class ImageModule {
 		parts.base = null;
 		parts.ext = ".webp";
 		const destSized = Path.format(parts);
+		const curPromise = this.resizeRequests.get(destSized);
+		if (curPromise) return curPromise;
+		const d = Promise.withResolvers();
+		d.finish = () => this.resizeRequests.delete(destSized);
+		this.resizeRequests.set(destSized, d.promise);
 		try {
 			await fs.access(destSized);
 		} catch (err) {
 			if (err.code != 'ENOENT') {
+				d.finish();
+				d.reject(err);
 				throw err;
 			}
 			await fs.mkdir(parts.dir, { recursive: true });
@@ -377,9 +387,13 @@ module.exports = class ImageModule {
 					console.error("image.resize failure", srcPath);
 					console.error(err);
 				}
+				d.finish();
+				d.resolve();
 				return;
 			}
 		}
+		d.finish();
+		d.resolve(destSized);
 		return destSized;
 	}
 	static get = {
