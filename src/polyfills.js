@@ -30,3 +30,12 @@ fs.mv ??= async function (oldPath, newPath) {
 		}
 	}
 };
+
+Promise.withResolvers ??= function withResolvers() {
+	let a, b;
+	const c = new this((resolve, reject) => {
+		a = resolve;
+		b = reject;
+	});
+	return { resolve: a, reject: b, promise: c };
+};
