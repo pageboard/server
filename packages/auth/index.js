@@ -204,7 +204,7 @@ module.exports = class AuthModule {
 				const n = grant.$level;
 				if (typeof n != 'number' || Number.isNaN(n)) {
 					// eslint-disable-next-line no-console
-					console.warn("grant without $level, ignoring", grant);
+					console.warn("grant without $level (ignored)", grant);
 					return;
 				}
 				grants[grant.const] = n;
