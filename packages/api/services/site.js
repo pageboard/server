@@ -188,7 +188,7 @@ module.exports = class SiteService {
 			nsite = site;
 			this.app.domains.release(nsite);
 		} else {
-			nsite = await req.call('core.install', site);
+			nsite = await req.call('core.build', site);
 		}
 		await nsite.$query(sql.trx).patchObject({
 			type: nsite.type,

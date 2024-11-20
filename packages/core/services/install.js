@@ -41,7 +41,7 @@ module.exports = class InstallService {
 		this.opts = opts;
 	}
 
-	async install(req, site) {
+	async build(req, site) {
 		const mustWait = site.$url && (site.data.env != "production" || !site.$pkg);
 		if (mustWait) this.app.domains.hold(site);
 		try {
@@ -72,8 +72,8 @@ module.exports = class InstallService {
 			throw err;
 		}
 	}
-	static install = {
-		title: 'Install',
+	static build = {
+		title: 'Build',
 		$action: 'write'
 	};
 
