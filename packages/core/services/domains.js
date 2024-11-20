@@ -158,7 +158,7 @@ module.exports = class DomainsService {
 			try {
 				host.hold();
 				await this.#resolvableHost(site.$url.hostname, host);
-				req.site = await req.run('core.load', site);
+				req.site = await req.run('core.install', site);
 				host.state = READY;
 				host.release();
 			} catch (err) {
