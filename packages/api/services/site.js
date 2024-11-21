@@ -186,7 +186,7 @@ module.exports = class SiteService {
 		let nsite;
 		if (sameDeps && sameEnv) {
 			nsite = site;
-			this.app.domains.release(nsite);
+			this.app.domains.release(req, nsite);
 		} else {
 			nsite = await req.call('core.build', site);
 		}
@@ -246,6 +246,16 @@ module.exports = class SiteService {
 				format: 'id'
 			}
 		}
+	};
+
+	async upgrade(req, data) {
+		return req.run('core.build', req.site);
+	}
+	static upgrade = {
+		title: 'Upgrade',
+		$action: 'write',
+		$lock: 'webmaster',
+		properties: {}
 	};
 
 	async empty(req, data) {

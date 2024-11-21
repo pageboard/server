@@ -96,7 +96,7 @@ module.exports = class ApiService {
 		Object.assign(scope, {
 			$request: body,
 			$query: query,
-			$origin: site.$url.origin,
+			$origin: req.$url.origin,
 			$site: site.id,
 			$languages: site.data.languages,
 			$user: user
@@ -183,7 +183,7 @@ module.exports = class ApiService {
 		// overwrite to avoid injection
 		Object.assign(scope, {
 			$query: query,
-			$origin: site.$url.origin,
+			$origin: req.$url.origin,
 			$site: site.id,
 			$languages: site.data.languages,
 			$user: user

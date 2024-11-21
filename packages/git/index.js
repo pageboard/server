@@ -53,11 +53,11 @@ module.exports = class GitModule {
 			const changed = await req.run('git.decide', getRefs(site.data.dependencies, payload));
 			if (!changed) return;
 			await req.run('site.save', site.data);
-			await this.app.cache.install(site);
 			mail.subject = `Pageboard deployed ${site.id} at version ${site.data.version}`;
+			await req.call('cache.install', req.$url);
 			mail.text = Text`
 						The version is immediately available at
-						${site.$url.href}
+						${req.$url.href}
 					`;
 
 		} catch (err) {

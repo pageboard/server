@@ -150,8 +150,8 @@ module.exports = class MailModule {
 		data.headers = { ...mailer.headers };
 		if (req.site.id) data.tag = req.site.id;
 		if (data.attachments) data.attachments = data.attachments.filter(obj => {
-			const url = new URL(obj.href, req.site.$url);
-			return url.host == req.site.$url.host;
+			const url = new URL(obj.href, req.$url);
+			return url.host == req.$url.host;
 		});
 		Log.mail("mail.to", data);
 		try {
@@ -351,7 +351,7 @@ module.exports = class MailModule {
 		const { item: emailPage } = await req.run('block.find', {
 			type: 'mail',
 			data: {
-				url: new URL(data.url, req.site.$url).pathname,
+				url: new URL(data.url, req.$url).pathname,
 				lang: data.lang
 			}
 		});

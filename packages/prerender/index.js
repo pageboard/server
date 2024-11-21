@@ -227,8 +227,8 @@ module.exports = class PrerenderModule {
 	}
 
 	async save(req, { url, path }) {
-		const { site, sql: { Block } } = req;
-		if (!site.$url) {
+		const { sql: { Block }, $url } = req;
+		if (!$url) {
 			throw new HttpError.BadRequest("Rendering needs a site url");
 		}
 		const {

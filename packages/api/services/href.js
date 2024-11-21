@@ -177,9 +177,9 @@ module.exports = class HrefService {
 	}
 
 	async #add(req, data) {
-		const { site, sql: { trx, Href } } = req;
+		const { site, sql: { trx, Href }, $url } = req;
 		let local = false;
-		const siteUrl = site.$url ?? new URL(`https://${site.id}.localhost.localdomain`);
+		const siteUrl = $url ?? new URL(`https://${site.id}.localhost.localdomain`);
 		const fullUrl = new URL(data.url, siteUrl);
 		if (siteUrl.hostname == fullUrl.hostname) {
 			data.url = fullUrl.pathname + fullUrl.search;

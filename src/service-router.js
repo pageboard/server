@@ -80,7 +80,7 @@ module.exports = function (group, router) {
 				const cookieParams = {
 					httpOnly: true,
 					sameSite: true,
-					secure: req.site.$url.protocol == "https:",
+					secure: req.$url.protocol == "https:",
 					path: '/'
 				};
 				for (const [key, cookie] of Object.entries(obj.cookies)) {

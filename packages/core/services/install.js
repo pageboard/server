@@ -42,8 +42,8 @@ module.exports = class InstallService {
 	}
 
 	async build(req, site) {
-		const mustWait = site.$url && (site.data.env != "production" || !site.$pkg);
-		if (mustWait) this.app.domains.hold(site);
+		const mustWait = req.$url && (site.data.env != "production" || !site.$pkg);
+		if (mustWait) this.app.domains.hold(req, site);
 		try {
 			const pkg = await this.#install(req, site);
 			await this.#prepare(req, site, pkg);
@@ -63,19 +63,15 @@ module.exports = class InstallService {
 					}
 				});
 			}
-			this.app.domains.release(site);
-			if (site.$url) req.call('cache.install', site.$url);
+			this.app.domains.release(req, site);
+			if (req.$url) req.call('cache.install', req.$url);
 			return site;
 		} catch (err) {
 			console.error(err);
-			if (mustWait) this.app.domains.error(site, err);
+			if (mustWait) this.app.domains.error(req, err);
 			throw err;
 		}
 	}
-	static build = {
-		title: 'Build',
-		$action: 'write'
-	};
 
 	async bootstrap(req) {
 		let site = { id: "*", data: {} };

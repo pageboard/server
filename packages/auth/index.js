@@ -59,7 +59,7 @@ module.exports = class AuthModule {
 	bearer(req, { maxAge, id, grants }) {
 		return {
 			value: this.#lock.sign({ id,	grants }, {
-				issuer: req.site.$url.hostname,
+				issuer: req.$url.hostname,
 				maxAge,
 				...this.opts
 			}),

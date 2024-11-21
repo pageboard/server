@@ -51,8 +51,8 @@ module.exports = class LoginModule {
 		// TODO most of this should be replaced
 		// in particular the email since now it is cheap to generate them
 		// the connection logic should also match usual one
-		const { site } = req;
-		if (!site.$url) {
+		const { site, $url } = req;
+		if (!$url) {
 			throw new HttpError.BadRequest("login.send requires a hostname. Use login.link");
 		}
 		const token = await this.#generate(req, data);
@@ -75,7 +75,7 @@ module.exports = class LoginModule {
 				${tokenStr}
 
 				Ce message est envoyé depuis
-				${site.$url.href}
+				${req.$url.href}
 
 				Si vous n'avez pas demandé ce code, vous pouvez ignorer ce message.`;
 		} else {
@@ -84,7 +84,7 @@ module.exports = class LoginModule {
 				${tokenStr}
 
 				This message is sent from
-				${site.$url.href}
+				${req.$url.href}
 
 				If you didn't ask this code, you can ignore this message.`;
 		}

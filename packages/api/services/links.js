@@ -39,7 +39,7 @@ module.exports = class LinksService {
 			});
 			res.type("text/plain");
 			res.send(obj.items.map(page => {
-				return new URL(page.data.url, req.site.$url).href;
+				return new URL(page.data.url, req.$url).href;
 			}).join('\n'));
 		});
 
@@ -48,7 +48,7 @@ module.exports = class LinksService {
 				robot: true,
 				type: ['page']
 			});
-			const { site } = req;
+			const { site, $url } = req;
 			const { languages = [] } = site.data;
 
 			// https://www.sitemaps.org/protocol.html
@@ -59,7 +59,7 @@ module.exports = class LinksService {
 			};
 
 			const xmlItem = item => {
-				const href = (new URL(item.data.url, site.$url)).href;
+				const href = (new URL(item.data.url, $url)).href;
 				return `<url>
 					<loc>${href}</loc>
 					<lastmod>${item.updated_at.split('T').shift()}</lastmod>
@@ -96,10 +96,10 @@ module.exports = class LinksService {
 
 	async robot(req, data) {
 		const lines = [];
-		const { site } = req;
+		const { site, $url } = req;
 		const { env = site.data.env } = data;
 		if (env == "production") {
-			lines.push(`Sitemap: ${new URL("/sitemap.xml", site.$url)}`);
+			lines.push(`Sitemap: ${new URL("/sitemap.xml", $url)}`);
 			lines.push('User-agent: *');
 			const { items } = await req.call('page.list', {
 				disallow: true,

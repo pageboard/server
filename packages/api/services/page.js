@@ -96,7 +96,7 @@ module.exports = class PageService {
 	}
 
 	parse(req, { url }) {
-		const loc = new URL(url, req.site.$url);
+		const loc = new URL(url, req.$url);
 		const [, pathname, lang, ext] = loc.pathname.match(
 			/^((?:\/.well-known\/\d{3})|(?:(?:\/[a-zA-Z0-9-]*)+?))(?:~([a-z]{2}(?:-[a-z]{2})?))?(?:\.([a-z]{3,4}))?$/
 		) ?? [];
@@ -120,7 +120,7 @@ module.exports = class PageService {
 	};
 
 	format(req, { url, lang, ext }) {
-		const obj = new URL(url, req.site.$url);
+		const obj = new URL(url, req.$url);
 		if (lang) obj.pathname += '~' + lang;
 		if (ext) obj.pathname += '.' + ext;
 		return obj;
@@ -150,11 +150,11 @@ module.exports = class PageService {
 	};
 
 	async get(req, data) {
-		const { site, sql: { Href } } = req;
+		const { site, sql: { Href }, $url } = req;
 		const { lang } = req.call('translate.lang', data);
 		if (lang != data.lang) {
 			data.lang = lang;
-			const mapUrl = new URL(req.url, site.$url);
+			const mapUrl = new URL(req.url, $url);
 			mapUrl.searchParams.set('url', this.format(req, {
 				url: data.url,
 				lang: data.lang,
@@ -318,10 +318,10 @@ module.exports = class PageService {
 		};
 
 		for (const b of changes.add) {
-			stripHostname(site, b);
+			stripHostname(req, b);
 		}
 		for (const b of changes.update) {
-			stripHostname(site, b);
+			stripHostname(req, b);
 		}
 		const returning = {};
 
@@ -493,14 +493,14 @@ function getParents({ site, sql: { trx } }, url, lang) {
 		.orderByRaw("length(block.data->>'url') DESC");
 }
 
-function stripHostname(site, block) {
+function stripHostname({ site, $url }, block) {
 	const list = site.$pkg.hrefs[block.type];
 	if (!list) return;
 	for (const desc of list) {
 		const url = jsonPath.get(block.data, desc.path);
 		if (url) {
-			const objUrl = new URL(url, site.$url);
-			if (objUrl.hostname == site.$url.hostname) {
+			const objUrl = new URL(url, $url);
+			if (objUrl.hostname == $url.hostname) {
 				jsonPath.set(block.data, desc.path, objUrl.pathname + objUrl.search + objUrl.hash);
 			}
 		}

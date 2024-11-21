@@ -108,7 +108,7 @@ module.exports = class StaticsModule {
 			dev: ""
 		}[site.data.env] || (force ? ".max" : "");
 		const { dir } = site.$pkg;
-		if (!suffix || !dir || !site.$url) {
+		if (!suffix || !dir) {
 			return inputs;
 		}
 
@@ -191,7 +191,7 @@ module.exports = class StaticsModule {
 	}
 
 	async install(req, { site, pkg }) {
-		if (!site.$url) return;
+		if (!req.$url) return;
 		const siteDir = this.dir({ site }, 'site');
 		await fs.mkdir(siteDir, { recursive: true });
 		if (pkg.directories) for (const mount of pkg.directories) {

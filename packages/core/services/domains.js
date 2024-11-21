@@ -54,9 +54,9 @@ module.exports = class DomainsService {
 	#ips = {};
 	#suffixes = [];
 	#allDomainsCalled = false;
-	idByDomain = {};
-	hostById = {};
-	siteById = {};
+	#idByDomain = new Map();
+	#hostById = {};
+	#siteById = {};
 
 	constructor(app, opts) {
 		this.app = app;
@@ -127,12 +127,12 @@ module.exports = class DomainsService {
 					if (!this.#suffixes.includes(hn)) this.#suffixes.push(hn);
 				});
 				const idMap = {};
-				for (const [id, site] of Object.entries(this.siteById)) {
+				for (const [id, site] of Object.entries(this.#siteById)) {
 					for (const domain of castArray(site.data.domains)) {
 						idMap[domain] = id;
 					}
 				}
-				for (const id of Object.keys(this.siteById)) {
+				for (const id of Object.keys(this.#siteById)) {
 					for (const suffix of this.#suffixes) {
 						const domain = `${id}${suffix}`;
 						if (!idMap[domain]) {
@@ -141,7 +141,7 @@ module.exports = class DomainsService {
 						}
 					}
 				}
-				this.idByDomain = idMap;
+				this.#idByDomain = idMap;
 			});
 		}
 		return rec.initializer;
@@ -157,12 +157,13 @@ module.exports = class DomainsService {
 			host.state = BUSY;
 			try {
 				host.hold();
-				await this.#resolvableHost(site.$url.hostname, host);
-				req.site = await req.run('core.build', site);
+				await this.#resolvableHost(req.$url.hostname, host);
+				await req.run('core.build', site);
 				host.state = READY;
 				host.release();
 			} catch (err) {
-				this.error(site, err);
+				console.error(err);
+				this.error(req, err);
 			}
 		}
 		const isPost = req.method == "POST";
@@ -179,7 +180,7 @@ module.exports = class DomainsService {
 			if (host.state == PARKED) {
 				throw new HttpError.ServiceUnavailable("Site is parked");
 			}
-			await this.#initSite(host, req, res);
+			req.site = await this.#initSite(host, req, res);
 
 			const version = site.data.server || app.version;
 			if (version != app.version) {
@@ -252,9 +253,8 @@ module.exports = class DomainsService {
 	}
 
 	async #initSite(host, req, res) {
-		const origSite = this.siteById[host.id];
+		const origSite = this.#siteById[host.id];
 		const site = origSite.$clone();
-		site.$url = new URL(origSite.$url);
 		const { tenant } = res.locals;
 		if (tenant) {
 			if (!host.tenants[tenant]) {
@@ -262,7 +262,7 @@ module.exports = class DomainsService {
 				host.tenants[tenant] = tsite._id;
 			}
 			site._id = host.tenants[tenant];
-			site.$url.hostname = req.hostname;
+			req.$url.hostname = req.hostname;
 			site.data = {
 				...site.data,
 				env: 'dev',
@@ -277,11 +277,11 @@ module.exports = class DomainsService {
 				const { host } = this.#initHost(req);
 				await host.wait();
 				req.tag('data-:site');
-				res.redirect(308, site.$url.href + req.url);
+				res.redirect(308, req.$url.href + req.url);
 			}
 		}
-		req.site = site;
 		res.locals.site = site.id;
+		return site;
 	}
 
 	async #allDomains(req) {
@@ -291,18 +291,18 @@ module.exports = class DomainsService {
 		const hostMap = {};
 		for (const site of list) {
 			this.#domainMapping(domains, site);
-			const cur = siteMap[site.id] = this.siteById[site.id];
+			const cur = siteMap[site.id] = this.#siteById[site.id];
 			if (cur) {
 				Object.assign(cur, site);
 			} else {
 				siteMap[site.id] = site;
 			}
 
-			const host = hostMap[site.id] = this.hostById[site.id];
+			const host = hostMap[site.id] = this.#hostById[site.id];
 			if (!host) hostMap[site.id] = new Host(site.id);
 		}
-		this.siteById = siteMap;
-		this.hostById = hostMap;
+		this.#siteById = siteMap;
+		this.#hostById = hostMap;
 		this.#allDomainsCalled = true;
 
 		return { domains };
@@ -345,21 +345,21 @@ module.exports = class DomainsService {
 			if (!t) return h;
 			else if (h.startsWith(`${t}-`)) return h.substring(t.length + 1);
 		})(req.res.locals.tenant, req.hostname);
-		const id = this.idByDomain[origHost];
+		const id = this.#idByDomain[origHost];
 		if (!id) {
 			throw new HttpError.NotFound("domain not found");
 		}
-		const site = this.siteById[id];
+		const site = this.#siteById[id];
 		if (!site) {
 			throw new HttpError.NotFound("site not found");
 		}
-		const host = this.hostById[id];
+		const host = this.#hostById[id];
 		host.by = req.headers['x-forwarded-by'];
 
-		site.$url = new URL("http://a.a");
-		site.$url.protocol = req.protocol;
-		site.$url.hostname = castArray(site.data.domains)[0] || req.hostname;
-		site.$url.port = portFromHost(req.headers.host);
+		req.$url = new URL("http://a.a");
+		req.$url.protocol = req.protocol;
+		req.$url.hostname = castArray(site.data.domains)[0] || req.hostname;
+		req.$url.port = portFromHost(req.headers.host);
 		return { host, site };
 	}
 
@@ -384,42 +384,44 @@ module.exports = class DomainsService {
 		}
 	}
 
-	hold(site) {
-		this.hostById[site.id]?.hold();
+	hold(req, site) {
+		this.#hostById[site.id]?.hold();
 	}
 
-	release(site) {
-		const host = this.hostById[site.id];
+	release(req, site) {
+		const host = this.#hostById[site.id];
 		if (!host) return;
-
-		if (!site.data.domains) site.data.domains = [];
-		const old = this.siteById[site.id];
-		site.$url ??= old?.$url;
-		this.#idByDomainUpdate(site, old);
-		this.siteById[site.id] = site;
+		this.#idByDomainUpdate(req, site);
+		this.#siteById[site.id] = site;
 		host.errors = [];
 		host.release();
 	}
 
-	#idByDomainUpdate(site, old) {
+	async get(req, id) {
+		const site = this.#siteById[id];
+		if (!site) return this.#siteById[id] = await req.run(
+			'core.build',
+			await req.run('site.get', { id })
+		);
+	}
+
+	#idByDomainUpdate(req, site) {
 		const id = site.id;
-		if (old) {
-			for (const domain of castArray(old.data.domains)) {
-				this.idByDomain[domain] = null;
-			}
+		for (const domain of castArray(req.site?.data.domains)) {
+			this.#idByDomain[domain] = null;
 		}
 		for (const domain of castArray(site.data.domains)) {
-			this.idByDomain[domain] = id;
+			this.#idByDomain[domain] = id;
 		}
 		for (const suffix of this.#suffixes) {
-			this.idByDomain[`${id}${suffix}`] = id;
+			this.#idByDomain[`${id}${suffix}`] = id;
 		}
 	}
 
-	error(site, err) {
-		const host = this.hostById[site.id];
+	error(req, err) {
+		const host = this.#hostById[req.site.id];
 		if (!host) {
-			console.error("Error", site.id, err);
+			console.error("Error", req.site.id, err);
 			return;
 		}
 		if (!host.errors) host.errors = [];

@@ -334,7 +334,7 @@ module.exports = class PrintModule {
 		const { item: pdf } = await req.run('block.find', {
 			type: 'pdf',
 			data: {
-				url: new URL(block.data.url, req.site.$url).pathname,
+				url: new URL(block.data.url, req.$url).pathname,
 				lang: block.data.lang
 			}
 		});
@@ -349,7 +349,7 @@ module.exports = class PrintModule {
 			const { item: coverPdf } = await req.run('block.find', {
 				type: 'pdf',
 				data: {
-					url: new URL(options.cover.url, req.site.$url).pathname,
+					url: new URL(options.cover.url, req.$url).pathname,
 					lang: block.data.lang
 				}
 			});
