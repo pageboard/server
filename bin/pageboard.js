@@ -1,5 +1,5 @@
 #!/usr/bin/node
-
+Error.stackTraceLimit = 100;
 const Pageboard = require("../src/pageboard");
 
 if (!process.env.HOME) {
