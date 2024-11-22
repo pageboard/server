@@ -75,7 +75,7 @@ module.exports = class PolyfillModule {
 			},
 			startViewTransition: {
 				detectSource: `document.startViewTransition`,
-				source: require.resolve('view-transitions-polyfill/dist/view-transitions-polyfill.js'), // for now, see https://github.com/demarketed/view-transitions-polyfill/pull/2
+				source: require.resolve('view-transitions-polyfill')
 			}
 		};
 	}
