@@ -73,9 +73,9 @@ module.exports = class PolyfillModule {
 			'Intl.RelativeTimeFormat.~locale.*': {
 				detectSource: `self.Intl?.RelativeTimeFormat?.supportedLocalesOf?.(document.documentElement.lang)?.length`
 			},
-			'Promise.withResolvers': {
-				source: require.resolve('@ungap/with-resolvers'),
-				detectSource: `self.Promise?.withResolvers`
+			startViewTransition: {
+				detectSource: `document.startViewTransition`,
+				source: require.resolve('view-transitions-polyfill/dist/view-transitions-polyfill.js'), // for now, see https://github.com/demarketed/view-transitions-polyfill/pull/2
 			}
 		};
 	}
