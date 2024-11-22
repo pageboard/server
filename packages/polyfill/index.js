@@ -112,7 +112,6 @@ module.exports = class PolyfillModule {
 			inputs,
 			output: 'polyfill-' + utils.hash(features.join('!')) + '.js',
 			local: true,
-			sourceMap: false,
 			force: true
 		});
 		return output;
