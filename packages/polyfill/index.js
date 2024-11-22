@@ -1,5 +1,5 @@
 const { join } = require('node:path');
-const polyfills = require('@kapouer/polyfill-library');
+const polyfills = require('polyfill-library');
 const toposort = require('toposort');
 const utils = require('../../src/utils');
 
