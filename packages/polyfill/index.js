@@ -96,7 +96,7 @@ module.exports = class PolyfillModule {
 		if (!features.length) throw new HttpError.BadRequest("No features requested");
 		const list = await this.getFeatures(features);
 		const polyfillModuleDir = join(
-			require.resolve('@kapouer/polyfill-library'),
+			require.resolve('polyfill-library'),
 			'../..'
 		);
 		const inputs = list.map(name => {
