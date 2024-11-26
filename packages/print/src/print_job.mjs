@@ -70,6 +70,10 @@ export const print_job = {
 					type: 'number',
 					nullable: true
 				},
+				count: {
+					title: 'Count',
+					type: 'integer'
+				},
 				files: {
 					title: 'Files',
 					type: 'array',

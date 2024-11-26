@@ -23,6 +23,10 @@ export const mail_job = {
 					title: 'Time',
 					type: 'number',
 					nullable: true
+				},
+				count: {
+					title: 'Count',
+					type: 'integer'
 				}
 			}
 		},

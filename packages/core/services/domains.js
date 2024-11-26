@@ -219,7 +219,7 @@ module.exports = class DomainsService {
 		};
 
 		req.try = async (block, job) => {
-			const response = block.data.response ??= {};
+			const response = block.data.response ??= { count: 0 };
 			const start = performance.now();
 			response.status = null;
 			response.text = null;
@@ -234,6 +234,7 @@ module.exports = class DomainsService {
 				throw ex;
 			} finally {
 				response.time = performance.now() - start;
+				response.count = (response.count ?? 0) + 1;
 				try {
 					await req.run('block.save', {
 						id: block.id,
