@@ -16,7 +16,7 @@ module.exports = class Package {
 
 	fromSite(cwd, site) {
 		this.name = site.id;
-		const { dependencies } = site.data;
+		const { dependencies = {} } = site.data;
 		for (const [mod, ver] of Object.entries(dependencies)) {
 			this.dependencies[mod] = ver.startsWith('link://')
 				? 'link://' + Path.resolve(cwd, ver.substring('link://'.length))
