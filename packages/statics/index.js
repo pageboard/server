@@ -205,11 +205,11 @@ module.exports = class StaticsModule {
 
 	async migrate(req) {
 		await req.run('href.change', {
-			from: '/.uploads',
+			from: '/@file',
 			to: '/@file/share'
 		});
 		await req.run('href.change', {
-			from: '/@file',
+			from: '/.uploads',
 			to: '/@file/share'
 		});
 		const dest = this.dir(req, 'share');
