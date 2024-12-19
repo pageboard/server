@@ -878,9 +878,9 @@ module.exports = class BlockService {
 			q.whereIn('block.id', data.id);
 		}
 		q.whereIn('block.type', types);
-		q.select(fun('recursive_delete', ref('block._id'), site.$pkg.standalones).as('count')).first();
+		q.select(fun('sum', fun('recursive_delete', ref('block._id'), site.$pkg.standalones)).as('count'));
 		const row = await q;
-		return { count: row?.count ?? 0 };
+		return { count: row[0]?.count ?? 0 };
 	}
 	static del = {
 		title: 'Delete',
