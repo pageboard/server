@@ -218,7 +218,7 @@ module.exports = class DomainsService {
 			return null;
 		};
 
-		req.try = async (block, job) => {
+		req.try = async (block, job, opts = {}) => {
 			const response = block.data.response ??= { count: 0 };
 			const start = performance.now();
 			response.status = null;
@@ -227,6 +227,7 @@ module.exports = class DomainsService {
 				const result = await job(req, block);
 				response.status = 200;
 				response.text = 'OK';
+				if (!opts.ignore) response.count = (response.count ?? 0) + 1;
 				return result;
 			} catch (ex) {
 				response.status = ex.statusCode ?? 500;
@@ -234,7 +235,6 @@ module.exports = class DomainsService {
 				throw ex;
 			} finally {
 				response.time = performance.now() - start;
-				response.count = (response.count ?? 0) + 1;
 				try {
 					await req.run('block.save', {
 						id: block.id,
