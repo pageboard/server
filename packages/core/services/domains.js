@@ -227,7 +227,7 @@ module.exports = class DomainsService {
 				const result = await job(req, block);
 				response.status = 200;
 				response.text = 'OK';
-				if (!opts.ignore) response.count = (response.count ?? 0) + 1;
+				if (opts.count) response.count = (response.count ?? 0) + 1;
 				return result;
 			} catch (ex) {
 				response.status = ex.statusCode ?? 500;
