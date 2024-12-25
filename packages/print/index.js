@@ -148,7 +148,19 @@ module.exports = class PrintModule {
 
 	async preview(req, data) {
 		const block = await req.run('block.get', { id: data.id, type: 'print_job' });
-		await this.#onlineJob(req, block, { device: "screen", ignore: true });
+		const { url, lang } = block.data;
+		const pdfUrl = req.call('page.format', {
+			url, lang, ext: 'pdf'
+		});
+		pdfUrl.searchParams.set('pdf', "screen");
+		const pdfRun = req.call('statics.file', {
+			mount: 'cache',
+			name: `${block.id}.pdf`
+		});
+		block.data.response.files = [pdfRun.url];
+		await this.#publicPdf(
+			req, pdfUrl, pdfRun.path
+		);
 		return { item: block };
 	}
 	static preview = {
@@ -179,7 +191,10 @@ module.exports = class PrintModule {
 			online: this.#onlineJob
 		}[block.data.printer];
 
-		await req.try(block, (req, block) => job.call(this, req, block));
+		await req.try(
+			block,
+			(req, block) => job.call(this, req, block, { count: true })
+		);
 		return { item: block };
 	}
 	static send = {
@@ -195,12 +210,12 @@ module.exports = class PrintModule {
 		}
 	};
 
-	async #onlineJob(req, block, opts = {}) {
+	async #onlineJob(req, block, opts) {
 		const { url, lang, device } = block.data;
 		const pdfUrl = req.call('page.format', {
 			url, lang, ext: 'pdf'
 		});
-		pdfUrl.searchParams.set('pdf', opts.device ?? device);
+		pdfUrl.searchParams.set('pdf', device);
 		const pdfRun = req.call('statics.file', {
 			mount: 'cache',
 			name: `${block.id}.pdf`
@@ -215,7 +230,7 @@ module.exports = class PrintModule {
 		));
 	}
 
-	async #printerJob(req, block) {
+	async #printerJob(req, block, opts) {
 		const { url, lang, device, options } = block.data;
 		const pdfUrl = req.call('page.format', {
 			url, lang, ext: 'pdf'
@@ -241,11 +256,12 @@ module.exports = class PrintModule {
 				} finally {
 					await fs.unlink(path);
 				}
-			}
+			},
+			opts
 		));
 	}
 
-	async #offlineJob(req, block) {
+	async #offlineJob(req, block, opts) {
 		const { offline } = req.site.data.printers ?? {};
 		const { basedir } = this.opts.offline ?? {};
 		if (!offline || !basedir) throw new HttpError.BadRequest("No offline printer");
@@ -274,7 +290,7 @@ module.exports = class PrintModule {
 			} finally {
 				await fs.unlink(path);
 			}
-		}));
+		}, opts));
 	}
 
 	async couriers(req, { iso_code }) {
@@ -316,7 +332,7 @@ module.exports = class PrintModule {
 		return agent;
 	}
 
-	async #remoteJob(req, block) {
+	async #remoteJob(req, block, opts) {
 		const { remote: conf } = this.opts;
 		if (!conf) throw new HttpError.BadRequest("No remote printer");
 		const agent = await this.#getAuthorizedAgent(req, {
@@ -364,7 +380,8 @@ module.exports = class PrintModule {
 		}
 		req.finish(async () => req.try(
 			block,
-			(req, block) => this.#remoteCall(req, block, obj)
+			(req, block) => this.#remoteCall(req, block, obj),
+			opts
 		));
 		return block;
 	}
