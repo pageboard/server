@@ -155,9 +155,9 @@ module.exports = class PrintModule {
 		pdfUrl.searchParams.set('pdf', "screen");
 		const pdfRun = req.call('statics.file', {
 			mount: 'cache',
-			name: `${block.id}.pdf`
+			name: `${block.id}-preview.pdf`
 		});
-		block.data.response.files = [pdfRun.url];
+		block.data.response.files = [pdfRun.url]; // do not save this mutation
 		await this.#publicPdf(
 			req, pdfUrl, pdfRun.path
 		);
