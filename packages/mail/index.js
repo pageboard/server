@@ -67,7 +67,7 @@ module.exports = class MailModule {
 		}
 		const opts = { ...this.opts[purpose] };
 		for (const [k, v] of Object.entries(site.data.mail)) {
-			if (v != null) opts[k] = v;
+			if (!Object.isEmpty(v)) opts[k] = v;
 		}
 		return new Mailer(opts);
 	}
