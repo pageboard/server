@@ -109,9 +109,21 @@ module.exports = class InstallService {
 		} catch {
 			// pass
 		}
+		const activeLock = Path.join(active, "pnpm-lock.yaml");
+		try {
+			const stats = await fs.stat(activeLock);
+			if (stats.mtimeMs >= new Date(site.updated_at).getTime()) {
+				console.info("site already installed", site.id);
+				const pkg = new Package(active);
+				pkg.fromSite(this.app.cwd, site);
+				return pkg;
+			}
+		} catch {
+			// pass
+		}
 		try {
 			await fs.mkdir(passive);
-			await fs.cp(Path.join(active, "pnpm-lock.yaml"), Path.join(passive, "pnpm-lock.yaml"));
+			await fs.cp(activeLock, Path.join(passive, "pnpm-lock.yaml"));
 		} catch {
 			// pass
 		}
