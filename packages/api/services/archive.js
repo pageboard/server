@@ -351,11 +351,12 @@ module.exports = class ArchiveService {
 					for (const id of obj.parents) {
 						const kid = refs.get(id);
 						if (!kid) {
-							throw new HttpError.BadRequest(
+							console.warn(
 								`Missing parent id: ${upgrader.reverseMap[id] ?? id}`
 							);
+						} else {
+							parents.push(kid);
 						}
-						parents.push(kid);
 					}
 					delete obj.parents;
 				}
@@ -377,8 +378,9 @@ module.exports = class ArchiveService {
 							console.warn(
 								`Missing child id: ${upgrader.reverseMap[id] ?? id}`
 							);
+						} else {
+							children.push(kid);
 						}
-						children.push(kid);
 					}
 					delete obj.standalones;
 				}
