@@ -231,6 +231,7 @@ module.exports = class DomainsService {
 			} catch (ex) {
 				response.status = ex.statusCode ?? 500;
 				response.text = ex.message ?? null;
+				console.error(ex);
 				throw ex;
 			} finally {
 				response.time = performance.now() - start;
