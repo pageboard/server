@@ -66,7 +66,7 @@ module.exports = class MailModule {
 			throw new HttpError.BadRequest("Unknown mailer:" + purpose);
 		}
 		const opts = { ...this.opts[purpose] };
-		for (const [k, v] of Object.entries(site.data.mail)) {
+		for (const [k, v] of Object.entries(site.data.mail ?? {})) {
 			if (k == "auth") {
 				if (v?.apiKey != null) {
 					opts[k] = v;
