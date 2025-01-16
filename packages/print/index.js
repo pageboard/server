@@ -286,7 +286,7 @@ module.exports = class PrintModule {
 				await fs.copyFile(path, dest);
 			} catch (ex) {
 				console.error(ex);
-				throw new HttpError.InternalServerError(`Offline job failure`);
+				throw new HttpError.InternalServerError(`Copy to printer failed`);
 			} finally {
 				await fs.unlink(path);
 			}
