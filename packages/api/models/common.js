@@ -92,6 +92,12 @@ exports.Model = class CommonModel extends Model {
 
 	async $beforeUpdate(opts, q) {
 		await super.$beforeUpdate(opts, q);
+		if (opts.old?.updated_at && this.updated_at) {
+			if (Date.parse(opts.old.updated_at) < Date.parse(this.updated_at)) {
+				// keep the one already set
+				return;
+			}
+		}
 		this.updated_at = new Date().toISOString();
 	}
 
