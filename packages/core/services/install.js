@@ -112,11 +112,14 @@ module.exports = class InstallService {
 		const activeLock = Path.join(active, "pnpm-lock.yaml");
 		try {
 			const stats = await fs.stat(activeLock);
-			if (stats.mtimeMs >= new Date(site.updated_at).getTime()) {
+			const mtime = Date.parse(site.updated_at);
+			if (stats.mtimeMs >= mtime) {
 				console.info("site already installed", site.id);
 				const pkg = new Package(active);
 				pkg.fromSite(this.app.cwd, site);
 				return pkg;
+			} else {
+				console.info("site needs install", site.id, stats.mtimeMs, "<", mtime);
 			}
 		} catch {
 			// pass
@@ -159,6 +162,7 @@ module.exports = class InstallService {
 			'--reporter=append-only'
 		];
 
+		const itime = new Date();
 		const command = `pnpm ${args.join(' ')}`;
 		try {
 			await exec(command, {
@@ -186,6 +190,7 @@ module.exports = class InstallService {
 			site.data.versions = await pkg.getVersions();
 			site.data.server = this.app.version;
 			site.data.hash = nextHash;
+			site.updated_at = itime.toISOString();
 			const nextLink = Path.join(siteDir, nextHash);
 			await fs.rm(nextLink, { force: true });
 			await fs.symlink(Path.basename(pkg.dir), nextLink);

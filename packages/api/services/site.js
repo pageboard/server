@@ -192,7 +192,8 @@ module.exports = class SiteService {
 		}
 		await nsite.$query(sql.trx).patchObject({
 			type: nsite.type,
-			data: nsite.data
+			data: nsite.data,
+			updated_at: nsite.updated_at
 		});
 		req.site = nsite;
 		if (languagesChanged || toMulti || toMono) {
