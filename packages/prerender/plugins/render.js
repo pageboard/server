@@ -1,4 +1,17 @@
 module.exports = function render(page, settings, req, res) {
+	settings.track = async function () {
+		const { Page } = window;
+		if (!Page) {
+			const err = new Error("Not renderable");
+			err.statusCode = 501;
+			throw err;
+		}
+		try {
+			await Page.paint();
+		} catch (err) {
+			console.error(err.toString(), err.stack);
+		}
+	};
 	page.on('idle', async () => {
 		const { status, statusText } = await page.evaluate(async isDev => {
 			// eslint-disable-next-line no-undef
