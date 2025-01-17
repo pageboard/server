@@ -461,7 +461,7 @@ module.exports = class InstallService {
 	async #makeBundles(site, pkg) {
 		const { $pkg } = site;
 		$pkg.aliases = pkg.aliases;
-		const { eltsMap } = pkg;
+		const { eltsMap, upgraded } = pkg;
 		const bundles = Object.entries(pkg.bundles).sort(([na], [nb]) => {
 			// bundle page group before others
 			const a = eltsMap[na];
@@ -574,7 +574,7 @@ module.exports = class InstallService {
 		}
 
 		// create those files
-		await Promise.all([
+		if (upgraded) await Promise.all([
 			this.#bundleSource(site, {
 				assign: 'schemas',
 				name: 'services',
@@ -612,7 +612,7 @@ module.exports = class InstallService {
 
 		// create bundles
 		const list = [];
-		for (const [name, bundleEl] of $pkg.bundles) {
+		if (upgraded) for (const [name, bundleEl] of $pkg.bundles) {
 			if (!bundleEl.orig) continue;
 			list.push(
 				this.app.statics.bundle(site, {
