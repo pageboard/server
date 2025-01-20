@@ -34,7 +34,7 @@ module.exports = class ArchiveService {
 		const lastUpdate = Math.max(...items.map(item => {
 			return item.updated_at;
 		}));
-		const archivePath = await archiveWrap(req, async archive => {
+		const archivePath = await archiveWrap(req, data.format, async archive => {
 			const buf = [];
 			const json = JSON.stringify(data.hrefs ? { hrefs, items } : items);
 			if (!data.version) buf.push(json);
@@ -63,6 +63,14 @@ module.exports = class ArchiveService {
 		$cache: false,
 		required: ['name'],
 		properties: {
+			format: {
+				title: 'Archive format',
+				anyOf: [
+					{ const: 'zip', title: 'Zip' },
+					{ const: 'tar', title: 'Tar' },
+				],
+				default: 'zip'
+			},
 			name: {
 				title: 'Fetch name',
 				type: 'string',
@@ -105,7 +113,7 @@ module.exports = class ArchiveService {
 			orphaned: 0
 		};
 
-		const archivePath = await archiveWrap(req, async archive => {
+		const archivePath = await archiveWrap(req, data.format, async archive => {
 			if (urls?.length) {
 				const urlIds = await site.$relatedQuery('children', trx)
 					.select('block.id')
@@ -245,6 +253,14 @@ module.exports = class ArchiveService {
 		$lock: 'webmaster',
 		$cache: false,
 		properties: {
+			format: {
+				title: 'Archive format',
+				anyOf: [
+					{ const: 'zip', title: 'Zip' },
+					{ const: 'tar', title: 'Tar' },
+				],
+				default: 'zip'
+			},
 			ids: {
 				title: 'List of id',
 				type: 'array',
@@ -525,8 +541,8 @@ function writeBlocks(jstream, parent, key, ids) {
 	return count;
 }
 
-async function archiveWrap(req, fn) {
-	const archive = new Archiver('zip');
+async function archiveWrap(req, format, fn) {
+	const archive = new Archiver(format);
 	archive.on('warning', err => {
 		if (err.code === 'ENOENT') {
 			console.warn(err);
@@ -538,7 +554,7 @@ async function archiveWrap(req, fn) {
 	const pubDir = req.call('statics.dir', 'cache');
 	await fs.mkdir(pubDir, { recursive: true });
 	const filename = await fn(archive);
-	const filePath = Path.join(pubDir, `${filename}.zip`);
+	const filePath = Path.join(pubDir, `${filename}.${format}`);
 	const d = pipeline(archive, createWriteStream(filePath));
 	await archive.finalize();
 	await d;
