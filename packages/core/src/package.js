@@ -17,10 +17,14 @@ module.exports = class Package {
 	fromSite(cwd, site) {
 		this.name = site.id;
 		const { dependencies = {} } = site.data;
+		this.linked = false;
 		for (const [mod, ver] of Object.entries(dependencies)) {
-			this.dependencies[mod] = ver.startsWith('link://')
-				? 'link://' + Path.resolve(cwd, ver.substring('link://'.length))
-				: ver;
+			if (ver.startsWith('link://')) {
+				this.linked = true;
+				this.dependencies[mod] = 'link://' + Path.resolve(cwd, ver.substring('link://'.length));
+			} else {
+				this.dependencies[mod] = ver;
+			}
 		}
 	}
 

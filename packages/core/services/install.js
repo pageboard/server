@@ -185,7 +185,7 @@ module.exports = class InstallService {
 			}
 		}
 		const nextHash = await pkg.hash();
-		if (nextHash != curHash) {
+		if (pkg.linked || nextHash != curHash) {
 			pkg.upgraded = true;
 			site.data.versions = await pkg.getVersions();
 			site.data.server = this.app.version;
