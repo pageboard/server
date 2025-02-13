@@ -223,9 +223,11 @@ module.exports = class PrintModule {
 		block.data.response.files = [pdfRun.url];
 		req.finish(async () => req.try(
 			block,
-			(req, block) => this.#publicPdf(
-				req, pdfUrl, pdfRun.path
-			),
+			async (req, block) => {
+				block.data.order.pages = await this.#publicPdf(
+					req, pdfUrl, pdfRun.path
+				);
+			},
 			opts
 		));
 	}
@@ -277,18 +279,19 @@ module.exports = class PrintModule {
 		});
 		block.data.response.files = [pdfRun.url];
 		req.finish(async () => req.try(block, async (req, block) => {
-			const { path } = await req.run('prerender.save', {
+			const res = await req.run('prerender.save', {
 				url: pdfUrl.pathname + pdfUrl.search,
 				path: pdfRun.path
 			});
+			block.data.order.pages = res.headers['x-page-count'];
 			const dest = Path.join(storePath, block.id + '.pdf');
 			try {
-				await fs.copyFile(path, dest);
+				await fs.copyFile(res.path, dest);
 			} catch (ex) {
 				console.error(ex);
 				throw new HttpError.InternalServerError(`Copy to printer failed`);
 			} finally {
-				await fs.unlink(path);
+				await fs.unlink(res.path);
 			}
 		}, opts));
 	}
@@ -438,7 +441,7 @@ module.exports = class PrintModule {
 			order.delivery.phone = order.delivery.phone.replaceAll(/[()-\s]+/g, '');
 		}
 		const clean = [];
-		file.count = await this.#publicPdf(
+		block.data.order.pages = file.count = await this.#publicPdf(
 			req, printProduct.pdf, file.path
 		);
 		clean.push(file.path);
@@ -468,7 +471,7 @@ module.exports = class PrintModule {
 			}
 			// TODO ensure coverPaper matches paper
 			// const { paper: coverPaper } = coverPdf.data;
-			coverFile.count = await this.#publicPdf(
+			block.data.order.pages += coverFile.count = await this.#publicPdf(
 				req, printProduct.cover_pdf, coverFile.path
 			);
 			clean.push(coverFile.path);

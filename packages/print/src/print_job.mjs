@@ -106,6 +106,11 @@ export const print_job = {
 					type: 'string',
 					format: 'singleline'
 				},
+				pages: {
+					title: 'Pages count',
+					type: 'integer',
+					nullable: true
+				},
 				status: {
 					title: 'Status',
 					anyOf: [{
