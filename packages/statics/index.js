@@ -217,7 +217,7 @@ module.exports = class StaticsModule {
 			await fs.cp(
 				Path.join(this.app.dirs.data, 'uploads', req.site.id),
 				dest,
-				{ errorOnExist: true, recursive: true }
+				{ errorOnExist: true, recursive: true, dereference: true }
 			);
 		} catch (err) {
 			if (!['ENOENT', 'ERR_FS_CP_DIR_TO_NON_DIR'].includes(err.code)) throw err;
