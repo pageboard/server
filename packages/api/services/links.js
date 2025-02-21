@@ -248,8 +248,8 @@ module.exports = class LinksService {
 		}
 	};
 
-	async get(req, { prefix }) {
-		return req.run('page.list', { prefix, drafts: true });
+	async get(req, { prefix, type }) {
+		return req.run('page.list', { prefix, type, drafts: true });
 	}
 	static get = {
 		title: 'Get pages',
@@ -260,6 +260,12 @@ module.exports = class LinksService {
 				type: 'string',
 				format: 'page',
 				$helper: "page",
+				nullable: true
+			},
+			type: {
+				title: 'Type',
+				type: 'string',
+				format: 'name',
 				nullable: true
 			}
 		}
