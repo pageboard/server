@@ -290,8 +290,9 @@ module.exports = class ArchiveService {
 		}
 	};
 
-	async import(req, { file, reset, idMap, types = [] }) {
+	async import(req, { file, reset, idMap, excludes = [] }) {
 		// TODO import zip file with export.ndjson
+		const types = excludes;
 		const { sql: { trx, Block } } = req;
 		let { site } = req;
 		const counts = {
@@ -314,10 +315,12 @@ module.exports = class ArchiveService {
 
 		const list = [];
 		const beforeEachStandalone = obj => {
+			if (obj.type && types.includes(obj.type)) return;
 			if (obj.type == "site" || list.length == 0) {
 				upgrader = new Upgrader({
 					site,
-					idMap
+					idMap,
+					excludes
 				});
 			} else if (!obj.id) {
 				return obj;
@@ -429,6 +432,7 @@ module.exports = class ArchiveService {
 
 		for (let obj of list) {
 			try {
+				if (!obj) continue;
 				if (obj.type && obj.id) obj = await upgrader.process(obj);
 				if (obj) await afterEachStandalone(obj);
 			} catch (err) {

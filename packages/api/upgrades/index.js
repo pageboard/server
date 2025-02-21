@@ -1,8 +1,9 @@
 module.exports = class Upgrader {
-	constructor({ site, idMap }) {
+	constructor({ site, idMap, excludes }) {
 		this.idMap = Object.isEmpty(idMap) ? null : idMap;
 		this.DomainBlock = site?.$modelClass;
 		this.reverseMap = {};
+		this.excludes = excludes;
 	}
 	beforeEach(block) {
 		const id = this.idMap?.[block.id];
@@ -22,6 +23,8 @@ module.exports = class Upgrader {
 				if (mid != null) arr[i] = mid;
 			});
 		}
+		if (!block.type) console.error("block.type missing", block);
+		if (this.excludes?.includes(block.type)) return;
 		const schema = this.DomainBlock.schema(block.type);
 		if (schema == null) {
 			console.warn("Unknown type", block.type, block.id);
