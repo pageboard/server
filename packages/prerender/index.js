@@ -131,6 +131,7 @@ module.exports = class PrerenderModule {
 
 	#callPdfMw(...args) {
 		pdf.presets.prepress.pageCount = true;
+		pdf.presets.printer.pdfa = true;
 		if (!this.#pdfMw) this.#pdfMw = dom(pdf({
 			timeout: 120000,
 			plugins: ['render']
