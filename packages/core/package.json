@@ -19,7 +19,7 @@
   "dependencies": {
     "class-deferred": "^1.0.1",
     "postinstall": "^0.11.0",
-    "semver": "7.6.3",
+    "semver": "7.7.1",
     "tosource": "2.0.0-alpha.3"
   }
 }

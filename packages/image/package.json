@@ -19,7 +19,7 @@
   "dependencies": {
     "bwip-js": "^4.5.1",
     "datauri": "^4.1.0",
-    "glob": "^11.0.0",
-    "sharpie": "^5.4.1"
+    "glob": "^11.0.1",
+    "sharpie": "^5.5.0"
   }
 }

@@ -29,6 +29,6 @@
     "json-schema-traverse": "^1.0.0",
     "ndjson": "2.0.0",
     "node-schedule": "^2.1.1",
-    "table": "^6.8.2"
+    "table": "^6.9.0"
   }
 }
