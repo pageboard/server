@@ -100,7 +100,7 @@ class EltProxy {
 		elt.resources = absolutePaths(elt.resources, context);
 	}
 	set(elt, key, val) {
-		console.warn("Cannot set", key, "of", elt.name);
+		console.warn("Cannot set", key, "of", this.name);
 		return false;
 	}
 	get(elt, key) {
