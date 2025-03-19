@@ -302,7 +302,6 @@ module.exports = class PageService {
 	};
 
 	async write(req, changes) {
-		const { site } = req;
 		changes = {
 			// blocks removed from their standalone parent (grouped by parent)
 			unrelate: {},
