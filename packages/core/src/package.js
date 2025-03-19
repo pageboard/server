@@ -7,11 +7,29 @@ module.exports = class Package {
 	elements = [];
 	dependencies = {};
 
-	#path;
+	#dir;
 
 	constructor(dir) {
-		this.dir = dir;
-		this.#path = Path.join(dir, 'package.json');
+		this.#dir = dir;
+	}
+
+	get lock() {
+		return Path.join(this.#dir, 'pnpm-lock.yaml');
+	}
+
+	get package() {
+		return Path.join(this.#dir, 'package.json');
+	}
+
+	async move(to) {
+		const lock = this.lock;
+		this.#dir = to;
+		try {
+			await fs.mkdir(to);
+			await fs.cp(lock, this.lock);
+		} catch {
+			// pass
+		}
 	}
 
 	fromSite(cwd, site) {
@@ -19,7 +37,9 @@ module.exports = class Package {
 		const { dependencies = {} } = site.data;
 		this.linked = false;
 		for (const [mod, ver] of Object.entries(dependencies)) {
-			if (ver.startsWith('link://')) {
+			if (!ver) {
+				delete this.dependencies[mod];
+			} else if (ver.startsWith('link://')) {
 				this.linked = true;
 				this.dependencies[mod] = 'link://' + Path.resolve(cwd, ver.substring('link://'.length));
 			} else {
@@ -32,16 +52,22 @@ module.exports = class Package {
 		await fs.mkdir(this.dir, {
 			recursive: true
 		});
-		await fs.writeFile(this.#path, JSON.stringify({
+		await fs.writeFile(this.package, JSON.stringify({
 			private: true,
 			name: this.name,
-			dependencies: this.dependencies
+			dependencies: this.dependencies,
+			pnpm: {
+				// only trust our modules
+				onlyBuiltDependencies: Object.keys(this.dependencies).filter(
+					dep => dep.startsWith('@pageboard/')
+				)
+			}
 		}, null, ' '));
 	}
 
 	async read() {
 		try {
-			const buf = await fs.readFile(this.#path);
+			const buf = await fs.readFile(this.package);
 			const obj = JSON.parse(buf);
 			Object.assign(this, obj);
 		} catch {
@@ -55,9 +81,18 @@ module.exports = class Package {
 		return pkg.read();
 	}
 
+	async mtime() {
+		try {
+			const stats = await fs.stat(this.lock);
+			return stats.mtimeMs;
+		} catch {
+			return 0;
+		}
+	}
+
 	async hash() {
 		try {
-			return hash(await fs.readFile(Path.join(this.dir, 'pnpm-lock.yaml')));
+			return hash(await fs.readFile(this.lock));
 		} catch {
 			return "none";
 		}
