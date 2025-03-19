@@ -10,6 +10,7 @@ exports.init = async () => {
 	const {
 		Matchdom, TextPlugin, JsonPlugin, StringPlugin, ArrayPlugin, OpsPlugin, NumPlugin, DatePlugin, RepeatPlugin, UrlPlugin
 	} = await import('matchdom');
+
 	sharedMd = new Matchdom(
 		TextPlugin,
 		StringPlugin,
