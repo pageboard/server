@@ -24,7 +24,8 @@ export const site = {
 			type: 'object',
 			additionalProperties: {
 				type: 'string',
-				format: 'singleline'
+				format: 'singleline',
+				nullable: true
 			}
 		},
 		versions: {
