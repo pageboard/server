@@ -7,26 +7,26 @@ module.exports = class Package {
 	elements = [];
 	dependencies = {};
 
-	#dir;
+	dir;
 
 	constructor(dir) {
-		this.#dir = dir;
+		this.dir = dir;
 	}
 
-	get lock() {
-		return Path.join(this.#dir, 'pnpm-lock.yaml');
+	get #lock() {
+		return Path.join(this.dir, 'pnpm-lock.yaml');
 	}
 
-	get package() {
-		return Path.join(this.#dir, 'package.json');
+	get #package() {
+		return Path.join(this.dir, 'package.json');
 	}
 
 	async move(to) {
-		const lock = this.lock;
-		this.#dir = to;
+		const lock = this.#lock;
+		this.dir = to;
 		try {
 			await fs.mkdir(to);
-			await fs.cp(lock, this.lock);
+			await fs.cp(lock, this.#lock);
 		} catch {
 			// pass
 		}
@@ -52,7 +52,7 @@ module.exports = class Package {
 		await fs.mkdir(this.dir, {
 			recursive: true
 		});
-		await fs.writeFile(this.package, JSON.stringify({
+		await fs.writeFile(this.#package, JSON.stringify({
 			private: true,
 			name: this.name,
 			dependencies: this.dependencies,
@@ -67,7 +67,7 @@ module.exports = class Package {
 
 	async read() {
 		try {
-			const buf = await fs.readFile(this.package);
+			const buf = await fs.readFile(this.#package);
 			const obj = JSON.parse(buf);
 			Object.assign(this, obj);
 		} catch {
@@ -83,16 +83,20 @@ module.exports = class Package {
 
 	async mtime() {
 		try {
-			const stats = await fs.stat(this.lock);
+			const stats = await fs.stat(this.#lock);
 			return stats.mtimeMs;
 		} catch {
 			return 0;
 		}
 	}
 
+	async touch() {
+		await fs.utimes(this.#lock, new Date(), new Date());
+	}
+
 	async hash() {
 		try {
-			return hash(await fs.readFile(this.lock));
+			return hash(await fs.readFile(this.#lock));
 		} catch {
 			return "none";
 		}

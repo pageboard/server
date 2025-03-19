@@ -62,6 +62,7 @@ module.exports = class InstallService {
 						hash: site.data.hash
 					}
 				});
+				await pkg.touch();
 			}
 			this.app.domains.release(req, site);
 			if (req.$url) req.call('cache.install', req.$url);
