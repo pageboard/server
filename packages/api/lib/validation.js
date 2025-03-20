@@ -425,7 +425,6 @@ module.exports = class Validation {
 	}
 
 	validate({ site }, data) {
-		if (site?.id == "*") return data; //bootstrap
 		const validator = site ?
 			site.$modelClass.getValidator().ajv
 			: this.#servicesValidator;

@@ -36,6 +36,8 @@ module.exports = class InstallService {
 	static name = 'core';
 	static $global = true;
 
+	#serverSite;
+
 	constructor(app, opts) {
 		this.app = app;
 		this.opts = opts;
@@ -75,12 +77,14 @@ module.exports = class InstallService {
 	}
 
 	async bootstrap(req) {
+		if (this.#serverSite) return this.#serverSite;
 		let site = { id: "*", data: {} };
 		const pkg = new Package("");
 		await this.#prepare(req, site, pkg);
 		site = req.sql.Block.initSite(site, pkg);
 		await this.#makeSchemas(site);
 		await req.call('auth.install', { site });
+		this.#serverSite = site;
 		return site;
 	}
 	static bootstrap = {
