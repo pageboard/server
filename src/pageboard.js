@@ -16,7 +16,7 @@ const ServiceRouter = require('./service-router');
 util.inspect.defaultOptions.depth = 10;
 
 const cli = require('./cli');
-const { mergeRecursive, init: initUtils } = require('./utils');
+const { mergeRecursive } = require('./utils');
 
 const pkgApp = JSON.parse(
 	readFileSync(Path.join(__dirname, '..', 'package.json'))
@@ -177,8 +177,6 @@ module.exports = class Pageboard {
 
 	async init() {
 		const server = this.#server = this.#createServer();
-
-		await initUtils();
 
 		this.#plugins = [];
 		this.#loadPlugins(this.opts);

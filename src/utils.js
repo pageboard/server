@@ -3,59 +3,55 @@ const getSlug = require('speakingurl');
 const mergeWith = require('lodash.mergewith');
 const { access } = require('node:fs/promises');
 const { hash } = require('node:crypto');
+const {
+	Matchdom, TextPlugin, JsonPlugin, StringPlugin, ArrayPlugin, OpsPlugin, NumPlugin, DatePlugin, RepeatPlugin, UrlPlugin
+} = require('matchdom');
 
-let sharedMd;
 
-exports.init = async () => {
-	const {
-		Matchdom, TextPlugin, JsonPlugin, StringPlugin, ArrayPlugin, OpsPlugin, NumPlugin, DatePlugin, RepeatPlugin, UrlPlugin
-	} = await import('matchdom');
-
-	sharedMd = new Matchdom(
-		TextPlugin,
-		StringPlugin,
-		JsonPlugin,
-		ArrayPlugin,
-		OpsPlugin,
-		NumPlugin,
-		DatePlugin,
-		UrlPlugin,
-		RepeatPlugin,
-		{
-			debug: true,
-			hooks: {
-				before: {
-					get(ctx, val, [path]) {
-						if (path[0]?.startsWith('$') && ctx.$data == null) {
-							ctx.$data = ctx.data;
-							ctx.data = ctx.scope;
-						}
+const sharedMd = new Matchdom(
+	TextPlugin,
+	StringPlugin,
+	JsonPlugin,
+	ArrayPlugin,
+	OpsPlugin,
+	NumPlugin,
+	DatePlugin,
+	UrlPlugin,
+	RepeatPlugin,
+	{
+		debug: true,
+		hooks: {
+			before: {
+				get(ctx, val, [path]) {
+					if (path[0]?.startsWith('$') && ctx.$data == null) {
+						ctx.$data = ctx.data;
+						ctx.data = ctx.scope;
 					}
-				},
-				after: {
-					get(ctx) {
-						if (ctx.$data != null) {
-							ctx.data = ctx.$data;
-							ctx.$data = null;
-						}
-					}
-				},
-				afterAll(ctx, val) {
-					if (ctx.expr.optional && val == null) {
-						// JSON object model - assume that we don't want undefined key/value pairs
-						ctx.filter(val, 'fail', '*');
-					}
-					return val;
 				}
 			},
-			formats: {
-				as: {
-					slug: (ctx, str) => getSlug(str, { custom: { "_": "-" } })
+			after: {
+				get(ctx) {
+					if (ctx.$data != null) {
+						ctx.data = ctx.$data;
+						ctx.$data = null;
+					}
 				}
+			},
+			afterAll(ctx, val) {
+				if (ctx.expr.optional && val == null) {
+					// JSON object model - assume that we don't want undefined key/value pairs
+					ctx.filter(val, 'fail', '*');
+				}
+				return val;
+			}
+		},
+		formats: {
+			as: {
+				slug: (ctx, str) => getSlug(str, { custom: { "_": "-" } })
 			}
 		}
-	);
-};
+	}
+);
 
 exports.dget = dget;
 exports.dset = dset;
