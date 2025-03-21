@@ -20,8 +20,9 @@
     "url": "https://github.com/pageboard/server/issues"
   },
   "engines": {
-    "node": ">=18"
+    "node": "^20.19.0"
   },
+  "packageManager": "pnpm@10.x",
   "homepage": "https://github.com/pageboard/server#readme",
   "workspaces": [
     "packages/*"
