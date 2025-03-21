@@ -45,10 +45,10 @@ module.exports = class Pageboard {
 		},
 		dirs: {
 			app: Path.dirname(__dirname),
-			config: Path.join(xdg.config, pkgApp.name),
-			cache: Path.join(xdg.cache, pkgApp.name),
-			data: Path.join(xdg.data, pkgApp.name),
-			tmp: Path.join(xdg.data, '../tmp', pkgApp.name)
+			config: Path.join(xdg.xdgConfig, pkgApp.name),
+			cache: Path.join(xdg.xdgCache, pkgApp.name),
+			data: Path.join(xdg.xdgData, pkgApp.name),
+			tmp: Path.join(xdg.xdgData, '../tmp', pkgApp.name)
 		},
 		plugins: [
 			"@pageboard/ai",

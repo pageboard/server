@@ -57,7 +57,7 @@
     "resolve-pkg": "^2.0.0",
     "speakingurl": "^14.0.1",
     "toml": "^3.0.0",
-    "xdg-basedir": "4.0.0"
+    "xdg-basedir": "5.1.0"
   },
   "eslintConfig": {
     "extends": "@kapouer/eslint-config",
