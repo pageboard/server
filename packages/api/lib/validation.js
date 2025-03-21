@@ -31,12 +31,21 @@ function fixSchema(schema) {
 				let bools = 0;
 				let strings = 0;
 				let nulls = 0;
+				let nullTypes = 0;
+				let types = 0;
 				for (const item of schema.anyOf) {
-					if (item.type == "string") strings++;
+					if (item.type == "string" || typeof item.const == "string") strings++;
 					else if (typeof item.const == "boolean") bools++;
-					else if (item.type == "null") nulls++;
+					else if (item.const === null) nulls++;
+					else if (item.type) {
+						types++;
+						if (item.type == "null") nullTypes++;
+					}
 				}
-				if (strings == 1 && bools >= 1 && strings + bools + nulls == schema.anyOf.length) {
+				if (types == nullTypes && nullTypes > 0) {
+					//console.warn("ajv does not support anyOf with type: 'null'.\nUse const: null instead.", schema);
+				}
+				if (strings + bools + nulls == schema.anyOf.length) {
 					schema.$coerce = true;
 				}
 			}
@@ -351,12 +360,13 @@ module.exports = class Validation {
 			keyword: 'content',
 			schemaType: ["object", "string"]
 		});
+		const formatKeyword = ajv.getKeyword('format');
+		const anyOfKeyword = ajv.getKeyword('anyOf');
+		ajv.removeKeyword('anyOf');
+		ajv.removeKeyword('format');
 		ajv.addKeyword({
-			// NOTE: there is no actual guarantee that format
-			// is applied before $coerce, but it seems it is the case.
 			keyword: '$coerce',
 			schemaType: 'boolean',
-			valid: true,
 			errors: false,
 			code(cxt) {
 				const { gen, parentSchema, data, it } = cxt;
@@ -377,17 +387,32 @@ module.exports = class Validation {
 						});
 					});
 				} else if (parentSchema.anyOf?.length > 1) {
-					const expr = gen.let('expr');
-					const hasNull = parentSchema.anyOf.find(item => item.type == "null");
-					gen
-						.if(_`typeof ${data} == 'string' && ['true', 'false'].includes(${data})`)
-						.assign(expr, _`${data} == 'true'`)
-						.elseIf(_`${data} == null`)
-						.assign(expr, hasNull ? _`null` : _`false`)
+					const consts = [];
+					let hasBool = false;
+					let hasNull = false;
+					for (const item of parentSchema.anyOf) {
+						if (item.type == "boolean" || item.const && typeof item.const == "boolean") {
+							hasBool = true;
+						}
+						if (item.const !== undefined) consts.push(item.const);
+						if (item.const === null) hasNull = true;
+					}
+
+					gen.if(_`typeof ${data} == 'string'`)
+						.if(_`${hasBool} && ['true', 'false', ''].includes(${data})`)
+						.assign(data, _`${data} == 'true'`)
+						.elseIf(_`${JSON.stringify(consts)}.includes(${data})`)
+						//.assign(data, _`${data}`)
+						.elseIf(_`${hasNull}`)
+						.assign(data, 'null')
+						.elseIf(_`${parentSchema.default !== undefined}`)
+						.assign(data, _`${parentSchema.default ?? null}`)
+						.endIf()
+						.elseIf(_`${hasBool} && !${hasNull} && ${data} == null`)
+						.assign(data, _`false`)
 						.else()
-						.assign(expr, _`${data}`)
+						//.assign(data, _`${data}`)
 						.endIf();
-					gen.assign(data, expr);
 					gen.assign(_`${parentData}[${parentDataProperty}]`, data);
 				} else if (parentSchema.type == "string") {
 					if (parentSchema.default !== undefined) {
@@ -421,6 +446,8 @@ module.exports = class Validation {
 				}
 			}
 		});
+		ajv.addKeyword(formatKeyword);
+		ajv.addKeyword(anyOfKeyword);
 		return ajv;
 	}
 
