@@ -415,7 +415,7 @@ module.exports = class BlockService {
 				title: 'Limit',
 				type: 'integer',
 				minimum: 0,
-				maximum: 1000,
+				maximum: 10000,
 				default: 10
 			},
 			offset: {
