@@ -17,7 +17,7 @@
   },
   "homepage": "https://github.com/pageboard/server#readme",
   "dependencies": {
-    "bwip-js": "^4.5.2",
+    "bwip-js": "^4.5.3",
     "datauri": "^4.1.0",
     "glob": "^11.0.1",
     "sharpie": "^5.5.0"
