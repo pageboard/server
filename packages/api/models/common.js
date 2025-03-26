@@ -567,7 +567,7 @@ function dateRange(val) {
 }
 
 function partialDateRange(val) {
-	const parts = val.split('P');
+	const parts = val.split(/--P|\/P|P/);
 	if (parts[0].includes('T')) return;
 	const start = new Date(parts[0]);
 	if (Number.isNaN(start.getTime())) return;

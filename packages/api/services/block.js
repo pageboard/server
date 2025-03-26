@@ -396,11 +396,13 @@ module.exports = class BlockService {
 			created_at: {
 				title: 'Created at',
 				type: 'string',
+				format: 'daterange',
 				nullable: true
 			},
 			updated_at: {
 				title: 'Updated at',
 				type: 'string',
+				format: 'daterange',
 				nullable: true
 			},
 			order: {
