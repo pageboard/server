@@ -967,7 +967,7 @@ module.exports = class BlockService {
 		}
 	};
 
-	async distinct(req, data) {
+	async histogram(req, data) {
 		const { site, sql: { ref, trx, raw, Block } } = req;
 		const { parent } = data;
 		delete data.parent;
@@ -1035,8 +1035,8 @@ module.exports = class BlockService {
 		return obj;
 	}
 
-	static distinct = {
-		title: 'Distinct values',
+	static histogram = {
+		title: 'Histogram',
 		$action: 'read',
 		required: ['type'],
 		properties: {
