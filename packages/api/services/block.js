@@ -15,6 +15,27 @@ module.exports = class BlockService {
 		router.write('/block/del', 'block.del');
 	}
 
+	async elements(elements) {
+		return {
+			counter: {
+				title: 'Counter',
+				bundle: true,
+				standalone: true,
+				properties: {
+					value: {
+						title: 'Value',
+						nullable: true,
+						type: "string"
+					},
+					count: {
+						title: 'Count',
+						type: "number"
+					}
+				}
+			}
+		};
+	}
+
 	get(req, data) {
 		const { lang } = req.call('translate.lang', data);
 		const q = req.site.$relatedQuery('children', req.sql.trx)
@@ -940,6 +961,171 @@ module.exports = class BlockService {
 							standalone: true,
 							contentless: true
 						}
+					}
+				}
+			}
+		}
+	};
+
+	async distinct(req, data) {
+		const { site, sql: { ref, trx, raw, Block } } = req;
+		const { parent } = data;
+		delete data.parent;
+		const q = site.$relatedQuery('children', trx);
+		let valid;
+		if (parent) {
+			if (Object.keys(parent).length) {
+				if (!parent.type?.length) {
+					throw new HttpError.BadRequest("Missing parent.type");
+				}
+				q.joinRelated('parents', { alias: 'parent' });
+				whereSub(q, parent, 'parent');
+				valid = true;
+			}
+		}
+		valid = whereSub(q, data) || valid;
+		if (!valid) {
+			throw new HttpError.BadRequest("Insufficient search parameters");
+		}
+		paginate(q, data);
+		let dataPath = 'data:' + data.path;
+		try {
+			const schema = site.$schema(data.type + '.data.' + data.path);
+			if (schema?.type == "array") {
+				q.with('values', Block.query(trx)
+					.select('_id', 'value')
+					.from(raw('block, jsonb_array_elements_text(??) AS value', [ref('data:' + data.path)]))
+				);
+				q.join('values', 'values._id', 'block._id');
+				dataPath = 'value';
+			}
+		} catch {
+			// pass
+		}
+		q.select(ref(dataPath).as('value'));
+		q.count(
+			ref(dataPath)
+		);
+		q.groupBy(
+			ref(dataPath)
+		);
+		q.orderBy(
+			ref(dataPath)
+		);
+
+		const [rows, count] = await Promise.all([
+			q,
+			q.clone().resultSize()
+		]);
+
+		req.types.add("counter");
+
+		const obj = {
+			count,
+			limit: data.limit,
+			offset: data.offset,
+			items: rows.map(item => ({
+				type: 'counter',
+				data: {
+					value: item.value,
+					count: item.count
+				}
+			}))
+		};
+		return obj;
+	}
+
+	static distinct = {
+		title: 'Distinct values',
+		$action: 'read',
+		required: ['type'],
+		properties: {
+			path: {
+				title: 'Data path',
+				type: 'string',
+				format: 'singleline'
+			},
+			type: {
+				title: 'Filter by types',
+				type: 'array',
+				items: {
+					type: 'string',
+					format: 'name'
+				},
+				$filter: {
+					name: 'element',
+					standalone: true,
+					contentless: true,
+					multiple: true
+				}
+			},
+			data: {
+				title: 'Filter by data',
+				type: 'object',
+				nullable: true
+			},
+			created_at: {
+				title: 'Created at',
+				type: 'string',
+				format: 'daterange',
+				nullable: true
+			},
+			updated_at: {
+				title: 'Updated at',
+				type: 'string',
+				format: 'daterange',
+				nullable: true
+			},
+			limit: {
+				title: 'Limit',
+				type: 'integer',
+				minimum: 0,
+				maximum: 10000,
+				default: 10
+			},
+			offset: {
+				title: 'Offset',
+				type: 'integer',
+				default: 0
+			},
+			parent: {
+				title: 'Filter by parent',
+				type: "object",
+				nullable: true,
+				properties: {
+					id: {
+						title: 'Select by id',
+						anyOf: [{ /* because nullable does not have priority */
+							type: 'null'
+						}, {
+							type: "string",
+							format: 'id'
+						}],
+						$filter: {
+							name: 'relation',
+							// TODO relation filter should propose all allowed types,
+							// and should use datalist to list all allowed block ids
+						}
+					},
+					type: {
+						title: 'Filter by types',
+						nullable: true,
+						type: 'array',
+						items: {
+							type: 'string',
+							format: 'name'
+						},
+						$filter: {
+							name: 'element',
+							standalone: true,
+							contentless: true,
+							multiple: true
+						}
+					},
+					data: {
+						title: 'Filter by data',
+						type: 'object',
+						nullable: true
 					}
 				}
 			}
