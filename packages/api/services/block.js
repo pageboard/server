@@ -1147,16 +1147,7 @@ function filterSub(q, data, language) {
 			q.orderBy(Block.fn.coalesce(...args), dir);
 		}
 	}
-	if (data.limit != null) {
-		if (data.offset < 0) {
-			data.limit += data.offset;
-			data.offset = 0;
-			if (data.limit < 0) {
-				throw new HttpError.BadRequest("limit cannot be negative");
-			}
-		}
-		q.offset(data.offset).limit(data.limit);
-	}
+	paginate(q, data);
 	return valid;
 }
 
@@ -1172,5 +1163,19 @@ function parseOrder(q, table, str) {
 	col = `${table}.${first}`;
 	if (list.length > 0) col += `:${list.join('.')}`;
 	return { col: q.ref(col), dir };
+}
+
+function paginate(q, data) {
+	if (data.limit != null) {
+		if (data.offset < 0) {
+			data.limit += data.offset;
+			data.offset = 0;
+			if (data.limit < 0) {
+				throw new HttpError.BadRequest("limit cannot be negative");
+			}
+		}
+		q.offset(data.offset).limit(data.limit);
+	}
+	return q;
 }
 
