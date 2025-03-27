@@ -122,7 +122,7 @@ module.exports = class InstallService {
 			pkg.fromSite(this.app.cwd, site);
 			return pkg;
 		} else {
-			console.info("site needs install", site.id, pkgMtime, "<", mtime);
+			console.info("installing site", site.id);
 		}
 
 		await pkg.move(passive);
