@@ -1,3 +1,5 @@
+const { default: Inspector } = require('url-inspector');
+
 module.exports = class InspectorModule {
 	static name = 'inspector';
 
@@ -7,7 +9,6 @@ module.exports = class InspectorModule {
 	}
 
 	async init() {
-		const Inspector = this.Inspector = (await import('url-inspector')).default;
 		this.local = new Inspector({
 			...this.opts,
 			nofavicon: true,
@@ -17,7 +18,7 @@ module.exports = class InspectorModule {
 	}
 
 	async request(req, urlObj) {
-		return this.Inspector.get(urlObj);
+		return Inspector.get(urlObj);
 	}
 
 	async get(req, { url }) {
