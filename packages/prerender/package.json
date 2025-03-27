@@ -23,6 +23,6 @@
   "homepage": "https://github.com/pageboard/server#readme",
   "dependencies": {
     "express-dom": "^8.14.4",
-    "express-dom-pdf": "^9.1.0"
+    "express-dom-pdf": "^9.1.1"
   }
 }
