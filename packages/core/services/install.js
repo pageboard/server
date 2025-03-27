@@ -1,7 +1,6 @@
 const Path = require('node:path');
-const { promisify } = require('node:util');
+const { promisify, types: { isProxy } } = require('node:util');
 const exec = promisify(require('node:child_process').exec);
-const { types: { isProxy } } = require('node:util');
 const vm = require('node:vm');
 const { promises: fs } = require('node:fs');
 
