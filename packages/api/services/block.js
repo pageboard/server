@@ -1002,6 +1002,17 @@ module.exports = class BlockService {
 		} catch {
 			// pass
 		}
+		if (data.regexp) {
+			q.with('values', Block.query(trx)
+				.select('_id', 'value[1] AS value')
+				.from(raw(
+					'block, regexp_matches(??, ?) AS value',
+					[ref('data:' + data.path).castText(), data.regexp]
+				))
+			);
+			q.join('values', 'values._id', 'block._id');
+			dataPath = 'value';
+		}
 		q.select(ref(dataPath).as('value'));
 		q.count(
 			ref(dataPath)
@@ -1009,9 +1020,13 @@ module.exports = class BlockService {
 		q.groupBy(
 			ref(dataPath)
 		);
-		q.orderBy(
-			ref(dataPath)
-		);
+		for (const order of data.order ?? []) {
+			const { col, dir } = parseOrder(q, null, order);
+			if (["count", "value"].includes(col.column) == false) {
+				throw new HttpError.BadRequest("Bad order");
+			}
+			q.orderBy(col, dir);
+		}
 
 		const [rows, count] = await Promise.all([
 			q,
@@ -1045,6 +1060,12 @@ module.exports = class BlockService {
 				type: 'string',
 				format: 'singleline'
 			},
+			regexp: {
+				title: 'Extract RegExp',
+				type: 'string',
+				format: 'singleline',
+				nullable: true
+			},
 			type: {
 				title: 'Filter by types',
 				type: 'array',
@@ -1075,6 +1096,14 @@ module.exports = class BlockService {
 				type: 'string',
 				format: 'daterange',
 				nullable: true
+			},
+			order: {
+				title: 'Sort by value or count',
+				type: 'array',
+				items: {
+					type: 'string',
+					format: 'singleline'
+				}
 			},
 			limit: {
 				title: 'Limit',
@@ -1346,7 +1375,7 @@ function parseOrder(q, table, str) {
 	}
 	const list = col.split('.');
 	const first = list.shift();
-	col = `${table}.${first}`;
+	col = table ? `${table}.${first}` : first;
 	if (list.length > 0) col += `:${list.join('.')}`;
 	return { col: q.ref(col), dir };
 }
