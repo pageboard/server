@@ -64,6 +64,8 @@ module.exports = class InstallService {
 					}
 				});
 				await pkg.touch();
+			} else if (pkg.perempted) {
+				await pkg.write(this.app.cache.hash);
 			}
 			this.app.domains.release(req, site);
 			if (req.$url) req.call('cache.install', req.$url);
@@ -114,6 +116,9 @@ module.exports = class InstallService {
 			// pass
 		}
 		const pkg = new Package(active);
+		const pkgObj = await pkg.read();
+		pkg.perempted = pkgObj.pageboard?.hash != this.app.cache.hash;
+
 		const mtime = Date.parse(site.updated_at);
 		const pkgMtime = await pkg.mtime();
 		if (pkgMtime >= mtime) {
@@ -126,7 +131,7 @@ module.exports = class InstallService {
 
 		await pkg.move(passive);
 		pkg.fromSite(this.app.cwd, site);
-		await pkg.write();
+		await pkg.write(this.app.cache.hash);
 		const curHash = await pkg.hash();
 
 		Log.install(pkg);
@@ -459,7 +464,7 @@ module.exports = class InstallService {
 	async #makeBundles(site, pkg) {
 		const { $pkg } = site;
 		$pkg.aliases = pkg.aliases;
-		const { eltsMap, upgraded } = pkg;
+		const { eltsMap, upgraded, perempted } = pkg;
 		const bundles = Object.entries(pkg.bundles).sort(([na], [nb]) => {
 			// bundle page group before others
 			const a = eltsMap[na];
@@ -471,20 +476,25 @@ module.exports = class InstallService {
 
 		const { actions, reads, writes } = this.app.api.validation;
 
+		const hashPrefix = this.app.cache.hash;
+
 		const [servicesPath, readsPath, writesPath] = await Promise.all([
 			this.#bundleSource(site, {
+				prefix: hashPrefix,
 				assign: 'schemas',
 				name: 'services',
 				source: actions,
 				dry: true
 			}),
 			this.#bundleSource(site, {
+				prefix: hashPrefix,
 				assign: 'schemas',
 				name: 'reads',
 				source: reads,
 				dry: true
 			}),
 			this.#bundleSource(site, {
+				prefix: hashPrefix,
 				assign: 'schemas',
 				name: 'writes',
 				source: writes,
@@ -503,6 +513,7 @@ module.exports = class InstallService {
 				dry: true
 			}),
 			this.#bundleSource(site, {
+				prefix: hashPrefix,
 				assign: 'schemas',
 				name: 'elements',
 				dry: true
@@ -571,28 +582,30 @@ module.exports = class InstallService {
 			if (Object.isEmpty(el.resources)) delete el.resources;
 		}
 
-		// create those files
-		if (upgraded) await Promise.all([
+		const tasks = [];
+
+		// depends also on server
+		if (perempted || upgraded) tasks.push(
 			this.#bundleSource(site, {
+				prefix: hashPrefix,
 				assign: 'schemas',
 				name: 'services',
 				source: actions
 			}),
 			this.#bundleSource(site, {
+				prefix: hashPrefix,
 				assign: 'schemas',
 				name: 'reads',
 				source: reads
 			}),
 			this.#bundleSource(site, {
+				prefix: hashPrefix,
 				assign: 'schemas',
 				name: 'writes',
 				source: writes
 			}),
 			this.#bundleSource(site, {
-				name: 'polyfills',
-				source: await this.app.polyfill.source(Array.from(pkg.polyfills))
-			}),
-			this.#bundleSource(site, {
+				prefix: hashPrefix,
 				assign: 'schemas',
 				name: 'elements',
 				source: {
@@ -606,13 +619,20 @@ module.exports = class InstallService {
 					})
 				}
 			})
-		]);
+		);
+
+		// create those files
+		if (upgraded) tasks.push(
+			this.#bundleSource(site, {
+				name: 'polyfills',
+				source: await this.app.polyfill.source(Array.from(pkg.polyfills))
+			})
+		);
 
 		// create bundles
-		const list = [];
 		if (upgraded) for (const [name, bundleEl] of $pkg.bundles) {
 			if (!bundleEl.orig) continue;
-			list.push(
+			tasks.push(
 				this.app.statics.bundle(site, {
 					inputs: bundleEl.orig?.scripts ?? [],
 					output: `${name}.js`
@@ -624,7 +644,7 @@ module.exports = class InstallService {
 			);
 			delete bundleEl.orig;
 		}
-		await Promise.all(list);
+		await Promise.all(tasks);
 
 		// clear up some space
 		delete pkg.polyfills;

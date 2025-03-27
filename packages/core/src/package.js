@@ -48,7 +48,7 @@ module.exports = class Package {
 		}
 	}
 
-	async write() {
+	async write(serverHash) {
 		await fs.mkdir(this.dir, {
 			recursive: true
 		});
@@ -56,6 +56,9 @@ module.exports = class Package {
 			private: true,
 			name: this.name,
 			dependencies: this.dependencies,
+			pageboard: {
+				hash: serverHash
+			},
 			pnpm: {
 				// only trust our modules
 				onlyBuiltDependencies: Object.keys(this.dependencies).filter(
