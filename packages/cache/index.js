@@ -2,7 +2,7 @@ const Upcache = require('upcache');
 const { promises: fs } = require('node:fs');
 const Path = require('node:path');
 const Stringify = require('fast-json-stable-stringify');
-const { hash } = require('node:crypto');
+const { hash } = require('../../src/utils');
 
 module.exports = class CacheModule {
 	static name = 'cache';
@@ -13,6 +13,9 @@ module.exports = class CacheModule {
 		this.metafile = Path.join(app.dirs.data, 'cache.json');
 		this.opts = opts;
 		opts.wkp = "/.well-known/upcache";
+	}
+	async init() {
+		this.hash = await hash(Stringify(this.app.opts));
 	}
 	map({ res }, to) {
 		return Upcache.map(res, to);
@@ -86,8 +89,6 @@ module.exports = class CacheModule {
 			let doSave = false;
 			let dobj = this.data;
 			if (!dobj) dobj = this.data = {};
-
-			this.hash ??= hash('sha256', Stringify(this.app.opts), 'base64url');
 
 			if (dobj.hash === undefined) {
 				doSave = true;
