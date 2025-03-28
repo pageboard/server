@@ -148,11 +148,12 @@ module.exports = class PrintModule {
 
 	async preview(req, data) {
 		const block = await req.run('block.get', { id: data.id, type: 'print_job' });
-		const { url, lang } = block.data;
+		const { url, lang, printer } = block.data;
 		const pdfUrl = req.call('page.format', {
 			url, lang, ext: 'pdf'
 		});
 		pdfUrl.searchParams.set('pdf', "screen");
+		if (printer) pdfUrl.searchParams.set('printer', printer);
 		const pdfRun = req.call('statics.file', {
 			mount: 'cache',
 			name: `${block.id}-preview.pdf`
@@ -211,11 +212,12 @@ module.exports = class PrintModule {
 	};
 
 	async #onlineJob(req, block, opts) {
-		const { url, lang, device } = block.data;
+		const { url, lang, device, printer } = block.data;
 		const pdfUrl = req.call('page.format', {
 			url, lang, ext: 'pdf'
 		});
 		pdfUrl.searchParams.set('pdf', device);
+		if (printer) pdfUrl.searchParams.set('printer', printer);
 		const pdfRun = req.call('statics.file', {
 			mount: 'cache',
 			name: `${block.id}.pdf`
@@ -233,11 +235,12 @@ module.exports = class PrintModule {
 	}
 
 	async #printerJob(req, block, opts) {
-		const { url, lang, device, options } = block.data;
+		const { url, lang, device, printer, options } = block.data;
 		const pdfUrl = req.call('page.format', {
 			url, lang, ext: 'pdf'
 		});
 		pdfUrl.searchParams.set('pdf', device);
+		if (printer) pdfUrl.searchParams.set('printer', printer);
 
 		const list = await cups.getPrinterNames();
 		if (!list.find(name => name == this.opts.local)) {
@@ -267,12 +270,13 @@ module.exports = class PrintModule {
 		const { offline } = req.site.data.printers ?? {};
 		const { basedir } = this.opts.offline ?? {};
 		if (!offline || !basedir) throw new HttpError.BadRequest("No offline printer");
-		const { url, lang, device } = block.data;
+		const { url, lang, device, printer } = block.data;
 		const storePath = Path.join(basedir, offline);
 		const pdfUrl = req.call('page.format', {
 			url, lang, ext: 'pdf'
 		});
 		pdfUrl.searchParams.set('pdf', device);
+		if (printer) pdfUrl.searchParams.set('printer', printer);
 		const pdfRun = req.call('statics.file', {
 			mount: 'cache',
 			name: `${block.id}.pdf`
@@ -391,13 +395,14 @@ module.exports = class PrintModule {
 
 	async #remoteCall(req, block, { agent, pdf, coverPdf, courier, file, coverFile }) {
 		const orderEndpoint = req.site.data.env == "production" ? "/order/create" : "/order/sandbox-create";
-		const { device, options } = block.data;
+		const { printer, device, options } = block.data;
 		const pdfUrl = req.call('page.format', {
 			url: block.data.url,
 			lang: block.data.lang,
 			ext: 'pdf'
 		});
 		pdfUrl.searchParams.set('pdf', device);
+		if (printer) pdfUrl.searchParams.set('printer', printer);
 
 		const printProduct = {
 			pdf: pdfUrl,
@@ -414,6 +419,7 @@ module.exports = class PrintModule {
 				ext: 'pdf'
 			});
 			coverUrl.searchParams.set('pdf', device);
+			if (printer) coverUrl.searchParams.set('printer', printer);
 			printProduct.cover_pdf = coverUrl;
 		}
 		if (options.discount_code) {

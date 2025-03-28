@@ -34,11 +34,13 @@ export const print_job = {
 		},
 		printer: {
 			title: 'Printer',
+			description: 'Type of printer.\nPassed as query parameter.',
 			type: 'string',
 			format: 'name'
 		},
 		device: {
 			title: 'Device',
+			description: 'Type of PDF device.\nPassed as query parameter `pdf`.',
 			anyOf: [{
 				const: 'screen',
 				title: 'Screen'
