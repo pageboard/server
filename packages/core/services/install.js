@@ -629,6 +629,9 @@ module.exports = class InstallService {
 			})
 		);
 
+		await Promise.all(tasks);
+
+		tasks.length = 0;
 		// create bundles
 		if (upgraded) for (const [name, bundleEl] of $pkg.bundles) {
 			if (!bundleEl.orig) continue;
