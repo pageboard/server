@@ -64,7 +64,8 @@ module.exports = class InstallService {
 					}
 				});
 				await pkg.touch();
-			} else if (pkg.perempted) {
+			}
+			if (pkg.perempted) {
 				await pkg.write(this.app.cache.hash);
 			}
 			this.app.domains.release(req, site);
@@ -507,7 +508,7 @@ module.exports = class InstallService {
 		});
 
 		// incorporate polyfills/elements into core scripts
-		const [polyfillsPath, elementsPath] = eltsMap.core ? await Promise.all([
+		const coreExtraPaths = eltsMap.core ? await Promise.all([
 			this.#bundleSource(site, {
 				name: 'polyfills',
 				dry: true
@@ -519,7 +520,7 @@ module.exports = class InstallService {
 				dry: true
 			})
 		]) : [];
-		eltsMap.core?.scripts.unshift(polyfillsPath, elementsPath);
+		eltsMap.core?.scripts.unshift(...coreExtraPaths);
 
 		// prepare bundles output paths
 		for (const [name, list] of bundles) {
@@ -584,6 +585,13 @@ module.exports = class InstallService {
 
 		const tasks = [];
 
+		if (upgraded) tasks.push(
+			this.#bundleSource(site, {
+				name: 'polyfills',
+				source: await this.app.polyfill.source(Array.from(pkg.polyfills))
+			})
+		);
+
 		// depends also on server
 		if (perempted || upgraded) tasks.push(
 			this.#bundleSource(site, {
@@ -618,14 +626,6 @@ module.exports = class InstallService {
 						return { $ref: '#/definitions/' + key };
 					})
 				}
-			})
-		);
-
-		// create those files
-		if (upgraded) tasks.push(
-			this.#bundleSource(site, {
-				name: 'polyfills',
-				source: await this.app.polyfill.source(Array.from(pkg.polyfills))
 			})
 		);
 
