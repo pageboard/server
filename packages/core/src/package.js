@@ -52,7 +52,7 @@ module.exports = class Package {
 		await fs.mkdir(this.dir, {
 			recursive: true
 		});
-		await fs.writeFile(this.#package, JSON.stringify({
+		const obj = {
 			private: true,
 			name: this.name,
 			dependencies: this.dependencies,
@@ -65,7 +65,8 @@ module.exports = class Package {
 					dep => dep.startsWith('@pageboard/')
 				)
 			}
-		}, null, ' '));
+		};
+		await fs.writeFile(this.#package, JSON.stringify(obj, null, ' '));
 	}
 
 	async read() {
