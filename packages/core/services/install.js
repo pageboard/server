@@ -118,20 +118,19 @@ module.exports = class InstallService {
 		}
 		const pkg = new Package(active);
 		const pkgObj = await pkg.read();
+		pkg.fromSite(this.app.cwd, site);
 		pkg.perempted = pkgObj.pageboard?.hash != this.app.cache.hash;
 
 		const mtime = Date.parse(site.updated_at);
 		const pkgMtime = await pkg.mtime();
-		if (pkgMtime >= mtime) {
+		if (!pkg.linked && pkgMtime >= mtime) {
 			console.info("site already installed", site.id);
-			pkg.fromSite(this.app.cwd, site);
 			return pkg;
 		} else {
 			console.info("installing site", site.id);
 		}
 
 		await pkg.move(passive);
-		pkg.fromSite(this.app.cwd, site);
 		await pkg.write(this.app.cache.hash);
 		const curHash = await pkg.hash();
 
