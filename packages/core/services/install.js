@@ -745,7 +745,12 @@ module.exports = class InstallService {
 					group = [word];
 				}
 				for (const sub of group) {
-					this.#listDependencies(pkg, root, elts[sub], list, gDone);
+					const subElt = elts[sub];
+					if (subElt) {
+						this.#listDependencies(pkg, root, subElt, list, gDone);
+					} else {
+						throw new HttpError.BadRequest(`Element not found: '${sub}' in contents of ${el.name}`);
+					}
 				}
 			}
 		} else if (el.name == root.group) {
@@ -753,7 +758,12 @@ module.exports = class InstallService {
 			if (group) {
 				gDone.add(el.name);
 				for (const sub of group) {
-					this.#listDependencies(pkg, root, elts[sub], list, gDone);
+					const subElt = elts[sub];
+					if (subElt) {
+						this.#listDependencies(pkg, root, subElt, list, gDone);
+					} else {
+						throw new HttpError.BadRequest(`Element not found: '${sub}' in contents of ${el.name}`);
+					}
 				}
 			}
 		}
