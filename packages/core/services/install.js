@@ -120,6 +120,9 @@ module.exports = class InstallService {
 		const pkgObj = await pkg.read();
 		pkg.fromSite(this.app.cwd, site);
 		pkg.perempted = pkgObj.pageboard?.hash != this.app.cache.hash;
+		if (!req.$url) {
+			pkg.linked = false;
+		}
 
 		const mtime = Date.parse(site.updated_at);
 		const pkgMtime = await pkg.mtime();
