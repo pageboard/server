@@ -278,7 +278,7 @@ function whereCondObject(q, refk, cond) {
 			q.whereNotNull(rstart); // TODO optional start
 			q.whereNotNull(rend); // TODO optional end
 			if (start == end) {
-				q.whereRaw(`(daterange(:start:, :end:) @> :at OR (:start: = :at AND :end: = :at))`, {
+				q.whereRaw(`daterange(:start:, :end:) @> :at OR :start: = :end: AND :start: = :at`, {
 					start: rstart.castTo('date'),
 					end: rend.castTo('date'),
 					at: val(start).castTo('date')
@@ -299,7 +299,7 @@ function whereCondObject(q, refk, cond) {
 					val(end).castTo('date')
 				]);
 			} else {
-				q.whereRaw(`(daterange(:from, :to) @> :at: OR (:at: = :from AND :at: = :to))`, {
+				q.whereRaw(`daterange(:from, :to) @> :at:`, {
 					from: val(start).castTo('date'),
 					to: val(end).castTo('date'),
 					at: refk.castTo('date')
