@@ -17,8 +17,8 @@ module.exports = class BlockService {
 
 	async elements(elements) {
 		return {
-			counter: {
-				title: 'Counter',
+			quantum: {
+				title: 'Quantum',
 				bundle: true,
 				standalone: true,
 				properties: {
@@ -29,7 +29,8 @@ module.exports = class BlockService {
 					},
 					count: {
 						title: 'Count',
-						type: "number"
+						type: "integer",
+						minimum: 0
 					}
 				}
 			}
@@ -971,7 +972,7 @@ module.exports = class BlockService {
 		const { site, sql: { ref, trx, raw, Block } } = req;
 		const { parent } = data;
 		delete data.parent;
-		const q = site.$relatedQuery('children', trx);
+		let q = site.$relatedQuery('children', trx);
 		let valid;
 		if (parent) {
 			if (Object.keys(parent).length) {
@@ -1013,6 +1014,7 @@ module.exports = class BlockService {
 			q.join('values', 'values._id', 'block._id');
 			dataPath = 'value';
 		}
+
 		q.select(ref(dataPath).as('value'));
 		q.count(
 			ref(dataPath)
@@ -1027,25 +1029,42 @@ module.exports = class BlockService {
 			}
 			q.orderBy(col, dir);
 		}
-
+		if (data.join?.type && data.join?.path) {
+			const language = req.call('translate.lang', data);
+			const q2 = site.$relatedQuery('children', trx)
+				.where('type', data.join.type)
+				.columns({ lang: language.lang })
+				.select('main.count', 'main.value')
+				.with('main', q)
+				.join('main', ref(`block.data:${data.join.path}`).castText() , ref('main.value'));
+			q = q2;
+		} else {
+			delete data.join;
+		}
 		const [rows, count] = await Promise.all([
 			q,
 			q.clone().resultSize()
 		]);
 
-		req.types.add("counter");
+		req.types.add("quantum");
 
 		const obj = {
 			count,
 			limit: data.limit,
 			offset: data.offset,
-			items: rows.map(item => ({
-				type: 'counter',
-				data: {
-					value: item.value,
-					count: item.count
+			items: rows.map(item => {
+				const obj = { type: 'quantum', data: {}};
+				if (data.join) {
+					obj.child = item;
+					obj.data.count = item.count;
+					obj.data.value = item.value;
+					delete item.count;
+					delete item.value;
+				} else {
+					obj.data = item;
 				}
-			}))
+				return obj;
+			})
 		};
 		return obj;
 	}
@@ -1055,6 +1074,16 @@ module.exports = class BlockService {
 		$action: 'read',
 		required: ['type'],
 		properties: {
+			type: {
+				title: 'Type',
+				type: 'string',
+				format: 'name',
+				$filter: {
+					name: 'element',
+					standalone: true,
+					contentless: true
+				}
+			},
 			path: {
 				title: 'Data path',
 				type: 'string',
@@ -1066,19 +1095,25 @@ module.exports = class BlockService {
 				format: 'singleline',
 				nullable: true
 			},
-			type: {
-				title: 'Filter by types',
-				type: 'array',
-				items: {
-					type: 'string',
-					format: 'name'
+			join: {
+				title: 'Join with',
+				properties: {
+					type: {
+						title: 'Type',
+						type: 'string',
+						format: 'name',
+						$filter: {
+							name: 'element',
+							standalone: true,
+							contentless: true
+						}
+					},
+					path: {
+						title: 'Data path',
+						type: 'string',
+						format: 'singleline'
+					}
 				},
-				$filter: {
-					name: 'element',
-					standalone: true,
-					contentless: true,
-					multiple: true
-				}
 			},
 			data: {
 				title: 'Filter by data',
