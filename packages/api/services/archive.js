@@ -19,24 +19,27 @@ module.exports = class ArchiveService {
 	}
 
 	async bundle(req, data) {
-		const { hrefs, items } = await req.run('apis.get', {
+		const { hrefs, items, item } = await req.run('apis.get', {
 			name: data.name,
 			query: data.query,
 			hrefs: true
 		});
 		const counts = {
-			blocks: items?.length,
+			blocks: items?.length ?? 0 + (item ? 1 : 0),
 			hrefs: 0,
 			files: 0,
 			skips: []
 		};
 
-		const lastUpdate = Math.max(...items.map(item => {
+		const lastUpdate = Math.max(item?.updated_at, ...items.map(item => {
 			return item.updated_at;
 		}));
 		const archivePath = await archiveWrap(req, data.format, async archive => {
 			const buf = [];
-			const json = JSON.stringify(data.hrefs ? { hrefs, items } : items);
+			const obj = { hrefs };
+			if (items) obj.items = items;
+			if (item) obj.item = item;
+			const json = JSON.stringify(data.hrefs ? obj : items ?? item);
 			if (!data.version) buf.push(json);
 			archive.append(json, {
 				name: 'export.json',
