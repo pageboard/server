@@ -433,7 +433,8 @@ module.exports = class BlockService {
 				items: {
 					type: 'string',
 					format: 'singleline'
-				}
+				},
+				nullable: true
 			},
 			limit: {
 				title: 'Limit',
@@ -524,7 +525,8 @@ module.exports = class BlockService {
 						type: 'array',
 						items: {
 							type: 'object'
-						}
+						},
+						nullable: true
 					}
 				}
 			},
@@ -609,7 +611,8 @@ module.exports = class BlockService {
 						items: {
 							type: 'string',
 							format: 'singleline'
-						}
+						},
+						nullable: true
 					},
 					count: {
 						title: 'Count parents',
@@ -663,7 +666,7 @@ module.exports = class BlockService {
 					first: {
 						title: 'Single',
 						type: 'boolean',
-						default: false
+						nullable: true
 					},
 					data: {
 						title: 'Select by data',
@@ -676,7 +679,8 @@ module.exports = class BlockService {
 						items: {
 							type: 'string',
 							format: "singleline"
-						}
+						},
+						nullable: true
 					},
 					count: {
 						title: 'Count children',
