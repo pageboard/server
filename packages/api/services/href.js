@@ -464,7 +464,7 @@ module.exports = class HrefService {
 	};
 
 	async collect(req, data) {
-		const { site, sql: { ref, trx } } = req;
+		const { site, sql: { ref, fun, trx } } = req;
 		const { hrefs } = site.$pkg;
 		const qList = q => {
 			const urlQueries = [];
@@ -481,11 +481,11 @@ module.exports = class HrefService {
 						.where('blocks.type', type)
 						.whereNotNull(ref(`blocks.data:${desc.path}`));
 					if (desc.array) {
-						bq.select(req.sql.raw("jsonb_array_elements_text(??) AS url", [
-							ref(`blocks.data:${desc.path}`)
-						]));
+						bq.select(
+							fun("jsonb_array_elements_text", ref(`blocks.data:${desc.path}`)).as('url')
+						);
 						bq.where(
-							req.sql.raw("jsonb_typeof(??)", [ref(`blocks.data:${desc.path}`)]),
+							fun("jsonb_typeof", ref(`blocks.data:${desc.path}`)),
 							'array'
 						);
 					} else {
