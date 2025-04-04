@@ -30,8 +30,10 @@ module.exports = class ArchiveService {
 			files: 0,
 			skips: []
 		};
+		const maxList = items ?? [];
+		if (item) maxList.push(item);
 
-		const lastUpdate = Math.max(item?.updated_at, ...items.map(item => {
+		const lastUpdate = Math.max(...maxList.map(item => {
 			return item.updated_at;
 		}));
 		const archivePath = await archiveWrap(req, data.format, async archive => {
@@ -39,7 +41,7 @@ module.exports = class ArchiveService {
 			const obj = { hrefs };
 			if (items) obj.items = items;
 			if (item) obj.item = item;
-			const json = JSON.stringify(data.hrefs ? obj : items ?? item);
+			const json = JSON.stringify(data.hrefs || item && items ? obj : items ?? item);
 			if (!data.version) buf.push(json);
 			archive.append(json, {
 				name: 'export.json',
