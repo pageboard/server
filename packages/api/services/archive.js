@@ -30,7 +30,11 @@ module.exports = class ArchiveService {
 			files: 0,
 			skips: []
 		};
-		const maxList = items ?? [];
+		const maxList = [];
+		if (items) {
+			if (Array.isArray(items)) maxList.push(...items);
+			else maxList.push(items);
+		}
 		if (item) maxList.push(item);
 
 		const lastUpdate = Math.max(...maxList.map(item => {
