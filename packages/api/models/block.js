@@ -434,7 +434,7 @@ function contentsNames(list) {
 	);
 }
 
-function findHrefs(schema, list, root, array) {
+function findHrefs(schema, list, root) {
 	if (!schema.properties || schema.virtual) return;
 	for (const [key, prop] of Object.entries(schema.properties)) {
 		if (!prop) {
@@ -443,9 +443,8 @@ function findHrefs(schema, list, root, array) {
 			continue;
 		}
 		let path;
-		if (array) path = root;
-		else if (root) path = `${root}.${key}`;
-		else path = key;
+		if (root) path = `${root}.${key}`;
+		else path = '$.' + key;
 		const { $filter } = prop;
 		let { $helper } = prop;
 		if ($filter?.name == "helper") {
@@ -459,9 +458,17 @@ function findHrefs(schema, list, root, array) {
 				if ($filter?.helper == "pageUrl") types.push('link');
 				else console.warn("href helper has no types", $helper, "in", prop);
 			}
-			list.push({ path, types, array });
+			list.push({
+				path,
+				types
+			});
 		} else if (prop.type == "array") {
-			findHrefs({properties: {items: prop.items}}, list, path, true);
+			if (prop.items) {
+				path += '[*]';
+				findHrefs(prop.items, list, path);
+			} else {
+				console.error("TODO", path, prop);
+			}
 		} else {
 			findHrefs(prop, list, path);
 		}

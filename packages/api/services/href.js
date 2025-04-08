@@ -464,7 +464,7 @@ module.exports = class HrefService {
 	};
 
 	async collect(req, data) {
-		const { site, sql: { ref, fun, trx } } = req;
+		const { site, sql: { ref, fun, raw, trx } } = req;
 		const { hrefs } = site.$pkg;
 		const qList = q => {
 			const urlQueries = [];
@@ -477,24 +477,15 @@ module.exports = class HrefService {
 					continue;
 				}
 				for (const desc of list) {
-					const bq = site.$modelClass.query(trx).from('blocks')
+					const bq = site.$modelClass.query(trx)
+						.from(raw('blocks, jsonb_path_query(blocks.data, ?)', desc.path))
+						.select(fun('json_value', ref('jsonb_path_query'), '$').as('url'))
 						.where('blocks.type', type)
-						.whereNotNull(ref(`blocks.data:${desc.path}`));
-					if (desc.array) {
-						bq.select(
-							fun("jsonb_array_elements_text", ref(`blocks.data:${desc.path}`)).as('url')
-						);
-						bq.where(
-							fun("jsonb_typeof", ref(`blocks.data:${desc.path}`)),
-							'array'
-						);
-					} else {
-						bq.select(ref(`blocks.data:${desc.path}`).castText().as('url'));
-					}
+						.where(fun('jsonb_path_exists', ref('blocks.data'), desc.path));
 					urlQueries.push(bq);
 				}
 			}
-			q.union(urlQueries, true);
+			q.union(urlQueries, true); // returns list of unique url
 		};
 
 		const unionBlocks = q => {
@@ -573,8 +564,7 @@ module.exports = class HrefService {
 	};
 
 	#collectBlockUrls({ site, sql: { trx } }, data, level) {
-		const { hrefs } = site.$pkg;
-		const types = Object.keys(hrefs);
+		const types = Object.keys(site.$pkg.hrefs);
 		const table = ['root', 'root:block', 'root:shared:block'][level];
 
 		const blockRelation = {
