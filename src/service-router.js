@@ -40,7 +40,7 @@ module.exports = function (group, router) {
 							const apiStr = handler;
 							handler = req => req.run(apiStr, unflatten(req.body));
 						}
-						const data = await handler(req, req.body);
+						const data = await handler(req);
 						this.reply(req, data);
 					} catch (err) {
 						next(err);

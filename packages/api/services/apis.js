@@ -13,13 +13,13 @@ module.exports = class ApiService {
 				query: unflatten(req.query)
 			});
 		});
-		router.write(["/:name", "/form/:name"], async (req, body) => {
+		router.write(["/:name", "/form/:name"], async req => {
 			await req.run('upload.parse', {});
 
 			return req.run('apis.post', {
 				name: req.params.name,
 				query: unflatten(req.query),
-				body: unflatten(body)
+				body: unflatten(req.body)
 			});
 		});
 	}
