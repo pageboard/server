@@ -1,7 +1,7 @@
 const Path = require('node:path');
 const { promises: fs } = require('node:fs');
 
-const bundler = require('postinstall-esbuild');
+const bundler = require.lazy('postinstall-esbuild');
 
 module.exports = class StaticsModule {
 	static name = 'statics';

@@ -1,4 +1,4 @@
-const { default: Inspector } = require('url-inspector');
+const Inspector = require.lazy('url-inspector');
 
 module.exports = class InspectorModule {
 	static name = 'inspector';
@@ -8,17 +8,28 @@ module.exports = class InspectorModule {
 		this.opts = opts;
 	}
 
-	async init() {
-		this.local = new Inspector({
+	#create(opts) {
+		return new Inspector.default(opts);
+	}
+
+	#local;
+	get local() {
+		if (!this.#local) this.#local = this.#create({
 			...this.opts,
 			nofavicon: true,
 			file: true
 		});
-		this.remote = new Inspector(this.opts);
+		return this.#local;
+	}
+
+	#remote;
+	get remote() {
+		if (!this.#remote) this.#remote = this.#create(this.opts);
+		return this.#remote;
 	}
 
 	async request(req, urlObj) {
-		return Inspector.get(urlObj);
+		return Inspector.default.get(urlObj);
 	}
 
 	async get(req, { url }) {

@@ -1,8 +1,10 @@
-const dget = require('dlv');
-const getSlug = require('speakingurl');
-const mergeWith = require('lodash.mergewith');
 const { access } = require('node:fs/promises');
 const { hash } = require('node:crypto');
+
+const dget = require.lazy('dlv');
+const getSlug = require.lazy('speakingurl');
+const mergeWith = require.lazy('lodash.mergewith');
+
 const {
 	Matchdom, TextPlugin, JsonPlugin, StringPlugin, ArrayPlugin, OpsPlugin, NumPlugin, DatePlugin, RepeatPlugin, UrlPlugin
 } = require('matchdom');

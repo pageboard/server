@@ -1,21 +1,29 @@
 // TODO move to https://github.com/hectorm/otpauth
-const otp = require('otplib');
-const qrcode = require('qrcode');
+const otp = require.lazy('otplib');
+const qrcode = require.lazy('qrcode');
 
 module.exports = class LoginModule {
 	static name = 'login';
 
 	constructor(app, opts) {
 		this.app = app;
-		otp.authenticator.options = {
-			// third-party TOTP apps expect steps of 30 seconds
-			step: 30
-		};
 	}
 	apiRoutes(router) {
 		router.write("/login/send", 'login.send');
 		router.write("/login/verify", 'login.verify');
 		router.write("/login/clear", 'login.clear');
+	}
+
+	#authenticator;
+	get #otp() {
+		if (!this.#authenticator) {
+			this.#authenticator = otp.authenticator;
+			this.#authenticator.options = {
+				// third-party TOTP apps expect steps of 30 seconds
+				step: 30
+			};
+		}
+		return this.#authenticator;
 	}
 
 	async priv({ sql: { trx } }, user) {
@@ -29,7 +37,7 @@ module.exports = class LoginModule {
 				type: 'priv',
 				data: {
 					otp: {
-						secret: otp.authenticator.generateSecret()
+						secret: this.#otp.generateSecret()
 					}
 				}
 			}).returning('*');
@@ -44,7 +52,7 @@ module.exports = class LoginModule {
 			email: data.email
 		});
 		const priv = await this.priv(req, user);
-		return otp.authenticator.generate(priv.data.otp.secret);
+		return this.#otp.generate(priv.data.otp.secret);
 	}
 
 	async send(req, data) {
@@ -121,16 +129,16 @@ module.exports = class LoginModule {
 		const tries = (priv.data.otp.tries || 0) + 1;
 		if (tries >= 5) {
 			const at = Date.parse(priv.data.otp.checked_at);
-			if (!Number.isNaN(at) && (Date.now() - at < 1000 * otp.authenticator.options.step / 2)) {
+			if (!Number.isNaN(at) && (Date.now() - at < 1000 * this.#otp.options.step / 2)) {
 				throw new HttpError.TooManyRequests();
 			}
 		}
 		token = token.replaceAll(/\s/g, '');
-		otp.authenticator.options = {
+		this.#otp.options = {
 			window: [tokenMaxAge, 0],
-			step: otp.authenticator.options.step
+			step: this.#otp.options.step
 		};
-		const verified = otp.authenticator.check(token, priv.data.otp.secret);
+		const verified = this.#otp.check(token, priv.data.otp.secret);
 		await priv.$query(trx).patchObject({
 			type: priv.type,
 			data: {
@@ -261,7 +269,7 @@ module.exports = class LoginModule {
 		const item = {
 			type: 'otp',
 			data: {
-				uri: otp.authenticator.keyuri(
+				uri: this.#otp.keyuri(
 					user.data.email, this.app.name, priv.data.otp.secret
 				)
 			}

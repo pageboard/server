@@ -3,10 +3,12 @@ const {
 } = require('node:fs');
 const { pipeline } = require('node:stream/promises');
 const Path = require('node:path');
-const { glob } = require('glob');
-const bwipjs = require('bwip-js');
 
-const DatauriParser = require('datauri/parser');
+const Glob = require.lazy('glob');
+const bwipjs = require.lazy('bwip-js');
+const DatauriParser = require.lazy('datauri/parser');
+const Sharpie = require.lazy('sharpie');
+
 const allowedParameters = {
 	rs: true,
 	ex: true,
@@ -82,13 +84,6 @@ module.exports = class ImageModule {
 		};
 	}
 
-	async init() {
-		const { sharp, sharpie, Sharpie } = await import('sharpie');
-		this.sharp = sharp;
-		this.sharpie = sharpie;
-		this.fileTypes = Sharpie.fileTypes;
-	}
-
 	mw(req, res, next) {
 		const extname = Path.extname(req.path);
 		if (!extname || /png|jpe?g|gif|webp|tiff|svg/.test(extname.substring(1)) == false) {
@@ -111,11 +106,17 @@ module.exports = class ImageModule {
 		}
 	}
 
+	#sharpie;
+	get sharpie() {
+		if (!this.#sharpie) this.#sharpie = Sharpie.sharpie(this.opts);
+		return this.#sharpie;
+	}
+
 	fileRoutes(router) {
 		router.get(
 			"/share/*",
 			this.mw,
-			this.sharpie(this.opts)
+			this.sharpie
 		);
 	}
 
@@ -136,11 +137,11 @@ module.exports = class ImageModule {
 		}
 
 		const ret = {
-			mime: this.fileTypes[format.name],
+			mime: Sharpie.fileTypes[format.name],
 			path: output
 		};
 
-		const transform = this.sharp()
+		const transform = Sharpie.sharp()
 			.rotate()
 			.resize({
 				fit: "inside",
@@ -442,9 +443,9 @@ module.exports = class ImageModule {
 						ext: '.{png,jpg,jpeg,tif,tiff,webp}'
 					})
 				];
-				const list = await glob(patterns);
+				const list = await Glob.glob(patterns);
 				if (list.length == 0) {
-					const noextlist = await glob(Path.format({
+					const noextlist = await Glob.glob(Path.format({
 						...parts,
 						ext: null
 					}) + '*', {

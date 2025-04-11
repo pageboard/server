@@ -1,5 +1,8 @@
 require('./polyfills');
-
+const importLazy = require('import-lazy');
+Object.getPrototypeOf(require).lazy = function (str) {
+	return importLazy(this)(str);
+};
 // exceptional but so natural
 global.HttpError = require('http-errors');
 global.Text = require('outdent');

@@ -1,5 +1,6 @@
+const bodyParser = require.lazy('body-parser');
+
 const { unflatten } = require('./utils');
-const bodyParser = require('body-parser');
 
 module.exports = function (group, router) {
 	return Object.assign(router, {

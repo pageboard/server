@@ -1,4 +1,4 @@
-const jsonPath = require('@kapouer/path');
+const jsonPath = require.lazy('@kapouer/path');
 
 module.exports = class PageService {
 	static name = 'page';

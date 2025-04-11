@@ -1,5 +1,5 @@
 const { promises: fs } = require('node:fs');
-const jsonPath = require('@kapouer/path');
+const jsonPath = require.lazy('@kapouer/path');
 
 
 module.exports = class HrefService {

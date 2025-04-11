@@ -2,8 +2,9 @@ const { pipeline: waitPipeline } = require('node:stream/promises');
 const { writeFile } = require('node:fs/promises');
 const Path = require('node:path');
 const { createWriteStream, promises: fs } = require('node:fs');
-const dom = require('express-dom');
-const pdf = require('express-dom-pdf');
+
+const dom = require.lazy('express-dom');
+const pdf = require.lazy('express-dom-pdf');
 
 module.exports = class PrerenderModule {
 	static name = 'prerender';

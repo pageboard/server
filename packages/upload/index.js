@@ -1,10 +1,12 @@
 const Path = require('node:path');
 const { promises: fs, createWriteStream } = require('node:fs');
 const { pipeline } = require('node:stream/promises');
-const busboy = require('busboy');
-const mime = require('mime-types');
-const speaking = require('speakingurl');
 const { Deferred } = require('class-deferred');
+
+const busboy = require.lazy('busboy');
+const mime = require.lazy('mime-types');
+const speaking = require.lazy('speakingurl');
+
 const utils = require('../../src/utils');
 
 module.exports = class UploadModule {

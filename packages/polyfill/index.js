@@ -1,6 +1,8 @@
 const { join } = require('node:path');
-const polyfills = require('polyfill-library');
-const toposort = require('toposort');
+
+const polyfills = require.lazy('polyfill-library');
+const toposort = require.lazy('toposort');
+
 const utils = require('../../src/utils');
 
 module.exports = class PolyfillModule {

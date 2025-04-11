@@ -1,4 +1,4 @@
-const traverse = require('json-schema-traverse');
+const traverse = require.lazy('json-schema-traverse');
 const { table, getBorderCharacters } = require('table');
 
 module.exports = function(schemas, api, schema, formatted) {

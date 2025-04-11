@@ -1,4 +1,4 @@
-const Stripe = require('stripe');
+const Stripe = require.lazy('stripe');
 
 module.exports = class StripeModule {
 	static name = 'stripe';

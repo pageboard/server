@@ -1,9 +1,10 @@
-const Upcache = require('upcache');
 const Path = require('node:path');
 const { promises: fs } = require('node:fs');
 const { promisify } = require('node:util');
 const generateKeyPair = promisify(require('node:crypto').generateKeyPair);
-const OnHeaders = require('on-headers');
+
+const Upcache = require.lazy('upcache');
+const OnHeaders = require.lazy('on-headers');
 
 module.exports = class AuthModule {
 	static name = 'auth';

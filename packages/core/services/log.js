@@ -1,5 +1,5 @@
-const morgan = require('morgan');
-const pad = require('pad');
+const morgan = require.lazy('morgan');
+const pad = require.lazy('pad');
 
 
 module.exports = class LogService {

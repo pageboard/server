@@ -1,7 +1,9 @@
-const Upcache = require('upcache');
 const { promises: fs } = require('node:fs');
 const Path = require('node:path');
-const Stringify = require('fast-json-stable-stringify');
+
+const Stringify = require.lazy('fast-json-stable-stringify');
+const Upcache = require.lazy('upcache');
+
 const { hash } = require('../../src/utils');
 
 module.exports = class CacheModule {

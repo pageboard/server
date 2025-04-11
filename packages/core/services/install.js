@@ -4,12 +4,11 @@ const exec = promisify(require('node:child_process').exec);
 const vm = require('node:vm');
 const { promises: fs } = require('node:fs');
 
-const semver = require('semver');
-const toSource = require('tosource');
+const semver = require.lazy('semver');
+const toSource = require.lazy('tosource');
 
 const { createEltProxy, MapProxy } = require('../src/proxies');
 const translateJSON = require('../src/translate');
-
 const Package = require('../src/package');
 
 /*

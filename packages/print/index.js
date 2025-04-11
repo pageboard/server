@@ -1,6 +1,8 @@
 const fs = require('node:fs/promises');
 const Path = require('node:path');
-const cups = require('node-cups');
+
+const cups = require.lazy('node-cups');
+
 const { TTLMap } = require('../../src/utils');
 
 module.exports = class PrintModule {
