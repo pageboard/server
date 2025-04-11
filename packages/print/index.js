@@ -22,7 +22,7 @@ module.exports = class PrintModule {
 
 	async elements(elements) {
 		const properties = {};
-		elements.site.$lock['printers'] = 'webmaster';
+		elements.site.$lock['data.printers'] = 'webmaster';
 		elements.site.properties.printers = {
 			title: 'Printers',
 			properties

@@ -373,7 +373,7 @@ module.exports = class Pageboard {
 				this.servicesDefinitions[method] = schema;
 			}
 			if (defined) {
-				this.api.registerFilter(service);
+				this.api.registerFilter(plugin);
 				if (!services[name]) services[name] = service;
 			}
 		}
