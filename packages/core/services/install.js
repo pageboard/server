@@ -68,7 +68,7 @@ module.exports = class InstallService {
 				await pkg.write(this.app.cache.hash);
 			}
 			this.app.domains.release(req, site);
-			if (req.$url) req.call('cache.install', req.$url);
+			req.call('cache.invalidate');
 			return site;
 		} catch (err) {
 			console.error(err);
@@ -464,6 +464,8 @@ module.exports = class InstallService {
 	}
 
 	async #makeBundles(site, pkg) {
+		// FIXME when changing from dev to staging or to prod,
+		// the same url are used and everything fails badly
 		const { $pkg } = site;
 		$pkg.aliases = pkg.aliases;
 		const { eltsMap, upgraded, perempted } = pkg;

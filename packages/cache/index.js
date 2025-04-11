@@ -51,6 +51,34 @@ module.exports = class CacheModule {
 		router.post(this.opts.wkp, (req, res, next) => this.mw(req, res, next));
 	}
 
+	async invalidate(req, data) {
+		if (!req.$url) {
+			if (req.site) console.warn("Cannot invalidate cache for site", req.site.id);
+			return;
+		}
+		const url = new URL(this.opts.wkp, req.$url);
+		const controller = new AbortController();
+		const toId = setTimeout(() => controller.abort(), 15000);
+		try {
+			await fetch(url, {
+				method: 'post',
+				rejectUnauthorized: false,
+				signal: controller.signal
+			});
+			clearTimeout(toId);
+		} catch (err) {
+			if (err.name == 'AbortError') {
+				console.warn("cache: post timeout", url.href);
+			} else {
+				console.error("cache:", err, url.href);
+			}
+		}
+	}
+	static invalidate = {
+		title: 'Invalidate site cache',
+		$private: true
+	};
+
 	#save() {
 		if (this.#to) clearTimeout(this.#to);
 		this.#to = setTimeout(async () => {
@@ -61,28 +89,6 @@ module.exports = class CacheModule {
 				console.error("Error writing", err.message, this.metafile);
 			}
 		}, 5000);
-	}
-
-	install(req, url) {
-		(async () => {
-			const obj = new URL(this.opts.wkp, url);
-			const controller = new AbortController();
-			const toId = setTimeout(() => controller.abort(), 10000);
-			try {
-				await fetch(obj, {
-					method: 'post',
-					rejectUnauthorized: false,
-					signal: controller.signal
-				});
-				clearTimeout(toId);
-			} catch (err) {
-				if (err.name == 'AbortError') {
-					console.warn("cache: post timeout", obj.href);
-				} else {
-					console.error("cache:", err, obj.href);
-				}
-			}
-		})();
 	}
 
 	mw(req, res, next) {

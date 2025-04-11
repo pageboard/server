@@ -54,7 +54,7 @@ module.exports = class GitModule {
 			if (!changed) return;
 			await req.run('site.save', site.data);
 			mail.subject = `Pageboard deployed ${site.id} at version ${site.data.version}`;
-			await req.call('cache.install', req.$url);
+			await req.call('cache.invalidate');
 			mail.text = Text`
 						The version is immediately available at
 						${req.$url.href}
