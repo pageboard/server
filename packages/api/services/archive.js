@@ -113,8 +113,8 @@ module.exports = class ArchiveService {
 	async export(req, data) {
 		const { site, sql: { ref, fun, trx } } = req;
 		const lang = site.data.languages?.length == 0 ? site.data.lang : null;
-		const urls = data.urls;
-		const ids = (data.ids ?? []).slice();
+		const { urls, excludes } = data;
+		const ids = data.ids.slice();
 		const counts = {
 			users: 0,
 			blocks: 0,
@@ -170,6 +170,7 @@ module.exports = class ArchiveService {
 			const q = site.$relatedQuery('children', trx)
 				.modify(q => {
 					if (ids.length > 0) q.whereIn('block.id', ids);
+					if (excludes.length > 0) q.whereNotIn('block.type', excludes);
 				})
 				.where(q => {
 					// workaround settings not being standalone on previous versions
@@ -205,6 +206,7 @@ module.exports = class ArchiveService {
 						.whereNot('parents.type', 'site')
 						.modify(q => {
 							if (ids.length) q.whereIn('parents.id', ids);
+							if (excludes.length > 0) q.whereNotIn('parents.type', excludes);
 						})
 						.select(fun('array_agg', ref('parents.id')).as('parents'))
 						.groupBy('block._id')
@@ -273,12 +275,22 @@ module.exports = class ArchiveService {
 				default: 'zip'
 			},
 			ids: {
-				title: 'List of id',
+				title: 'Export ids',
 				type: 'array',
 				items: {
 					type: "string",
 					format: 'id'
-				}
+				},
+				default: []
+			},
+			excludes: {
+				title: 'Excluded types',
+				type: 'array',
+				items: {
+					type: "string",
+					format: "name"
+				},
+				default: []
 			},
 			urls: {
 				title: 'List of url',
@@ -301,7 +313,7 @@ module.exports = class ArchiveService {
 		}
 	};
 
-	async import(req, { file, reset, idMap, excludes = [] }) {
+	async import(req, { file, reset, idMap, excludes }) {
 		// TODO import zip file with export.ndjson
 		const types = excludes;
 		const { sql: { trx, Block } } = req;
@@ -493,12 +505,13 @@ module.exports = class ArchiveService {
 				}
 			},
 			excludes: {
-				title: 'Excluded types',
+				title: 'Exclude types',
 				type: 'array',
 				items: {
 					type: "string",
 					format: "name"
-				}
+				},
+				default: []
 			}
 		}
 	};
