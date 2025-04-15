@@ -1,5 +1,6 @@
 const Path = require('node:path');
 const { promises: fs } = require('node:fs');
+const { deepEqual } = require('node:assert');
 const { hash } = require('../../../src/utils');
 
 module.exports = class Package {
@@ -34,6 +35,8 @@ module.exports = class Package {
 
 	fromSite(cwd, site) {
 		this.name = site.id;
+		const olds = this.dependencies;
+		this.dependencies = {};
 		const { dependencies = {} } = site.data;
 		this.linked = false;
 		for (const [mod, ver] of Object.entries(dependencies)) {
@@ -45,6 +48,12 @@ module.exports = class Package {
 			} else {
 				this.dependencies[mod] = ver;
 			}
+		}
+		try {
+			deepEqual(olds, this.dependencies);
+			this.changed = false;
+		} catch {
+			this.changed = true;
 		}
 	}
 

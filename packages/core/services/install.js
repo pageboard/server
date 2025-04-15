@@ -125,7 +125,7 @@ module.exports = class InstallService {
 
 		const mtime = Date.parse(site.updated_at);
 		const pkgMtime = await pkg.mtime();
-		if (!pkg.linked && pkgMtime >= mtime) {
+		if (!pkg.changed && !pkg.linked && pkgMtime >= mtime) {
 			console.info("site already installed", site.id);
 			return pkg;
 		} else {
