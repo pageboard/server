@@ -70,7 +70,7 @@ module.exports = class CacheModule {
 			if (err.name == 'AbortError') {
 				console.warn("cache: post timeout", url.href);
 			} else {
-				console.error("cache:", err, url.href);
+				console.info("cache:", err, url.href);
 			}
 		}
 	}
