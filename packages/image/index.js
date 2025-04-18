@@ -136,11 +136,6 @@ module.exports = class ImageModule {
 			}
 		}
 
-		const ret = {
-			mime: Sharpie.fileTypes[format.name],
-			path: output
-		};
-
 		const transform = Sharpie.sharp()
 			.rotate()
 			.resize({
@@ -167,6 +162,12 @@ module.exports = class ImageModule {
 			delete transform.options.input.buffer;
 			transform.options.input.file = input.startsWith('file://') ? input.substring(7) : input;
 		}
+
+		const ret = {
+			mime: Sharpie.Sharpie.fileTypes[format.name],
+			path: output
+		};
+
 		if (output) {
 			try {
 				ops.push(transform.toFile(output));
