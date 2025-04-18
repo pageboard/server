@@ -60,10 +60,10 @@ module.exports = class ImageModule {
 	constructor(app, opts) {
 		this.app = app;
 		this.opts = {
-			async param(req, { rs }) {
+			async param(req, { rs, ex }) {
 				const size = req.call('image.guess', {
-					width: rs?.w ?? 0,
-					height: rs?.h ?? 0,
+					width: (rs?.w ?? 0) * (100 / (ex?.w ?? 100)),
+					height: (rs?.h ?? 0) * (100 / (ex?.h ?? 100)),
 					fit: rs.fit
 				});
 				const path = await req.call('image.get', {
