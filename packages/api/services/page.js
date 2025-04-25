@@ -495,13 +495,14 @@ function getParents({ site, sql: { trx } }, url, lang) {
 function stripHostname({ site, $url }, block) {
 	const list = site.$pkg.hrefs[block.type];
 	if (!list) return;
+	const re = new RegExp(RegExp.escape($url.href) + '?', 'g');
 	for (const desc of list) {
-		const url = jsonPath.get(block.data, desc.path);
-		if (url) {
-			const objUrl = new URL(url, $url);
-			if (objUrl.hostname == $url.hostname) {
-				jsonPath.set(block.data, desc.path, objUrl.pathname + objUrl.search + objUrl.hash);
-			}
+		const root = desc.path.substring(2).split('[*]')[0];
+		const obj = jsonPath.get(block.data, root);
+		if (obj) {
+			jsonPath.set(block.data, root, JSON.parse(
+				JSON.stringify(obj).replaceAll(re, '/')
+			));
 		}
 	}
 }
