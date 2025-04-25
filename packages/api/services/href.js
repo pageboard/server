@@ -320,40 +320,28 @@ module.exports = class HrefService {
 	};
 
 	async referrers(req, { ids = [], url, limit, offset }) {
-		const { site, sql: { ref, trx } } = req;
+		const { site, sql: { ref, trx, fun } } = req;
 		const { hrefs, standalones, pages } = site.$pkg;
-		const qList = q => {
-			const urlQueries = [];
+		const altRefs = site.$relatedQuery('children', trx).where(wq => {
 			for (const [type, list] of Object.entries(hrefs)) {
+				if (pages.has(type)) continue;
 				for (const desc of list) {
-					const bq = site.$modelClass.query(trx).from('block')
-						.select('block.id')
-						.where('block.type', type)
-						.whereNotNull(ref(`block.data:${desc.path}`));
-					if (desc.array) {
-						bq.where(
-							req.sql.raw("jsonb_typeof(??)", [ref(`block.data:${desc.path}`)]),
-							'array'
-						);
-					}
-					urlQueries.push(bq);
+					wq.orWhere(q => {
+						q.where('block.type', type);
+						q.where(fun('jsonb_path_exists', ref('block.data'), desc.path + ` ? (@ == "${url}")`));
+					});
 				}
 			}
-			q.union(urlQueries, true);
-		};
+		});
 		const pageTypes = Array.from(pages);
-		const q = site.$relatedQuery('children', trx)
-			.with('list', qList)
-			.join('list', 'list.id', 'block.id')
+		const q = altRefs
 			.distinct('parents.id', 'parents.type')
-			.where(ref('block.data:url').castText(), url)
 			.joinRelated('parents.[parents as roots]')
 			.whereNot('parents.type', 'site')
-			.whereNotIn('block.type', pageTypes)
 			.where(q => {
 				q.where(q => {
 					q.where('parents:roots.type', 'site');
-					q.where('parents.type', pageTypes);
+					q.whereIn('parents.type', pageTypes);
 					if (ids.length) q.whereNotIn('parents.id', ids);
 				});
 				q.orWhere(q => {
@@ -363,6 +351,7 @@ module.exports = class HrefService {
 					if (ids.length) q.whereNotIn('parents:roots.id', ids);
 				});
 			});
+
 		const [items, count] = await Promise.all([
 			q.limit(limit).offset(offset),
 			q.resultSize()
