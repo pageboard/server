@@ -400,30 +400,56 @@ module.exports = class HrefService {
 	async change({
 		site, sql: { trx, ref, fun, raw, Block, Href }
 	}, { from, to }) {
-		if (from == to) return; // hum
+		if (!from || !to || from == "/" || to == "/") {
+			// this shouldn't happen
+			throw new HttpError.BadRequest("from, to must not be empty or /");
+		}
+		if (from == to) {
+			// nothing to do but ok
+			return;
+		}
+		const fromLen = from.length;
 		for (const [type, list] of Object.entries(site.$pkg.hrefs)) {
 			for (const desc of list) {
-				const key = 'block.data:' + desc.path;
-				const field = ref(key).castText();
-				// this is a fake query not part of trx
-				const args = field._createRawArgs(Block.query());
-
-				await site.$relatedQuery('children', trx)
-					.where('block.type', type)
-					.where(q => {
-						q.where(q => {
-							q.where(fun('starts_with', field, `${from}/`));
-							q.whereNot(fun('starts_with', field, `${to}/`));
-						});
-						q.orWhere(field, from);
-					})
-					.patch({
-						type,
-						[key]: raw(`overlay(${args[0]} placing ? from 1 for ${from.length})`, [
-							args[1],
-							to
-						])
+				if (!desc.types.includes('link')) {
+					// only href accepting a link must be updated
+					continue;
+				}
+				if (desc.path.includes('[*]')) {
+					console.error("href.change does not support updating nested links");
+				}
+				const keyAcc = desc.path.substring(1)
+					.replace(/\.(\w+)/g, (m, label) => {
+						return `['${label}']`;
 					});
+
+				const obj = {
+					fromDir: `${from}/`,
+					to: `${to}/`,
+					from: from
+				};
+				const qi = Block.query(trx).knex().raw(`WITH blocks AS (
+					SELECT block._id, block.data FROM block, relation
+					WHERE block._id = relation.child_id
+					AND relation.parent_id = :site_id
+					AND block.type = :type
+					AND jsonb_path_exists(data, '${desc.path} \\? ((@ == $from) || (@ starts with $fromDir && !(@ starts with $to)))', '${JSON.stringify(obj)}')
+				), iters AS (
+					SELECT _id, to_jsonb(
+						OVERLAY(
+							(jsonb_build_array(list.href))->>0
+							PLACING :to FROM 1 FOR ${fromLen}
+						)
+					) AS href
+					FROM blocks, jsonb_path_query(blocks.data, '${desc.path}') AS list(href)
+				)
+				UPDATE block
+					SET data${keyAcc} = iters.href
+					FROM iters WHERE block._id = iters._id`, {
+					to, type,
+					site_id: site._id
+				});
+				await qi;
 			}
 		}
 		const q = Href.query(trx).where('_parent_id', site._id)
@@ -438,6 +464,7 @@ module.exports = class HrefService {
 	static change = {
 		title: 'Change all',
 		$private: true,
+		$action: 'write',
 		properties: {
 			from: {
 				title: 'From',
