@@ -18,7 +18,7 @@
   "homepage": "https://github.com/pageboard/server#readme",
   "dependencies": {
     "@apideck/better-ajv-errors": "^0.3.6",
-    "@kapouer/objection": "^3.1.4",
+    "@kapouer/objection": "^3.1.6",
     "@kapouer/path": "^4.2.1",
     "ajv": "^8.17.1",
     "ajv-formats": "^3.0.1",
