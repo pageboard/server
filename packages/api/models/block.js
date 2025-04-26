@@ -458,6 +458,10 @@ function findHrefs(schema, list, root) {
 				if ($filter?.helper == "pageUrl") types.push('link');
 				else console.warn("href helper has no types", $helper, "in", prop);
 			}
+			if (types.includes('link') && root?.includes('[*]')) {
+				// href.change does not know how to update links in arrays
+				console.error("nested links in arrays are not supported", root);
+			}
 			list.push({
 				path,
 				types
