@@ -480,37 +480,16 @@ module.exports = class HrefService {
 	};
 
 	async collect(req, data) {
-		const { site, sql: { ref, fun, raw, trx } } = req;
-		const { hrefs } = site.$pkg;
-		const qList = q => {
-			const urlQueries = [];
-			for (const [type, list] of Object.entries(hrefs)) {
-				if (data.types.length && !list.some(desc => {
-					return desc.types.some(type => {
-						return data.types.includes(type);
-					});
-				})) {
-					continue;
-				}
-				for (const desc of list) {
-					const bq = site.$modelClass.query(trx)
-						.from(raw('blocks, jsonb_path_query(blocks.data, ?)', desc.path))
-						.select(fun('json_value', ref('jsonb_path_query'), '$').as('url'))
-						.where('blocks.type', type)
-						.where(fun('jsonb_path_exists', ref('blocks.data'), desc.path));
-					urlQueries.push(bq);
-				}
-			}
-			q.union(urlQueries, true); // returns list of unique url
-		};
+		const { site, sql: { trx } } = req;
+		const qList = this.#collectUrls(req, data);
 
 		const unionBlocks = q => {
 			const unionList = [
-				this.#collectBlockUrls(req, data, 0)
+				this.#collectBlocks(req, data, 0)
 			];
 			if (data.content) {
-				unionList.push(this.#collectBlockUrls(req, data, 1));
-				unionList.push(this.#collectBlockUrls(req, data, 2));
+				unionList.push(this.#collectBlocks(req, data, 1));
+				unionList.push(this.#collectBlocks(req, data, 2));
 			}
 			q.union(unionList, true);
 		};
@@ -579,7 +558,39 @@ module.exports = class HrefService {
 		}
 	};
 
-	#collectBlockUrls({ site, sql: { trx } }, data, level) {
+	#collectUrls(req, data) {
+		const { site, sql: { ref, fun, raw, trx } } = req;
+		const { hrefs } = site.$pkg;
+		const qList = q => {
+			const urlQueries = [];
+			for (const [type, list] of Object.entries(hrefs)) {
+				if (data.type && type != data.type) continue;
+				if (data.types.length && !list.some(desc => {
+					return desc.types.some(type => {
+						return data.types.includes(type);
+					});
+				})) {
+					continue;
+				}
+				for (const desc of list) {
+					const bq = site.$modelClass.query(trx)
+						.from(raw('blocks, jsonb_path_query(blocks.data, ?)', desc.path))
+						.select(fun('json_value', ref('jsonb_path_query'), '$').as('url'))
+						.where('blocks.type', type)
+						.where(fun('jsonb_path_exists', ref('blocks.data'), desc.path));
+					urlQueries.push(bq);
+				}
+			}
+			if (!urlQueries.length) {
+				throw new HttpError.BadRequest(`block type ${data.type} does not have href types ${data.types}`);
+			}
+			q.union(urlQueries, true); // returns list of unique url
+		};
+
+		return qList;
+	}
+
+	#collectBlocks({ site, sql: { trx } }, data, level) {
 		const types = Object.keys(site.$pkg.hrefs);
 		const table = ['root', 'root:block', 'root:shared:block'][level];
 
@@ -617,66 +628,19 @@ module.exports = class HrefService {
 	}
 
 	async reinspect(req, data) {
-		const { site, sql: { trx, ref, val } } = req;
-		const { hrefs, pages } = site.$pkg;
-		const fhrefs = {};
-		for (const [type, list] of Object.entries(hrefs)) {
-			if (data.block != type) continue;
-			const flist = list.filter(desc => desc.types.includes(data.href));
-			if (pages.has(type)) flist.push({
-				path: 'url',
-				types: ['link']
-			});
-			if (flist.length) fhrefs[type] = flist;
-		}
-		if (Object.keys(fhrefs).length === 0) {
-			throw new HttpError.BadRequest(`No href types matching: ${data.block}/${data.href}`);
-		}
-
-		const rows = await site.$modelClass.query(trx).columns().from(
-			site.$relatedQuery('children', trx).select('block._id')
-				.whereIn('block.type', Object.keys(fhrefs))
-				.leftOuterJoin('href', function () {
-					this.on('href._parent_id', site._id);
-					this.on(function () {
-						for (const [type, list] of Object.entries(fhrefs)) {
-							this.orOn(function () {
-								this.on('block.type', val(type));
-								this.on(function () {
-									for (const desc of list) {
-										if (desc.array) {
-											this.orOn(ref(`data:${desc.path}`).from('block'), '@>', ref('href.url').castJson());
-										} else {
-											this.orOn('href.url', ref(`data:${desc.path}`).from('block').castText());
-										}
-									}
-								});
-							});
-						}
-					});
-				})
-				.groupBy('block._id')
-				.count({ count: 'href.*' })
-				.as('sub')
-		).join('block', 'block._id', 'sub._id')
-			.where('sub.count', 0);
-		const urls = [];
-		let ignored = 0;
-		for (const row of rows) {
-			for (const desc of fhrefs[row.type]) {
-				const url = jsonPath.get(row.data, desc.path);
-				if (url && !urls.includes(url) && !url.startsWith('/.well-known/')) {
-					urls.push(url);
-				} else {
-					ignored++;
-				}
-			}
-		}
-		const list = await Promise.all(urls.map(url => req.run('href.add', { url })));
+		const { site, sql: { trx } } = req;
+		const qList = this.#collectUrls(req, { type: data.block, types: data.href });
+		const rows = await site.$relatedQuery('hrefs', trx)
+			.with('blocks', q => {
+				q.union([site.$query(trx), site.$relatedQuery('children', trx)], true);
+			})
+			.with('list', qList)
+			.join('list', 'href.url', 'list.url').orderBy('href.url');
+		const list = await Promise.all(rows.map(item => req.run('href.add', {
+			url: item.url
+		})));
 		return {
-			ignored,
-			blocks: rows.length,
-			added: list.length
+			count: list.length
 		};
 	}
 	static reinspect = {
