@@ -35,11 +35,11 @@ module.exports = class SettingsService {
 	};
 
 	async find(req, data) {
-		return req.run('block.find', {
-			type: 'settings',
+		return req.call('block.find', {
+			type: ['settings'],
 			parents: {
 				first: true,
-				type: 'user'
+				type: ['user']
 			},
 			parent: {
 				data: {

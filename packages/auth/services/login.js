@@ -155,7 +155,7 @@ module.exports = class LoginModule {
 		const { user } = req;
 		const verified = await this.#verifyToken(req, data);
 		if (!verified) throw new HttpError.BadRequest("Bad token");
-		const { item: settings } = await req.run('settings.find', {
+		const { item: settings } = await req.call('settings.find', {
 			email: data.email
 		});
 		const { grants } = user;
