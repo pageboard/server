@@ -300,7 +300,7 @@ module.exports = class ImageModule {
 			return { path };
 		}
 		const format = mime.split('/').pop();
-		if (!this.sharp.format[format]) {
+		if (!Sharpie.sharp.format[format]) {
 			console.warn("image.add cannot process", mime);
 			return { path };
 		}
