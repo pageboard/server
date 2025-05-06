@@ -247,6 +247,7 @@ module.exports = class Validation {
 			keyword: 'templates',
 			schemaType: "object"
 		});
+
 		ajv.addKeyword({
 			keyword: 'upgrade',
 			schemaType: "object"
@@ -265,6 +266,11 @@ module.exports = class Validation {
 			// list properties that should have unique values across a site
 			keyword: 'unique',
 			schemaType: "array"
+		});
+		ajv.addKeyword({
+			// allow to quickly find the schema of the group of the element
+			keyword: 'group',
+			schemaType: "string"
 		});
 		ajv.addKeyword({
 			// is this a private service

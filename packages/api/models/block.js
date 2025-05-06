@@ -96,7 +96,12 @@ class Block extends Model {
 	static elementToSchema(el) {
 		const blockProps = this.jsonSchema.properties;
 		const ElementKeywords = [
-			'$lock', 'parents', 'upgrade', 'csp', 'templates'
+			'$lock',
+			'parents',
+			'upgrade',
+			'csp',
+			'templates',
+			'group'
 		];
 		const {
 			standalone, properties, required = [], contents, name, unique
@@ -311,13 +316,6 @@ class Block extends Model {
 				const groupSchema = el.group ? DomainBlock.schema(el.group) : null;
 				const { unique: groupUnique } = groupSchema?.properties?.data ?? {};
 				if (groupUnique) {
-					if (!uniques.some(item => {
-						return item.fields.some(field => {
-							return groupUnique.includes(field);
-						});
-					})) {
-						// pass
-					}
 					uniques.push({
 						fields: groupUnique,
 						types: Array.from(site.$pkg.groups[el.group])
@@ -337,29 +335,31 @@ class Block extends Model {
 				const id = opt.old?.id ?? this.id;
 				if (id != null) q.whereNot('block.id', id);
 				const list = [];
-				for (const { fields, types } of uniques) {
-					q.orWhere(q => {
-						q.whereIn('type', types);
-						for (const field of fields) {
-							const key = `data.${field}`;
-							const val = dget(opt.old || this, key);
-							if (val == null) {
-								if (val === undefined && opt.patch) continue;
-								const parent = dget(el.properties, key.split('.').join('.properties.'));
-								if (parent?.nullable) continue;
-								throw new HttpError.BadRequest(
-									`${el.name} requires unique non-null field: ${key}`
-								);
-							} else {
-								list.push(`${field}=${val}`);
+				q.where(q => {
+					for (const { fields, types } of uniques) {
+						q.orWhere(q => {
+							q.whereIn('block.type', types);
+							for (const field of fields) {
+								const key = `data.${field}`;
+								const val = dget(opt.old || this, key);
+								if (val == null) {
+									if (val === undefined && opt.patch) continue;
+									const parent = dget(el.properties, key.split('.').join('.properties.'));
+									if (parent?.nullable) continue;
+									throw new HttpError.BadRequest(
+										`${el.name} requires unique non-null field: ${key}`
+									);
+								} else {
+									list.push(`${field}=${val}`);
+								}
+								q.whereJsonText('block.data:' + field, val);
 							}
-							q.whereJsonText('data:' + field, val);
-						}
-					});
-				}
+						});
+					}
+				});
 				const count = await q.resultSize();
 				if (count > 0) {
-					throw new HttpError.BadRequest(`${el.name} requires unique fields:\n${JSON.stringify(uniques)}`);
+					throw new HttpError.BadRequest(`${el.name} requires unique fields:\n${list.join('\n')}`);
 				}
 			}
 			async $beforeInsert(context) {
