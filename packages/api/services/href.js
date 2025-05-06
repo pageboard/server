@@ -74,7 +74,7 @@ module.exports = class HrefService {
 				if (href) {
 					const obj = await req.run('block.search', {
 						parent: {
-							type: Array.from(site.$pkg.pages),
+							type: Array.from(site.$pkg.groups.page),
 							data: {
 								url: url
 							}
@@ -321,10 +321,10 @@ module.exports = class HrefService {
 
 	async referrers(req, { ids = [], url, limit, offset }) {
 		const { site, sql: { ref, trx, fun } } = req;
-		const { hrefs, standalones, pages } = site.$pkg;
+		const { hrefs, standalones, groups } = site.$pkg;
 		const altRefs = site.$relatedQuery('children', trx).where(wq => {
 			for (const [type, list] of Object.entries(hrefs)) {
-				if (pages.has(type)) continue;
+				if (groups.page.has(type)) continue;
 				for (const desc of list) {
 					wq.orWhere(q => {
 						q.where('block.type', type);
@@ -333,7 +333,7 @@ module.exports = class HrefService {
 				}
 			}
 		});
-		const pageTypes = Array.from(pages);
+		const pageTypes = Array.from(groups.page);
 		const q = altRefs
 			.distinct('parents.id', 'parents.type')
 			.joinRelated('parents.[parents as roots]')

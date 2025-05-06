@@ -47,7 +47,7 @@ module.exports = class PageService {
 				// this must not be confused with page.lock
 				query.drafts = true;
 				if (!query.type) {
-					query.type = Array.from(site.$pkg.pages);
+					query.type = Array.from(site.$pkg.groups.page);
 				}
 			} else if (!query.type) {
 				query.type = ['page'];
@@ -92,7 +92,7 @@ module.exports = class PageService {
 				q.where(ref("block.data:prefix").castBool(), true);
 			})
 			.orderBy(fun.coalesce(ref("block.data:prefix").castBool(), false), "asc")
-			.whereIn('block.type', type ? [type] : Array.from(site.$pkg.pages));
+			.whereIn('block.type', type ? [type] : Array.from(site.$pkg.groups.page));
 	}
 
 	parse(req, { url }) {
@@ -376,7 +376,7 @@ module.exports = class PageService {
 		const { lang } = req.call('translate.lang', data);
 		const q = site.$relatedQuery('children', trx)
 			.columns({ lang, content: ['title'] })
-			.whereIn('block.type', data.type ?? Array.from(site.$pkg.pages))
+			.whereIn('block.type', data.type ?? Array.from(site.$pkg.groups.page))
 			.where('block.standalone', true);
 
 		if (!data.drafts) {
@@ -487,7 +487,7 @@ function getParents({ site, sql: { trx } }, url, lang) {
 	}
 	return site.$relatedQuery('children', trx)
 		.columns({ lang, content: ['title'] })
-		.whereIn('block.type', Array.from(site.$pkg.pages))
+		.whereIn('block.type', Array.from(site.$pkg.groups.page))
 		.whereJsonText('block.data:url', 'IN', urlParents)
 		.orderByRaw("length(block.data->>'url') DESC");
 }

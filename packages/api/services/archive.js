@@ -128,7 +128,7 @@ module.exports = class ArchiveService {
 			if (urls?.length) {
 				const urlIds = await site.$relatedQuery('children', trx)
 					.select('block.id')
-					.whereIn('block.type', Array.from(site.$pkg.pages))
+					.whereIn('block.type', Array.from(site.$pkg.groups.page))
 					.whereJsonText('block.data:url', 'IN', urls);
 				ids.push(...urlIds.map(item => item.id));
 			}

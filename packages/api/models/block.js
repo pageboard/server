@@ -284,7 +284,7 @@ class Block extends Model {
 			#pkg = {
 				bundles: new Map(),
 				standalones: Array.from(standalones),
-				pages: groups.page ?? new Set(),
+				groups,
 				textblocks: Array.from(textblocks),
 				hashtargets: Array.from(hashtargets),
 				hrefs,
@@ -395,7 +395,7 @@ class Block extends Model {
 				const { type, data } = this;
 				if (!type || !data) return;
 				const { req } = context.transaction;
-				if (!req.site.$pkg.pages.has(type)) return;
+				if (!req.site.$pkg.groups.page.has(type)) return;
 				const { url } = data;
 				if (!url) return;
 				await req.run('href.del', { url });
@@ -404,7 +404,7 @@ class Block extends Model {
 				const { type, content, data } = this;
 				if (!type || !content || !data) return;
 				const { req } = context.transaction;
-				if (!req.site.$pkg.pages.has(type)) return;
+				if (!req.site.$pkg.groups.page.has(type)) return;
 				const { url } = data;
 				if (!url) return;
 				const { title } = content;

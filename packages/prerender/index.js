@@ -64,7 +64,7 @@ module.exports = class PrerenderModule {
 				pathname, lang, ext = 'page'
 			} = ret;
 			ret.schema = null;
-			if (pathname == null || !site.$pkg.pages.has(ext)) {
+			if (pathname == null || !site.$pkg.groups.page.has(ext)) {
 				return ret;
 			}
 			if (lang && !site.data.languages?.includes(lang)) {
