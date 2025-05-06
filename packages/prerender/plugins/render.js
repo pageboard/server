@@ -34,7 +34,7 @@ module.exports = function render(page, settings, req, res) {
 			return result;
 		}, req.site.data.env == "dev");
 		if (status > 200) {
-			throw new HttpError[status < 400 ? 400 : status](statusText);
+			throw HttpError.from(status, statusText);
 		}
 	});
 };

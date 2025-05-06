@@ -243,7 +243,7 @@ module.exports = class PrerenderModule {
 		const ext = schema.name;
 		const res = await this.#callMw(ext, req);
 		if (res.statusCode != 200) {
-			throw new HttpError[res.statusCode]();
+			throw HttpError.from(res.statusCode, res.statusText);
 		}
 		if (!path) {
 			path = req.call('statics.file', {

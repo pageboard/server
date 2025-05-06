@@ -11,7 +11,7 @@ module.exports = class ProxyService {
 			url.searchParams.append(key, val);
 		}
 		const res = await fetch(data.url);
-		if (!res.ok) throw new HttpError[res.status](res.statusText);
+		if (!res.ok) throw HttpError.from(res.status, res.statusText);
 		return res.json();
 	}
 	static get = {

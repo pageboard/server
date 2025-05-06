@@ -4,7 +4,17 @@ Object.getPrototypeOf(require).lazy = function (str) {
 	return importLazy(this)(str);
 };
 // exceptional but so natural
-global.HttpError = require('http-errors');
+const HttpError = require('http-errors');
+HttpError.from = (code, msg) => {
+	if (typeof code == "number") {
+		if (code < 400 && code > 504) code = 500;
+		return new HttpError[code](msg);
+	} else {
+		return HttpError(code, msg);
+	}
+};
+global.HttpError = HttpError;
+
 global.Text = require('outdent');
 global.Log = require('./log')('pageboard');
 

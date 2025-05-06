@@ -24,7 +24,7 @@ export class BearerAgent {
 			redirect: 'follow',
 			...opts
 		});
-		if (!res.ok) throw new HttpError[res.status](res.statusText);
+		if (!res.ok) throw HttpError.from(res.status, res.statusText);
 		return res.json();
 	}
 }

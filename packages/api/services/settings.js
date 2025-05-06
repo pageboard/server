@@ -205,7 +205,7 @@ module.exports = class SettingsService {
 		// TODO custom data ?
 		const res = await req.run('settings.find', { email });
 		if (res.item) return res;
-		if (res.$status != 404) throw new HttpError[res.$status]();
+		if (res.$status != 404) throw HttpError.from(res.$status, res.$statusText);
 		const user = await req.run('user.add', { email });
 		const block = {
 			id: await req.sql.Block.genId(),

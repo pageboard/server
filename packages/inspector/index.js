@@ -47,8 +47,7 @@ module.exports = class InspectorModule {
 				return obj;
 			}
 		} catch (err) {
-			if (typeof err == 'number') throw new HttpError[err]("Inspector failure");
-			else throw err;
+			throw HttpError.from(err, "Inspector failure");
 		}
 	}
 
