@@ -302,36 +302,64 @@ class Block extends Model {
 				return copy;
 			}
 			async #uniqueProperty(context, opt = {}) {
-				const el = this.$schema();
-				const { unique } = el?.properties?.data ?? {};
-				if (!unique || !this.type) return;
+				if (!this.type) {
+					return;
+				}
 				const { req: { sql: { trx }, site } } = context.transaction;
-				const q = site.$relatedQuery('children', trx)
-					.where('block.type', this.type);
+				const el = this.$schema();
+				const uniques = [];
+				const groupSchema = el.group ? DomainBlock.schema(el.group) : null;
+				const { unique: groupUnique } = groupSchema?.properties?.data ?? {};
+				if (groupUnique) {
+					if (!uniques.some(item => {
+						return item.fields.some(field => {
+							return groupUnique.includes(field);
+						});
+					})) {
+						// pass
+					}
+					uniques.push({
+						fields: groupUnique,
+						types: Array.from(site.$pkg.groups[el.group])
+					});
+				}
+				const { unique } = el?.properties?.data ?? {};
+				if (unique) {
+					const fields = unique.filter(field => {
+						return !uniques.some(item => {
+							return item.fields.includes(field);
+						});
+					});
+					if (fields.length) uniques.push({ fields, types: [this.type] });
+				}
+				if (!uniques.length) return;
+				const q = site.$relatedQuery('children', trx);
 				const id = opt.old?.id ?? this.id;
 				if (id != null) q.whereNot('block.id', id);
-				let hasCheck = false;
 				const list = [];
-				for (const field of unique) {
-					const key = `data.${field}`;
-					const val = dget(opt.old || this, key);
-					if (val == null) {
-						if (val === undefined && opt.patch) continue;
-						const parent = dget(el.properties, key.split('.').join('.properties.'));
-						if (parent?.nullable) continue;
-						throw new HttpError.BadRequest(
-							`${el.name} requires unique non-null field: ${key}`
-						);
-					} else {
-						list.push(`${field}=${val}`);
-					}
-					hasCheck = true;
-					q.whereJsonText('data:' + field, val);
+				for (const { fields, types } of uniques) {
+					q.orWhere(q => {
+						q.whereIn('type', types);
+						for (const field of fields) {
+							const key = `data.${field}`;
+							const val = dget(opt.old || this, key);
+							if (val == null) {
+								if (val === undefined && opt.patch) continue;
+								const parent = dget(el.properties, key.split('.').join('.properties.'));
+								if (parent?.nullable) continue;
+								throw new HttpError.BadRequest(
+									`${el.name} requires unique non-null field: ${key}`
+								);
+							} else {
+								list.push(`${field}=${val}`);
+							}
+							q.whereJsonText('data:' + field, val);
+						}
+					});
 				}
-				if (!hasCheck) return;
 				const count = await q.resultSize();
 				if (count > 0) {
-					throw new HttpError.BadRequest(`${el.name} requires unique fields:\n${list.join('\n')}`);
+					throw new HttpError.BadRequest(`${el.name} requires unique fields:\n${JSON.stringify(uniques)}`);
 				}
 			}
 			async $beforeInsert(context) {
