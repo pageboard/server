@@ -14,10 +14,10 @@ module.exports = class LinksService {
 				maxAge: '1 day' // this redirection is subject to change
 			}),
 			({ site }, res) => {
-				if (!site || !site.data.favicon) {
+				if (!site?.data.favicon) {
 					res.sendStatus(204);
 				} else {
-					res.redirect(site.data.favicon + "?format=ico");
+					res.redirect(site.data.favicon + "?format=png");
 				}
 			}
 		);
