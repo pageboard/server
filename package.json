@@ -114,7 +114,7 @@
   "devDependencies": {
     "@kapouer/eslint-config": "2.1.1",
     "eslint": "^8.57.1",
-    "eslint-plugin-mocha": "^11.0.0",
+    "eslint-plugin-mocha": "^10.4.0",
     "mocha": "^11.2.2"
   }
 }
