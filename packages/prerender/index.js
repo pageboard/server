@@ -208,7 +208,7 @@ module.exports = class PrerenderModule {
 		const scripts = [];
 		const links = [];
 		for (const src of core?.scripts ?? []) {
-			scripts.push(`<script defer src="${src}" data-priority="${core.priority}"></script>`);
+			scripts.push(`<script defer src="${src}" data-bundle="core" data-priority="${core.priority}"></script>`);
 			links.push(`<${src}>;rel=preload;as=script`);
 		}
 		res.type('text/html');
