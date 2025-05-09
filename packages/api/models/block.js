@@ -99,7 +99,6 @@ class Block extends Model {
 			'$lock',
 			'parents',
 			'upgrade',
-			'csp',
 			'templates',
 			'group'
 		];
@@ -249,7 +248,6 @@ class Block extends Model {
 			oneOf: []
 		};
 		const hrefs = {};
-		// TODO merge csp for each page bundle
 
 		// rootSchema has already been merged into eltsMap
 		for (const [type, element] of Object.entries(eltsMap)) {

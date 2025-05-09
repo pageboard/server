@@ -10,6 +10,7 @@ const toSource = require.lazy('tosource');
 const { createEltProxy, MapProxy } = require('../src/proxies');
 const translateJSON = require('../src/translate');
 const Package = require('../src/package');
+const { merge } = require('../../../src/utils');
 
 /*
 Description of element properties used by installer
@@ -676,7 +677,10 @@ module.exports = class InstallService {
 		el.stylesheets = sortElements(list, 'stylesheets');
 		el.resources = { ...el.resources };
 		el.bundle = bundle;
-		return { ...el };
+		return {
+			...el,
+			csp: buildCSP(this.opts, list)
+		};
 	}
 
 	async #bundleSource(site, { prefix, assign, name, source, dry }) {
@@ -856,4 +860,34 @@ function loadFromFile(buf, elts, names, context) {
 			});
 		}
 	}
+}
+
+function buildCSP(conf, elements) {
+	const csp = {};
+	for (const el of elements) {
+		for (const [src, list] of Object.entries(el.csp || {})) {
+			const arr = csp[src] ??= [];
+			for (const item of (typeof list == "string" ? [list] : list)) {
+				const mitem = merge(item, {
+					$commons: conf.commons
+				});
+				if (!arr.includes(mitem)) arr.push(mitem);
+			}
+		}
+		if (el.scripts) for (const src of el.scripts) {
+			const origin = /(^https?:\/\/[.-\w]+)/.exec(src);
+			if (origin) {
+				const arr = csp.script ??= [];
+				if (!arr.includes(origin[0])) arr.push(origin[0]);
+			}
+		}
+		if (el.stylesheets) for (const src of el.stylesheets) {
+			const origin = /(^https?:\/\/[.-\w]+)/.exec(src);
+			if (origin) {
+				const arr = csp.style ??= [];
+				if (!arr.includes(origin[0])) arr.push(origin[0]);
+			}
+		}
+	}
+	return csp;
 }

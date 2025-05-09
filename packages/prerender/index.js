@@ -71,7 +71,7 @@ module.exports = class PrerenderModule {
 				ret.lang = null;
 				return ret;
 			}
-			ret.schema = site.$schema(ext);
+			ret.schema = site.$pkg.bundles.get(ext);
 			return ret;
 		} catch {
 			return {};
