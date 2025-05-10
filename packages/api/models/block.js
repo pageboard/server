@@ -314,6 +314,7 @@ class Block extends Model {
 			}
 			async #uniqueProperty(context, opt = {}) {
 				if (!this.type) {
+					console.warn("Missing type, skipping #uniqueProperty", this);
 					return;
 				}
 				const { req: { sql: { trx }, site } } = context.transaction;
