@@ -679,7 +679,7 @@ module.exports = class InstallService {
 		el.bundle = bundle;
 		return {
 			...el,
-			csp: buildCSP(this.opts, list)
+			csp: buildCSP(this.app.opts.commons, list)
 		};
 	}
 
@@ -862,16 +862,14 @@ function loadFromFile(buf, elts, names, context) {
 	}
 }
 
-function buildCSP(conf, elements) {
+function buildCSP(commons, elements) {
 	const csp = {};
 	for (const el of elements) {
 		for (const [src, list] of Object.entries(el.csp || {})) {
 			const arr = csp[src] ??= [];
 			for (const item of (typeof list == "string" ? [list] : list)) {
-				const mitem = merge(item, {
-					$commons: conf.commons
-				});
-				if (!arr.includes(mitem)) arr.push(mitem);
+				const mitem = merge(item, commons.csp);
+				if (mitem && !arr.includes(mitem)) arr.push(mitem);
 			}
 		}
 		if (el.scripts) for (const src of el.scripts) {
