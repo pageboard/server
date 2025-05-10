@@ -189,7 +189,7 @@ module.exports = class HrefService {
 		let result;
 		if (local && !fullUrl.pathname.startsWith('/@')) {
 			const { item } = await req.run('block.find', {
-				type: site.$pkg.standalones,
+				type: Array.from(site.$pkg.groups.page),
 				content: 'title',
 				data: {
 					url: fullUrl.pathname
