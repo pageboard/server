@@ -364,7 +364,7 @@ class Block extends Model {
 					}
 				});
 				const count = await q.resultSize();
-				if (count > 0) {
+				if (count > 0 && list > 0) {
 					throw new HttpError.BadRequest(`${el.name} requires unique fields:\n${list.join('\n')}`);
 				}
 			}
