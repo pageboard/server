@@ -372,7 +372,7 @@ function whereCond(q, key, value) {
 		return q.whereNull(refk);
 	}
 	if (Array.isArray(value)) {
-		q.where(q => {
+		if (value.length > 0) q.where(q => {
 			const byType = new Map();
 			for (const x of value) {
 				if (x == null) {
@@ -388,6 +388,7 @@ function whereCond(q, key, value) {
 				else q.orWhere(refk.castTo(getCast(type)), 'IN', Array.from(set));
 			}
 		});
+		else q.whereNull(refk);
 		return q;
 	}
 
