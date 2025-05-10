@@ -10,7 +10,6 @@ const toSource = require.lazy('tosource');
 const { createEltProxy, MapProxy } = require('../src/proxies');
 const translateJSON = require('../src/translate');
 const Package = require('../src/package');
-const { merge } = require('../../../src/utils');
 
 /*
 Description of element properties used by installer
@@ -49,7 +48,7 @@ module.exports = class InstallService {
 			const pkg = await this.#install(req, site);
 			await this.#prepare(req, site, pkg);
 			await req.call('statics.install', { site, pkg });
-			site = req.sql.Block.initSite(site, pkg);
+			site = req.sql.Block.initSite(site, pkg, this.app.opts.commons);
 			await this.#makeSchemas(site);
 			await req.call('auth.install', { site });
 			await this.#makeBundles(site, pkg);
@@ -83,7 +82,7 @@ module.exports = class InstallService {
 			const site = { id: "*", data: {} };
 			const pkg = new Package("");
 			await this.#prepare(req, site, pkg);
-			this.#site = req.sql.Block.initSite(site, pkg);
+			this.#site = req.sql.Block.initSite(site, pkg, this.app.opts.commons);
 			await this.#makeSchemas(this.#site);
 			await req.call('auth.install', { site: this.#site });
 		}
@@ -511,8 +510,8 @@ module.exports = class InstallService {
 			scripts: [servicesPath, readsPath, writesPath]
 		});
 
-		// incorporate polyfills/elements into core scripts
-		const coreExtraPaths = eltsMap.core ? await Promise.all([
+		// incorporate polyfills/elements into site scripts
+		const extraPaths = await Promise.all([
 			this.#bundleSource(site, {
 				name: 'polyfills',
 				dry: true
@@ -523,8 +522,8 @@ module.exports = class InstallService {
 				name: 'elements',
 				dry: true
 			})
-		]) : [];
-		eltsMap.core?.scripts.unshift(...coreExtraPaths);
+		]);
+		eltsMap.site.scripts.unshift(...extraPaths);
 
 		// prepare bundles output paths
 		for (const [name, list] of bundles) {
@@ -678,8 +677,7 @@ module.exports = class InstallService {
 		el.resources = { ...el.resources };
 		el.bundle = bundle;
 		return {
-			...el,
-			csp: buildCSP(this.app.opts.commons, list)
+			...el
 		};
 	}
 
@@ -860,32 +858,4 @@ function loadFromFile(buf, elts, names, context) {
 			});
 		}
 	}
-}
-
-function buildCSP(commons, elements) {
-	const csp = {};
-	for (const el of elements) {
-		for (const [src, list] of Object.entries(el.csp || {})) {
-			const arr = csp[src] ??= [];
-			for (const item of (typeof list == "string" ? [list] : list)) {
-				const mitem = merge(item, commons.csp);
-				if (mitem && !arr.includes(mitem)) arr.push(mitem);
-			}
-		}
-		if (el.scripts) for (const src of el.scripts) {
-			const origin = /(^https?:\/\/[.-\w]+)/.exec(src);
-			if (origin) {
-				const arr = csp.script ??= [];
-				if (!arr.includes(origin[0])) arr.push(origin[0]);
-			}
-		}
-		if (el.stylesheets) for (const src of el.stylesheets) {
-			const origin = /(^https?:\/\/[.-\w]+)/.exec(src);
-			if (origin) {
-				const arr = csp.style ??= [];
-				if (!arr.includes(origin[0])) arr.push(origin[0]);
-			}
-		}
-	}
-	return csp;
 }

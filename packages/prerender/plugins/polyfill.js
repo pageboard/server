@@ -4,7 +4,7 @@ module.exports = function (page) {
 			// Polyfills logic is part of the core bundle.
 			// Scripts that are *not* part of the core bundle can rely on polyfills
 			const scripts = Array.from(
-				document.head.querySelectorAll('script[src]:not([data-bundle="core"])')
+				document.head.querySelectorAll('script[src]:not([data-bundle="site"])')
 			);
 			for (const node of scripts) {
 				node.dataset.src = node.getAttribute('src');

@@ -63,17 +63,17 @@ module.exports = class PrerenderModule {
 			const {
 				pathname, lang, ext = 'page'
 			} = ret;
-			ret.schema = null;
 			if (pathname == null || !site.$pkg.groups.page.has(ext)) {
-				return ret;
+				ret.ext = null;
+			} else {
+				ret.ext = ext;
 			}
 			if (lang && !site.data.languages?.includes(lang)) {
 				ret.lang = null;
-				return ret;
 			}
-			ret.schema = site.$pkg.bundles.get(ext);
 			return ret;
-		} catch {
+		} catch(err) {
+			console.info(err);
 			return {};
 		}
 	}
@@ -83,12 +83,11 @@ module.exports = class PrerenderModule {
 
 		const {
 			pathname,
-			schema,
 			lang,
 			ext
 		} = await this.#requestedRenderingSchema(req, { url: req.path });
 
-		if (pathname == null || schema == null) {
+		if (pathname == null || ext == null) {
 			if (req.accepts(['image/*', 'json', 'html']) != 'html') {
 				next(new HttpError.NotAcceptable(req.path));
 			} else {
@@ -114,8 +113,7 @@ module.exports = class PrerenderModule {
 				for (const key in query) redUrl.searchParams.append(key, query[key]);
 				res.redirect(redUrl);
 			} else {
-				req.schema = schema;
-				this.#callMw(schema.name, req, res, next);
+				this.#callMw(ext, req, res, next);
 			}
 		}
 	}
@@ -151,8 +149,8 @@ module.exports = class PrerenderModule {
 					settings.pdf(preset ?? 'screen');
 				}
 			} else if (online) {
-				// pass to next middleware
-				cspSchemaToPhase(policies, req.schema.csp);
+				// online fully renders, so it needs site CSPs
+				Object.assign(policies, req.site.$pkg.csps);
 			}
 		});
 		return this.#pdfMw(...args);
@@ -160,10 +158,9 @@ module.exports = class PrerenderModule {
 
 	#callHtmlMw(...args) {
 		if (!this.#htmlMw) this.#htmlMw = dom().route((phase, req, res) => {
-			const { site, schema } = req;
-			const { settings, online, visible, policies } = phase;
+			const { site } = req;
+			const { settings, visible, policies } = phase;
 			if (visible) {
-				// full render
 				const { plugins } = settings;
 				plugins.add('redirect');
 				plugins.add('preloads');
@@ -171,12 +168,10 @@ module.exports = class PrerenderModule {
 				plugins.add('polyfill');
 				plugins.add('serialize');
 				settings.equivs = ["X-Upcache-Lock"];
-				if (res.req && (site.data.env == "dev" || !req.locked(['webmaster']))) {
-					// manual response does not have req
+				Object.assign(policies, site.$pkg.csps);
+				if (req.res && !req.locked(['webmaster'])) {
 					settings.enabled = false;
 				}
-			} else if (online) {
-				cspSchemaToPhase(policies, schema.csp);
 			}
 		});
 		return this.#htmlMw(...args);
@@ -186,17 +181,18 @@ module.exports = class PrerenderModule {
 		if (!this.#mailMw) this.#mailMw = dom(handler => {
 			handler.online.enabled = true;
 		}).route((phase, req, res) => {
-			const { schema } = req;
-			const { settings, online, visible, policies } = phase;
+			const { site } = req;
+			const { settings, visible, policies } = phase;
 			if (visible) {
 				const { plugins } = settings;
 				plugins.add('nopreload');
 				plugins.add('inlinestyle');
 				plugins.add('serialize');
 				settings.enabled = true;
-			} else if (online) {
-				// pass to next middleware
-				cspSchemaToPhase(policies, schema.csp);
+				Object.assign(policies, site.$pkg.csps);
+			} else {
+				// online fully renders, so it needs site CSPs
+				Object.assign(policies, site.$pkg.csps);
 			}
 		});
 		return this.#mailMw(...args);
@@ -204,11 +200,11 @@ module.exports = class PrerenderModule {
 
 	source(req, res) {
 		req.call('cache.map', "/.well-known/source");
-		const core = req.site.$pkg.bundles.get('core');
+		const siteBundle = req.site.$pkg.bundles.get('site');
 		const scripts = [];
 		const links = [];
-		for (const src of core?.scripts ?? []) {
-			scripts.push(`<script defer src="${src}" data-bundle="core" data-priority="${core.priority}"></script>`);
+		for (const src of siteBundle.scripts ?? []) {
+			scripts.push(`<script defer src="${src}" data-bundle="site" data-priority="${siteBundle.priority}"></script>`);
 			links.push(`<${src}>;rel=preload;as=script`);
 		}
 		res.type('text/html');
@@ -234,13 +230,13 @@ module.exports = class PrerenderModule {
 			throw new HttpError.BadRequest("Rendering needs a site url");
 		}
 		const {
-			schema
+			ext
 		} = await this.#requestedRenderingSchema(req, { url });
 
-		req.url = url;
-		req.schema = schema;
+		if (!ext) throw new HttpError.NotAcceptable(req.path);
 
-		const ext = schema.name;
+		req.url = url;
+
 		const res = await this.#callMw(ext, req);
 		if (res.statusCode != 200) {
 			throw HttpError.from(res.statusCode, res.statusText);
@@ -283,9 +279,3 @@ module.exports = class PrerenderModule {
 	};
 };
 
-
-function cspSchemaToPhase(policies, csp) {
-	for (const [key, list] of Object.entries(csp)) {
-		policies[key] = list.join(' ');
-	}
-}

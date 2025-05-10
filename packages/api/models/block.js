@@ -1,6 +1,6 @@
 const common = require('./common');
 const { Model } = common;
-const { dget } = require('../../../src/utils');
+const { dget, merge } = require('../../../src/utils');
 const crypto = require('node:crypto');
 
 class Block extends Model {
@@ -230,7 +230,7 @@ class Block extends Model {
 		}
 	};
 
-	static initSite(block, pkg) {
+	static initSite(block, pkg, commons) {
 		const {
 			eltsMap, groups, tag,
 			standalones, textblocks, hashtargets
@@ -248,14 +248,21 @@ class Block extends Model {
 			oneOf: []
 		};
 		const hrefs = {};
+		const csps = {};
 
 		// rootSchema has already been merged into eltsMap
 		for (const [type, element] of Object.entries(eltsMap)) {
 			const hrefsList = [];
 			findHrefs(element, hrefsList);
+			mergeCSP(csps, commons, element);
 			if (hrefsList.length) hrefs[type] = hrefsList;
 			types[type] = Block.elementToSchema(element);
 			elements.oneOf.push({ $ref: `#/definitions/${type}` });
+		}
+		for (const key of Object.keys(csps)) {
+			const list = csps[key];
+			if (list?.length) csps[key] = csps[key].join(' ');
+			else delete csps[key];
 		}
 
 		class DomainBlock extends Block {
@@ -291,6 +298,7 @@ class Block extends Model {
 				textblocks: Array.from(textblocks),
 				hashtargets: Array.from(hashtargets),
 				hrefs,
+				csps,
 				tag,
 				dir: pkg.dir,
 				migrations: {}
@@ -501,6 +509,30 @@ function findHrefs(schema, list, root) {
 			}
 		} else {
 			findHrefs(prop, list, path);
+		}
+	}
+}
+
+function mergeCSP(csp, commons, el) {
+	if (el.csp) for (const [src, list] of Object.entries(el.csp)) {
+		const arr = csp[src] ??= [];
+		for (const item of (typeof list == "string" ? [list] : list)) {
+			const mitem = merge(item, commons.csp);
+			if (mitem && !arr.includes(mitem)) arr.push(mitem);
+		}
+	}
+	if (el.scripts) for (const src of el.scripts) {
+		const origin = /(^https?:\/\/[.-\w]+)/.exec(src);
+		if (origin) {
+			const arr = csp.script ??= [];
+			if (!arr.includes(origin[0])) arr.push(origin[0]);
+		}
+	}
+	if (el.stylesheets) for (const src of el.stylesheets) {
+		const origin = /(^https?:\/\/[.-\w]+)/.exec(src);
+		if (origin) {
+			const arr = csp.style ??= [];
+			if (!arr.includes(origin[0])) arr.push(origin[0]);
 		}
 	}
 }

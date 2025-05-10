@@ -2,7 +2,20 @@ export const site = {
 	title: 'Site',
 	bundle: true,
 	standalone: true,
+	priority: -1000, // way before page group
 	$lock: {}, // needed for other elements that add properties
+	csp: {
+		default: ["'none'"],
+		'form-action': ["'self'"],
+		'frame-ancestors': ["'self'"],
+		connect: ["'self'"],
+		object: ["'none'"],
+		script: ["'self'"],
+		frame: ["https:"],
+		style: ["'self'", "'unsafe-inline'"],
+		font: ["'self'", "data:", "https:"],
+		img: ["'self'", "data:", "https:"]
+	},
 	properties: {
 		title: {
 			title: 'Site title',
