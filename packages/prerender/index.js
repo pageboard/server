@@ -56,7 +56,7 @@ module.exports = class PrerenderModule {
 		);
 	}
 
-	async #requestedRenderingSchema(req, { url }) {
+	async #checkPath(req, { url }) {
 		const { site } = req;
 		try {
 			const ret = await req.run('page.parse', { url });
@@ -85,7 +85,7 @@ module.exports = class PrerenderModule {
 			pathname,
 			lang,
 			ext
-		} = await this.#requestedRenderingSchema(req, { url: req.path });
+		} = await this.#checkPath(req, { url: req.path });
 
 		if (pathname == null || ext == null) {
 			if (req.accepts(['image/*', 'json', 'html']) != 'html') {
@@ -231,7 +231,7 @@ module.exports = class PrerenderModule {
 		}
 		const {
 			ext
-		} = await this.#requestedRenderingSchema(req, { url });
+		} = await this.#checkPath(req, { url });
 
 		if (!ext) throw new HttpError.NotAcceptable(req.path);
 
