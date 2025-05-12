@@ -523,6 +523,7 @@ module.exports = class InstallService {
 				dry: true
 			})
 		]);
+		eltsMap.site.scripts ??= [];
 		eltsMap.site.scripts.unshift(...extraPaths);
 
 		// prepare bundles output paths
