@@ -134,8 +134,11 @@ module.exports = class PrerenderModule {
 		if (!this.#pdfMw) this.#pdfMw = dom(pdf({
 			timeout: 120000,
 			plugins: ['render']
-		})).route(({ visible, online, location, settings, policies }, req) => {
+		})).route((phase, req) => {
+			const { visible, location, settings } = phase;
+			const { site } = req;
 			if (visible) {
+				phase.policies = site.$pkg.csps;
 				// render < equivs < pdf to ensure status is changed after render
 				settings.plugins.delete('equivs');
 				settings.plugins.add('equivs');
@@ -148,9 +151,6 @@ module.exports = class PrerenderModule {
 				if (preset != "browser") {
 					settings.pdf(preset ?? 'screen');
 				}
-			} else if (online) {
-				// online fully renders, so it needs site CSPs
-				Object.assign(policies, req.site.$pkg.csps);
 			}
 		});
 		return this.#pdfMw(...args);
@@ -159,7 +159,7 @@ module.exports = class PrerenderModule {
 	#callHtmlMw(...args) {
 		if (!this.#htmlMw) this.#htmlMw = dom().route((phase, req, res) => {
 			const { site } = req;
-			const { settings, visible, policies } = phase;
+			const { settings, visible } = phase;
 			if (visible) {
 				const { plugins } = settings;
 				plugins.add('redirect');
@@ -168,7 +168,7 @@ module.exports = class PrerenderModule {
 				plugins.add('polyfill');
 				plugins.add('serialize');
 				settings.equivs = ["X-Upcache-Lock"];
-				Object.assign(policies, site.$pkg.csps);
+				phase.policies = site.$pkg.csps;
 				if (req.res && !req.locked(['webmaster'])) {
 					settings.enabled = false;
 				}
@@ -182,17 +182,16 @@ module.exports = class PrerenderModule {
 			handler.online.enabled = true;
 		}).route((phase, req, res) => {
 			const { site } = req;
-			const { settings, visible, policies } = phase;
+			const { settings, online, visible } = phase;
 			if (visible) {
 				const { plugins } = settings;
 				plugins.add('nopreload');
 				plugins.add('inlinestyle');
 				plugins.add('serialize');
 				settings.enabled = true;
-				Object.assign(policies, site.$pkg.csps);
-			} else {
+			} else if (online) {
 				// online fully renders, so it needs site CSPs
-				Object.assign(policies, site.$pkg.csps);
+				phase.policies = site.$pkg.csps;
 			}
 		});
 		return this.#mailMw(...args);
