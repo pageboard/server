@@ -3,9 +3,9 @@ module.exports = class SettingsService {
 
 	apiRoutes(router) {
 		router.read("/settings/get", async req => {
-			return req.run('settings.get', {
+			return req.filter(req.run('settings.get', {
 				id: req.user.id
-			});
+			}));
 		});
 
 		router.write('/settings/save', 'settings.save');

@@ -37,7 +37,7 @@ module.exports = class PageService {
 				}));
 			}
 			obj.commons = this.opts;
-			return obj;
+			return req.filter(obj);
 		});
 		router.read('/page/search', async req => {
 			const { query, site } = req;
@@ -55,7 +55,7 @@ module.exports = class PageService {
 
 			const action = query.text != null ? 'page.search' : 'page.list';
 			const obj = await req.run(action, query);
-			return obj;
+			return req.filter(obj);
 		});
 
 		router.write('/page/write', 'page.write');

@@ -207,6 +207,9 @@ module.exports = class DomainsService {
 		req.run = (command, data) => {
 			return app.api.run(req, command, data);
 		};
+		req.filter = data => {
+			return app.api.filter(req, data);
+		};
 
 		req.types = new Set();
 

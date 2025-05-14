@@ -3,13 +3,17 @@ module.exports = class ResponseFilter {
 
 	run(req, obj) {
 		if (!obj || typeof obj != "object") return obj;
-		const { item, items } = obj;
+		const { item, items, parent } = obj;
 		if (!item && !items) {
 			return this.#recurse(req, obj);
 		}
 		if (item) {
 			obj.item = this.#recurse(req, item);
 			if (!obj.item?.type) delete obj.items;
+		}
+		if (parent) { // the structure returned by /page/find
+			obj.parent = this.#recurse(req, parent);
+			if (!obj.parent?.type) delete obj.parent;
 		}
 		if (obj.items) obj.items = obj.items
 			.map(item => this.#recurse(req, item))

@@ -110,7 +110,9 @@ module.exports = class ApiService {
 				scope
 			);
 
-		const response = method ? await req.run(method, input) : input;
+		const response = method ? req.filter(
+			await req.run(method, input)
+		) : input;
 
 		scope.$out = Object.isEmpty(action.response)
 			? response
@@ -197,7 +199,9 @@ module.exports = class ApiService {
 				scope
 			);
 
-		const response = method ? await req.run(method, input) : input;
+		const response = method ? req.filter(
+			await req.run(method, input)
+		) : input;
 
 		const out = Object.isEmpty(action.response)
 			? response

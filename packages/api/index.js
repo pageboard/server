@@ -5,8 +5,9 @@ const Validation = require('./lib/validation');
 const Href = require('./models/href');
 const Block = require('./models/block');
 
-const { mergeRecursive } = require('../../src/utils');
 const ResponseFilter = require('./lib/filter');
+
+const { mergeRecursive } = require('../../src/utils');
 
 module.exports = class ApiModule {
 	static name = 'api';
@@ -18,7 +19,6 @@ module.exports = class ApiModule {
 	].map(name => Path.join(__dirname, 'services', name));
 
 	#validation;
-	#responseFilter = new ResponseFilter();
 
 	constructor(app) {
 		this.app = app;
@@ -31,10 +31,6 @@ module.exports = class ApiModule {
 		Block.createValidator = function() {
 			return self.validation.createValidator(this);
 		};
-	}
-
-	registerFilter(service) {
-		this.#responseFilter.register(service);
 	}
 
 	get validation() {
@@ -188,11 +184,7 @@ module.exports = class ApiModule {
 			if (!hadTrx && sql.trx && !sql.trx.isCompleted()) {
 				await sql.trx.commit();
 			}
-			if (schema && !schema.$private) {
-				return this.#responseFilter.run(req, obj);
-			} else {
-				return obj;
-			}
+			return obj;
 		} catch(err) {
 			Log.api("error %s:\n%O", method, err);
 			if (!hadTrx && sql.trx && !sql.trx.isCompleted()) {
@@ -217,6 +209,16 @@ module.exports = class ApiModule {
 				}
 			}
 		}
+	}
+
+	#filter = new ResponseFilter();
+
+	register(service) {
+		this.#filter.register(service);
+	}
+
+	filter(req, obj) {
+		return this.#filter.run(req, obj);
 	}
 
 };

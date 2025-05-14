@@ -3,7 +3,10 @@ export const site = {
 	bundle: true,
 	standalone: true,
 	priority: -1000, // way before page group
-	$lock: {}, // needed for other elements that add properties
+	$lock: {
+		'data.dependencies': 'webmaster',
+		'data.versions': 'webmaster'
+	},
 	csp: {
 		default: ["'none'"],
 		'form-action': ["'self'"],

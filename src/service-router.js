@@ -13,7 +13,9 @@ module.exports = function (group, router) {
 					try {
 						if (typeof handler == "string") {
 							const apiStr = handler;
-							handler = req => req.run(apiStr, unflatten(req.query));
+							handler = async req => {
+								return req.filter(await req.run(apiStr, unflatten(req.query)));
+							};
 						}
 						const data = await handler(req);
 						this.reply(req, data);
@@ -39,7 +41,9 @@ module.exports = function (group, router) {
 					try {
 						if (typeof handler == "string") {
 							const apiStr = handler;
-							handler = req => req.run(apiStr, unflatten(req.body));
+							handler = async req => {
+								return req.filter(await req.run(apiStr, unflatten(req.body)));
+							};
 						}
 						const data = await handler(req);
 						this.reply(req, data);
