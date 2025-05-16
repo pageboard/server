@@ -290,7 +290,10 @@ module.exports = class InstallService {
 		if (!pbConf) {
 			throw new HttpError.BadRequest(`site dependency ${mod} must declare at least package.json#pageboard.version`);
 		}
-		if (!semver.satisfies(this.app.version, pbConf.version)) {
+		if (!semver.satisfies(
+			this.app.version.replace(/^0\./, '1.'),
+			pbConf.version?.replace(/^\^0\./, '^1.')
+		)) {
 			throw new HttpError.BadRequest(`Server ${this.app.version} is not compatible with module ${mod} which has support for server ${pbConf.version}`);
 		}
 		const destUrl = Path.join('/', '@file', 'site', site.data.hash, mod);
