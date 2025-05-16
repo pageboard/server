@@ -139,7 +139,6 @@ module.exports = class SettingsService {
 				}
 			});
 		}
-		return obj;
 	}
 	static grant = {
 		title: 'Grant',
@@ -179,7 +178,6 @@ module.exports = class SettingsService {
 				}
 			});
 		}
-		return obj;
 	}
 	static revoke = {
 		title: 'Revoke',
@@ -220,7 +218,6 @@ module.exports = class SettingsService {
 			});
 		delete settings.parents;
 		settings.parent = user;
-		return { item: settings };
 	}
 
 	static have = {
