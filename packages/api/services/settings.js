@@ -124,7 +124,6 @@ module.exports = class SettingsService {
 
 	async grant(req, { email, grant }) {
 		if (req.locked([grant], true)) {
-			// TODO req.user must also have a "grant" manager permission
 			throw new HttpError.Forbidden("Higher grant is needed");
 		}
 		const obj = await req.run('settings.have', { email });
@@ -142,8 +141,8 @@ module.exports = class SettingsService {
 	}
 	static grant = {
 		title: 'Grant',
-		description: 'A higher permission is needed to grant a lower permission',
 		$action: 'write',
+		$lock: ["webmaster", "permissions"],
 		required: ['email', 'grant'],
 		properties: {
 			email: {
@@ -161,7 +160,7 @@ module.exports = class SettingsService {
 	};
 
 	async revoke(req, { email, grant }) {
-		if (req.locked([grant], true)) { // TODO req.user must also have a "grant" manager permission
+		if (req.locked([grant], true)) {
 			throw new HttpError.Forbidden("Higher grant is needed");
 		}
 		const obj = await req.run('settings.find', { email });
@@ -183,6 +182,7 @@ module.exports = class SettingsService {
 		title: 'Revoke',
 		description: 'A higher permission is needed to revoke a lower permission',
 		$action: 'write',
+		$lock: ["webmaster", "permissions"],
 		required: ['email', 'grant'],
 		properties: {
 			email: {
@@ -200,7 +200,6 @@ module.exports = class SettingsService {
 	};
 
 	async have(req, { email }) {
-		// TODO custom data ?
 		const res = await req.run('settings.find', { email });
 		if (res.item) return res;
 		if (res.$status != 404) throw HttpError.from(res.$status, res.$statusText);
