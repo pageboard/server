@@ -458,7 +458,7 @@ function asPaths(obj, schemas = [], pre = "") {
 			if (wasRangeSchema == "integer") {
 				range = numericRange(val, schema);
 			} else {
-				range = dateRange(val);
+				range = dateRange(val, schema.format);
 			}
 			if (range) {
 				range.names = Object.keys(schema.properties);
@@ -474,7 +474,7 @@ function asPaths(obj, schemas = [], pre = "") {
 				if (op) {
 					dval = new Date(val);
 				} else {
-					const range = dateRange(val);
+					const range = dateRange(val, schema.format);
 					if (range) {
 						dval = range;
 					} else {
@@ -540,10 +540,10 @@ function isRangeSchema(schema) {
 	);
 }
 
-function dateRange(val) {
+function dateRange(val, format) {
 	let start, end;
 	if (typeof val == "string") {
-		const range = partialDateRange(val);
+		const range = partialDateRange(val, format);
 		if (range) [start, end] = range;
 		else return;
 	} else if (Array.isArray(val) && val.length == 2) {
@@ -567,7 +567,7 @@ function dateRange(val) {
 	};
 }
 
-function partialDateRange(val) {
+function partialDateRange(val, format) {
 	const parts = val.split(/--P|\/P|P/);
 	if (parts[0].includes('T')) return;
 	const start = new Date(parts[0]);
@@ -581,6 +581,7 @@ function partialDateRange(val) {
 		} else if (parts.length == 2) {
 			end.setMonth(end.getMonth() + 1);
 		} else if (parts.length == 3) {
+			if (format == "date") return;
 			end.setDate(end.getDate() + 1);
 		}
 	} else if (parts.length == 2) {
