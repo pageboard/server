@@ -425,7 +425,7 @@ function asPaths(obj, schemas = [], pre = "") {
 			schema = dget(parent, 'properties.' + lastKey);
 			if (schema) break;
 			if (parent?.additionalProperties && typeof parent?.additionalProperties == "object") {
-				schema = parent.additionalProperties;
+				schema = parent;
 				break;
 			}
 		}
@@ -444,7 +444,10 @@ function asPaths(obj, schemas = [], pre = "") {
 		}
 
 		let wasRangeSchema;
-		if (
+		if (schema.additionalProperties) {
+			if (!ret[parentRef]) ret[parentRef] = {};
+			ret[parentRef][lastKey] = val;
+		} else if (
 			val && (
 				typeof val == "string"
 				|| typeof val == "object"
