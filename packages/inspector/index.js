@@ -1,5 +1,6 @@
-const Inspector = require.lazy('url-inspector');
-
+const Inspector = require('url-inspector');
+// FIXME using require.lazy makes this module leaks
+// and prevents nodejs process from terminating
 module.exports = class InspectorModule {
 	static name = 'inspector';
 
