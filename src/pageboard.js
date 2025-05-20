@@ -275,9 +275,7 @@ module.exports = class Pageboard {
 			if (!res.headersSent) {
 				res.status(code);
 			}
-			setTimeout(() => {
-				res.end(err.toString());
-			}, code >= 500 ? 5000 : 0);
+			res.end(err.toString());
 		});
 		server.use('/', viewRouter);
 		await this.#start();
