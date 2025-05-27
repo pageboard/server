@@ -17,9 +17,9 @@
   },
   "homepage": "https://github.com/pageboard/server#readme",
   "dependencies": {
-    "@anthropic-ai/sdk": "^0.39.0",
-    "deepl-node": "^1.17.3",
-    "openai": "^4.89.1",
+    "@anthropic-ai/sdk": "^0.52.0",
+    "deepl-node": "^1.18.0",
+    "openai": "^4.103.0",
     "openai-chat-tokens": "^0.2.8"
   }
 }
