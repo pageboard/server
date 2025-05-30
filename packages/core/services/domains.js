@@ -57,9 +57,15 @@ module.exports = class DomainsService {
 	#idByDomain = new Map();
 	#hostById = {};
 	#siteById = {};
+	#domains;
 
 	constructor(app, opts) {
 		this.app = app;
+		this.#domains = opts ?? [];
+		if (this.#domains.length == 0) {
+			console.warn("'domains' configuration variable is empty, using default localhost.localdomain");
+			this.#domains.push('localhost.localdomain');
+		}
 
 		if (app.version != app.opts.upstream) {
 			this.#wait.resolve();
@@ -317,9 +323,9 @@ module.exports = class DomainsService {
 		const version = site.data.server || this.app.version;
 		const upstream = this.app.opts.upstreams[version];
 		const domains = [ ...castArray(site.data.domains) ];
-		const domain = domains.shift();
+		const domain = domains.shift() ?? (site.id + "." + this.#domains[0]);
 		if (domain != null) {
-			for (const secondary of [...domains, site.id]) {
+			for (const secondary of [...domains]) {
 				if (map[secondary]) {
 					console.error("Seconday domain already declared", site.id, secondary);
 				} else {
