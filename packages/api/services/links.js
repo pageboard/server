@@ -196,6 +196,7 @@ module.exports = class LinksService {
 				`);
 			}
 			await req.run('block.del', { id: item.id });
+			await req.run('href.del', { url: item.data.url });
 		}
 		for (const data of redirects) {
 			await req.run('href.change', { from: data.url, to: data.redirect });
