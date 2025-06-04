@@ -401,11 +401,13 @@ module.exports = class DomainsService {
 
 	release(req, site) {
 		const host = this.#hostById[site.id];
-		if (!host) return;
-		this.#idByDomainUpdate(req, site);
-		this.#siteById[site.id] = site;
-		host.errors = [];
-		host.release();
+		if (host) {
+			this.#idByDomainUpdate(req, site);
+			this.#siteById[site.id] = site;
+			host.errors = [];
+			host.release();
+		}
+		return site;
 	}
 
 	async get(req, id) {

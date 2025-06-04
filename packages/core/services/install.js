@@ -119,6 +119,9 @@ module.exports = class InstallService {
 		const pkgObj = await pkg.read();
 		pkg.fromSite(this.app.cwd, site);
 		pkg.perempted = pkgObj.pageboard?.hash != this.app.cache.hash;
+		if (req.site?.data?.env) {
+			pkg.rebuild = req.site?.data?.env != site.data.env;
+		}
 		if (!req.$url) {
 			pkg.linked = false;
 		}
@@ -471,7 +474,7 @@ module.exports = class InstallService {
 		// the same url are used and everything fails badly
 		const { $pkg } = site;
 		$pkg.aliases = pkg.aliases;
-		const { eltsMap, upgraded, perempted } = pkg;
+		const { eltsMap, upgraded, perempted, rebuild } = pkg;
 		const bundles = Object.entries(pkg.bundles).sort(([na], [nb]) => {
 			// bundle page group before others
 			const a = eltsMap[na];
@@ -640,7 +643,7 @@ module.exports = class InstallService {
 
 		tasks.length = 0;
 		// create bundles
-		if (upgraded) for (const [name, bundleEl] of $pkg.bundles) {
+		if (upgraded || rebuild) for (const [name, bundleEl] of $pkg.bundles) {
 			if (!bundleEl.orig) continue;
 			tasks.push(
 				this.app.statics.bundle(site, {

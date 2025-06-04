@@ -182,24 +182,23 @@ module.exports = class SiteService {
 		const sameDeps = Object.isEmpty(data.dependencies) ? true : isEqual(initial.dependencies, data.dependencies);
 		const sameEnv = data.env == initial.env;
 
-		mergeRecursiveObject(site.data, data);
-		let nsite;
+		const nsite = site.$clone();
+		mergeRecursiveObject({}, nsite.data, data);
 		if (sameDeps && sameEnv) {
-			nsite = site;
-			this.app.domains.release(req, nsite);
+			req.site = this.app.domains.release(req, nsite);
 		} else {
-			nsite = await req.call('core.build', site);
+			req.site = await req.call('core.build', nsite);
 		}
-		await nsite.$query(sql.trx).patchObject({
+
+		await req.site.$query(sql.trx).patchObject({
 			type: nsite.type,
 			data: nsite.data,
 			updated_at: nsite.updated_at
 		});
-		req.site = nsite;
 		if (languagesChanged || toMulti || toMono) {
 			await req.run('translate.initialize');
 		}
-		return nsite;
+		return req.site;
 	}
 	static save = {
 		title: 'Save',
