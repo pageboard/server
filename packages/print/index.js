@@ -237,31 +237,35 @@ module.exports = class PrintModule {
 	}
 
 	async #printerJob(req, block, opts) {
+		const list = await cups.getPrinterNames();
+		if (!list.find(name => name == this.opts.local)) {
+			throw new HttpError.NotFound("Printer not found");
+		}
 		const { url, lang, device, printer, options } = block.data;
 		const pdfUrl = req.call('page.format', {
 			url, lang, ext: 'pdf'
 		});
 		pdfUrl.searchParams.set('pdf', device);
 		if (printer) pdfUrl.searchParams.set('printer', printer);
-
-		const list = await cups.getPrinterNames();
-		if (!list.find(name => name == this.opts.local)) {
-			throw new HttpError.NotFound("Printer not found");
-		}
+		const pdfRun = req.call('statics.file', {
+			mount: 'cache',
+			name: `${block.id}.pdf`
+		});
+		block.data.response.files = [pdfRun.url];
 		req.finish(async () => req.try(
 			block,
 			async (req, block) => {
-				const { path } = await req.run('prerender.save', {
-					url: pdfUrl.pathname + pdfUrl.search
-				});
+				block.data.order.pages = await this.#publicPdf(
+					req, pdfUrl, pdfRun.path
+				);
 				try {
-					const ret = await cups.printFile(path, {
+					const ret = await cups.printFile(pdfRun.path, {
 						printer: this.opts.local,
 						printerOptions: options
 					});
 					if (ret.stdout) console.info(ret.stdout);
 				} finally {
-					await fs.unlink(path);
+					await fs.unlink(pdfRun.path);
 				}
 			},
 			opts
@@ -285,19 +289,17 @@ module.exports = class PrintModule {
 		});
 		block.data.response.files = [pdfRun.url];
 		req.finish(async () => req.try(block, async (req, block) => {
-			const res = await req.run('prerender.save', {
-				url: pdfUrl.pathname + pdfUrl.search,
-				path: pdfRun.path
-			});
-			block.data.order.pages = res.headers['x-page-count'];
+			block.data.order.pages = await this.#publicPdf(
+				req, pdfUrl.pathname + pdfUrl.search, pdfRun.path
+			);
 			const dest = Path.join(storePath, block.id + '.pdf');
 			try {
-				await fs.copyFile(res.path, dest);
+				await fs.copyFile(pdfRun.path, dest);
 			} catch (ex) {
 				console.error(ex);
 				throw new HttpError.InternalServerError(`Copy to printer failed`);
 			} finally {
-				await fs.unlink(res.path);
+				await fs.unlink(pdfRun.path);
 			}
 		}, opts));
 	}
