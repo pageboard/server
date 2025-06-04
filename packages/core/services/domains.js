@@ -202,6 +202,13 @@ module.exports = class DomainsService {
 		req.opts = app.opts;
 		req.res = res;
 		res.locals ??= {};
+		Object.defineProperty(req, 'host', {
+			configurable: true,
+			enumerable: true,
+			get() {
+				return req.headers['x-forwarded-host'] ?? req.headers.host;
+			}
+		});
 		res.accelerate = path => {
 			res.set('X-Accel-Redirect', "/@internal" + path);
 			res.end();
