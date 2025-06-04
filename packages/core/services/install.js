@@ -595,7 +595,7 @@ module.exports = class InstallService {
 
 		const tasks = [];
 
-		if (upgraded) tasks.push(
+		if (upgraded || rebuild) tasks.push(
 			this.#bundleSource(site, {
 				name: 'polyfills',
 				source: await this.app.polyfill.source(Array.from(pkg.polyfills))
@@ -603,7 +603,7 @@ module.exports = class InstallService {
 		);
 
 		// depends also on server
-		if (perempted || upgraded) tasks.push(
+		if (perempted || upgraded || rebuild) tasks.push(
 			this.#bundleSource(site, {
 				prefix: hashPrefix,
 				assign: 'schemas',
