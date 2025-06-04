@@ -89,13 +89,9 @@ module.exports = class PrerenderModule {
 
 		if (pathname == null || ext == null) {
 			if (req.accepts(['image/*', 'json', 'html']) != 'html') {
-				next(new HttpError.NotAcceptable(req.path));
+				next(new HttpError.NotAcceptable());
 			} else {
-				req.call('cache.map', "/.well-known/statics/410.html");
-				res.set('X-Accel-Redirect', "/.well-known/statics/410.html");
-				res.status(410);
-				res.removeHeader('Content-Type');
-				res.end();
+				next(new HttpError.Gone());
 			}
 		} else {
 			const { query } = req;
