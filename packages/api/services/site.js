@@ -183,7 +183,7 @@ module.exports = class SiteService {
 		const sameEnv = data.env == initial.env;
 
 		const nsite = site.$clone();
-		mergeRecursiveObject({}, nsite.data, data);
+		mergeRecursiveObject(nsite.data, data);
 		if (sameDeps && sameEnv) {
 			req.site = this.app.domains.release(req, nsite);
 		} else {
