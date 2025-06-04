@@ -50,6 +50,7 @@ module.exports = class SettingsService {
 	}
 	static find = {
 		title: 'Find',
+		$action: 'read',
 		required: ['email'],
 		properties: {
 			email: {
