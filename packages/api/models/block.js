@@ -309,7 +309,7 @@ class Block extends Model {
 			}
 			$clone(opts) {
 				const copy = super.$clone(opts);
-				Object.assign(copy.$pkg, this.$pkg);
+				Object.assign(copy.#pkg, this.#pkg);
 				return copy;
 			}
 			async #uniqueProperty(context, opt = {}) {
