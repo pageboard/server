@@ -370,7 +370,7 @@ module.exports = class DomainsService {
 		req.$url = new URL("http://a.a");
 		req.$url.protocol = req.protocol;
 		req.$url.hostname = castArray(site.data.domains)[0] || req.hostname;
-		req.$url.port = portFromHost(req.headers.host);
+		req.$url.port = portFromHost(req.host);
 		return { host, site };
 	}
 
