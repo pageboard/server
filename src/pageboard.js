@@ -20,6 +20,7 @@ global.Log = require('./log')('pageboard');
 
 const util = require('node:util');
 const Path = require('node:path');
+const { setTimeout: sleep } = require('node:timers/promises');
 const { promises: fs, readFileSync, createWriteStream } = require('node:fs');
 const xdg = require('xdg-basedir');
 const toml = require('toml');
@@ -267,7 +268,7 @@ module.exports = class Pageboard {
 		server.use('/@api', apiRouter);
 
 		const viewRouter = await this.#initPlugins("view");
-		viewRouter.use((err, req, res, next) => {
+		viewRouter.use(async (err, req, res, next) => {
 			const code = getCode(err);
 			if ((this.dev || code >= 500) && code != 404) {
 				console.error(err);
@@ -275,7 +276,8 @@ module.exports = class Pageboard {
 			if (!res.headersSent) {
 				res.status(code);
 			}
-			res.end(err.toString());
+			if (code != 404) await sleep(5000);
+			res.end();
 		});
 		server.use('/', viewRouter);
 		await this.#start();
