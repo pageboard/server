@@ -7,7 +7,7 @@ module.exports = async function (page, settings, req, res) {
 			if (text == null) console.warn("No coverage for", item);
 			else return ranges.map(range => {
 				if (range.start >= 7 && text.slice(range.start - 7, range.start) == "@media ") {
-					console.info("Dropped @media rule", text.slice(range.start - 7, range.stop));
+					console.info("Dropped @media rule", text.slice(range.start - 7, range.end));
 					return '';
 				} else {
 					return text.slice(range.start, range.end).trim();
