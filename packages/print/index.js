@@ -290,7 +290,7 @@ module.exports = class PrintModule {
 		block.data.response.files = [pdfRun.url];
 		req.finish(async () => req.try(block, async (req, block) => {
 			block.data.order.pages = await this.#publicPdf(
-				req, pdfUrl.pathname + pdfUrl.search, pdfRun.path
+				req, pdfUrl, pdfRun.path
 			);
 			const dest = Path.join(storePath, block.id + '.pdf');
 			try {
