@@ -456,7 +456,7 @@ module.exports = class PrintModule {
 			req, printProduct.pdf, file.path
 		);
 		clean.push(file.path);
-		printProduct.pdf = file.url;
+		printProduct.pdf = new URL(file.url, req.$url).href;
 
 		const { paper } = pdf.data;
 
@@ -486,7 +486,7 @@ module.exports = class PrintModule {
 				req, printProduct.cover_pdf, coverFile.path
 			);
 			clean.push(coverFile.path);
-			printProduct.cover_pdf = coverFile.url;
+			printProduct.cover_pdf = new URL(coverFile.url, req.$url).href;
 			printProduct.runlists.push({
 				tag: "cover",
 				sides: options.cover.sides,
