@@ -122,6 +122,7 @@ module.exports = class PrintModule {
 				}]
 			};
 		} else if (printer == "printer") {
+			// TODO improve using https://www.pwg.org/ipp/ippguide.html
 			const optsList = await cups.getPrinterOptions(printer);
 			item.properties = Object.fromEntries(optsList.map(po => {
 				const obj = {
