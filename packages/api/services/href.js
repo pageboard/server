@@ -410,11 +410,12 @@ module.exports = class HrefService {
 		const fromLen = from.length;
 		for (const [type, list] of Object.entries(site.$pkg.hrefs)) {
 			for (const desc of list) {
-				if (type && !desc.types.includes(limit)) {
+				if (limit && !desc.types.includes(limit)) {
 					continue;
 				}
 				if (desc.path.includes('[*]')) {
-					console.error("href.change does not support updating nested links");
+					console.info("href.change does not support nested path", desc.path);
+					continue;
 				}
 				const keyAcc = desc.path.substring(1)
 					.replace(/\.(\w+)/g, (m, label) => {
