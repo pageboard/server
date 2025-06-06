@@ -398,7 +398,7 @@ module.exports = class HrefService {
 
 	async change({
 		site, sql: { trx, ref, fun, raw, Block, Href }
-	}, { from, to }) {
+	}, { from, to, limit }) {
 		if (!from || !to || from == "/" || to == "/") {
 			// this shouldn't happen
 			throw new HttpError.BadRequest("from, to must not be empty or /");
@@ -410,8 +410,7 @@ module.exports = class HrefService {
 		const fromLen = from.length;
 		for (const [type, list] of Object.entries(site.$pkg.hrefs)) {
 			for (const desc of list) {
-				if (!desc.types.includes('link')) {
-					// only href accepting a link must be updated
+				if (type && !desc.types.includes(limit)) {
 					continue;
 				}
 				if (desc.path.includes('[*]')) {
@@ -474,6 +473,12 @@ module.exports = class HrefService {
 				title: 'To',
 				type: 'string',
 				format: 'pathname'
+			},
+			limit: {
+				title: 'Limit to type',
+				description: 'Optimization to avoid requesting all schemas',
+				type: 'string',
+				format: 'name'
 			}
 		}
 	};
