@@ -91,29 +91,25 @@ module.exports = class CacheModule {
 		}, 5000);
 	}
 
-	mw(req, res, next) {
-		try {
-			const tags = [];
-			let doSave = false;
-			let dobj = this.data;
-			if (!dobj) dobj = this.data = {};
+	mw(req, res) {
+		const tags = [];
+		let doSave = false;
+		let dobj = this.data;
+		if (!dobj) dobj = this.data = {};
 
-			if (dobj.hash === undefined) {
-				doSave = true;
-				dobj.hash = this.hash;
-			} else if (dobj.hash != this.hash) {
-				doSave = true;
-				dobj.hash = this.hash;
-				tags.push('app');
-				console.info("cache changes app tag");
-			}
-			tags.push('app-:site');
-			this.tag(...tags)(req, res);
-			if (doSave) this.#save();
-			res.sendStatus(204);
-		} catch (err) {
-			next(err);
+		if (dobj.hash === undefined) {
+			doSave = true;
+			dobj.hash = this.hash;
+		} else if (dobj.hash != this.hash) {
+			doSave = true;
+			dobj.hash = this.hash;
+			tags.push('app');
+			console.info("cache changes app tag");
 		}
+		tags.push('app-:site');
+		this.tag(...tags)(req, res);
+		if (doSave) this.#save();
+		res.sendStatus(204);
 	}
 };
 

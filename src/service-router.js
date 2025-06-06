@@ -9,19 +9,15 @@ module.exports = function (group, router) {
 			if (!Array.isArray(routes)) routes = [routes];
 			for (const route of routes) this.get(
 				route,
-				async (req, res, next) => {
-					try {
-						if (typeof handler == "string") {
-							const apiStr = handler;
-							handler = async req => {
-								return req.filter(await req.run(apiStr, unflatten(req.query)));
-							};
-						}
-						const data = await handler(req);
-						this.reply(req, data);
-					} catch (err) {
-						next(err);
+				async req => {
+					if (typeof handler == "string") {
+						const apiStr = handler;
+						handler = async req => {
+							return req.filter(await req.run(apiStr, unflatten(req.query)));
+						};
 					}
+					const data = await handler(req);
+					this.reply(req, data);
 				}
 			);
 		},
@@ -37,19 +33,15 @@ module.exports = function (group, router) {
 					}
 				}),
 				bodyParser.urlencoded({ extended: false, limit: '100kb' }),
-				async (req, res, next) => {
-					try {
-						if (typeof handler == "string") {
-							const apiStr = handler;
-							handler = async req => {
-								return req.filter(await req.run(apiStr, unflatten(req.body)));
-							};
-						}
-						const data = await handler(req);
-						this.reply(req, data);
-					} catch (err) {
-						next(err);
+				async req => {
+					if (typeof handler == "string") {
+						const apiStr = handler;
+						handler = async req => {
+							return req.filter(await req.run(apiStr, unflatten(req.body)));
+						};
 					}
+					const data = await handler(req);
+					this.reply(req, data);
 				}
 			);
 		},

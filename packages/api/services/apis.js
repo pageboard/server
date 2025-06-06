@@ -27,43 +27,42 @@ module.exports = class ApiService {
 	siteRoutes(router) {
 		router.get("/@stream/:name", async (req, res, next) => {
 			const data = req.params;
-			try {
-				const form = await req.run('apis.find', {
-					name: data.name,
-					types: ['fetch']
-				});
+			const form = await req.run('apis.find', {
+				name: data.name,
+				types: ['fetch']
+			});
 
-				const { reactions = [] } = form.data ?? {};
+			const { reactions = [] } = form.data ?? {};
 
-				if (!reactions.length) {
-					throw new HttpError.BadRequest("No reactions");
-				}
-				const wMap = this.#writers;
-				for (const writer of reactions) {
-					const readers = (
-						wMap.has(writer) ? wMap : wMap.set(writer, new Set())
-					).get(writer);
-					readers.add(res);
-				}
-				const pingInterval = setInterval(() => {
-					res.write(`data: {"type":"ping"}\n\n`);
-				}, 25000);
-				req.on('close', () => {
-					clearInterval(pingInterval);
-					for (const writer of reactions) {
-						const readers = wMap.get(writer);
-						readers?.delete(res);
-					}
-				});
-				res.writeHead(200, {
-					'Content-Type': 'text/event-stream',
-					'Connection': 'keep-alive',
-					'Cache-Control': 'no-cache',
-					'X-Accel-Buffering': 'no'
-				});
-			} catch (err) {
-				next(err);
+			if (!reactions.length) {
+				throw new HttpError.BadRequest("No reactions");
 			}
+			const wMap = this.#writers;
+			for (const writer of reactions) {
+				const readers = (
+					wMap.has(writer) ? wMap : wMap.set(writer, new Set())
+				).get(writer);
+				readers.add(res);
+			}
+			const pingInterval = setInterval(() => {
+				res.write(`data: {"type":"ping"}\n\n`);
+			}, 25000);
+			req.on('close', () => {
+				clearInterval(pingInterval);
+				for (const writer of reactions) {
+					// TODO when fetch.data.reactions is changed
+					// it must unregister its readers from each of the previous reactions
+					// reactions should be a relation between fetch/form
+					const readers = wMap.get(writer);
+					readers?.delete(res);
+				}
+			});
+			res.writeHead(200, {
+				'Content-Type': 'text/event-stream',
+				'Connection': 'keep-alive',
+				'Cache-Control': 'no-cache',
+				'X-Accel-Buffering': 'no'
+			});
 		});
 	}
 

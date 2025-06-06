@@ -83,37 +83,25 @@ module.exports = class DomainsService {
 
 	siteRoutes(router) {
 		router.use((req, res, next) => {
-			try {
-				this.extendRequest(req, res, this.app);
-				next();
-			} catch (err) {
-				next(err);
-			}
+			this.extendRequest(req, res, this.app);
+			next();
 		});
 		router.get(this.wk.proxy, async (req, res, next) => {
-			try {
-				const domains = await this.#allDomains(req);
-				this.#wait.resolve();
-				res.json(domains);
-			} catch (err) {
-				next(err);
-			}
+			const domains = await this.#allDomains(req);
+			this.#wait.resolve();
+			res.json(domains);
 		});
 		router.use(async (req, res, next) => {
-			try {
-				await this.#wait;
-				if (!this.#allDomainsCalled) {
-					await this.#allDomains(req);
-				}
-				await this.#initRecord(req.headers['x-forwarded-by']);
-				const obj = await this.#initRequest(req, res);
-				if (obj) {
-					res.json(obj);
-				} else {
-					next();
-				}
-			} catch (err) {
-				next(err);
+			await this.#wait;
+			if (!this.#allDomainsCalled) {
+				await this.#allDomains(req);
+			}
+			await this.#initRecord(req.headers['x-forwarded-by']);
+			const obj = await this.#initRequest(req, res);
+			if (obj) {
+				res.json(obj);
+			} else {
+				next();
 			}
 		});
 	}
