@@ -428,7 +428,7 @@ module.exports = class ImageModule {
 			obj.offset += limit;
 			for (const href of obj.hrefs) {
 				let urlPath = href.url;
-				if (!urlPath.startsWith('/@file/') || !req.sql.Href.isImage(href.mime)) {
+				if (!urlPath.startsWith('/@file/share/') || !req.sql.Href.isImage(href.mime)) {
 					continue;
 				}
 				let filePath = req.call('statics.path', urlPath);
@@ -528,6 +528,9 @@ module.exports = class ImageModule {
 			req.res.type(ret.mime);
 			return ret.buf;
 		}
+		// TODO return { type: 'barcode', data: { ... }, content: { <img> or buffer ? }}
+		// that API is only useful to get a QR code outside of a web page
+		// for example when getting a qr code out of a private totp uri
 	}
 	static barcode = {
 		title: 'Get Barcode',
