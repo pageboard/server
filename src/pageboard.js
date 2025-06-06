@@ -225,7 +225,7 @@ module.exports = class Pageboard {
 		server.use("/", siteRouter);
 
 		const fileRouter = await this.#initPlugins("file");
-		fileRouter.get("/*", (req, res, next) => {
+		fileRouter.get('/{*path}', (req, res, next) => {
 			next(new HttpError.NotFound(req.path));
 		});
 		fileRouter.use((err, req, res, next) => {

@@ -44,14 +44,14 @@ module.exports = class StaticsModule {
 	}
 
 	fileRoutes(router) {
-		router.get("/*", this.app.cache.tag('app-:site').for({
+		router.get('/{*path}', this.app.cache.tag('app-:site').for({
 			immutable: true,
 			maxAge: '1 year'
 		}));
 		for (const [mount, { handled }] of Object.entries(this.opts.mounts)) {
 			if (handled) continue;
 			router.get(
-				`/${mount}/*`,
+				`/${mount}/*path`,
 				(req, res, next) => {
 					const path = this.path(req, req.baseUrl + req.path);
 					if (!path) return next(new HttpError.BadRequest("Unknown path"));

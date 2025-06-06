@@ -67,7 +67,7 @@ module.exports = class ApiModule {
 
 	apiRoutes(router) {
 		const tenantsLen = Object.keys(this.app.opts.database.url).length - 1;
-		router.get("/*",
+		router.get('/{*path}',
 			this.app.cache.tag('app-:site'),
 			this.app.cache.tag('db-:tenant').for(`${tenantsLen}day`)
 		);

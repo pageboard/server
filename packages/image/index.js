@@ -114,7 +114,7 @@ module.exports = class ImageModule {
 
 	fileRoutes(router) {
 		router.get(
-			"/share/*",
+			"/share/*path",
 			this.mw,
 			this.sharpie
 		);

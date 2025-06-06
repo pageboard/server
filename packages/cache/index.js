@@ -44,10 +44,10 @@ module.exports = class CacheModule {
 		}
 		console.info("cache:", this.opts.enable ? 'enabled' : 'disabled');
 		if (!this.opts.enable) {
-			router.get('/*', this.disable());
+			router.get('/{*path}', this.disable());
 		}
 		// all routes must have a app tag
-		router.get('/*', Upcache.tag('app'));
+		router.get('/{*path}', Upcache.tag('app'));
 		router.post(this.opts.wkp, (req, res, next) => this.mw(req, res, next));
 	}
 

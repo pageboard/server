@@ -49,7 +49,7 @@ module.exports = class PrerenderModule {
 		dom.defaults.cookies.add("bearer");
 
 		router.get(
-			'/*',
+			'/{*path}',
 			async (req, res, next) => this.check(req, res, next),
 			this.app.cache.tag('app-:site'),
 			(req, res) => this.source(req, res)
