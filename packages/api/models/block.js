@@ -146,20 +146,20 @@ class Block extends Model {
 		return schema;
 	}
 
-	static genId(length) {
+	static genId() {
 		// similar function defined in pageboard-write#store.js
-		if (!length) length = 8;
 		return new Promise((resolve, reject) => {
-			crypto.randomBytes(length, (err, buffer) => {
+			crypto.randomBytes(10, (err, buffer) => {
 				if (err) reject(err);
-				else resolve(buffer.toString('hex'));
+				else resolve(
+					buffer.toString('base64').slice(0, 14)
+						.replace(/=+$/, '')
+						.replaceAll(/[/+]/g, () => {
+							return String.fromCharCode(Math.round(Math.random() * 25) + 97);
+						})
+				);
 			});
 		});
-	}
-
-	static genIdSync(length) {
-		if (!length) length = 8;
-		return crypto.randomBytes(length).toString('hex');
 	}
 
 	static QueryBuilder = class BlockQueryBuilder extends common.QueryBuilder {
