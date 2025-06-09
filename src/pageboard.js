@@ -145,9 +145,16 @@ module.exports = class Pageboard {
 		req.locks ??= [];
 		if (grant) req.user.grants.push(grant);
 		if (id) {
-			const site = req.site = await this.domains.get(req, id);
-			if (site.data.domains?.length > 0) {
-				req.$url = new URL(`https://${site.data.domains[0]}`);
+			req.site = this.domains.site(id);
+			if (!req.site) {
+				req.site = await req.run(
+					'core.build',
+					await req.run('site.get', { id })
+				);
+				this.domains.site(id, req.site);
+			}
+			if (req.site.data.domains?.length > 0) {
+				req.$url = new URL(`https://${req.site.data.domains[0]}`);
 			} else {
 				req.$url = new URL(`https://${id}.${req.opts.domain}:${req.opts.port}`);
 			}

@@ -398,12 +398,13 @@ module.exports = class DomainsService {
 		return site;
 	}
 
-	async get(req, id) {
-		const site = this.#siteById[id];
-		if (!site) return this.#siteById[id] = await req.run(
-			'core.build',
-			await req.run('site.get', { id })
-		);
+	site(id, site) {
+		if (site) {
+			this.#siteById[id] = site;
+			return site;
+		} else {
+			return this.#siteById[id];
+		}
 	}
 
 	#idByDomainUpdate(req, site) {
