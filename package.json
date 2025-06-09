@@ -39,6 +39,7 @@
     "@pageboard/inspector": "workspace:*",
     "@pageboard/mail": "workspace:*",
     "@pageboard/polyfill": "workspace:*",
+    "@pageboard/payment": "workspace:*",
     "@pageboard/prerender": "workspace:*",
     "@pageboard/print": "workspace:*",
     "@pageboard/statics": "workspace:*",
