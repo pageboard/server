@@ -78,6 +78,14 @@
     "overrides": [
       {
         "files": [
+          "*.js"
+        ],
+        "rules": {
+          "no-underscore-dangle": ["error", { "allow": ["_id", "_parent_id"] }]
+        }
+      },
+      {
+        "files": [
           "*.mjs"
         ],
         "parserOptions": {
