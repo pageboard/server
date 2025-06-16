@@ -75,6 +75,7 @@ module.exports = class Pageboard {
 			"@pageboard/image",
 			"@pageboard/inspector",
 			"@pageboard/mail",
+			"@pageboard/payment",
 			"@pageboard/polyfill",
 			"@pageboard/prerender",
 			"@pageboard/print",

@@ -11,7 +11,8 @@ export const payment = {
 		},
 		amount: {
 			title: 'Amount',
-			type: 'numeric'
+			type: 'number',
+			multipleOf: 0.01,
 		},
 		currency: {
 			title: 'Currency',

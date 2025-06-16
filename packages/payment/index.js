@@ -3,7 +3,7 @@ const currencyNames = new Intl.DisplayNames(["en"], { type: "currency" });
 
 module.exports = class PaymentModule {
 	static name = 'payment';
-	static priority = 100;
+	static priority = 10000;
 
 	constructor(app, opts) {
 		this.app = app;
@@ -33,14 +33,13 @@ module.exports = class PaymentModule {
 			}
 		};
 		const { payment } = await import('./src/payment.mjs');
-		payment.properties.currency = PaymentModule.payment.properties.currency;
+		payment.properties.currency = PaymentModule.initiate.properties.currency;
 		return { payment };
 	}
 
 	apiRoutes(router) {
-		router.read("/stripe/config", 'stripe.config');
-		router.write("/stripe/intent", 'stripe.intent');
-		router.write("/stripe/hook", 'stripe.hook');
+		router.read("/payment/config", 'payment.config');
+		router.write("/payment/hook", 'payment.hook');
 	}
 
 	#config(site) {
@@ -71,11 +70,11 @@ module.exports = class PaymentModule {
 		};
 	}
 	static config = {
-		title: 'Get config',
+		title: 'Config',
 		$action: 'read'
 	};
 
-	async intent(req, data) {
+	async initiate(req, data) {
 		const stripe = this.#stripe(req);
 		const paymentIntent = await stripe.paymentIntents.create({
 			currency: data.currency,
@@ -89,8 +88,8 @@ module.exports = class PaymentModule {
 			clientSecret: paymentIntent.client_secret
 		};
 	}
-	static intent = {
-		title: 'Get payment intent',
+	static initiate = {
+		title: 'Initiate',
 		$action: 'write',
 		required: ['amount', 'currency'],
 		properties: {
@@ -101,7 +100,8 @@ module.exports = class PaymentModule {
 			},
 			amount: {
 				title: 'Amount',
-				type: 'numeric'
+				type: 'number',
+				multipleOf: 0.01
 			},
 			currency: {
 				title: 'Currency',
@@ -138,14 +138,16 @@ module.exports = class PaymentModule {
 			// app.run doesn't correctly deal with transactions ?
 			// use req = req.sudo(site) to promote request as if it was received for site ?
 			//
-			await this.app.run('do.something', { id }, { site });
+			// await this.app.run('do.something', { id }, { site });
 			console.info('💰 Payment captured!', data);
 		}
 	}
 
 	static hook = {
-		title: 'Webhook',
-		$action: 'write'
+		title: 'Hook',
+		$action: 'write',
+		$private: true,
+		$global: true
 	};
 
 };
