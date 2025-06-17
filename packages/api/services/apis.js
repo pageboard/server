@@ -239,7 +239,7 @@ module.exports = class ApiService {
 
 	async #redirect(req, redirection, response, scope) {
 		redirection = mergeExpressions(response, redirection ?? {}, scope);
-		if (scope.$out && redirection.name) {
+		if (scope.$out && redirection?.name) {
 			const api = await req.run('apis.find', {
 				name: redirection.name,
 				types: ['api_form', 'fetch']
