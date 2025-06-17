@@ -58,7 +58,7 @@ module.exports = class MailModule {
 			},
 			nullable: true
 		};
-		return import('./lib/mail_job.mjs');
+		return import('./src/mail_job.mjs');
 	}
 
 	#mailer({ site }, purpose) {
