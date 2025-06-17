@@ -1,9 +1,10 @@
 const Stripe = require.lazy('stripe');
+const { hash } = require('../../src/utils');
 const currencyNames = new Intl.DisplayNames(["en"], { type: "currency" });
 
 module.exports = class PaymentModule {
 	static name = 'payment';
-	static priority = 10000;
+	static priority = 100;
 
 	constructor(app, opts) {
 		this.app = app;
@@ -11,9 +12,9 @@ module.exports = class PaymentModule {
 	}
 
 	async elements(elements) {
-		elements.site.$lock['data.stripe'] = 'root';
-		elements.site.properties.stripe = {
-			title: 'Stripe',
+		elements.site.$lock['data.payment'] = 'webmaster';
+		elements.site.properties.payment = {
+			title: 'Payment',
 			properties: {
 				key: {
 					title: 'Private key',
@@ -43,23 +44,25 @@ module.exports = class PaymentModule {
 	}
 
 	#config(site) {
-		const { stripe } = site.data;
-		if (!stripe) {
-			if (site.data.env != "production") return this.opts;
-			else throw new HttpError.NotImplemented("Missing configuration");
+		const { payment } = site.data;
+		if (!payment?.key || !payment?.hook || !payment?.pub) {
+			throw new HttpError.NotImplemented("Missing configuration");
 		} else {
-			return stripe;
+			return {
+				...payment,
+				hash: hash(payment.key)
+			};
 		}
 	}
 
-	#stripe({ site }) {
-		const origSite = this.app.domains.site(site.id);
+	#stripe(req) {
+		const origSite = this.app.domains.site(req.site.id);
 		let { $stripe: inst } = origSite;
-		const conf = this.#config(site);
-		// FIXME find where key is stored in inst
-		console.log(inst);
-		if (!inst || inst.key != conf.key) {
+		const conf = this.#config(origSite);
+		if (!inst || inst.$hash != conf.hash) {
 			inst = origSite.$stripe = new Stripe(conf.key);
+			inst.$hash = conf.hash;
+			inst.$hook = conf.hook;
 		}
 		return inst;
 	}
@@ -76,12 +79,22 @@ module.exports = class PaymentModule {
 
 	async initiate(req, data) {
 		const stripe = this.#stripe(req);
+		const ret = await req.run('block.find', {
+			type: 'payment',
+			data: {
+				job: data.job
+			}
+		});
+		const payment = ret.item ?? (await req.run('block.add', {
+			type: 'payment',
+			data
+		})).item;
+
 		const paymentIntent = await stripe.paymentIntents.create({
 			currency: data.currency,
 			amount: data.amount,
 			metadata: {
-				id: data.id,
-				site: req.site.id
+				id: payment.id
 			}
 		});
 		return {
@@ -91,17 +104,17 @@ module.exports = class PaymentModule {
 	static initiate = {
 		title: 'Initiate',
 		$action: 'write',
-		required: ['amount', 'currency'],
+		required: ['job', 'amount', 'currency'],
 		properties: {
-			id: {
-				title: 'Order',
+			job: {
+				title: 'Job',
 				type: 'string',
 				format: 'id'
 			},
 			amount: {
 				title: 'Amount',
-				type: 'number',
-				multipleOf: 0.01
+				type: 'integer',
+				minimum: 0
 			},
 			currency: {
 				title: 'Currency',
@@ -116,38 +129,61 @@ module.exports = class PaymentModule {
 		}
 	};
 
-	async hook(req) {
-		if (!this.opts.hook) {
-			throw new HttpError.NotImplemented("Missing configuration");
-		}
-		const event = this.#stripe(req).webhooks.constructEvent(
+	async hook(req, data) {
+		const $stripe = this.#stripe(req);
+		const event = $stripe.webhooks.constructEvent(
 			req.buffer,
 			req.get('stripe-signature'),
-			this.opts.hook
+			$stripe.$hook
 		);
-		const { type, data } = event;
-		console.log(event);
-		// TODO store payment details in a payment block
-		if (type === 'payment_intent.created') {
-			// created intent
-		} else if (type === 'payment_intent.succeeded') {
-			const { id, site } = data.metadata;
-			if (!id) throw new HttpError.BadRequest("Unknown id: " + id);
-			if (!site) throw new HttpError.BadRequest("Unknown site: " + site);
-			// FIXME
-			// app.run doesn't correctly deal with transactions ?
-			// use req = req.sudo(site) to promote request as if it was received for site ?
-			//
-			// await this.app.run('do.something', { id }, { site });
-			console.info('💰 Payment captured!', data);
+		const {
+			type,
+			data: {
+				object: {
+					metadata: {
+						id
+					} = {}
+				} = {}
+			} = {}
+		} = event;
+		if (!id) throw new HttpError.BadRequest("Missing id");
+		let status;
+		if (type == "payment_intent.created") {
+			status = 'waiting';
+		} else if (type == 'payment_intent.succeeded') {
+			status = 'paid';
+		} else if (type == 'payment_intent.canceled') {
+			status = 'canceled';
+		} else if (type == 'payment_intent.payment_failed') {
+			status = 'failed';
+		} else {
+			throw new HttpError.BadRequest("Unsupported notification type: " + type);
+		}
+		const ret = await req.run('block.save', {
+			type: 'payment',
+			id,
+			data: { status }
+		});
+		await req.sql.trx.commit();
+		if (status == "paid") {
+			return ret;
 		}
 	}
 
 	static hook = {
 		title: 'Hook',
 		$action: 'write',
-		$private: true,
-		$global: true
+		properties: {
+			type: {
+				title: 'Event',
+				type: 'string',
+				format: 'singleline'
+			},
+			data: {
+				title: 'Data',
+				type: 'object'
+			}
+		}
 	};
 
 };
