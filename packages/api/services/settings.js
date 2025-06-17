@@ -218,6 +218,7 @@ module.exports = class SettingsService {
 			});
 		delete settings.parents;
 		settings.parent = user;
+		return { item: settings };
 	}
 
 	static have = {
