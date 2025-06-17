@@ -218,7 +218,19 @@ module.exports = class SettingsService {
 			});
 		delete settings.parents;
 		settings.parent = user;
-		return { item: settings };
+		// this is done to avoid a 403
+		return {
+			item: {
+				id: settings.id,
+				type: settings.type,
+				parent: {
+					type: 'user',
+					data: {
+						email: user.data.email
+					}
+				}
+			}
+		};
 	}
 
 	static have = {
