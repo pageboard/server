@@ -159,6 +159,10 @@ module.exports = class PaymentModule {
 		} else {
 			throw new HttpError.BadRequest("Unsupported notification type: " + type);
 		}
+		const payment = await req.run('block.get', { id });
+		if (payment.data.status == "paid") {
+			return;
+		}
 		const ret = await req.run('block.save', {
 			type: 'payment',
 			id,
