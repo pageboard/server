@@ -41,8 +41,11 @@ const sharedMd = new Matchdom(
 			},
 			afterAll(ctx, val) {
 				if (ctx.expr.optional && val == null) {
-					// JSON object model - assume that we don't want undefined key/value pairs
+					// strip undefined keys or values
 					ctx.filter(val, 'fail', '*');
+				} else if (val === undefined) {
+					// drop the whole result when the merge is unsuccessful
+					ctx.filter(val, 'fail', '/');
 				}
 				return val;
 			}
