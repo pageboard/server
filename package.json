@@ -124,6 +124,6 @@
     "@kapouer/eslint-config": "2.1.1",
     "eslint": "^8.57.1",
     "eslint-plugin-mocha": "^10.5.0",
-    "mocha": "^11.5.0"
+    "mocha": "^11.6.0"
   }
 }
