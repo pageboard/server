@@ -1,6 +1,9 @@
 const OpenAI = require('openai');
 const { merge } = require('../../../src/utils');
 
+// TODO
+// https://openai.com/index/introducing-structured-outputs-in-the-api/
+
 class AiModule {
 	#inst;
 
@@ -14,6 +17,9 @@ class AiModule {
 
 	async ask(type, params, strings) {
 		const directive = merge(this.opts[type], params);
+		if (!directive) {
+			throw new HttpError.BadRequest("Empty directive");
+		}
 		const messages = this.#messages(directive, strings);
 
 		const response = await this.#inst.chat.completions.create({

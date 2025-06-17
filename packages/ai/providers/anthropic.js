@@ -14,6 +14,9 @@ class AiModule {
 
 	async ask(type, params, strings) {
 		const directive = merge(this.opts[type], params);
+		if (!directive) {
+			throw new HttpError.BadRequest("Empty directive");
+		}
 		const messages = this.#messages(directive, strings);
 		const response = await this.#inst.messages.create({
 			model: this.opts.model,
