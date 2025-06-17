@@ -46,6 +46,7 @@ const sharedMd = new Matchdom(
 				} else if (val === undefined) {
 					// drop the whole result when the merge is unsuccessful
 					ctx.filter(val, 'fail', '/');
+					val = null;
 				}
 				return val;
 			}
@@ -93,7 +94,7 @@ exports.flatten = function (obj, opts) {
 
 exports.mergeExpressions = function (data, template, scope) {
 	if (!template) return data;
-	return sharedMd.merge(template, data, structuredClone(scope)) || {};
+	return sharedMd.merge(template, data, structuredClone(scope));
 };
 
 exports.merge = function (template, data) {
