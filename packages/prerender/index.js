@@ -30,7 +30,7 @@ module.exports = class PrerenderModule {
 			timeout: 20000
 		}, this.opts);
 
-		dom.online.plugins = new Set([
+		dom.defaults.online.plugins = new Set([
 			'console',
 			'cookies',
 			'form',
@@ -38,7 +38,7 @@ module.exports = class PrerenderModule {
 			'languages'
 		]);
 
-		Object.assign(dom.plugins, {
+		Object.assign(dom.defaults.plugins, {
 			serialize: require('./plugins/serialize'),
 			polyfill: require('./plugins/polyfill'),
 			nopreload: require('./plugins/nopreload'),
@@ -46,7 +46,11 @@ module.exports = class PrerenderModule {
 			form: require('./plugins/form'),
 			render: require('./plugins/render')
 		});
-		dom.defaults.cookies.add("bearer");
+		dom.defaults.online.cookies.add("bearer");
+
+		pdf.presets.prepress.pageCount = true;
+		pdf.presets.remote = structuredClone(pdf.presets.printer);
+		pdf.presets.remote.compatibilityLevel = "1.3";
 
 		router.get(
 			'/{*path}',
@@ -125,10 +129,8 @@ module.exports = class PrerenderModule {
 	}
 
 	#callPdfMw(...args) {
-		pdf.presets.prepress.pageCount = true;
-		pdf.presets.printer.pdfa = true;
 		if (!this.#pdfMw) this.#pdfMw = dom(pdf({
-			timeout: 120000,
+			timeout: 240000,
 			plugins: ['render']
 		})).route((phase, req) => {
 			const { visible, location, settings } = phase;
