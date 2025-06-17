@@ -239,12 +239,15 @@ module.exports = class ApiService {
 
 	async #redirect(req, redirection, response, scope) {
 		redirection = mergeExpressions(response, redirection ?? {}, scope);
-		if (redirection.name) {
+		if (scope.$out && redirection.name) {
 			const api = await req.run('apis.find', {
 				name: redirection.name,
 				types: ['api_form', 'fetch']
 			});
 			if (api.type == 'api_form') {
+				if (redirection.grant && !req.user.grants.includes(redirection.grant)) {
+					req.user.grants.push(redirection.grant);
+				}
 				return req.run('apis.post', {
 					name: redirection.name,
 					query: redirection.parameters,
