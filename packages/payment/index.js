@@ -33,9 +33,7 @@ module.exports = class PaymentModule {
 				}
 			}
 		};
-		const { payment } = await import('./src/payment.mjs');
-		payment.properties.currency = PaymentModule.initiate.properties.currency;
-		return { payment };
+		return import('./src/payment.mjs');
 	}
 
 	apiRoutes(router) {

@@ -16,7 +16,10 @@ export const payment = {
 		},
 		currency: {
 			title: 'Currency',
-			type: 'string'
+			type: 'string',
+			$filter: {
+				name: 'currency'
+			}
 		},
 		status: {
 			title: 'Status',
