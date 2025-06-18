@@ -39,6 +39,8 @@ module.exports = class ApiService {
 			}
 			const wMap = this.#writers;
 			for (const writer of reactions) {
+				const ttl = Number.parseFloat(writer);
+				if (Number.isInteger(ttl)) continue;
 				const readers = (
 					wMap.has(writer) ? wMap : wMap.set(writer, new Set())
 				).get(writer);
@@ -53,6 +55,8 @@ module.exports = class ApiService {
 					// TODO when fetch.data.reactions is changed
 					// it must unregister its readers from each of the previous reactions
 					// reactions should be a relation between fetch/form
+					const ttl = Number.parseFloat(writer);
+					if (Number.isInteger(ttl)) continue;
 					const readers = wMap.get(writer);
 					readers?.delete(res);
 				}
