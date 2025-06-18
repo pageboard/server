@@ -38,9 +38,6 @@ export const payment = {
 			}, {
 				const: 'paid',
 				title: 'Paid'
-			}, {
-				const: 'used',
-				title: 'Used'
 			}],
 			default: null
 		}
