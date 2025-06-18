@@ -50,6 +50,9 @@ export const print_job = {
 			}, {
 				const: 'printer',
 				title: 'Printer'
+			}, {
+				const: 'remote',
+				title: 'Remote'
 			}]
 		},
 		response: {
