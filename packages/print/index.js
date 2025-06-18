@@ -159,7 +159,7 @@ module.exports = class PrintModule {
 		if (printer) pdfUrl.searchParams.set('printer', printer);
 		const pdfRun = req.call('statics.file', {
 			mount: 'cache',
-			name: `${block.id}-preview.pdf`
+			name: `preview-${block.id}.pdf`
 		});
 		block.data.response.files = [pdfRun.url]; // do not save this mutation
 		await this.#publicPdf(
@@ -223,7 +223,7 @@ module.exports = class PrintModule {
 		if (printer) pdfUrl.searchParams.set('printer', printer);
 		const pdfRun = req.call('statics.file', {
 			mount: 'cache',
-			name: `${block.id}.pdf`
+			name: `online-${block.id}.pdf`
 		});
 		block.data.response.files = [pdfRun.url];
 		req.finish(async () => req.try(
@@ -250,7 +250,7 @@ module.exports = class PrintModule {
 		if (printer) pdfUrl.searchParams.set('printer', printer);
 		const pdfRun = req.call('statics.file', {
 			mount: 'cache',
-			name: `${block.id}.pdf`
+			name: `printer-${block.id}.pdf`
 		});
 		block.data.response.files = [pdfRun.url];
 		req.finish(async () => req.try(
@@ -286,7 +286,7 @@ module.exports = class PrintModule {
 		if (printer) pdfUrl.searchParams.set('printer', printer);
 		const pdfRun = req.call('statics.file', {
 			mount: 'cache',
-			name: `${block.id}.pdf`
+			name: `offline-${block.id}.pdf`
 		});
 		block.data.response.files = [pdfRun.url];
 		req.finish(async () => req.try(block, async (req, block) => {
