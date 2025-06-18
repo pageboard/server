@@ -88,15 +88,21 @@ module.exports = class PaymentModule {
 			data
 		})).item;
 
+		const customer = await stripe.customers.create();
+		const ephemeralKey = await stripe.ephemeralKeys.create({ customer: customer.id });
 		const paymentIntent = await stripe.paymentIntents.create({
 			currency: data.currency,
 			amount: data.amount,
+			customer: customer.id,
 			metadata: {
 				id: payment.id
 			}
 		});
 		return {
-			clientSecret: paymentIntent.client_secret
+			paymentIntent: paymentIntent.client_secret,
+			ephemeralKey: ephemeralKey.secret,
+			customer: customer.id,
+			publishableKey: req.site.data.payment.pub
 		};
 	}
 	static initiate = {
