@@ -58,7 +58,7 @@ module.exports = class PaymentModule {
 		let { $stripe: inst } = origSite;
 		const conf = this.#config(origSite);
 		if (!inst || inst.$hash != conf.hash) {
-			inst = origSite.$stripe = new Stripe(conf.key);
+			inst = origSite.$stripe = new Stripe(conf.key, { apiVersion: '2025-05-28.basil' });
 			inst.$hash = conf.hash;
 			inst.$hook = conf.hook;
 		}
@@ -88,8 +88,15 @@ module.exports = class PaymentModule {
 			data
 		})).item;
 
+		if (payment.data.status == "paid") throw new HttpError.BadRequest("Order already paid");
+
 		const customer = await stripe.customers.create();
-		const ephemeralKey = await stripe.ephemeralKeys.create({ customer: customer.id });
+		const ephemeralKey = await stripe.ephemeralKeys.create({
+			customer: customer.id
+		}, {
+			// eslint-disable-next-line no-underscore-dangle
+			apiVersion: stripe._api.version // https://github.com/stripe/stripe-node/issues/2351
+		});
 		const paymentIntent = await stripe.paymentIntents.create({
 			currency: data.currency,
 			amount: data.amount,
@@ -104,6 +111,7 @@ module.exports = class PaymentModule {
 			customer: customer.id,
 			publishableKey: req.site.data.payment.pub
 		};
+
 	}
 	static initiate = {
 		title: 'Initiate',
