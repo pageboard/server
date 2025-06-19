@@ -136,15 +136,6 @@ module.exports = class ApiModule {
 				const { $tags = ['data-:site'] } = schema;
 				app.cache.tag(...$tags)(req, req.res, () => { });
 			}
-			if (schema.$lock != null && schema.$lock !== true) {
-				if (req.locked?.(schema.$lock)) {
-					if (req.user?.grants?.length == 0) {
-						throw new HttpError.Unauthorized(schema.$lock);
-					} else {
-						throw new HttpError.Forbidden(schema.$lock);
-					}
-				}
-			}
 
 			this.validate(req, data);
 		}

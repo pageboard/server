@@ -227,8 +227,7 @@ module.exports = class StaticsModule {
 		title: 'Migrate from /.uploads to /@file',
 		$private: true,
 		$global: false,
-		$action: 'write',
-		$lock: ['webmaster']
+		$action: 'write'
 	};
 };
 

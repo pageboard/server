@@ -2,14 +2,25 @@ const bodyParser = require.lazy('body-parser');
 
 const { unflatten } = require('./utils');
 
+function isLocked(req, locks) {
+	if (req.locked?.(locks)) {
+		if (req.user?.grants?.length == 0) {
+			throw new HttpError.Unauthorized(locks);
+		} else {
+			throw new HttpError.Forbidden(locks);
+		}
+	}
+}
+
 module.exports = function (group, router) {
 	return Object.assign(router, {
 		group,
-		read(routes, handler) {
+		read(routes, handler, locks = []) {
 			if (!Array.isArray(routes)) routes = [routes];
 			for (const route of routes) this.get(
 				route,
 				async req => {
+					isLocked(req, locks);
 					if (typeof handler == "string") {
 						const apiStr = handler;
 						handler = async req => {
@@ -22,7 +33,7 @@ module.exports = function (group, router) {
 			);
 		},
 
-		write(routes, handler) {
+		write(routes, handler, locks = []) {
 			if (!Array.isArray(routes)) routes = [routes];
 			for (const route of routes) this.post(
 				route,
@@ -34,6 +45,7 @@ module.exports = function (group, router) {
 				}),
 				bodyParser.urlencoded({ extended: false, limit: '100kb' }),
 				async req => {
+					isLocked(req, locks);
 					if (typeof handler == "string") {
 						const apiStr = handler;
 						handler = async req => {

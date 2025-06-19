@@ -16,8 +16,8 @@ module.exports = class ArchiveService {
 	}
 
 	apiRoutes(router) {
-		router.read('/archive/export', 'archive.export');
-		router.write('/archive/import', 'archive.import');
+		router.read('/archive/export', 'archive.export', ['webmaster']);
+		router.write('/archive/import', 'archive.import', ['webmaster']);
 	}
 
 	async bundle(req, data) {
@@ -70,7 +70,6 @@ module.exports = class ArchiveService {
 	static bundle = {
 		title: 'Bundle by fetch',
 		$action: 'read',
-		$lock: 'webmaster',
 		$cache: false,
 		required: ['name'],
 		properties: {
@@ -263,7 +262,6 @@ module.exports = class ArchiveService {
 	static export = {
 		title: 'Export site',
 		$action: 'read',
-		$lock: 'webmaster',
 		$cache: false,
 		properties: {
 			format: {
@@ -482,7 +480,6 @@ module.exports = class ArchiveService {
 	static import = {
 		title: 'Import site',
 		$action: 'write',
-		$lock: 'webmaster',
 		$tags: ['data-:site'],
 		required: ['file'],
 		properties: {

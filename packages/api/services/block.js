@@ -9,10 +9,10 @@ module.exports = class BlockService {
 	}
 
 	apiRoutes(router) {
-		router.read("/block/get", 'block.get');
+		router.read("/block/get", 'block.get', ['webmaster']);
 		router.read("/block/search", 'block.search');
-		router.write('/block/write', 'block.write');
-		router.write('/block/del', 'block.del');
+		router.write('/block/write', 'block.write', ['webmaster']);
+		router.write('/block/del', 'block.del', ['webmaster']);
 	}
 
 	async elements(elements) {
@@ -914,7 +914,6 @@ module.exports = class BlockService {
 		title: 'Delete',
 		description: 'Also all sub-blocks',
 		$action: 'write',
-		$lock: 'webmaster',
 		properties: {
 			id: {
 				title: 'Select by ids',
@@ -1211,7 +1210,6 @@ module.exports = class BlockService {
 		title: 'Write many',
 		$action: 'write',
 		$private: true,
-		$lock: 'webmaster',
 		$tags: ['data-:site'],
 		required: ['operations'],
 		properties: {

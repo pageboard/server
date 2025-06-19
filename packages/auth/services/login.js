@@ -224,7 +224,6 @@ module.exports = class LoginModule {
 	static link = {
 		title: 'Internal link',
 		$action: 'write',
-		$lock: 'root',
 		required: ['email', 'grant'],
 		$private: true,
 		properties: {

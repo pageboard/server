@@ -499,8 +499,7 @@ module.exports = class ImageModule {
 		title: 'Migrate site original images',
 		$private: true,
 		$global: false,
-		$action: 'write',
-		$lock: ['webmaster']
+		$action: 'write'
 	};
 
 	async barcode(req, data) {

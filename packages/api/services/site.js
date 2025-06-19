@@ -14,7 +14,7 @@ module.exports = class SiteService {
 	}
 
 	apiRoutes(router) {
-		router.write("/site/save", 'site.save');
+		router.write("/site/save", 'site.save', ['webmaster']);
 	}
 
 	#QuerySite({ sql: { trx, Block } }, data) {
@@ -254,7 +254,6 @@ module.exports = class SiteService {
 	static upgrade = {
 		title: 'Upgrade',
 		$action: 'write',
-		$lock: 'webmaster',
 		properties: {}
 	};
 

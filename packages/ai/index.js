@@ -24,7 +24,7 @@ module.exports = class AiModule {
 	}
 
 	apiRoutes(router) {
-		router.read("/ai/depict", 'ai.depict');
+		router.read("/ai/depict", 'ai.depict', ['webmaster']);
 	}
 
 	async translate(req, { strings, lang }) {
@@ -83,7 +83,6 @@ module.exports = class AiModule {
 		title: 'Depict image',
 		$action: 'read',
 		$private: true,
-		$lock: 'webmaster',
 		required: ['url'],
 		properties: {
 			url: {

@@ -58,7 +58,7 @@ module.exports = class PageService {
 			return req.filter(obj);
 		});
 
-		router.write('/page/write', 'page.write');
+		router.write('/page/write', 'page.write', ['webmaster']);
 	}
 
 	#QueryPage({ site, sql: { trx, ref, val, fun } }, { url, lang, type }) {
@@ -336,7 +336,6 @@ module.exports = class PageService {
 	static write = {
 		title: 'Write content',
 		$private: true,
-		$lock: ['webmaster'],
 		$tags: ['data-:site'],
 		$action: 'write',
 		properties: {

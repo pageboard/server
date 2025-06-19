@@ -9,9 +9,9 @@ module.exports = class HrefService {
 	}
 
 	apiRoutes(router) {
-		router.read("/href/search", 'href.search');
-		router.read("/href/find", 'href.find');
-		router.write("/href/add", 'href.add');
+		router.read("/href/search", 'href.search', ['webmaster']);
+		router.read("/href/find", 'href.find', ['user']);
+		router.write("/href/add", 'href.add', ['webmaster']);
 	}
 
 	get({ site, sql: { trx, Href } }, data) {
@@ -29,7 +29,6 @@ module.exports = class HrefService {
 	static find = {
 		title: 'Find',
 		$action: 'read',
-		$lock: 'user',
 		required: ['url'],
 		properties: {
 			url: {
@@ -124,7 +123,6 @@ module.exports = class HrefService {
 	static search = {
 		title: 'Search',
 		$action: 'read',
-		$lock: 'webmaster',
 		properties: {
 			type: {
 				type: 'array',
@@ -308,7 +306,6 @@ module.exports = class HrefService {
 		title: 'Delete',
 		$action: 'write',
 		$tags: ['data-:site'],
-		$lock: 'webmaster',
 		required: ['url'],
 		properties: {
 			url: {

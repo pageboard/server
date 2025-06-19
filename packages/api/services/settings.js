@@ -8,7 +8,7 @@ module.exports = class SettingsService {
 			}));
 		});
 
-		router.write('/settings/save', 'settings.save');
+		router.write('/settings/save', 'settings.save', ['webmaster']);
 	}
 	async get(req, { id }) {
 		return req.run('block.find', {
@@ -143,7 +143,6 @@ module.exports = class SettingsService {
 	static grant = {
 		title: 'Grant',
 		$action: 'write',
-		$lock: ["webmaster", "permissions"],
 		required: ['email', 'grant'],
 		properties: {
 			email: {
@@ -183,7 +182,6 @@ module.exports = class SettingsService {
 		title: 'Revoke',
 		description: 'A higher permission is needed to revoke a lower permission',
 		$action: 'write',
-		$lock: ["webmaster", "permissions"],
 		required: ['email', 'grant'],
 		properties: {
 			email: {
@@ -275,7 +273,6 @@ module.exports = class SettingsService {
 		title: 'Save',
 		$action: 'write',
 		required: ['id'],
-		$lock: 'webmaster',
 		$tags: ['data-:site'],
 		properties: {
 			id: {
