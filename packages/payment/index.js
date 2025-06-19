@@ -164,6 +164,9 @@ module.exports = class PaymentModule {
 			status = 'canceled';
 		} else if (type == 'payment_intent.payment_failed') {
 			status = 'failed';
+		} else if (type?.startsWith('payment_intent.')) {
+			console.info("Ignoring payment_intent notification:", type);
+			return;
 		} else {
 			throw new HttpError.BadRequest("Unsupported notification type: " + type);
 		}
