@@ -24,11 +24,6 @@ module.exports = class PaymentModule {
 					title: 'Public key',
 					type: 'string',
 					format: 'singleline'
-				},
-				hook: {
-					title: 'Hook secret',
-					type: 'string',
-					format: 'singleline'
 				}
 			}
 		};
@@ -59,7 +54,6 @@ module.exports = class PaymentModule {
 		if (!inst || inst.$hash != conf.hash) {
 			inst = origSite.$stripe = new Stripe(conf.key, { apiVersion: '2025-05-28.basil' });
 			inst.$hash = conf.hash;
-			inst.$hook = conf.hook;
 		}
 		return inst;
 	}
@@ -142,7 +136,7 @@ module.exports = class PaymentModule {
 		const event = $stripe.webhooks.constructEvent(
 			req.buffer,
 			req.get('stripe-signature'),
-			$stripe.$hook
+			data.secret
 		);
 		const {
 			type,
@@ -197,6 +191,11 @@ module.exports = class PaymentModule {
 			data: {
 				title: 'Data',
 				type: 'object'
+			},
+			secret: {
+				title: 'Hook secret',
+				type: 'string',
+				format: 'singleline'
 			}
 		}
 	};
