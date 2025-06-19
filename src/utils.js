@@ -148,7 +148,12 @@ function nestie(input, glue) {
 					tmp = tmp[key] = empty(arr[i]);
 				}
 			} else {
-				tmp[key] = input[k];
+				const v = input[k];
+				if (v != null && !Array.isArray(v) && typeof v == "object") {
+					tmp[key] = nestie(v, glue) ?? v;
+				} else {
+					tmp[key] = v;
+				}
 			}
 		}
 	}
