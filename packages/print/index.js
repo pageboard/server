@@ -371,7 +371,7 @@ module.exports = class PrintModule {
 		obj.pdf = pdf;
 		obj.file = req.call('statics.file', {
 			mount: 'cache',
-			name: `${block.id}-content.pdf`
+			name: `content-${block.id}.pdf`
 		});
 		block.data.response.files = [obj.file.url];
 		if (options.cover.url) {
@@ -386,7 +386,7 @@ module.exports = class PrintModule {
 			obj.coverPdf = coverPdf;
 			obj.coverFile = req.call('statics.file', {
 				mount: 'cache',
-				name: `${block.id}-cover.pdf`
+				name: `cover-${block.id}.pdf`
 			});
 			block.data.response.files.push(obj.coverFile.url);
 		}
