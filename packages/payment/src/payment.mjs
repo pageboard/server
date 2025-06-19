@@ -18,7 +18,8 @@ export const payment = {
 			title: 'Currency',
 			type: 'string',
 			$filter: {
-				name: 'currency'
+				name: 'intl',
+				of: 'currency'
 			}
 		},
 		status: {

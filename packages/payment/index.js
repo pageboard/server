@@ -1,6 +1,5 @@
 const Stripe = require.lazy('stripe');
 const { hash } = require('../../src/utils');
-const currencyNames = new Intl.DisplayNames(["en"], { type: "currency" });
 
 module.exports = class PaymentModule {
 	static name = 'payment';
@@ -111,7 +110,6 @@ module.exports = class PaymentModule {
 			customer: customer.id,
 			publishableKey: req.site.data.payment.pub
 		};
-
 	}
 	static initiate = {
 		title: 'Initiate',
@@ -131,12 +129,10 @@ module.exports = class PaymentModule {
 			currency: {
 				title: 'Currency',
 				type: 'string',
-				anyOf: Intl.supportedValuesOf("currency").map(str => {
-					return {
-						const: str,
-						title: currencyNames.of(str)
-					};
-				})
+				$filter: {
+					name: 'intl',
+					of: 'currency'
+				}
 			}
 		}
 	};
