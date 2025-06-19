@@ -105,11 +105,13 @@ module.exports = class ApiService {
 			$user: user
 		});
 
+		const paramsObj = unflatten(parameters);
+
 		const input = scope.$in = Object.isEmpty(action.request)
-			? mergeRecursive(body, parameters)
+			? mergeRecursive(body, paramsObj)
 			: mergeExpressions(
-				parameters,
-				mergeRecursive({}, parameters, unflatten(action.request)),
+				paramsObj,
+				mergeRecursive({}, paramsObj, unflatten(action.request)),
 				scope
 			);
 
@@ -194,11 +196,13 @@ module.exports = class ApiService {
 			$user: user
 		});
 
+		const paramsObj = unflatten(parameters);
+
 		const input = scope.$in = Object.isEmpty(action.request)
-			? mergeRecursive(query, parameters)
+			? mergeRecursive(query, paramsObj)
 			: mergeExpressions(
-				parameters,
-				mergeRecursive({}, parameters, unflatten(action.request)),
+				paramsObj,
+				mergeRecursive({}, paramsObj, unflatten(action.request)),
 				scope
 			);
 
