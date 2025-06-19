@@ -40,7 +40,7 @@ const sharedMd = new Matchdom(
 				}
 			},
 			afterAll(ctx, val) {
-				if (ctx.expr.optional && val == null) {
+				if ((ctx.expr.optional || ctx.expr.last) && val == null) {
 					// strip undefined keys or values
 					ctx.filter(val, 'fail', '*');
 				} else if (val === undefined) {
