@@ -37,7 +37,7 @@ module.exports = class PaymentModule {
 
 	#config(site) {
 		const { payment } = site.data;
-		if (!payment?.key || !payment?.hook || !payment?.pub) {
+		if (!payment?.key || !payment?.pub) {
 			throw new HttpError.NotImplemented("Missing configuration");
 		} else {
 			return {
