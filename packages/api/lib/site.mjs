@@ -7,6 +7,7 @@ export const site = {
 		'data.dependencies': 'webmaster',
 		'data.versions': 'webmaster'
 	},
+	unique: ['domains'],
 	csp: {
 		default: ["'none'"],
 		'form-action': ["'self'"],
@@ -27,8 +28,7 @@ export const site = {
 		},
 		domains: {
 			title: 'Domain names',
-			description: 'The main domain and the redirecting ones if any',
-			nullable: true,
+			description: 'Primary domain first, others will redirect to it',
 			type: "array",
 			items: {
 				type: "string",

@@ -75,7 +75,6 @@ module.exports = class DomainsService {
 	init() {
 		this.wk = {
 			cache: this.app.opts.cache.wkp,
-			git: this.app.opts.git.wkp,
 			status: "/.well-known/status",
 			proxy: "/.well-known/pageboard"
 		};
@@ -267,13 +266,10 @@ module.exports = class DomainsService {
 				env: 'dev',
 				domains: []
 			};
-		} else if (req.path !== this.wk.git) {
+		} else if (req.path) {
 			const domains = castArray(site.data.domains);
 			if (domains.length && req.hostname != domains[0] && !req.path.startsWith('/@')) {
-				Object.defineProperty(req, 'hostname', {
-					value: domains[0]
-				});
-				const { host } = this.#initHost(req);
+				const { host } = this.#initHost(req, domains[0]);
 				await host.wait();
 				req.tag('data-:site');
 				res.redirect(308, req.$url.href + req.url);
@@ -310,22 +306,29 @@ module.exports = class DomainsService {
 	#domainMapping(map, site) {
 		const version = site.data.server || this.app.version;
 		const upstream = this.app.opts.upstreams[version];
-		const domains = [ ...castArray(site.data.domains) ];
-		const domain = domains.shift() ?? (site.id + "." + this.#domains[0]);
-		if (domain != null) {
-			for (const secondary of [...domains]) {
-				if (map[secondary]) {
-					console.error("Seconday domain already declared", site.id, secondary);
-				} else {
-					map[secondary] = '=' + domain;
-				}
-			}
-			if (map[domain] == null) {
-				map[domain] = upstream;
+		const domains = [...castArray(site.data.domains)];
+		if (domains.length == 0) {
+			if (process.env.NODE_ENV != "production") {
+				domains.unshift(site.id + "." + this.#domains[0]);
+			} else {
+				// because conflicts cannot be managed here
+				console.warn("Ignoring site without domains:", site.id);
+				return map;
 			}
 		}
-		// the proxy tries the full domain first, and then the prefix
-		map[site.id] = upstream;
+		const primary = domains.shift();
+		for (const secondary of [...domains]) {
+			if (map[secondary]) {
+				console.error("Secondary domain already declared", site.id, secondary);
+			} else {
+				map[secondary] = '=' + primary;
+			}
+		}
+		if (map[primary] == null) {
+			map[primary] = upstream;
+		} else {
+			console.error("Primary domain already declared", site.id, primary);
+		}
 		return map;
 	}
 
@@ -339,11 +342,11 @@ module.exports = class DomainsService {
 		}
 	}
 
-	#initHost(req) {
+	#initHost(req, hostname = req.hostname) {
 		const origHost = ((t, h) => {
 			if (!t) return h;
 			else if (h.startsWith(`${t}-`)) return h.substring(t.length + 1);
-		})(req.res.locals.tenant, req.hostname);
+		})(req.res.locals.tenant, hostname);
 		const id = this.#idByDomain[origHost];
 		if (!id) {
 			throw new HttpError.NotFound("domain not found");
@@ -357,7 +360,7 @@ module.exports = class DomainsService {
 
 		req.$url = new URL("http://a.a");
 		req.$url.protocol = req.protocol;
-		req.$url.hostname = castArray(site.data.domains)[0] || req.hostname;
+		req.$url.hostname = castArray(site.data.domains)[0] || hostname;
 		req.$url.port = portFromHost(req.host);
 		return { host, site };
 	}
