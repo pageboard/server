@@ -421,9 +421,9 @@ module.exports = class DomainsService {
 	}
 
 	error(req, err) {
-		const host = this.#hostById[req.site.id];
+		const host = req.site?.id ? this.#hostById[req.site.id] : null;
 		if (!host) {
-			console.error("Error", req.site.id, err);
+			console.error("Error", req.site?.id, err);
 			return;
 		}
 		if (!host.errors) host.errors = [];

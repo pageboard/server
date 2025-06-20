@@ -181,7 +181,7 @@ module.exports = class ApiModule {
 			if (!hadTrx && sql.trx && !sql.trx.isCompleted()) {
 				await sql.trx.rollback();
 			}
-			if (!schema.$action && err.message?.startsWith("no database connection")) {
+			if (!schema?.$action && err.message?.startsWith("no database connection")) {
 				console.warn(method, "schema might need $action = read|write");
 			}
 			if (!err.method) err.method = method;
