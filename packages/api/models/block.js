@@ -317,7 +317,7 @@ class Block extends Model {
 					console.warn("Missing type, skipping #uniqueProperty", this);
 					return;
 				}
-				const { req: { sql: { trx }, site } } = context.transaction;
+				const { req: { sql, site } } = context.transaction;
 				const el = this.$schema();
 				const uniques = [];
 				const groupSchema = el.group ? DomainBlock.schema(el.group) : null;
@@ -338,7 +338,7 @@ class Block extends Model {
 					if (fields.length) uniques.push({ fields, types: [this.type] });
 				}
 				if (!uniques.length) return;
-				const q = site.$relatedQuery('children', trx);
+				const q = site.$relatedQuery('children', sql.trx);
 				const id = opt.old?.id ?? this.id;
 				if (id != null) q.whereNot('block.id', id);
 				const list = [];
@@ -357,9 +357,18 @@ class Block extends Model {
 										`${el.name} requires unique non-null field: ${key}`
 									);
 								} else {
-									list.push(`${field}=${val}`);
+									list.push(field);
 								}
-								q.whereJsonText('block.data:' + field, val);
+								const rcol = sql.ref('block.data:' + field);
+								if (Array.isArray(val)) {
+									q.where(q => {
+										for (const str of val) {
+											q.orWhere(rcol, '@>', sql.val(str));
+										}
+									});
+								} else {
+									q.whereJsonText('block.data:' + field, val);
+								}
 							}
 						});
 					}
