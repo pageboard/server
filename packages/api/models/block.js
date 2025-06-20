@@ -338,32 +338,43 @@ class Block extends Model {
 					if (fields.length) uniques.push({ fields, types: [this.type] });
 				}
 				if (!uniques.length) return;
-				const q = site.$relatedQuery('children', sql.trx);
+				const q = this.type == "site"
+					? site.$modelClass.query(sql.trx)
+					: site.$relatedQuery('children', sql.trx);
 				const id = opt.old?.id ?? this.id;
 				if (id != null) q.whereNot('block.id', id);
 				const list = [];
+				const conditions = [];
+				for (const { fields, types } of uniques) {
+					const cfields = [];
+					for (const field of fields) {
+						const key = `data.${field}`;
+						const val = dget(opt.old || this, key);
+						if (Array.isArray(val) && val.length == 0) continue;
+						if (val == null) {
+							if (val === undefined && opt.patch) continue;
+							const parent = dget(el.properties, key.split('.').join('.properties.'));
+							if (parent?.nullable) continue;
+							throw new HttpError.BadRequest(
+								`${el.name} requires unique non-null field: ${key}`
+							);
+						} else {
+							cfields.push({ field, val });
+							list.push(field);
+						}
+					}
+					if (cfields.length) conditions.push({ types, cfields });
+				}
 				q.where(q => {
-					for (const { fields, types } of uniques) {
+					for (const { cfields, types } of conditions) {
 						q.orWhere(q => {
 							q.whereIn('block.type', types);
-							for (const field of fields) {
-								const key = `data.${field}`;
-								const val = dget(opt.old || this, key);
-								if (val == null) {
-									if (val === undefined && opt.patch) continue;
-									const parent = dget(el.properties, key.split('.').join('.properties.'));
-									if (parent?.nullable) continue;
-									throw new HttpError.BadRequest(
-										`${el.name} requires unique non-null field: ${key}`
-									);
-								} else {
-									list.push(field);
-								}
+							for (const { field, val } of cfields) {
 								const rcol = sql.ref('block.data:' + field);
 								if (Array.isArray(val)) {
 									q.where(q => {
 										for (const str of val) {
-											q.orWhere(rcol, '@>', sql.val(str));
+											q.orWhere(rcol, '@>', sql.val(str).castJson());
 										}
 									});
 								} else {
@@ -373,9 +384,11 @@ class Block extends Model {
 						});
 					}
 				});
-				const count = await q.resultSize();
-				if (count > 0 && list > 0) {
-					throw new HttpError.BadRequest(`${el.name} requires unique fields:\n${list.join('\n')}`);
+				if (list.length > 0) {
+					const count = await q.resultSize();
+					if (count > 0) {
+						throw new HttpError.BadRequest(`${el.name} requires unique fields: ${list.join(', ')}`);
+					}
 				}
 			}
 			async $beforeInsert(context) {
