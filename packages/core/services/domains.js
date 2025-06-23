@@ -58,7 +58,7 @@ module.exports = class DomainsService {
 	#hostById = {};
 	#siteById = {};
 	#domains;
-	#hasLoggedMissingDomains = false;
+	#siteWarnings = new Map();
 
 	constructor(app, opts) {
 		this.app = app;
@@ -314,9 +314,10 @@ module.exports = class DomainsService {
 				domains.unshift(site.id + "." + this.#domains[0]);
 			} else {
 				// because conflicts cannot be managed here
-				if (!this.#hasLoggedMissingDomains) {
-					console.warn("Ignoring site without domains:", site.id);
-					this.#hasLoggedMissingDomains = true;
+				if (!this.#siteWarnings.has(site.id)) {
+					const warning = `Ignoring site without domains: ${site.id}`;
+					console.warn(warning);
+					this.#siteWarnings.set(site.id, warning);
 				}
 				return map;
 			}
