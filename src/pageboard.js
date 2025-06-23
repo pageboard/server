@@ -260,7 +260,7 @@ module.exports = class Pageboard {
 		});
 		apiRouter.use((err, req, res, next) => {
 			const code = getCode(err);
-			if (this.dev) console.error(err);
+			if (this.dev || code >= 500) console.error(err);
 			const obj = {
 				item: {
 					type: 'error',
