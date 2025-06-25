@@ -204,7 +204,7 @@ module.exports = class SettingsService {
 		if (res.$status != 404) throw HttpError.from(res.$status, res.$statusText);
 		const user = await req.run('user.add', { email });
 		const block = {
-			id: await req.sql.Block.genId(),
+			id: req.sql.Block.genId(),
 			type: 'settings',
 			parents: [user]
 		};

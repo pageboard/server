@@ -241,7 +241,7 @@ module.exports = class PrerenderModule {
 		if (!path) {
 			path = req.call('statics.file', {
 				mount: 'cache',
-				name: await Block.genId(9) + '.' + ext
+				name: Block.genId() + '.' + ext
 			}).path;
 		}
 		await fs.mkdir(Path.parse(path).dir, { recursive: true });

@@ -148,18 +148,11 @@ class Block extends Model {
 
 	static genId() {
 		// similar function defined in pageboard-write#store.js
-		return new Promise((resolve, reject) => {
-			crypto.randomBytes(10, (err, buffer) => {
-				if (err) reject(err);
-				else resolve(
-					buffer.toString('base64').slice(0, 14)
-						.replace(/=+$/, '')
-						.replaceAll(/[/+]/g, () => {
-							return String.fromCharCode(Math.round(Math.random() * 25) + 97);
-						})
-				);
+		return crypto.randomBytes(10).toString('base64').slice(0, 14)
+			.replace(/=+$/, '')
+			.replaceAll(/[/+]/g, () => {
+				return String.fromCharCode(Math.round(Math.random() * 25) + 97);
 			});
-		});
 	}
 
 	static QueryBuilder = class BlockQueryBuilder extends common.QueryBuilder {
@@ -458,7 +451,7 @@ class Block extends Model {
 	async $beforeInsert(q) {
 		await super.$beforeInsert(q);
 		if (!this.id) {
-			this.id = await Block.genId();
+			this.id = Block.genId();
 		}
 	}
 	$schema() {
