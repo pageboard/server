@@ -27,7 +27,9 @@
     "iso8601-duration": "^2.1.2",
     "json-schema-traverse": "^1.0.0",
     "ndjson": "2.0.0",
+    "nimma": "^0.7.2",
     "node-schedule": "^2.1.1",
-    "table": "^6.9.0"
+    "table": "^6.9.0",
+    "unzipper": "^0.12.3"
   }
 }

@@ -4,6 +4,8 @@ const { pipeline } = require('node:stream/promises');
 
 const ndjson = require.lazy('ndjson');
 const Archiver = require.lazy('archiver');
+const Unzipper = require.lazy('unzipper');
+const Nimma = require.lazy('nimma');
 
 const utils = require('../../../src/utils');
 const Upgrader = require('../upgrades');
@@ -141,7 +143,17 @@ module.exports = class ArchiveService {
 				name: 'export.ndjson',
 				date: site.updated_at
 			});
-			jstream.write(nsite);
+			const hrefsList = data.hrefs ? await req.run('href.collect', {
+				ids,
+				content: true
+			}) : null;
+			if (hrefsList) {
+				counts.hrefs = hrefsList.length;
+				for (const href of hrefsList) {
+					jstream.write(href);
+				}
+			}
+			if (ids.length == 0) jstream.write(nsite);
 
 			const colOpts = {
 				lang,
@@ -239,21 +251,10 @@ module.exports = class ArchiveService {
 					}
 				}
 			}
-			if (data.hrefs) {
-				const list = await req.run('href.collect', {
-					ids,
-					content: true
-				});
-				counts.hrefs = list.length;
-				for (const href of list) {
-					jstream.write(href);
-				}
-				if (data.files) {
-					await this.#archiveFiles(req, archive, list, counts, { size: null });
-				}
-			}
 			jstream.end();
-
+			if (hrefsList?.length && data.files) {
+				await this.#archiveFiles(req, archive, hrefsList, counts, { size: null });
+			}
 			return [site.id, fileStamp()].join('-');
 		});
 		counts.file = req.call('statics.url', archivePath);
@@ -312,7 +313,6 @@ module.exports = class ArchiveService {
 	};
 
 	async import(req, { file, reset, idMap, excludes }) {
-		// TODO import zip file with export.ndjson
 		const types = excludes;
 		const { sql: { trx, Block } } = req;
 		let { site } = req;
@@ -328,13 +328,18 @@ module.exports = class ArchiveService {
 		};
 		const { orphaned } = await req.run('site.gc', { days: 0 });
 		counts.orphaned = orphaned;
-		const fstream = createReadStream(Path.resolve(this.app.cwd, file))
-			.pipe(ndjson.parse());
+		const inputArchive = Path.extname(file) == ".zip" ? await Unzipper.Open.file(file) : null;
+		const fileStream = inputArchive
+			? inputArchive.files.find(d => d.path == "export.ndjson").stream()
+			: createReadStream(Path.resolve(this.app.cwd, file));
+		const ndStream = fileStream.pipe(ndjson.parse());
 
 		let upgrader;
 		const refs = new Map();
-
 		const list = [];
+		const hrefMap = new Map();
+		const { hrefs } = site.$pkg;
+
 		const beforeEachStandalone = obj => {
 			if (obj.type && types.includes(obj.type)) return;
 			if (obj.type == "site" || list.length == 0) {
@@ -349,11 +354,50 @@ module.exports = class ArchiveService {
 			return upgrader.beforeEach(obj);
 		};
 		const afterEachStandalone = async obj => {
-			if (obj.type && types.includes(obj.type)) return;
 			if (!obj.id) {
+				if (!obj.url) {
+					console.warn("Imported object has no id and no url", obj);
+					return;
+				}
+				if (hrefMap.has(obj.url)) {
+					console.warn("href is exported twice", obj.url);
+					return;
+				}
+				hrefMap.set(obj.url, obj);
 				counts.hrefs++;
 				return site.$relatedQuery('hrefs', trx).insert(obj).onConflict(['_parent_id', 'url']).ignore();
-			} else if (obj.type == "site") {
+			}
+			if (!obj.type || types.includes(obj.type)) return;
+			const files = new Map();
+			const jspQuery = {};
+			const jspCb = ({ path: hrefPath, value: hrefVal }) => {
+				if (!hrefVal) return;
+				if (hrefMap.has(hrefVal)) {
+					// can something smart be done now ?
+				}
+				if (inputArchive) {
+					// find the corresponding file in the archive
+					const pathVal = hrefVal.replace(/^\/@file\/share/, '@file');
+					const hrefFile = inputArchive.files.find(d => d.path == pathVal);
+					if (!hrefFile) {
+						console.info("archive does not contain file", pathVal);
+					} else if (!files.has(pathVal)) {
+						files.set(pathVal, { stream: hrefFile.stream(), path: hrefPath });
+					}
+				}
+			};
+			for (const { path: hrefPath } of hrefs[obj.type] ?? []) {
+				jspQuery[hrefPath] = jspCb;
+			}
+			Nimma.default.query(obj.data, jspQuery);
+			for (const [hrefPath, hrefObj] of files.entries()) {
+				const { href } = await req.call('upload.save', {
+					stream: hrefObj.stream,
+					filename: hrefPath
+				});
+				utils.dset(obj.data, hrefObj.path, href.url);
+			}
+			if (obj.type == "site") {
 				if (reset) {
 					await req.run('site.empty', { id: req.site.id });
 					const data = {};
@@ -437,16 +481,21 @@ module.exports = class ArchiveService {
 				refs.set(obj.id, row._id);
 			}
 		};
-
-		fstream.on('data', obj => {
-			list.push(beforeEachStandalone(obj));
+		const objs = [];
+		ndStream.on('data', async obj => {
+			if (typeof obj.id == "number") {
+				idMap[obj.id] = Block.genId();
+			}
+			objs.push(obj);
 		});
 
 
 		await new Promise((resolve, reject) => {
-			fstream.on('error', reject);
-			fstream.on('finish', resolve);
+			ndStream.on('error', reject);
+			ndStream.on('finish', resolve);
 		});
+
+		for (const obj of objs) list.push(beforeEachStandalone(obj));
 
 		const errors = [];
 		let error;
@@ -484,7 +533,7 @@ module.exports = class ArchiveService {
 		required: ['file'],
 		properties: {
 			file: {
-				title: 'File path',
+				title: 'Archive path',
 				type: 'string'
 			},
 			idMap: {

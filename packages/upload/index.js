@@ -52,6 +52,46 @@ module.exports = class UploadModule {
 		) && headers['content-type']?.startsWith('multipart/form-data');
 	}
 
+	async save(req, { stream, filename }) {
+		const pathObj = Path.parse(filename);
+		const ext = pathObj.ext.toLowerCase();
+		if (/^\.[a-z]{3,4}$/.test(ext) == false) {
+			// unsupported file extension format
+			stream.resume();
+			throw new HttpError.BadRequest("Unsupported file extension: " + ext);
+		}
+		const subDir = (new Date()).toISOString().split('T').shift().substring(0, 7);
+		const dir = Path.join(req.call('statics.dir', 'share'), subDir);
+		await fs.mkdir(dir, { recursive: true });
+
+		const basename = speaking(pathObj.name, {
+			truncate: 128,
+			symbols: false
+		});
+		const ranb = utils.hash(Date.now().toString());
+		const filePath = Path.join(dir, `${basename}-${ranb}${ext}`);
+		try {
+			await pipeline(
+				stream,
+				createWriteStream(filePath)
+			);
+			const image = await req.run('image.add', {
+				path: filePath,
+				mime: mime.lookup(ext)
+			}) ?? { path: filePath };
+			const url = req.call('statics.url', image.path);
+			return req.run('href.add', { url, pathname: url });
+		} catch (err) {
+			console.error(err);
+			try {
+				await fs.unlink(filePath);
+			} catch {
+				// always cleanup
+			}
+			throw err;
+		}
+	}
+
 	async parse(req, options) {
 		if (!this.#acceptable(req)) return [];
 		const bb = busboy({
@@ -61,64 +101,33 @@ module.exports = class UploadModule {
 		if (!req.body || req.body instanceof Buffer) {
 			req.body = Object.create(null);
 		}
-		const d = new Deferred();
+		const ret = Promise.withResolvers();
 		const defers = [];
-		bb.on('file', async (name, stream, { filename, encoding }) => {
-			const d = new Deferred();
-			defers.push(d);
-			const pathObj = Path.parse(filename);
-			const ext = pathObj.ext.toLowerCase();
-			if (/^\.[a-z]{3,4}$/.test(ext) == false) {
-				// unsupported file extension format
-				stream.resume();
-				d.reject(new HttpError.BadRequest("Unsupported file extension: " + ext));
-				return;
-			}
-			const subDir = (new Date()).toISOString().split('T').shift().substring(0, 7);
-			const dir = Path.join(req.call('statics.dir', 'share'), subDir);
-			await fs.mkdir(dir, { recursive: true });
 
-			const basename = speaking(pathObj.name, {
-				truncate: 128,
-				symbols: false
-			});
-			const ranb = utils.hash(Date.now().toString());
-			const filePath = Path.join(dir, `${basename}-${ranb}${ext}`);
+		bb.on('file', async (name, stream, { filename, encoding }) => {
+			const d = Promise.withResolvers();
+			defers.push(d.promise);
 			try {
-				await pipeline(
-					stream,
-					createWriteStream(filePath)
-				);
-				const image = await req.run('image.add', {
-					path: filePath,
-					mime: mime.lookup(ext)
-				}) ?? { path: filePath };
-				const url = req.call('statics.url', image.path);
-				const { href } = await req.run('href.add', { url, pathname: url });
-				this.#fill(req.body, name, url);
-				global.AllHrefs[url] = href;
+				const { href } = await this.save(req, { stream, filename });
+				this.#fill(req.body, name, href.url);
+				global.AllHrefs.set(href.url, href);
 				d.resolve(href);
 			} catch (err) {
-				console.error(err);
-				try {
-					await fs.unlink(filePath);
-				} catch {
-					// always cleanup
-				}
 				d.reject(err);
 			}
 		});
+
 		bb.on('field', (name, value) => this.#fill(req.body, name, value));
 
 		bb.on('close', async () => {
 			try {
-				d.resolve(await Promise.all(defers));
+				ret.resolve(await Promise.all(defers));
 			} catch (err) {
-				d.reject(err);
+				ret.reject(err);
 			}
 		});
 		req.pipe(bb);
-		return d;
+		return ret.promise;
 	}
 
 	static parse = {
