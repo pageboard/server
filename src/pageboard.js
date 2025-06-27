@@ -8,10 +8,8 @@ const HttpError = require('http-errors');
 HttpError.from = (code, msg) => {
 	if (typeof code == "number") {
 		if (code < 400 && code > 504) code = 500;
-		return new HttpError[code](msg);
-	} else {
-		return HttpError(code, msg);
 	}
+	return HttpError(code, msg);
 };
 global.HttpError = HttpError;
 
