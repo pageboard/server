@@ -161,11 +161,11 @@ suite('upload', function () {
 	/*
 	test('upload a fake href', async function () {
 		const filePath = '/@file/2019-01/test.txt';
-		global.AllHrefs[filePath] = {
+		global.AllHrefs.set(filePath, {
 			mime: 'text/plain', size: 100, type: 'link',
 			url: filePath,
 			pathname: filePath
-		};
+		});
 		try {
 			await app.run('upload.files', {
 				files: [filePath]

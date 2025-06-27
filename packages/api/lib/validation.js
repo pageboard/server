@@ -306,7 +306,7 @@ module.exports = class Validation {
 			},
 			validate({ size, types }, data) {
 				if (!data) return true;
-				const href = global.AllHrefs[data];
+				const href = global.AllHrefs.get(data);
 				if (href) {
 					if (size > 0 && href.meta.size > size) {
 						return false;

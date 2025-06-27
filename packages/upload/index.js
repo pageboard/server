@@ -14,7 +14,7 @@ module.exports = class UploadModule {
 	static $global = true;
 
 	constructor(app, opts) {
-		global.AllHrefs = {};
+		global.AllHrefs = new Map();
 		this.app = app;
 		this.opts = opts;
 		opts.tmp = app.dirs.tmp;
@@ -145,7 +145,7 @@ module.exports = class UploadModule {
 		// --data.files=@path.txt le @ précise qu'il faut charger le fichier
 		const hrefs = [];
 		for (const file of files) {
-			const href = global.AllHrefs[file];
+			const href = global.AllHrefs.get(file);
 			if (!href) {
 				throw new HttpError.BadRequest("Unknown file: " + file);
 			}
