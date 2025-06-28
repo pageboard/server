@@ -36,7 +36,6 @@ module.exports = class PageService {
 					url, lang, type: ext
 				}));
 			}
-			obj.commons = this.opts;
 			return req.filter(obj);
 		});
 		router.read('/page/search', async req => {
