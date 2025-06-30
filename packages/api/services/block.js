@@ -485,7 +485,10 @@ module.exports = class BlockService {
 						}, {
 							type: "string",
 							format: 'id'
-						}]
+						}],
+						$filter: {
+							name: 'relation',
+						}
 					},
 					type: {
 						title: 'Select by types',
