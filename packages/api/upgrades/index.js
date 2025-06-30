@@ -23,6 +23,12 @@ module.exports = class Upgrader {
 				if (mid != null) arr[i] = mid;
 			});
 		}
+		if (this.idMap && block.parents) {
+			block.parents.forEach((id, i, arr) => {
+				const mid = this.idMap[id];
+				if (mid != null) arr[i] = mid;
+			});
+		}
 		if (!block.type) console.error("block.type missing", block);
 		if (this.excludes?.includes(block.type)) return;
 		const schema = this.DomainBlock.schema(block.type);
