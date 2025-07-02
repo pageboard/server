@@ -8,6 +8,7 @@ module.exports = class PaymentModule {
 	constructor(app, opts) {
 		this.app = app;
 		this.opts = opts;
+		this.opts.apiVersion = '2025-05-28.basil';
 	}
 
 	async elements(elements) {
@@ -52,7 +53,9 @@ module.exports = class PaymentModule {
 		let { $stripe: inst } = origSite;
 		const conf = this.#config(origSite);
 		if (!inst || inst.$hash != conf.hash) {
-			inst = origSite.$stripe = new Stripe(conf.key, { apiVersion: '2025-05-28.basil' });
+			inst = origSite.$stripe = new Stripe(conf.key, {
+				apiVersion: this.opts.apiVersion
+			});
 			inst.$hash = conf.hash;
 		}
 		return inst;
@@ -87,8 +90,9 @@ module.exports = class PaymentModule {
 		const ephemeralKey = await stripe.ephemeralKeys.create({
 			customer: customer.id
 		}, {
-			// eslint-disable-next-line no-underscore-dangle
-			apiVersion: stripe._api.version // https://github.com/stripe/stripe-node/issues/2351
+			// We expect the client to use the same version as ours, see also
+			// https://github.com/stripe/stripe-node/issues/2351
+			apiVersion: data.apiVersion || this.opts.apiVersion
 		});
 		const paymentIntent = await stripe.paymentIntents.create({
 			currency: data.currency,
@@ -127,6 +131,12 @@ module.exports = class PaymentModule {
 					name: 'intl',
 					of: 'currency'
 				}
+			},
+			apiVersion: {
+				title: 'Client API Version',
+				type: 'string',
+				format: 'singleline',
+				nullable: true
 			}
 		}
 	};
