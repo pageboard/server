@@ -64,7 +64,11 @@ exports.dset = dset;
 
 exports.hash = str => {
 	if (Array.isArray(str)) str = str.join('');
-	return hash('sha256', str, 'base64url').replaceAll(/[_-]/g, 'x').slice(0, 8);
+	return hash('sha256', str, 'base64')
+		.replace(/=+$/, '')
+		.replaceAll(/[/+]/g, () => {
+			return String.fromCharCode(Math.round(Math.random() * 25) + 97);
+		}).slice(0, 8);
 };
 
 exports.mergeRecursive = (...args) => {
