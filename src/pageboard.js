@@ -98,8 +98,13 @@ module.exports = class Pageboard {
 			opts.config = Path.join(Pageboard.defaults.dirs.config, 'config.toml');
 		}
 
-		// TODO check schema of toml
-		const fileOpts = opts.config ? toml.parse(readFileSync(opts.config)) : {};
+		const fileOpts = {};
+		if (opts.config) try {
+			Object.assign(fileOpts, toml.parse(readFileSync(opts.config)));
+		} catch (err) {
+			console.error("Error parsing", opts.config + ":" + err.line);
+			process.exit(1);
+		}
 		opts = mergeRecursive({}, Pageboard.defaults, fileOpts, opts);
 
 		if (!opts.verbose) {
