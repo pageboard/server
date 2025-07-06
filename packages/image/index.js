@@ -168,22 +168,25 @@ module.exports = class ImageModule {
 			path: output
 		};
 
-		if (output) {
-			try {
+		try {
+			if (output) {
 				ops.push(transform.toFile(output));
 				await Promise.all(ops);
-			} catch (ex) {
-				try {
-					await fs.unlink(output);
-				} catch {
-					// pass
-				}
-				throw ex;
+			} else {
+				ops.unshift(transform.toBuffer());
+				const [buf] = await Promise.all(ops);
+				ret.buffer = buf;
 			}
-		} else {
-			ops.unshift(transform.toBuffer());
-			const [buf] = await Promise.all(ops);
-			ret.buffer = buf;
+		} catch (err) {
+			if (output) try {
+				await fs.unlink(output);
+			} catch {
+				// pass
+			}
+			if (err.message?.startsWith('Input file is missing')) {
+				err.code = 'ENOENT';
+			}
+			throw err;
 		}
 		return ret;
 	}
