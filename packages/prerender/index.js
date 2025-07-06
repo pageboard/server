@@ -32,11 +32,13 @@ module.exports = class PrerenderModule {
 
 		dom.defaults.online.plugins = new Set([
 			'console',
+			'hidden',
 			'cookies',
 			'form',
 			'equivs',
 			'languages'
 		]);
+		dom.defaults.online.log = this.app.dev;
 
 		Object.assign(dom.defaults.plugins, {
 			serialize: require('./plugins/serialize'),
@@ -49,8 +51,10 @@ module.exports = class PrerenderModule {
 		dom.defaults.online.cookies.add("bearer");
 
 		pdf.presets.prepress.pageCount = true;
+
 		pdf.presets.remote = structuredClone(pdf.presets.printer);
 		pdf.presets.remote.compatibilityLevel = "1.3";
+		pdf.presets.remote.browser = "firefox";
 
 		router.get(
 			'/{*path}',
