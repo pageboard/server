@@ -53,7 +53,7 @@ module.exports = class PrerenderModule {
 		pdf.presets.prepress.pageCount = true;
 
 		pdf.presets.remote = structuredClone(pdf.presets.printer);
-		pdf.presets.remote.compatibilityLevel = "1.3";
+		pdf.presets.remote.compatibilityLevel = "1.7";
 		pdf.presets.remote.browser = "firefox";
 
 		router.get(
