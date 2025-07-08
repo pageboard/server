@@ -52,8 +52,13 @@ module.exports = class PrerenderModule {
 
 		pdf.presets.prepress.pageCount = true;
 
+		// TODO allow parametrization of this in print api instead
 		pdf.presets.remote = structuredClone(pdf.presets.printer);
-		pdf.presets.remote.compatibilityLevel = "1.7";
+		Object.assign(pdf.presets.remote.distiller, {
+			MaxShadingBitmapSize: 4096000,
+			PassThroughJPEGImages: true,
+			SubsetFonts: false
+		});
 		pdf.presets.remote.browser = "firefox";
 
 		router.get(
