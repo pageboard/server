@@ -1,6 +1,5 @@
 const { promises: dns, setDefaultResultOrder } = require('node:dns');
 const { performance } = require('node:perf_hooks');
-const { Deferred } = require('class-deferred');
 
 
 // const localhost4 = "127.0.0.1";
@@ -19,7 +18,7 @@ const [
 class Host {
 	tenants = {};
 	#held = true;
-	#hold = new Deferred();
+	#hold = Promise.withResolvers();
 	state = INIT;
 
 	constructor(id) {
@@ -30,11 +29,11 @@ class Host {
 		this.release();
 	}
 	async wait() {
-		await this.#hold;
+		await this.#hold.promise;
 	}
 	hold() {
 		if (!this.#held) {
-			this.#hold = new Deferred();
+			this.#hold = Promise.withResolvers();
 			this.#held = true;
 		}
 	}
@@ -50,7 +49,7 @@ module.exports = class DomainsService {
 	static priority = -Infinity;
 	static name = "domains";
 
-	#wait = new Deferred();
+	#wait = Promise.withResolvers();
 	#ips = {};
 	#suffixes = [];
 	#allDomainsCalled = false;
@@ -92,7 +91,7 @@ module.exports = class DomainsService {
 			res.json(domains);
 		});
 		router.use(async (req, res, next) => {
-			await this.#wait;
+			await this.#wait.promise;
 			if (!this.#allDomainsCalled) {
 				await this.#allDomains(req);
 			}
