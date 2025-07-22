@@ -191,6 +191,7 @@ module.exports = class PrerenderModule {
 			const { site } = req;
 			const { settings, online, visible } = phase;
 			if (visible) {
+				settings.hidden = false;
 				const { plugins } = settings;
 				plugins.add('nopreload');
 				plugins.add('inlinestyle');
