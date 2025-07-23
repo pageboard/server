@@ -500,6 +500,7 @@ module.exports = class ImageModule {
 	}
 	static migrate = {
 		title: 'Migrate site original images',
+		description: 'Must be run after statics.migrate',
 		$private: true,
 		$global: false,
 		$action: 'write'

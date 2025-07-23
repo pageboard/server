@@ -227,6 +227,7 @@ module.exports = class StaticsModule {
 	}
 	static migrate = {
 		title: 'Migrate from /.uploads to /@file',
+		description: 'Must be run before image.migrate',
 		$private: true,
 		$global: false,
 		$action: 'write'
