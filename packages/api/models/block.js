@@ -332,7 +332,7 @@ class Block extends Model {
 				}
 				if (!uniques.length) return;
 				const q = this.type == "site"
-					? site.$modelClass.query(sql.trx)
+					? this.$modelClass.query(sql.trx)
 					: site.$relatedQuery('children', sql.trx);
 				const id = opt.old?.id ?? this.id;
 				if (id != null) q.whereNot('block.id', id);
