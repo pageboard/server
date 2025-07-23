@@ -53,7 +53,7 @@ module.exports = class StaticsModule {
 			router.get(
 				`/${mount}/*path`,
 				(req, res, next) => {
-					const path = this.path(req, req.baseUrl + req.path);
+					const path = this.path(req, { url: req.baseUrl + req.path });
 					if (!path) return next(new HttpError.BadRequest("Unknown path"));
 					res.accelerate(path);
 				}
@@ -61,11 +61,11 @@ module.exports = class StaticsModule {
 		}
 	}
 
-	path(req, url) {
+	path(req, { url, remount }) {
 		const prefix = `/@file/`;
 		if (url.startsWith(prefix)) {
 			const list = url.substring(prefix.length).split('/');
-			const { dir, owned } = this.opts.mounts[list[0]] ?? {};
+			const { dir, owned } = this.opts.mounts[remount ?? list[0]] ?? {};
 			if (dir) {
 				if (owned) list.splice(1, 0, req.site.id);
 				return Path.join(dir, ...list);
@@ -162,7 +162,7 @@ module.exports = class StaticsModule {
 			} else if (/^https?:\/\//.test(url)) {
 				inList.push(url);
 			} else if (url.startsWith('/@file/site/')) {
-				inList.push(this.app.statics.path({ site }, url));
+				inList.push(this.app.statics.path({ site }, { url }));
 			} else {
 				console.error("file not in project", url);
 			}
@@ -196,7 +196,9 @@ module.exports = class StaticsModule {
 		await fs.mkdir(siteDir, { recursive: true });
 		if (pkg.directories) for (const mount of pkg.directories) {
 			try {
-				await mountDirectory(siteDir, mount.from, this.path({ site }, mount.to));
+				await mountDirectory(siteDir, mount.from, this.path(
+					{ site }, { url: mount.to }
+				));
 			} catch (err) {
 				console.error("Cannot mount", mount.from, mount.to, err);
 			}

@@ -695,7 +695,7 @@ module.exports = class HrefService {
 					continue;
 				}
 				list.push(item.url);
-				const filePath = req.call('statics.path', item.url);
+				const filePath = req.call('statics.path', { url: item.url });
 				if (filePath) await fs.unlink(filePath);
 				const { count } = await req.run('href.del', { url: item.url });
 				if (count != 1) {

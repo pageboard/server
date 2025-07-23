@@ -88,7 +88,7 @@ module.exports = class ImageModule {
 		const extname = Path.extname(req.path);
 		if (!extname || /png|jpe?g|gif|webp|tiff|svg/.test(extname.substring(1)) == false) {
 			// try catch
-			const path = req.call('statics.path', req.path);
+			const path = req.call('statics.path', { url: req.baseUrl + req.path });
 			if (!path) next(new HttpError.BadRequest("Unknown path"));
 			else res.accelerate(path);
 		} else {
@@ -344,7 +344,7 @@ module.exports = class ImageModule {
 	}
 
 	async get(req, { url, size }) {
-		let srcPath = req.call('statics.path', url);
+		let srcPath = req.call('statics.path', { url });
 		if (!srcPath) return;
 		const srcParts = Path.parse(srcPath);
 		srcParts.base = null;
@@ -353,7 +353,7 @@ module.exports = class ImageModule {
 		srcPath = Path.format(srcParts);
 		if (!size) return srcPath;
 
-		const destPath = req.call('statics.path', url.replace(/^\/@file\/share/, "/@file/image/"));
+		const destPath = req.call('statics.path', { url, remount: 'image' });
 
 		const parts = Path.parse(destPath);
 		parts.name = parts.name.replace(ImageModule.regSizes, '');
@@ -434,7 +434,7 @@ module.exports = class ImageModule {
 				if (!urlPath.startsWith('/@file/share/') || !req.sql.Href.isImage(href.mime)) {
 					continue;
 				}
-				let filePath = req.call('statics.path', urlPath);
+				let filePath = req.call('statics.path', { urlPath });
 				const parts = Path.parse(filePath);
 				parts.base = null;
 				const patterns = [

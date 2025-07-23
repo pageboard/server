@@ -34,7 +34,7 @@ module.exports = class InspectorModule {
 	}
 
 	async get(req, { url }) {
-		const localFile = req.call('statics.path', url);
+		const localFile = req.call('statics.path', { url });
 		try {
 			if (localFile != null) {
 				const meta = await this.local.look(`file://${localFile}`);

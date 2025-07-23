@@ -694,7 +694,7 @@ module.exports = class InstallService {
 		const sourceUrl = `/@file/site/${site.data.hash}/${filename}`;
 		const sourcePath = this.app.statics.path(
 			{ site },
-			sourceUrl
+			{ url: sourceUrl }
 		);
 		if (source) {
 			if (typeof source == "object") {

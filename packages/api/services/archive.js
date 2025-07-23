@@ -571,7 +571,7 @@ module.exports = class ArchiveService {
 						url, size
 					});
 				} else {
-					filePath = req.call('statics.path', url);
+					filePath = req.call('statics.path', { url });
 				}
 				if (!filePath) {
 					counts.skips.push(url);
