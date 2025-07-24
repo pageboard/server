@@ -146,9 +146,9 @@ class Block extends Model {
 		return schema;
 	}
 
-	static genId() {
-		// similar function defined in pageboard-write#store.js
-		return crypto.randomBytes(10).toString('base64').slice(0, 14)
+	// similar function defined in pageboard-write#store.js
+	static genId(len = 14) {
+		return crypto.randomBytes(Math.round(len * 3 / 4)).toString('base64').slice(0, len)
 			.replace(/={1,2}$/, '')
 			.replaceAll(/[/+]/g, () => {
 				return String.fromCharCode(Math.round(Math.random() * 25) + 97);
