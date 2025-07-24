@@ -31,3 +31,9 @@ Some methods dynamically check for a grant level. To set the highest grant level
 
 It is often handy to change database tenant (as defined in config):
 `npx pageboard --database.tenant=dev ...`
+
+Tests
+-----
+
+Tests need a symlink to pageboard/client to tests/fixtures/client:
+`cd tests/fixtures; ln -s <path to pageboard/client> client`
