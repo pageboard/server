@@ -153,7 +153,8 @@ module.exports = class ArchiveService {
 					jstream.write(href);
 				}
 			}
-			if (ids.length == 0) jstream.write(nsite);
+			// always write site - import relies on versions, languages...
+			jstream.write(nsite);
 
 			const colOpts = {
 				lang,
