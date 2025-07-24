@@ -138,6 +138,48 @@ suite('block', function () {
 		assert.deepEqual(list, titles);
 	});
 
+	test('TODO: search blocks and count parents, children', async function () {
+		const { item: b } = await app.run('block.add', {
+			type: 'page', data: { url: '/test' }
+		}, { site: site.id });
+		const c = await app.run('block.get', {
+			id: b.id
+		}, { site: site.id });
+		assert.ok('_id' in b, 'has _id');
+		assert.ok('id' in b, 'has id');
+		assert.equal(typeof b.updated_at, "string");
+		assert.equal('_id' in JSON.parse(JSON.stringify(b)), false);
+		assert.deepEqual(b, c);
+	});
+
+	test('TODO: search blocks and fetch children', async function () {
+		const { item: b } = await app.run('block.add', {
+			type: 'page', data: { url: '/test' }
+		}, { site: site.id });
+		const c = await app.run('block.get', {
+			id: b.id
+		}, { site: site.id });
+		assert.ok('_id' in b, 'has _id');
+		assert.ok('id' in b, 'has id');
+		assert.equal(typeof b.updated_at, "string");
+		assert.equal('_id' in JSON.parse(JSON.stringify(b)), false);
+		assert.deepEqual(b, c);
+	});
+
+	test('TODO: search blocks with language content', async function () {
+		const { item: b } = await app.run('block.add', {
+			type: 'page', data: { url: '/test' }
+		}, { site: site.id });
+		const c = await app.run('block.get', {
+			id: b.id
+		}, { site: site.id });
+		assert.ok('_id' in b, 'has _id');
+		assert.ok('id' in b, 'has id');
+		assert.equal(typeof b.updated_at, "string");
+		assert.equal('_id' in JSON.parse(JSON.stringify(b)), false);
+		assert.deepEqual(b, c);
+	});
+
 	test('fill block', async function () {
 		const { item: b1 } = await app.run('block.add', {
 			type: 'page', data: { url: '/testfill' }
@@ -197,7 +239,7 @@ suite('block', function () {
 			}]
 		}, { site: site.id });
 
-		const clone = await app.run('block.clone', {
+		const { item: clone } = await app.run('block.clone', {
 			id: src.id,
 			data: {
 				url: '/test2'
