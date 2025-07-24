@@ -121,7 +121,7 @@
     "ui": "tdd"
   },
   "devDependencies": {
-    "@kapouer/eslint-config": "2.1.1",
+    "@kapouer/eslint-config": "^2.2.2",
     "eslint": "^8.57.1",
     "eslint-plugin-mocha": "^10.5.0",
     "mocha": "^11.7.1"
