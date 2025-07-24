@@ -65,7 +65,7 @@ exports.dset = dset;
 exports.hash = str => {
 	if (Array.isArray(str)) str = str.join('');
 	return hash('sha256', str, 'base64')
-		.replace(/=+$/, '')
+		.replace(/={1,2}$/, '')
 		.replaceAll(/[/+]/g, () => {
 			return String.fromCharCode(Math.round(Math.random() * 25) + 97);
 		}).slice(0, 8);

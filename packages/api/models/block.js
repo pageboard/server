@@ -149,7 +149,7 @@ class Block extends Model {
 	static genId() {
 		// similar function defined in pageboard-write#store.js
 		return crypto.randomBytes(10).toString('base64').slice(0, 14)
-			.replace(/=+$/, '')
+			.replace(/={1,2}$/, '')
 			.replaceAll(/[/+]/g, () => {
 				return String.fromCharCode(Math.round(Math.random() * 25) + 97);
 			});

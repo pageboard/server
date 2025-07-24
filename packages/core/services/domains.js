@@ -340,7 +340,7 @@ module.exports = class DomainsService {
 	#initTenant(req) {
 		const {
 			groups: { tenant, domain }
-		} = /^(?:(?<tenant>[a-z0-9]+)-)?(?<id>[a-z0-9]+)(?<domain>\.[a-z0-9]+\.[a-z]+)$/.exec(req.hostname) || { groups: {} };
+		} = /^(?:(?<tenant>[a-z0-9]{1,16})-)?(?<id>[a-z0-9]{1,32})(?<domain>\.[a-z0-9]+\.[a-z]+)$/.exec(req.hostname) || { groups: {} };
 
 		if (tenant && this.#suffixes.includes(domain) && tenant in this.app.opts.database.url) {
 			req.res.locals.tenant = tenant;

@@ -1251,7 +1251,7 @@ module.exports = class BlockService {
 
 		const contentIds = {};
 		for (const [name, content = ''] of Object.entries(block.content ?? {})) {
-			contentIds[name] = Array.from(content.matchAll(/block-id="([a-z0-9]+)"/g))
+			contentIds[name] = Array.from(content.matchAll(/block-id="([a-z0-9]{1,32})"/g))
 				.map(item => item[1]);
 		}
 

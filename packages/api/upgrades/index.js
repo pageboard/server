@@ -64,7 +64,7 @@ module.exports = class Upgrader {
 		}
 		for (const [key, str] of Object.entries(block.content)) {
 			if (!str) continue;
-			block.content[key] = str.replaceAll(/block-id="([a-z0-9]+)"/g, (match, id) => {
+			block.content[key] = str.replaceAll(/block-id="([a-z0-9]{1,32})"/g, (match, id) => {
 				return `block-id="${this.idMap[id] ?? id}"`;
 			});
 		}

@@ -134,7 +134,7 @@ module.exports = class ReservationService {
 					phone: {
 						title: 'Phone',
 						type: 'string',
-						pattern: /^(\(\d+\))? *\d+([ .-]?\d+)*$/.source
+						pattern: /^(\(\d+\))? *\d+(?:[ .-]\d+)*$/.source
 					}
 				}
 			},
