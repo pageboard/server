@@ -3,6 +3,8 @@ const { merge } = require('../../../src/utils');
 
 // TODO
 // https://openai.com/index/introducing-structured-outputs-in-the-api/
+// https://platform.openai.com/docs/guides/text?api-mode=responses#reusable-prompts
+
 
 class AiModule {
 	#inst;
