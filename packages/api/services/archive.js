@@ -325,6 +325,7 @@ module.exports = class ArchiveService {
 			blocks: 0,
 			contents: 0,
 			hrefs: 0,
+			files: 0,
 			langs: {
 				in: new Set(),
 				out: new Set()
@@ -399,6 +400,7 @@ module.exports = class ArchiveService {
 					stream: hrefObj.stream,
 					filename: hrefPath
 				});
+				counts.files++;
 				utils.dset(obj.data, hrefObj.path, href.url);
 			}
 			if (obj.type == "site") {
