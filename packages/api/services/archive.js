@@ -195,8 +195,7 @@ module.exports = class ArchiveService {
 				parents(users),
 				children(standalones) as standalones . children(blocks),
 				children(blocks)
-			]`)
-				.modifiers(modifiers);
+			]`).modifiers(modifiers);
 			const blocksId = new Set();
 			counts.blocks += blocks.length;
 			for (const block of blocks) {
