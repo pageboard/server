@@ -257,7 +257,11 @@ module.exports = class ArchiveService {
 			}
 			return [site.id, fileStamp()].join('-');
 		});
-		counts.file = req.call('statics.url', archivePath);
+		if (this.app.opts.cli) {
+			counts.file = archivePath;
+		} else {
+			counts.file = req.call('statics.url', archivePath);
+		}
 		return counts;
 	}
 	static export = {
