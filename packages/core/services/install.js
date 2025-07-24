@@ -335,9 +335,9 @@ module.exports = class InstallService {
 			list.sort((a, b) => {
 				a = Path.basename(a, Path.extname(a));
 				b = Path.basename(b, Path.extname(b));
-				if (a == b) return 0;
-				else if (a > b) return 1;
+				if (a > b) return 1;
 				else if (a < b) return -1;
+				else return 0;
 			}).map(path => Path.join(absPath, path)).forEach(path => {
 				if (path.endsWith('.js')) {
 					pkg.elements.push({

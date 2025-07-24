@@ -4,8 +4,10 @@ module.exports = async function (page, settings, req, res) {
 		const cov = await page.coverage.stopCSSCoverage();
 		const styles = cov.map(item => {
 			const { text, ranges } = item;
-			if (text == null) console.warn("No coverage for", item);
-			else return ranges.map(range => {
+			if (text == null) {
+				console.warn("No coverage for", item);
+				return '';
+			} else return ranges.map(range => {
 				if (range.start >= 7 && text.slice(range.start - 7, range.start) == "@media ") {
 					console.info("Dropped @media rule", text.slice(range.start - 7, range.end));
 					return '';

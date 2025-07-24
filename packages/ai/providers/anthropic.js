@@ -69,6 +69,8 @@ class AiModule {
 							data
 						}
 					};
+				} else {
+					return null;
 				}
 			}));
 		}

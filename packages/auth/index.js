@@ -59,7 +59,7 @@ module.exports = class AuthModule {
 
 	bearer(req, { maxAge, id, grants }) {
 		return {
-			value: this.#lock.sign({ id,	grants }, {
+			value: this.#lock.sign({ id, grants }, {
 				issuer: req.$url.hostname,
 				maxAge,
 				...this.opts
@@ -136,9 +136,9 @@ module.exports = class AuthModule {
 		locks.sort((a, b) => {
 			const al = grants[a] || -1;
 			const bl = grants[b] || -1;
-			if (al == bl) return 0;
-			else if (al < bl) return 1;
+			if (al < bl) return 1;
 			else if (al > bl) return -1;
+			else return 0;
 		});
 		return locks;
 	}
@@ -237,7 +237,7 @@ module.exports = class AuthModule {
 		delete locks['*'];
 		for (const [path, list] of Object.entries(locks)) {
 			path.split('.').reduce((obj, val, index, arr) => {
-				if (obj == null) return;
+				if (obj == null) return null;
 				if (index == arr.length - 1) {
 					if (this.locked(req, list)) delete obj[val];
 				}

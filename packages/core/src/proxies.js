@@ -162,8 +162,12 @@ function absolutePaths(list, context) {
 		} else {
 			path = join(context.mount, path);
 		}
-		if (obj) obj[key] = path;
-		else return path;
+		if (obj) {
+			obj[key] = path;
+			return null;
+		} else {
+			return path;
+		}
 	});
 	if (obj) return obj;
 	else return arr.filter(x => Boolean(x));

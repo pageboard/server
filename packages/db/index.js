@@ -46,7 +46,7 @@ module.exports = class DatabaseModule {
 		let tknex;
 		if (tenants.has(tenant)) {
 			tknex = tenants.get(tenant);
-		}	else {
+		} else {
 			tknex = knex({
 				client: 'pg',
 				connection: url,

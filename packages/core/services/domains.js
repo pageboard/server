@@ -448,10 +448,10 @@ function errorObject(err) {
 		message: err.message
 	};
 	if (err.stack) errObj.stack = err.stack.split('\n').map(line => {
-		if (line == std) return;
+		if (line == std) return null;
 		const index = line.indexOf("/pageboard/");
 		if (index >= 0) return line.substring(index);
-		if (/^\s*at\s/.test(line)) return;
+		if (/^\s*at\s/.test(line)) return null;
 		return line;
 	}).filter(x => Boolean(x)).join('\n');
 

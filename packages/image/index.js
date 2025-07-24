@@ -93,7 +93,7 @@ module.exports = class ImageModule {
 			else res.accelerate(path);
 		} else {
 			const wrongParams = [];
-			Object.keys(req.query).some(key => {
+			Object.keys(req.query).forEach(key => {
 				if (!allowedParameters[key]) wrongParams.push(key);
 			});
 			if (wrongParams.length) {
