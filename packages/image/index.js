@@ -434,7 +434,7 @@ module.exports = class ImageModule {
 				if (!urlPath.startsWith('/@file/share/') || !req.sql.Href.isImage(href.mime)) {
 					continue;
 				}
-				let filePath = req.call('statics.path', { urlPath });
+				let filePath = req.call('statics.path', { url: urlPath });
 				const parts = Path.parse(filePath);
 				parts.base = null;
 				const patterns = [
