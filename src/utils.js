@@ -123,7 +123,7 @@ function dset(obj, keys, val) {
 function empty(key) {
 	if (key == null || key === "") return {};
 	const nkey = Number(key);
-	return nkey === key ? [] : {};
+	return nkey == key ? [] : {};
 }
 
 function nestie(input, glue) {
