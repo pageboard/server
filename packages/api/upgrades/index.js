@@ -40,6 +40,12 @@ module.exports = class Upgrader {
 				schema.properties.content?.properties,
 				block.content
 			);
+			if (['page', 'pdf', 'mail'].includes(block.type)) {
+				fixPageData(block);
+			}
+			if (block.type == "site") {
+				fixSiteExtra(block);
+			}
 		}
 
 		if (block.children) {
@@ -94,4 +100,28 @@ function fixContentProperties(props, content) {
 	if (ckeys.length != 1 || ckeys[0] === keys[0]) return;
 	content[""] = content[ckeys[0]];
 	delete content[ckeys[0]];
+}
+
+function fixPageData({ data, content }) {
+	if (data.title != null) {
+		content.title = data.title;
+		delete data.title;
+	}
+	if (data.description != null) {
+		content.description = data.description;
+		delete data.description;
+	}
+}
+
+function fixSiteExtra({ data }) {
+	data.extra ??= {};
+	for (const key of ['google_site_verification', 'google_tag_manager', 'google_analytics', 'linkedin']) {
+		if (data[key] != null) data.extra[key] = data[key];
+		delete data[key];
+	}
+	data.languages ??= [];
+	if (data.lang && data.languages.length == 0) {
+		data.languages.push(data.lang);
+		delete data.lang;
+	}
 }
