@@ -39,6 +39,9 @@ module.exports = class InspectorModule {
 			const meta = localFile ?
 				await this.local.look(`file://${localFile}`)
 				: await this.remote.look(url);
+			if (localFile) {
+				meta.url = url;
+			}
 			if (new URL(meta.url, req.$url).host == req.$url.host) {
 				delete meta.site;
 			}
