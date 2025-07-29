@@ -112,7 +112,6 @@ CREATE TABLE href (
     type character varying(255) NOT NULL,
     icon character varying(255),
     site character varying(255),
-    pathname character varying(2047) NOT NULL,
     meta jsonb DEFAULT '{}'::jsonb NOT NULL,
     lang character varying(255),
     created_at timestamp with time zone DEFAULT now() NOT NULL,

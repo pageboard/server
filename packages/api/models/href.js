@@ -46,9 +46,6 @@ class Href extends common.Model {
 			site: {
 				type: 'string'
 			},
-			pathname: {
-				type: 'string'
-			},
 			lang: {
 				nullable: true,
 				type: "string"
