@@ -200,10 +200,12 @@ module.exports = class HrefService {
 				type: 'link',
 				title: item.content.title,
 				site: null,
+				pathname: fullUrl.pathname,
 				url: fullUrl.pathname + fullUrl.search
 			};
 		} else {
 			result = await this.inspect(req, { url: data.url });
+			result.pathname = data.pathname ?? fullUrl.pathname;
 		}
 		if (!local && result.url != data.url) {
 			result.canonical = result.url;
@@ -232,6 +234,11 @@ module.exports = class HrefService {
 			url: {
 				type: 'string',
 				format: 'uri-reference'
+			},
+			pathname: {
+				type: 'string',
+				format: 'pathname',
+				nullable: true
 			}
 		}
 	};
@@ -252,7 +259,7 @@ module.exports = class HrefService {
 		return { href };
 	}
 	static update = {
-		title: 'Update title and url',
+		title: 'Update title and pathname',
 		$action: 'write',
 		$private: true,
 		required: ['url'],
@@ -264,6 +271,10 @@ module.exports = class HrefService {
 			title: {
 				type: 'string',
 				format: 'singleline'
+			},
+			pathname: {
+				type: 'string',
+				format: 'pathname'
 			}
 		}
 	};
