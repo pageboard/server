@@ -236,7 +236,7 @@ module.exports = class HrefService {
 		}
 	};
 
-	async update(req, data) {
+	async save(req, data) {
 		const { site, sql: { trx, Href } } = req;
 		const { url } = data;
 		const copy = { ...data };
@@ -250,26 +250,6 @@ module.exports = class HrefService {
 			.patchObject(copy)
 			.returning(Href.columns);
 		return { href };
-	}
-	static update = {
-		title: 'Update title',
-		$action: 'write',
-		$private: true,
-		required: ['url'],
-		properties: {
-			url: {
-				type: 'string',
-				format: 'uri-reference'
-			},
-			title: {
-				type: 'string',
-				format: 'singleline'
-			}
-		}
-	};
-
-	async save(req, data) {
-		return req.call('href.update', data);
 	}
 	static save = {
 		title: 'Update title',
