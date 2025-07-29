@@ -491,10 +491,6 @@ module.exports = class ImageModule {
 						to: urlPath
 					});
 				}
-				if (href.pathname != urlPath) await req.call('href.update', {
-					url: urlPath,
-					pathname: urlPath
-				});
 			}
 		} while (obj.offset < obj.count);
 	}

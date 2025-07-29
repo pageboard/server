@@ -57,7 +57,6 @@ module.exports = class InspectorModule {
 				if (result[key] !== undefined) obj[key] = result[key];
 			});
 		if (obj.icon == "data:/,") delete obj.icon;
-		obj.pathname = (new URL(result.url)).pathname;
 		['width', 'height', 'duration', 'size', 'thumbnail', 'description', 'source']
 			.forEach(key => {
 				if (result[key] !== undefined) obj.meta[key] = result[key];
