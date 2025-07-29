@@ -317,7 +317,6 @@ module.exports = class ArchiveService {
 	};
 
 	async import(req, { file, reset, idMap, excludes }) {
-		const types = excludes;
 		const { sql: { trx, Block } } = req;
 		let { site } = req;
 		const counts = {
@@ -346,17 +345,17 @@ module.exports = class ArchiveService {
 		const { hrefs } = site.$pkg;
 
 		const beforeEachStandalone = obj => {
-			if (obj.type && types.includes(obj.type)) return;
-			if (obj.type == "site" || list.length == 0) {
-				upgrader = new Upgrader({
+			if (obj.type) {
+				if (excludes.includes(obj.type)) return;
+				if (!upgrader) upgrader = new Upgrader({
 					site,
 					idMap,
 					excludes
 				});
+				return upgrader.beforeEach(obj);
 			} else if (!obj.id) {
 				return obj;
 			}
-			return upgrader.beforeEach(obj);
 		};
 		const afterEachStandalone = async obj => {
 			if (!obj.id) {
@@ -372,7 +371,7 @@ module.exports = class ArchiveService {
 				counts.hrefs++;
 				return site.$relatedQuery('hrefs', trx).insert(obj).onConflict(['_parent_id', 'url']).ignore();
 			}
-			if (!obj.type || types.includes(obj.type)) return;
+			if (!obj.type || excludes.includes(obj.type)) return;
 			const files = new Map();
 			const jspQuery = {};
 			const jspCb = ({ path: hrefPath, value: hrefVal }) => {
