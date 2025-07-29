@@ -36,35 +36,28 @@ module.exports = class InspectorModule {
 	async get(req, { url }) {
 		const localFile = req.call('statics.path', { url });
 		try {
-			if (localFile != null) {
-				const meta = await this.local.look(`file://${localFile}`);
-				const result = this.#filterResult(meta, url);
-				const obj = await this.#preview(req, result);
-				return obj;
-			} else {
-				const meta = await this.remote.look(url);
-				const result = this.#filterResult(meta);
-				const obj = await this.#preview(req, result);
-				return obj;
+			const meta = localFile ?
+				await this.local.look(`file://${localFile}`)
+				: await this.remote.look(url);
+			if (new URL(meta.url, req.$url).host == req.$url.host) {
+				delete meta.site;
 			}
+			const result = this.#filterResult(meta);
+			const obj = await this.#preview(req, result);
+			return obj;
 		} catch (err) {
 			throw HttpError.from(err, "Inspector failure");
 		}
 	}
 
-	#filterResult(result, localUrl) {
+	#filterResult(result) {
 		const obj = { meta: {} };
 		['mime', 'url', 'type', 'title', 'icon', 'site']
 			.forEach(key => {
 				if (result[key] !== undefined) obj[key] = result[key];
 			});
 		if (obj.icon == "data:/,") delete obj.icon;
-		if (localUrl) {
-			obj.site = null;
-			obj.pathname = obj.url = localUrl;
-		} else if (result.url) {
-			obj.pathname = (new URL(result.url)).pathname;
-		}
+		obj.pathname = (new URL(result.url)).pathname;
 		['width', 'height', 'duration', 'size', 'thumbnail', 'description', 'source']
 			.forEach(key => {
 				if (result[key] !== undefined) obj.meta[key] = result[key];
