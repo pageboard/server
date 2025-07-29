@@ -79,7 +79,7 @@ module.exports = class UploadModule {
 				mime: mime.lookup(ext)
 			}) ?? { path: filePath };
 			const url = req.call('statics.url', image.path);
-			return req.run('href.add', { url, pathname: url });
+			return req.run('href.add', { url });
 		} catch (err) {
 			console.error(err);
 			try {
