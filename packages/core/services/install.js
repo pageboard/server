@@ -219,7 +219,7 @@ module.exports = class InstallService {
 		for (const [name, version] of Object.entries(needed)) {
 			const range = offered[name];
 			if (!range || !semver.satisfies(version, "^" + range)) {
-				throw new HttpError.BadRequest("Incompatible module:", name, range, "<", version);
+				throw new HttpError.BadRequest(`Incompatible module: ${name} has ${range} but ${version} is needed`);
 			}
 		}
 		return true;
