@@ -29,6 +29,6 @@
     "event-submitter-polyfill": "^0.4.0",
     "formdata-submitter-polyfill": "^1.0.3",
     "toposort": "^2.0.2",
-    "view-transitions-polyfill": "^1.0.5"
+    "view-transitions-polyfill": "^1.0.6"
   }
 }
