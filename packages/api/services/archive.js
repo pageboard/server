@@ -330,8 +330,13 @@ module.exports = class ArchiveService {
 				out: new Set()
 			}
 		};
-		const { orphaned } = await req.run('site.gc', { days: 0 });
-		counts.orphaned = orphaned;
+		if (reset) {
+			const ret = await req.run('site.empty', { id: req.site.id });
+			counts.orphaned = ret.blocks;
+		} else {
+			const { orphaned } = await req.run('site.gc', { days: 0 });
+			counts.orphaned = orphaned;
+		}
 		const inputArchive = Path.extname(file) == ".zip" ? await Unzipper.Open.file(file) : null;
 		const fileStream = inputArchive
 			? inputArchive.files.find(d => d.path == "export.ndjson").stream()
@@ -404,7 +409,6 @@ module.exports = class ArchiveService {
 			}
 			if (obj.type == "site") {
 				if (reset) {
-					await req.run('site.empty', { id: req.site.id });
 					const data = {};
 					for (const key of reset) {
 						if (obj.data[key] != null) data[key] = obj.data[key];
