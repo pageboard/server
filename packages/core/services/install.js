@@ -215,6 +215,20 @@ module.exports = class InstallService {
 		}
 	}
 
+	compatibility(req, { dependencies = {}, versions = {} }) {
+		for (const [name, version] of Object.entries(versions)) {
+			const range = dependencies[name];
+			if (!range || !semver.satisfies(version, range)) return false;
+		}
+		return true;
+	}
+
+	static compatibility = {
+		title: 'Compatibility of versions with dependencies',
+		$action: 'read',
+		$private: true
+	};
+
 	async #migrate(req, site) {
 		const { migrations } = site.$pkg;
 		const { versions } = req.site.data;
