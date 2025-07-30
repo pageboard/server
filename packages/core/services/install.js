@@ -215,10 +215,12 @@ module.exports = class InstallService {
 		}
 	}
 
-	compatibility(req, { dependencies = {}, versions = {} }) {
-		for (const [name, version] of Object.entries(versions)) {
-			const range = dependencies[name];
-			if (!range || !semver.satisfies(version, range)) return false;
+	compatibility(req, { offered = {}, needed = {} }) {
+		for (const [name, version] of Object.entries(needed)) {
+			const range = offered[name];
+			if (!range || !semver.satisfies(version, "^" + range)) {
+				throw new HttpError.BadRequest("Incompatible module:", name, range, "<", version);
+			}
 		}
 		return true;
 	}

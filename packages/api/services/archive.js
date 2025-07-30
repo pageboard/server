@@ -423,12 +423,10 @@ module.exports = class ArchiveService {
 					site = await req.run('site.save', data);
 					upgrader.DomainBlock = site.$modelClass;
 				}
-				if (!req.call('core.compatibility', {
-					dependencies: site.data.dependencies,
-					versions: obj.data.versions
-				})) {
-					throw new HttpError.BadRequest("archive dependencies are incompatible with installed site dependencies");
-				}
+				req.call('core.compatibility', {
+					offered: site.data.versions,
+					needed: obj.data.versions
+				});
 			} else if (obj.type == "user") {
 				try {
 					const user = await site.$modelClass.query(trx).where('type', 'user')
