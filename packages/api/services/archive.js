@@ -410,6 +410,13 @@ module.exports = class ArchiveService {
 			if (obj.type == "site") {
 				if (reset) {
 					const data = {};
+					if (reset === true) reset = [];
+					if (Object.isEmpty(req.site.data?.dependencies) && !reset.includes("dependencies") && !Object.isEmpty(obj.data.dependencies)) {
+						reset.push('dependencies');
+					}
+					if (Object.isEmpty(req.site.data.languages) && !reset.includes("languages") && !Object.isEmpty(obj.data.languages)) {
+						reset.push('languages');
+					}
 					for (const key of reset) {
 						if (obj.data[key] != null) data[key] = obj.data[key];
 					}
