@@ -231,20 +231,19 @@ module.exports = class InstallService {
 
 	async #migrate(req, site) {
 		const { migrations } = site.$pkg;
-		const { versions } = req.site.data;
-		// FIXME dependencies might be with link://path
-		// what we need here is the installed
-		// comparison between current pkg.dependencies and the ones that just got installed
-		const oldVersion = semver.minVersion(req.site.data.server);
-		for (const [mod, ver] of Object.entries(site.data.versions)) {
-			const old = versions ? versions[mod] : oldVersion;
+		const { versions: oldVersions } = req.site.data;
+		const { versions } = site.data;
+		for (const [mod, ver] of Object.entries(versions)) {
+			const old = oldVersions?.[mod];
 			if (!old || old == ver) continue;
+			// collect migrations that are old < mig <= ver
 			const migs = semver.sort(Object.keys(migrations).filter(
 				mig => {
 					mig = semver.coerce(mig);
 					return semver.lt(old, mig) && semver.gte(mig, ver);
 				}
 			));
+			if (migs.length === 0) continue;
 			console.warn(migs);
 			for (const mig of migs) {
 				for (const [type, list] of migrations[mig]) {
