@@ -141,7 +141,6 @@ module.exports = class PaymentModule {
 			id,
 			data: { status }
 		});
-		await req.sql.trx.commit();
 		if (status == "paid") {
 			return ret;
 		}
