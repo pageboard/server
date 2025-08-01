@@ -98,7 +98,12 @@ exports.flatten = function (obj, opts) {
 
 exports.mergeExpressions = function (data, template, scope) {
 	if (!template) return data;
-	return sharedMd.merge(template, data, structuredClone(scope));
+	try {
+		scope = structuredClone(scope);
+	} catch (err) {
+		console.error("Cannot clone", err, scope);
+	}
+	return sharedMd.merge(template, data, scope);
 };
 
 exports.merge = function (template, data) {
