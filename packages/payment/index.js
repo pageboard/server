@@ -1,5 +1,4 @@
 const Stripe = require.lazy('stripe');
-const { hash } = require('../../src/utils');
 
 module.exports = class PaymentModule {
 	static name = 'payment';
@@ -8,26 +7,9 @@ module.exports = class PaymentModule {
 	constructor(app, opts) {
 		this.app = app;
 		this.opts = opts;
-		this.opts.apiVersion = '2025-05-28.basil';
 	}
 
-	async elements(elements) {
-		elements.site.$lock['data.payment'] = 'webmaster';
-		elements.site.properties.payment = {
-			title: 'Payment',
-			properties: {
-				key: {
-					title: 'Private key',
-					type: 'string',
-					format: 'singleline'
-				},
-				pub: {
-					title: 'Public key',
-					type: 'string',
-					format: 'singleline'
-				}
-			}
-		};
+	async elements() {
 		return import('./src/payment.mjs');
 	}
 
@@ -36,43 +18,10 @@ module.exports = class PaymentModule {
 		router.write("/payment/hook", 'payment.hook');
 	}
 
-	#config(site) {
-		const { payment } = site.data;
-		if (!payment?.key || !payment?.pub) {
-			throw new HttpError.NotImplemented("Missing configuration");
-		} else {
-			return {
-				...payment,
-				hash: hash(payment.key)
-			};
-		}
-	}
-
-	#stripe(req) {
-		const origSite = this.app.domains.site(req.site.id);
-		let { $stripe: inst } = origSite;
-		const conf = this.#config(origSite);
-		if (!inst || inst.$hash != conf.hash) {
-			inst = origSite.$stripe = new Stripe(conf.key, {
-				apiVersion: this.opts.apiVersion
-			});
-			inst.$hash = conf.hash;
-		}
-		return inst;
-	}
-
-	async config(req) {
-		return {
-			publishableKey: this.#config(req.site).pub
-		};
-	}
-	static config = {
-		title: 'Config',
-		$action: 'read'
-	};
-
 	async initiate(req, data) {
-		const stripe = this.#stripe(req);
+		const stripe = new Stripe(data.privateKey, {
+			apiVersion: data.apiVersion
+		});
 		const ret = await req.run('block.find', {
 			type: 'payment',
 			data: {
@@ -92,7 +41,7 @@ module.exports = class PaymentModule {
 		}, {
 			// We expect the client to use the same version as ours, see also
 			// https://github.com/stripe/stripe-node/issues/2351
-			apiVersion: data.apiVersion || this.opts.apiVersion
+			apiVersion: data.apiVersion
 		});
 		const paymentIntent = await stripe.paymentIntents.create({
 			currency: data.currency,
@@ -106,13 +55,13 @@ module.exports = class PaymentModule {
 			paymentIntent: paymentIntent.client_secret,
 			ephemeralKey: ephemeralKey.secret,
 			customer: customer.id,
-			publishableKey: req.site.data.payment.pub
+			publishableKey: data.publicKey
 		};
 	}
 	static initiate = {
 		title: 'Initiate',
 		$action: 'write',
-		required: ['job', 'amount', 'currency'],
+		required: ['job', 'amount', 'currency', 'privateKey', 'publicKey'],
 		properties: {
 			job: {
 				title: 'Job',
@@ -132,6 +81,16 @@ module.exports = class PaymentModule {
 					of: 'currency'
 				}
 			},
+			privateKey: {
+				title: 'Stripe private key',
+				type: 'string',
+				format: 'singleline'
+			},
+			publicKey: {
+				title: 'Stripe public key',
+				type: 'string',
+				format: 'singleline'
+			},
 			apiVersion: {
 				title: 'Client API Version',
 				type: 'string',
@@ -142,8 +101,7 @@ module.exports = class PaymentModule {
 	};
 
 	async hook(req, data) {
-		const $stripe = this.#stripe(req);
-		const event = $stripe.webhooks.constructEvent(
+		const event = Stripe.webhooks.constructEvent(
 			req.buffer,
 			req.get('stripe-signature'),
 			data.secret
