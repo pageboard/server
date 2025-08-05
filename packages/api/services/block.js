@@ -485,10 +485,7 @@ module.exports = class BlockService {
 						}, {
 							type: "string",
 							format: 'id'
-						}],
-						$filter: {
-							name: 'relation',
-						}
+						}]
 					},
 					type: {
 						title: 'Select by types',
@@ -948,12 +945,7 @@ module.exports = class BlockService {
 						}, {
 							type: "string",
 							format: 'id'
-						}],
-						$filter: {
-							name: 'relation',
-							// TODO relation filter should propose all allowed types,
-							// and should use datalist to list all allowed block ids
-						}
+						}]
 					},
 					type: {
 						title: 'Select by types',
@@ -1170,12 +1162,7 @@ module.exports = class BlockService {
 						}, {
 							type: "string",
 							format: 'id'
-						}],
-						$filter: {
-							name: 'relation',
-							// TODO relation filter should propose all allowed types,
-							// and should use datalist to list all allowed block ids
-						}
+						}]
 					},
 					type: {
 						title: 'Filter by types',
