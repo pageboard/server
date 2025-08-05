@@ -273,7 +273,7 @@ module.exports = class ArchiveService {
 				title: 'Archive format',
 				anyOf: [
 					{ const: 'zip', title: 'Zip' },
-					{ const: 'tar', title: 'Tar' },
+					{ const: 'tar', title: 'Tar' }
 				],
 				default: 'zip'
 			},
