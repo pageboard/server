@@ -289,13 +289,17 @@ module.exports = class MailModule {
 			} else {
 				item = (await req.run('settings.get', { id: data.from })).item;
 			}
-			if (item.parent?.data?.name) {
-				mailOpts.from.title = item.parent.data.name;
-			}
-			if (item.parent.data.email?.split('@').pop() == domain) {
-				mailOpts.from.address = item.parent.data.email;
+			if (!item) {
+				console.warn("mail.#sendJob: from not found:", data.from);
 			} else {
-				mailOpts.from.address = `${site.id}.${item.id}@${domain}`;
+				if (item.parent?.data?.name) {
+					mailOpts.from.title = item.parent.data.name;
+				}
+				if (item.parent.data.email?.split('@').pop() == domain) {
+					mailOpts.from.address = item.parent.data.email;
+				} else {
+					mailOpts.from.address = `${site.id}.${item.id}@${domain}`;
+				}
 			}
 		}
 		if (data.replyTo) {
@@ -305,6 +309,9 @@ module.exports = class MailModule {
 				mailOpts.replyTo = (await req.run('settings.get', {
 					id: data.replyTo
 				})).item?.parent?.data?.email;
+			}
+			if (!mailOpts.replyTo) {
+				console.warn("mail.#sendJob: replyTo not found:", data.replyTo);
 			}
 		}
 
