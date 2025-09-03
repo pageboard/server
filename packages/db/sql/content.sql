@@ -120,7 +120,8 @@ $BODY$;
 
 CREATE OR REPLACE FUNCTION block_delete_orphans (
 	site_id INTEGER,
-	days INTEGER DEFAULT 0
+	days INTEGER DEFAULT 0,
+	delete_content BOOLEAN DEFAULT FALSE
 ) RETURNS INTEGER
 	LANGUAGE 'sql'
 AS $BODY$
@@ -130,7 +131,7 @@ AS $BODY$
 		ON t.child_id = block._id
 		WHERE s.parent_id = site_id
 		AND block._id = s.child_id
-		AND block.standalone IS FALSE
+		AND (block.standalone IS FALSE OR delete_content IS TRUE AND block.type = 'content')
 		AND extract('day' from now() - block.updated_at) >= days
 		GROUP BY block._id
 	),

@@ -278,9 +278,9 @@ module.exports = class SiteService {
 		}
 	};
 
-	async gc({ site, sql: { trx, raw, ref, fun } }, { age }) {
+	async gc({ site, sql: { trx, raw, ref, fun } }, { age, content }) {
 		const { count } = await site.$query(trx).select(
-			fun('block_delete_orphans', ref('block._id'), age)
+			fun('block_delete_orphans', ref('block._id'), age, content)
 				.as('count')
 		);
 		return { count };
@@ -297,6 +297,12 @@ module.exports = class SiteService {
 				type: 'integer',
 				minimum: 0,
 				default: 0
+			},
+			content: {
+				title: 'Content',
+				description: 'Clean content blocks too',
+				type: 'boolean',
+				default: false
 			}
 		}
 	};
