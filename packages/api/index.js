@@ -15,7 +15,7 @@ module.exports = class ApiModule {
 	static plugins = [
 		'help', 'user', 'site', 'archive', 'settings', 'page', 'links',
 		'block', 'href', 'reservation', 'translate', 'redirect', 'apis',
-		'proxy', 'stat'
+		'proxy', 'stat', 'exec'
 	].map(name => Path.join(__dirname, 'services', name));
 
 	#validation;
