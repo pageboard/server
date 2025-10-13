@@ -310,7 +310,8 @@ module.exports = class BlockService {
 					.whereNot('type', 'content');
 			}
 		});
-
+		// useful for debugging
+		// console.info(q.toKnexQuery().toString());
 		const [rows, count] = await Promise.all([
 			q,
 			q.clone().resultSize()
